@@ -1,0 +1,31 @@
+# Dependencies
+node_modules/
+server/node_modules/
+
+# Build outputs
+dist/
+.parcel-cache/
+
+# Environment / secrets
+.env
+.env.local
+.env*.local
+firebase.json
+.firebaserc
+
+# OS junk
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Editor
+.vscode/settings.json
+*.swp
+*.swo
+
+# Logs
+npm-debug.log*
+yarn-error.log*
+
+# Coverage
+coverage/
