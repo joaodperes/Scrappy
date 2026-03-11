@@ -7,9 +7,11 @@ import { WDEFS, WCOLORS, inventory, activeSlot, makeScaledWeaponModel, setWeapon
 import { sfx } from './audio.js';
 
 const SECRET_KIT_RESPAWN_SEC = 300;
+// Secret pickups live on the Command Deck (y=7), the highest platform on the map.
+// Reach it via the Vent Shaft ramp (Smelter Hall, north wall) or jump pad.
 const SECRET_KITS = [
-  { tag: 'secret_health', type: 'health', pos: { x: 34.2, y: 0.55, z: -34.0 } },
-  { tag: 'secret_armor',  type: 'armor',  pos: { x: 32.8, y: 0.55, z: -34.0 } },
+  { tag: 'secret_health', type: 'health', pos: { x: 10.0, y: 7.45, z: 44.0 } },
+  { tag: 'secret_armor',  type: 'armor',  pos: { x: 18.0, y: 7.45, z: 44.0 } },
 ];
 
 function _makePickupLight(pos, col3) {
@@ -20,7 +22,6 @@ function _makePickupLight(pos, col3) {
 
 export function spawnPickup(pos) {
   const r = Math.random();
-  // Increase armor spawn rate: health 30%, armor 50%, ammo 20%
   const type = r < .3 ? 'health' : r < .8 ? 'armor' : 'ammo';
   return spawnTypedPickup(pos, type);
 }
@@ -170,27 +171,36 @@ export function tryPickupWeapon(gameRunning, paused) {
     if (d < nearestDist) { nearestDist = d; nearest = p; }
   }
   if (!nearest) return;
-  WDEFS[nearest.wName].ammo = WDEFS[nearest.wName].startAmmo;
-  // Improved pickup logic:
-  // 1. If weapon already in inventory, replace that slot
-  // 2. If free slot, fill it
-  // 3. Otherwise, replace active slot
-  let slot = inventory.findIndex(w => w === nearest.wName);
-  if (slot !== -1) {
-    inventory[slot] = nearest.wName;
-    setActiveSlot(slot);
-    setWeapon(nearest.wName);
+
+  const wName = nearest.wName;
+  WDEFS[wName].ammo = WDEFS[wName].startAmmo;
+
+  // ── Slot assignment rules ────────────────────────────────────────────────
+  // Rule 1: same weapon type already in inventory → refresh ammo in that slot,
+  //         don't change active slot or switch weapon.
+  const existingSlot = inventory.findIndex(w => w === wName);
+  if (existingSlot !== -1) {
+    // Ammo already refreshed above, nothing else to do.
+    refreshSlotHUD();
   } else {
-    let freeSlot = inventory.findIndex(w => w === null);
+    // Rule 2: there is an empty slot → fill it; keep the current active weapon.
+    const freeSlot = inventory.findIndex(w => w === null);
     if (freeSlot !== -1) {
-      inventory[freeSlot] = nearest.wName;
-      setActiveSlot(freeSlot);
-      setWeapon(nearest.wName);
+      inventory[freeSlot] = wName;
+      // Only switch to this slot if we currently have nothing equipped
+      if (!inventory[activeSlot]) {
+        setActiveSlot(freeSlot);
+        setWeapon(wName);
+      } else {
+        refreshSlotHUD();
+      }
     } else {
-      inventory[activeSlot] = nearest.wName;
-      setWeapon(nearest.wName);
+      // Rule 3: no empty slot → replace the active slot.
+      inventory[activeSlot] = wName;
+      setWeapon(wName);
     }
   }
+
   sfx.wPickup();
   nearest.mesh.getChildMeshes().forEach(m => m.dispose()); nearest.mesh.dispose();
   nearest.ring.dispose(); nearest.light.dispose();
