@@ -2,14 +2,14 @@
 import { scene, camera, engine } from './scene.js';
 import { texturesReady, setOnTexturesReady } from './textures.js';
 import { ensureAudio } from './audio.js';
-import { buildLevel, resetBarrels } from './level.js';
+import { buildLevel, resetBarrels, updateBarrels } from './level.js';
 import { setupLighting } from './lighting.js';
 import { setWeapon, inventory, WDEFS, setActiveSlot, animWeapon } from './weapons.js';
 import { enemies, projs, pickups, weaponDrops, _sparkPool, particles, player } from './gameState.js';
 import { rebuildMeshMap, hitRobot, updateEnemies } from './enemies.js';
 import { updateProjs } from './projectiles.js';
 import { updateParticles } from './particles.js';
-import { updatePickups, updateWeaponDrops, tryPickupWeapon } from './pickups.js';
+import { updatePickups, updateWeaponDrops, tryPickupWeapon, initSecretKits } from './pickups.js';
 import { updateWaves, setCurWave, setWaveOn, setWaveDly, curWave } from './waves.js';
 import { updatePlayer, setupInput, hurtPlayer, PH, resetPlayer } from './player.js';
 import { updateHUD, tickHitMarker, wireDeathSubmit, showHitMarker } from './ui.js';
@@ -51,8 +51,8 @@ function startGame() {
 
   // Reset weapons
   for (const [k,w] of Object.entries(WDEFS)) w.ammo = (k==='PISTOL') ? Infinity : 0;
-  inventory[0]='PISTOL'; inventory[1]=null;
-  setActiveSlot(0);
+  inventory[2]='PISTOL'; inventory[1]=null; inventory[0]=null;
+  setActiveSlot(2);
 
   // Reset wave state
   setCurWave(0); setWaveOn(false); setWaveDly(1.8);
@@ -64,7 +64,11 @@ function startGame() {
     else if (p.mesh) p.mesh.dispose();
     if (p.light) p.light.dispose();
   } projs.length=0;
-  for (const p of pickups) { p.mesh.dispose(); p.ring.dispose(); p.light.dispose(); } pickups.length=0;
+  for (const p of pickups) { 
+      if (p.mesh) p.mesh.dispose(); 
+      if (p.ring) p.ring.dispose(); 
+      if (p.light) p.light.dispose(); 
+  } pickups.length=0;
   for (const p of weaponDrops) { p.mesh.getChildMeshes().forEach(m=>m.dispose()); p.mesh.dispose(); p.ring.dispose(); p.light.dispose(); } weaponDrops.length=0;
   for (const sp of _sparkPool) { sp.active=false; sp.mesh.setEnabled(false); }
   particles.length=0;
@@ -196,16 +200,29 @@ document.getElementById('pauseOverlay')?.addEventListener('click', () => { if (p
 
 //  Init 
 buildLevel();
+initSecretKits();
 setupLighting();
 renderLeaderboard();
 
+engine.resize();
+window.addEventListener('resize', () => engine.resize());
 //  Game loop 
+let hudTimer = 0;
 engine.runRenderLoop(() => {
   let dt = engine.getDeltaTime() / 1000;
   if (dt < 0.001) dt = 0.001;
   if (dt > 0.05) dt = 0.05;
+  
   if (gameRunning && !paused) {
     updatePlayer(dt, gameRunning, paused);
+    
+    // Added the timer tick 
+    hudTimer += dt;
+    if (hudTimer >= 1.0) { // Every 1 full second
+        if (cb.markHudDirty) cb.markHudDirty();
+        hudTimer = 0;
+    }
+
     if (isPvpActive()) {
       updatePvp(dt);
     } else {
@@ -214,6 +231,7 @@ engine.runRenderLoop(() => {
       updatePickups(dt);
       updateWeaponDrops(dt);
       updateWaves(dt, gameRunning);
+      updateBarrels(dt);
     }
     updateParticles(dt);
     animWeapon(dt);

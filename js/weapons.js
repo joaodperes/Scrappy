@@ -2,15 +2,16 @@
 const BABYLON = window.BABYLON;
 import { scene, camera } from './scene.js';
 import { M } from './textures.js';
+import { isScoped } from './player.js';
 
 export const WDEFS = {
   PISTOL:   { name:'PISTOL',          dmg:20,  range:90,  cd:.18,  hitscan:true,  ammo:Infinity, aps:1, spread:.0,   pellets:1, startAmmo:Infinity },
   SMG:      { name:'SMG',             dmg:11,  range:55,  cd:.09,  hitscan:true,  ammo:0,        aps:1, spread:.035, pellets:1, startAmmo:45 },
-  SHOTGUN:  { name:'SHOTGUN',         dmg:15,  range:16,  cd:.72,  hitscan:true,  ammo:0,        aps:1, spread:.09,  pellets:7, startAmmo:20 },
+  SHOTGUN:  { name:'SHOTGUN',         dmg:32,  range:25,  cd:.25,  hitscan:true,  ammo:0,        aps:1, spread:0.12, pellets:10, startAmmo:16 },
   CHAINGUN: { name:'CHAINGUN',        dmg:14,  range:60,  cd:.08,  hitscan:true,  ammo:0,        aps:1, spread:.055, pellets:1, startAmmo:80 },
   RAILGUN:  { name:'RAILGUN',         dmg:110, range:130, cd:1.8,  hitscan:true,  ammo:0,        aps:1, spread:.0,   pellets:1, startAmmo:6  },
-  PLASMA:   { name:'PLASMA RIFLE',    dmg:25,  range:90,  cd:.28,  hitscan:false, ammo:0,        aps:1,             pellets:1, startAmmo:30, speed:42 },
-  ROCKET:   { name:'ROCKET LAUNCHER', dmg:95,  range:90,  cd:1.2,  hitscan:false, ammo:0,        aps:1,             pellets:1, startAmmo:6,  speed:16, splash:4.5 },
+  PLASMA:   { name:'PLASMA RIFLE',    dmg:25,  range:90,  cd:.28,  hitscan:false, ammo:0,        aps:1,              pellets:1, startAmmo:30, speed:42 },
+  ROCKET:   { name:'ROCKET LAUNCHER', dmg:95,  range:90,  cd:1.2,  hitscan:false, ammo:0,        aps:1,              pellets:1, startAmmo:6,  speed:16, splash:4.5 },
 };
 
 export const WCOLORS = {
@@ -24,15 +25,15 @@ export const ROBOT_DROPS = {
   heavy:   'CHAINGUN',
   sniper:  'RAILGUN',
   drone:   'PLASMA',
-  pistol:  'PISTOL',
+  pistol:  ['ROCKET', 'SHOTGUN', 'RAILGUN'][Math.floor(Math.random() * 3)],
   shotgun: 'SHOTGUN',
   rocket:  'ROCKET',
 };
 
 export const AUTO_WEAPONS = new Set(['SMG', 'CHAINGUN']);
 
-export const inventory  = ['PISTOL', null];
-export let   activeSlot = 0;
+export const inventory = [null, null, 'PISTOL']; 
+export let activeSlot = 2;
 export let   curWep     = 'PISTOL';
 export let   wepCooldown = 0;
 export let   swingT      = 0;
@@ -161,15 +162,27 @@ const WROT = {
 };
 
 export function refreshSlotHUD() {
-  for (let i = 0; i < 2; i++) {
-    const el  = document.getElementById('wSlot' + i);
-    if (!el) return;
+  for (let i = 0; i < 3; i++) { 
+    const el = document.getElementById('wSlot' + i);
+    if (!el) continue; // Safety check
     const wep = inventory[i];
     const isActive = (i === activeSlot);
+    
+    // Update CSS classes
     el.className = 'wSlot' + (isActive ? ' active' : '') + (wep ? '' : ' empty');
-    el.querySelector('.sName').textContent = wep ? WDEFS[wep].name : 'EMPTY';
-    const a = wep ? WDEFS[wep].ammo : null;
-    el.querySelector('.sAmmo').textContent = wep ? (a === Infinity ? 'INFINITE' : a + ' RDS') : '—';
+    
+    // Update text
+    const nameEl = el.querySelector('.sName');
+    const ammoEl = el.querySelector('.sAmmo');
+    
+    if (wep) {
+        nameEl.textContent = WDEFS[wep].name;
+        const a = WDEFS[wep].ammo;
+        ammoEl.textContent = (a === Infinity) ? 'INFINITE' : a + ' RDS';
+    } else {
+        nameEl.textContent = 'EMPTY';
+        ammoEl.textContent = '—';
+    }
   }
 }
 
@@ -192,13 +205,23 @@ export function setActiveSlot(i) {
 }
 
 export function animWeapon(dt) {
+  // If aiming down sights, target X is 0 (center screen). Otherwise, use default hip-fire X.
+  const targetX = isScoped ? 0 : WPOS[curWep].x;
+  // If aiming down sights, raise the gun slightly to align with the camera center
+  const targetY = isScoped ? WPOS[curWep].y + 0.08 : WPOS[curWep].y + Math.sin(Date.now() * .0018) * .007;
+
+  // Smoothly interpolate (lerp) the weapon position for that buttery AAA feel
+  wepGroup.position.x += (targetX - wepGroup.position.x) * dt * 15;
+  wepGroup.position.y += (targetY - wepGroup.position.y) * dt * 15;
+
   if (swingT > 0) {
     swingT = Math.max(0, swingT - dt * 7.5);
     const k = Math.sin(swingT * Math.PI);
     wepGroup.position.z = WPOS[curWep].z - k * .09;
     wepGroup.rotation.x = WROT[curWep].x + k * .28;
   } else {
-    wepGroup.position.y = WPOS[curWep].y + Math.sin(Date.now() * .0018) * .007;
+    wepGroup.position.z = WPOS[curWep].z; // Reset Z when not firing
+    wepGroup.rotation.x = WROT[curWep].x;
   }
 }
 

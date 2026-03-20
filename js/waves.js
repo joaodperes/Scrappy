@@ -17,13 +17,27 @@ export function getWaveComposition(idx) {
     [{type:'scout',  count:3}, {type:'drone',  count:1}],                                   // 3
     [{type:'scout',  count:4}, {type:'drone',  count:1}],                                   // 4
     [{type:'scout',  count:3}, {type:'heavy',  count:1}],                                   // 5
-    [{type:'scout',  count:4}, {type:'heavy',  count:2}],                                   // 6
+    [{type:'scout',  count:4}, {type:'drone',  count:1}, {type:'heavy',  count:2}],                                   // 6
     [{type:'scout',  count:3}, {type:'heavy',  count:2}, {type:'sniper', count:1}],         // 7
     [{type:'scout',  count:4}, {type:'heavy',  count:2}, {type:'sniper', count:2}, {type:'drone', count:2}], // 8
     [{type:'scout',  count:3}, {type:'heavy',  count:2}, {type:'sniper', count:2}, {type:'drone', count:2}, {type:'pistol', count:1}], // 9
+    [
+      { type: 'giantbot', count: 1 },
+      { type: 'scout', count: 1 }, // Minions
+      { type: 'heavy', count: 1 }, 
+      { type: 'sniper', count: 1 },
+    ],
     [{type:'scout',  count:3}, {type:'heavy',  count:2}, {type:'sniper', count:2}, {type:'drone', count:2}, {type:'pistol', count:1}, {type:'shotgun', count:1}], // 10
     [{type:'scout',  count:3}, {type:'heavy',  count:2}, {type:'sniper', count:2}, {type:'drone', count:2}, {type:'pistol', count:1}, {type:'shotgun', count:1}, {type:'rocket', count:1}], // 11
   ];
+  if (idx > 0 && idx % 9 === 0) { // Since 0 is Wave 1, 9 is Wave 10
+    return [
+      { type: 'giantbot', count: 1 },
+      { type: 'scout', count: 1 }, // Minions
+      { type: 'heavy', count: 1 }, 
+      { type: 'sniper', count: 1 },
+    ];
+  }
   if (idx < fixed.length) return fixed[idx];
   const e = idx - (fixed.length - 1);
   const comp = [];
@@ -39,7 +53,6 @@ export function getWaveComposition(idx) {
 
 // Spawn points ordered FAR→MID relative to player start (-19, -12) so waves
 // enter from the wider map perimeter before collapsing inward.
-// Coordinates match the new Smelting District map.
 const SPAWNS = [
   // Perimeter / high ground
   [ 14,  7, 44], [  8,  7, 44], [ 20,  7, 44], [ -25, 7, -44], [ -22, 7, -40],

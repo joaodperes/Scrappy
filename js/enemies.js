@@ -1,6 +1,6 @@
 // enemies.js – robot AI, spawning, hit/destroy, round timer, angry mode
 const BABYLON = window.BABYLON;
-import { scene, camera } from './scene.js';
+import { scene, camera, navPlugin } from './scene.js';
 import { M, robotTex } from './textures.js';
 import { makeScaledWeaponModel, ROBOT_DROPS } from './weapons.js';
 import { enemies, player, cb } from './gameState.js';
@@ -96,6 +96,8 @@ function _tickTimers(dt) {
   // Wave cleared – reset so next spawn triggers fresh countdown
   const aliveNow = enemies.filter(e => e.alive).length;
   if (aliveNow === 0) {
+    const kr = document.getElementById('_killsRound');
+    if (kr) kr.textContent = 'ROUND: ' + _roundKills + ' / ' + _roundEnemies;
     _roundInit  = false;
     _angryMode  = false;
     _resetTimerColour();
@@ -186,9 +188,13 @@ function _updateArrow(e) {
 }
 
 // ── Wall-clearance ray ────────────────────────────────────────
-function _wallInDir(ox, oy, oz, dir, rad) {
-  const origin = new BABYLON.Vector3(ox, oy + 0.5, oz);
-  const ray = new BABYLON.Ray(origin, dir, rad);
+// Probe whether moving in direction `dir` by `step` metres from (ox,oy,oz)
+// would hit a wall.  Origin is at the BOT'S CURRENT position (not the
+// destination) so walls between here and there are detected.
+// Probe length = step + 0.85 margin; height = 1.0 (body centre).
+function _wallInDir(ox, oy, oz, dir, step) {
+  const origin = new BABYLON.Vector3(ox, oy + 1.0, oz);
+  const ray = new BABYLON.Ray(origin, dir, step + 0.85);
   const hit = scene.pickWithRay(ray, m => m.checkCollisions && !m.metadata?.enemy && m.isEnabled());
   return !!hit?.hit;
 }
@@ -253,11 +259,29 @@ export function buildRobot(type) {
     if (type === 'shotgun') { bW=.54; bH=1.12; bD=.34; aL=.72; aW=.12; lW=.16; lH=.68; fL=.25; fH=.12; hW=.34; hH=.33; hD=.26; }
     if (type === 'rocket')  { bW=.52; bH=1.15; bD=.36; aL=.74; aW=.13; lW=.17; lH=.70; fL=.28; fH=.13; hW=.36; hH=.34; hD=.29; }
     const bY = bH / 2 + .28;
+    const hY = bY + bH/2 + hH*.42;
+    if (type === 'giantbot') {
+      addBox('core', bW * 0.6, bH * 0.4, bD * 1.5, M.ledOrange, 0, bY, bD * 0.2);
+      
+      // Muscular Arms
+      addBox('armL', 0.45, 1.4, 0.45, bmat, bW/2 + 0.35, bY + 0.2, 0);
+      addBox('armR', 0.45, 1.4, 0.45, bmat, -bW/2 - 0.35, bY + 0.2, 0);
+      
+      // Textured Cannons mounted to arms
+      addCyl('shL', 0.5, 2.2, M.rustWall,  bW/2 + 0.4, bY + bH/2 + 0.1, 0.4, Math.PI/2);
+      addCyl('shR', 0.5, 2.2, M.rustWall, -bW/2 - 0.4, bY + bH/2 + 0.1, 0.4, Math.PI/2);
+      
+      // Scary Horns/Spikes instead of a flat crown
+      for (let i = -1; i <= 1; i += 2) {
+          addCyl('horn' + i, 0.15, 0.9, M.ledRed, i * 0.4, hY + hH/2 + 0.3, -0.1, -Math.PI/5);
+      }
+    }
+    
     addBox('body', bW, bH, bD, bmat, 0, bY, 0);
     addBox('pan', bW*.55, bH*.38, .06, bmat, 0, bY, bW*.28);
     addSphere('glow', .08, led, 0, bY+.05, bW*.31);
     for (const s of [-1, 1]) { addBox('leg'+s, lW, lH, lW*1.2, bmat, s*(bW/2-.12), .22, 0); addBox('ft'+s, fL, fH, fL*1.1, bmat, s*(bW/2-.12), .03, .06); }
-    const hY = bY + bH/2 + hH*.42;
+    
     addBox('hd', hW, hH, hD, bmat, 0, hY, 0);
     addBox('vis', hW*.78, .14, hW*.18, led, 0, hY, hW*.38);
     addBox('aL', aW, aW, aL, bmat,  bW/2+aW/2, bY+bH*.18, -aL*.1);
@@ -270,13 +294,14 @@ export function buildRobot(type) {
   }
 
   const stat = {
-    scout:   { hp:55,  maxHp:55,  spd:5.0, dmg:9,  range:26, rate:.85, pt:'bullet',  pv:26, score:100, mOY:1.0 },
-    heavy:   { hp:200, maxHp:200, spd:2.3, dmg:28, range:24, rate:2.4, pt:'heavy',   pv:55, score:260, mOY:1.35 },
-    sniper:  { hp:38,  maxHp:38,  spd:2.8, dmg:32, range:48, rate:2.8, pt:'sniper',  pv:40, score:210, mOY:1.0 },
-    drone:   { hp:48,  maxHp:48,  spd:6.0, dmg:7,  range:22, rate:.48, pt:'plasma',  pv:24, score:155, mOY:0.5 },
-    pistol:  { hp:30,  maxHp:30,  spd:4.2, dmg:7,  range:22, rate:.65, pt:'bullet',  pv:22, score:70,  mOY:1.0 },
+    scout:   { hp:55,  maxHp:55,  spd:5.5, dmg:4,  range:26, rate:0.55,  pt:'bullet',  pv:26, score:100, mOY:1.0 }, // High RoF, low damage
+    heavy:   { hp:200, maxHp:200, spd:1.2, dmg:12, range:24, rate:0.25, pt:'heavy',   pv:55, score:260, mOY:1.35 },     // Slow move, VERY high RoF
+    sniper:  { hp:38,  maxHp:38,  spd:2.8, dmg:80, range:48, rate:3.5,  pt:'sniper',  pv:40, score:210, mOY:1.0 },     // Massive damage, slow RoF
+    drone:   { hp:48,  maxHp:48,  spd:6.0, dmg:7,  range:22, rate:0.6,  pt:'plasma',  pv:24, score:155, mOY:0.5 }, // Balanced
+    pistol:  { hp:30,  maxHp:30,  spd:4.2, dmg:7,  range:22, rate:0.65, pt:'bullet',  pv:22, score:70,  mOY:1.0 }, // Balanced
     shotgun: { hp:80,  maxHp:80,  spd:2.7, dmg:18, range:18, rate:1.1, pt:'shotgun', pv:18, score:140, mOY:1.0 },
     rocket:  { hp:120, maxHp:120, spd:2.0, dmg:40, range:28, rate:2.2, pt:'rocket',  pv:14, score:200, mOY:1.1 },
+    giantbot:  { hp: 1500, maxHp: 1500, spd: 1.8, dmg: 45, range: 40, rate: 1.5, pt: 'rocket', pv: 20, score: 5000, mOY: 2.5, railgunImmune: true },
   }[type] || {};
 
   return {
@@ -296,33 +321,43 @@ export function buildRobot(type) {
   };
 }
 
-// ── Curated walkable spawn positions ─────────────────────────
+// ── Curated walkable spawn positions (Expanded for 5 Tiers & Kept away from walls) ───────
 const WALKABLE_SPAWNS = [
-  [-19,0,-12],[-24,0,-20],[-14,0,-20],[-19,0,-28],[-26,0,-8],
-  [18,0,4],[18,0,16],[24,0,10],[12,0,10],[18,0,22],
-  [-11,0,-4],[0,0,16],[4,0,12],[-4,0,18],[0,0,20],
-  [-5,0,-4],[5,0,-4],[-5,0,6],[5,0,6],
-  [37,0,-10],[34,0,-18],[40,0,-6],[37,0,2],
-  [-38,0,25],[-34,0,18],[-42,0,28],[-38,0,32],
-  [0,0,-40],[-6,0,-36],[6,0,-36],[0,0,-46],
-  [0,0,46],[-6,0,42],[6,0,42],[0,0,52],
-  [-10,0,-26],[26,0,-8],[20,0,-28],[-20,0,8],
-  [30,0,-36],[-30,0,36],[0,0,-14],
-  [-9,-1.5,0],[0,-1.5,0],[8,-1.5,0],
-  [-20,3,-28],[-27,3,-4],[26,3,10],
-  [-25,7,-44],[14,7,44],
+  // TIER 1: Main Floor (y = 0)
+  [-30, 0,  30], [ 30, 0,  30], [-30, 0, -30], [ 30, 0, -30], // Far corners
+  [-20, 0,   0], [ 20, 0,   0], [  0, 0,  20], [  0, 0, -20], // Mid-points
+
+  // TIER 2: Mezzanine (y = 6)
+  [-34, 6,  34], [ 34, 6,  34], [-34, 6, -34], [ 34, 6, -34], 
+
+  // TIER 3: Sniper Decks (y = 12)
+  [  0, 12,  38], [-20, 12,  38], [ 20, 12,  38], // North Deck
+  [  0, 12, -38], [-20, 12, -38], [ 20, 12, -38], // South Deck
+
+  // TIER 4: Sky Bridge (y = 18)
+  [ 0, 18,  16], [ 0, 18, -16],
+
+  // TIER 5: The Summit (y = 24)
+  [ 0, 24,   0]
 ];
 const MIN_SPAWN_DIST = 16;
 
-export function spawnBot(type, _x, spawnY, _z, scale = 1.0) {
-  const candidates = WALKABLE_SPAWNS.filter(p => Math.abs(p[1] - spawnY) < 1.5);
-  const shuffled   = candidates.sort(() => Math.random() - 0.5);
-  let px = _x, pz = _z;
+export function spawnBot(type, _x, _spawnY_IGNORED, _z, scale = 1.0) {
+  // Completely ignore spawnY so bots scatter across all vertical levels!
+  let validSpawns = WALKABLE_SPAWNS;
+  if (type === 'giantbot') {
+      validSpawns = WALKABLE_SPAWNS.filter(sp => sp[1] === 0);
+  }
+  const shuffled = validSpawns.slice().sort(() => Math.random() - 0.5);
+  let px = _x, pz = _z, py = 0;
+  
   for (const [cx, cy, cz] of shuffled) {
     const dx = cx - camera.position.x, dz = cz - camera.position.z;
+    // Ensure they don't spawn right on top of the player
     if (dx * dx + dz * dz >= MIN_SPAWN_DIST * MIN_SPAWN_DIST) {
-      px = cx + (Math.random() - 0.5) * 1.4;
-      pz = cz + (Math.random() - 0.5) * 1.4;
+      px = cx + (Math.random() - 0.5) * 2.0; // Add slight random scatter
+      py = cy;
+      pz = cz + (Math.random() - 0.5) * 2.0;
       break;
     }
   }
@@ -330,9 +365,14 @@ export function spawnBot(type, _x, spawnY, _z, scale = 1.0) {
   e.hp = Math.round(e.hp * scale); e.maxHp = Math.round(e.maxHp * scale);
   e.dmg = Math.round(e.dmg * scale);
   e.speed = e.speed * (0.85 + 0.15 * Math.min(scale, 2.0));
-  e.group.position.set(px, spawnY + (e.flyH > 0 ? e.flyH : 0), pz);
-  if (_angryMode) { e.dmg = Math.round(e.dmg * 1.6); e.speed *= 1.5; e.score *= 2; _addRedArrow(e); }
-  if (_roundInit) _roundEnemies++;   // keep denominator accurate for mid-round spawns
+  if (type === 'giantbot') {
+      e.group.scaling.set(3, 3, 3); // Make him 3x bigger
+  }
+  
+  // Set the true vertical height
+  e.group.position.set(px, py + (e.flyH > 0 ? e.flyH : 0), pz);
+  
+  if (isAngryMode()) { e.dmg = Math.round(e.dmg * 1.6); e.speed *= 1.5; e.score *= 2; _addRedArrow(e); }
   enemies.push(e);
   rebuildMeshMap();
 }
@@ -352,22 +392,66 @@ export function hitRobot(e, dmg) {
 export function destroyRobot(e) {
   e.alive = false;
   if (e._arrowNode) { e._arrowNode.getChildMeshes().forEach(m => m.dispose()); e._arrowNode.dispose(); }
-  const pos = e.group.position.clone().add(new BABYLON.Vector3(0, 1, 0));
+  
+  // ── 1. RAYCAST: Find the floor beneath the dying bot ────────
+  const ray = new BABYLON.Ray(e.group.position, new BABYLON.Vector3(0, -1, 0), 100);
+  const hit = scene.pickWithRay(ray, (m) => m.checkCollisions);
+  
+  // Create our loot drop position
+  const pos = e.group.position.clone();
+  if (hit && hit.pickedPoint) {
+      pos.y = hit.pickedPoint.y + 0.5; // Snap the loot to the floor we just hit!
+  } else {
+      pos.y += 1.0; // Fallback if no floor was found
+  }
+  // ────────────────────────────────────────────────────────────
+
   spawnSparks(pos, 0xff8844, 16);
   sfx.robotDie();
   e.group.getChildMeshes().forEach(m => m.dispose());
   e.group.dispose();
   rebuildMeshMap();
-  player.score += e.score;
+
+  // ── 2. APPLY DOUBLE SCORE BUFF ──────────────────────────────
+  let pointsToAward = e.score;
+  if (player.buffs && player.buffs['double_score'] > 0) {
+      pointsToAward *= 2; 
+  }
+  player.score += pointsToAward;
+  // ────────────────────────────────────────────────────────────
+
   _totalKills++;
   _roundKills++;
+  
   const names = { scout:'Scout destroyed!',heavy:'Heavy down!',sniper:'Sniper eliminated!',drone:'Drone shot down!',pistol:'Pistol bot down!',shotgun:'Shotgunner destroyed!',rocket:'Rocket bot destroyed!' };
   const feed = document.getElementById('killFeed');
-  if (feed) { feed.textContent = (names[e.type] || 'Robot destroyed!') + (_angryMode ? ' [ENRAGED]' : ''); clearTimeout(feed._t); feed._t = setTimeout(() => feed.textContent = '', 2200); }
-  import('./pickups.js').then(({ spawnPickup, spawnWeaponDrop }) => {
-    if (Math.random() < .45) spawnPickup(pos);
-    const dropWep = ROBOT_DROPS[e.type];
-    if (dropWep) spawnWeaponDrop(pos, dropWep);
+  if (feed) { 
+      feed.textContent = (names[e.type] || 'Robot destroyed!') + (_angryMode ? ' [ENRAGED]' : ''); 
+      clearTimeout(feed._t); 
+      feed._t = setTimeout(() => feed.textContent = '', 2200); 
+  }
+
+  import('./pickups.js').then(({ spawnPickup, spawnWeaponDrop, spawnPowerup }) => {
+   // --- EPIC BOSS LOOT EXPLOSION ---
+    if (e.type === 'giantbot') {
+      spawnPowerup(pos.add(new BABYLON.Vector3( 1.5, 0, 0)), 'quad_damage');
+      spawnPowerup(pos.add(new BABYLON.Vector3(-1.5, 0, 0)), 'infinite_ammo');
+      spawnPickup(pos.add(new BABYLON.Vector3(0, 0,  1.5)));
+      spawnPickup(pos.add(new BABYLON.Vector3(0, 0, -1.5)));
+      spawnWeaponDrop(pos, 'ROCKET');
+    } else {
+      // --- NORMAL BOT LOOT ---
+      if (Math.random() < 1.0) { // Changed from 0.1 to test
+        // ── 3. ADD DOUBLE SCORE TO THE DROP POOL ──────────────
+        const pTypes = ['quad_damage', 'infinite_ammo', 'haste', 'double_score'];
+        const pt = pTypes[Math.floor(Math.random() * pTypes.length)];
+        spawnPowerup(pos, pt);
+      } else if (Math.random() < .45) {
+        spawnPickup(pos);
+      }
+      const dropWep = ROBOT_DROPS[e.type];
+      if (dropWep) spawnWeaponDrop(pos, dropWep);
+    }
   });
   cb.markHudDirty?.();
 }
@@ -392,86 +476,138 @@ export function updateEnemies(dt) {
     if (!e.alive) continue;
     e.animT += dt;
 
-    if (e.flyH > 0) e.group.position.y = e.flyH + Math.sin(e.animT * 1.9) * .18;
-    else            e.group.position.y = Math.abs(Math.sin(e.animT * 5.8)) * .04;
+    // --- 1. BASE Y & VISUAL BOBBING ---
+    if (e._floorY === undefined) {
+        e._floorY = e.group.position.y - (e.flyH > 0 ? e.flyH : 0);
+    }
+
+    let bob = 0;
+    if (e.flyH > 0) bob = e.flyH + Math.sin(e.animT * 1.9) * .18;
+    else            bob = Math.abs(Math.sin(e.animT * 5.8)) * .04;
 
     _updateArrow(e);
 
-    const dist       = BABYLON.Vector3.Distance(e.group.position, _ePP);
-    const inRange    = dist < e.range;
-    const targetDist = e.type === 'sniper' ? 20 : 2.8;
+    const dist = BABYLON.Vector3.Distance(e.group.position, _ePP);
+    const inRange = dist < e.range;
 
-    // ── Movement ──────────────────────────────────────────────
-    if (dist > targetDist + .5 || dist < targetDist - 1.5) {
-      _eDir.copyFrom(_ePP).subtractInPlace(e.group.position);
-      if (e.flyH === 0) _eDir.y = 0;
-      _eDir.normalize();
-      if (e.type === 'sniper' && dist < targetDist) _eDir.scaleInPlace(-1);
-
-      // Angry mode: always charge at full speed regardless of distance
-      const speedBoost = _angryMode ? 1.0 : (1.0 + Math.min(1.5, Math.max(0, (dist - 8) * 0.07)));
-
-      // Bot separation
-      for (const o of enemies) {
-        if (o === e || !o.alive) continue;
-        _eSep.copyFrom(e.group.position).subtractInPlace(o.group.position);
-        const sl = _eSep.length();
-        if (sl > 0 && sl < 1.8) _eDir.addInPlace(_eSep.normalize().scaleInPlace(0.9));
-      }
-      _eDir.normalize();
-
-      const step   = e.speed * speedBoost * dt;
-      // Scouts use finer steering angles since they get stuck in tight corridors
-      const steerSet = e.type === 'scout' ? _STEER_SCOUT : _STEER;
-      let moved = false;
-      const px0 = e.group.position.x, pz0 = e.group.position.z;
-
-      for (let ai = 0; ai < steerSet.length; ai++) {
-        _eTry.copyFrom(_eDir);
-        if (steerSet[ai] !== 0) _rotY(_eTry, steerSet[ai] + e._stuckAngle);
-        _eTry.y = 0; _eTry.normalize();
-        const sx = _eTry.x * step, sz = _eTry.z * step;
-        if (!_wallInDir(e.group.position.x + sx, 0, e.group.position.z + sz, _eTry, 0.65)) {
-          e.group.position.x += sx; e.group.position.z += sz; moved = true; break;
+    // --- 2. BOSS SPECIAL ABILITIES ---
+    if (e.type === 'giantbot') {
+        e.slamTimer = (e.slamTimer || 0) - dt;
+        if (dist < 6.0 && e.slamTimer <= 0) {
+            e.slamTimer = 4.0; 
+            e._yAnimOffset = 2.5; // Visual Jump
+            e.group.scaling.set(2.5, 4.0, 2.5); 
+            setTimeout(() => {
+                if (e && e.alive) {
+                    e._yAnimOffset = 0;
+                    e.group.scaling.set(3, 3, 3); 
+                    import('./projectiles.js').then(({ boom }) => {
+                        boom(e.group.position.clone(), 10, 50, false); 
+                    });
+                }
+            }, 300);
         }
-        const dirX = new BABYLON.Vector3(_eTry.x, 0, 0).normalize();
-        if (Math.abs(_eTry.x) > 0.1 && !_wallInDir(e.group.position.x + sx, 0, e.group.position.z, dirX, 0.65)) {
-          e.group.position.x += sx; moved = true; break;
-        }
-        const dirZ = new BABYLON.Vector3(0, 0, _eTry.z).normalize();
-        if (Math.abs(_eTry.z) > 0.1 && !_wallInDir(e.group.position.x, 0, e.group.position.z + sz, dirZ, 0.65)) {
-          e.group.position.z += sz; moved = true; break;
-        }
-      }
-
-      // Stuck detection – if we haven't moved in 0.6s, pick a new random escape angle
-      if (!moved) {
-        e._stuckTimer += dt;
-        if (e._stuckTimer > 0.6) {
-          e._stuckAngle = (Math.random() - 0.5) * Math.PI;   // random ±90°
-          e._stuckTimer = 0;
-        }
-      } else {
-        e._stuckTimer = Math.max(0, e._stuckTimer - dt * 2);
-        if (e._stuckTimer === 0) e._stuckAngle = 0;
-      }
     }
 
+    // --- 3. MOVEMENT LOGIC (DRONE VS GROUND) ---
+    if (e.type === 'drone') {
+        // DRONE: Direct flight toward player's head level
+        const targetY = camera.position.y + 0.5;
+        e._floorY += (targetY - e._floorY) * dt * 2.0;
+
+        if (dist > 6.0) {
+            _eDir.copyFrom(_ePP).subtractInPlace(e.group.position);
+            _eDir.y = 0; 
+            _eDir.normalize();
+            e.group.position.addInPlace(_eDir.scale(e.speed * dt));
+        }
+    } 
+    else {
+        // GROUND BOTS: NavMesh Pathfinding
+        const targetDist = e.type === 'sniper' ? 20 : 1.8; 
+        const shouldMove = _angryMode || (dist > targetDist + .5 || dist < targetDist - 1.5);
+
+        if (shouldMove) {
+            const botFeet = new BABYLON.Vector3(e.group.position.x, e._floorY + 0.5, e.group.position.z);
+            const playerFeet = new BABYLON.Vector3(_ePP.x, _ePP.y - 0.72, _ePP.z); 
+
+            const startPt = navPlugin.getClosestPoint(botFeet);
+            let endPt = navPlugin.getClosestPoint(playerFeet);
+
+            if (startPt && endPt) {
+                const path = navPlugin.computePath(startPt, endPt);
+                if (path && path.length > 1) {
+                    _eDir.copyFrom(path[1]).subtractInPlace(startPt);
+                    _eDir.y = 0;
+                    _eDir.normalize();
+
+                    // Apply separation from other bots
+                    for (const o of enemies) {
+                        if (o === e || !o.alive) continue;
+                        _eSep.copyFrom(e.group.position).subtractInPlace(o.group.position);
+                        if (_eSep.length() < 1.5) _eDir.addInPlace(_eSep.normalize().scale(0.5));
+                    }
+
+                    e.group.position.addInPlace(_eDir.normalize().scale(e.Speed * dt));
+
+                    // ── FIX: Start the snap query 1.5 units ABOVE the bot ──
+                    const safeQueryPos = new BABYLON.Vector3(e.group.position.x, e.group.position.y + 1.5, e.group.position.z);
+                    const snapped = navPlugin.getClosestPoint(safeQueryPos);
+
+                    // Add a 0.05 unit buffer so their feet don't z-fight with the floor
+                    if (snapped) e._floorY = snapped.y + 0.05;     
+                }
+            }
+        }
+    }
+
+    // --- 4. APPLY FINAL TRANSFORM ---
+    e.group.position.y = e._floorY + bob + (e._yAnimOffset || 0);
     _eLookAt.set(_ePP.x, e.group.position.y, _ePP.z);
     e.group.lookAt(_eLookAt);
 
-    // ── Attack (LOS required) ─────────────────────────────────
+    // --- 5. ATTACK ---
     if (inRange) {
       e.atkTimer -= dt;
       if (e.atkTimer <= 0) {
         e.atkTimer = e.rate;
         _eMuzzle.set(e.group.position.x, e.group.position.y + e.muzzleOffY, e.group.position.z);
         const playerEye = _ePP.clone(); playerEye.y += 1.2;
+        
         if (_hasLOS(_eMuzzle, playerEye)) {
           const dir = playerEye.subtract(_eMuzzle).normalize();
-          const sp  = { scout:.065, heavy:.10, sniper:.012, drone:.07 }[e.type] || .07;
-          dir.x += (Math.random()-.5)*sp; dir.y += (Math.random()-.5)*sp; dir.normalize();
-          fireEnemyShot(e, dir, e.dmg, e.projV, e.projT);
+          if (e.type === 'giantbot') {
+              const weps = ['rocket', 'plasma', 'heavy'];
+              const wepIdx = Math.floor(Date.now() / 3500) % 3;
+              const pt = weps[wepIdx];
+              
+              const bossDmg = pt === 'rocket' ? 45 : (pt === 'plasma' ? 20 : 12);
+              const bossSpd = pt === 'rocket' ? 16 : (pt === 'plasma' ? 40 : 55);
+              
+              if (pt === 'rocket') {
+                  // ── DOUBLE SHOULDER ROCKETS ──
+                  const originalPos = e.group.position.clone();
+                  
+                  // Calculate the "Right" vector relative to where the boss is looking
+                  const rightVec = BABYLON.Vector3.Cross(new BABYLON.Vector3(0, 1, 0), dir).normalize();
+                  const shoulderWidth = 1.5; // Distance from center to shoulder
+                  
+                  // Move to Left Shoulder & Fire
+                  e.group.position.addInPlace(rightVec.scale(-shoulderWidth));
+                  fireEnemyShot(e, dir, bossDmg, bossSpd, pt);
+                  
+                  // Move to Right Shoulder & Fire
+                  e.group.position.copyFrom(originalPos).addInPlace(rightVec.scale(shoulderWidth));
+                  fireEnemyShot(e, dir, bossDmg, bossSpd, pt);
+                  
+                  // Snap back to center instantly (the player never sees the shift)
+                  e.group.position.copyFrom(originalPos);
+                  
+              } else {
+                  // Standard center-fire for Plasma and Heavy machine gun
+                  fireEnemyShot(e, dir, bossDmg, bossSpd, pt);
+              }
+          }
         }
       }
     }

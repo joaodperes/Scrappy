@@ -41,11 +41,12 @@ export let mouseHeld = false;
 
 let noAmmoTimer  = 0;
 let _hudDirty    = false;
+let _xVel        = 0;  // <-- Added horizontal velocity!
 let _yVel        = 0;
+let _zVel        = 0;  // <-- Added horizontal velocity!
 let _jumpBufTimer = 0;
 let _coyoteTimer  = 0;
 let _wasOnGround  = false;
-
 // Auto-unstuck: if player holds movement but barely moves for 1.5 s, nudge up
 let _stuckTimer   = 0;
 let _lastStuckPos = new BABYLON.Vector3();
@@ -83,24 +84,37 @@ export function hurtPlayer(rawDmg) {
 function shoot() {
   if (wepCooldown > 0) return;
   const W = WDEFS[curWep];
-  if (W.ammo !== Infinity && W.ammo < W.aps) {
+  
+  // Check Infinite Ammo Buff
+  const hasInfiniteAmmo = player.buffs['infinite_ammo'] > 0;
+  
+  if (W.ammo !== Infinity && W.ammo < W.aps && !hasInfiniteAmmo) {
     sfx.noAmmo();
     const na = document.getElementById('noAmmo');
     if (na) { na.classList.add('show'); noAmmoTimer = 1.2; }
     return;
   }
-  setWepCooldown(W.cd); setSwingT(1);
-  if (W.ammo !== Infinity) W.ammo -= W.aps;
+  
+  // Haste Buff modifies cooldown
+  const cdMult = player.buffs['haste'] > 0 ? 0.5 : 1.0; 
+  setWepCooldown(W.cd * cdMult); 
+  setSwingT(1);
+  
+  if (W.ammo !== Infinity && !hasInfiniteAmmo) W.ammo -= W.aps;
   refreshSlotHUD();
+  
+  // Quad Damage Buff modifies damage
+  const dmgMult = player.buffs['quad_damage'] > 0 ? 4 : 1;
+  const modDmg = W.dmg * dmgMult;
+  
   switch (curWep) {
-    case 'PISTOL':   sfx.pistol();   hitscan(_meshToEnemy, W.spread, W.dmg,  W.range); break;
-    case 'SMG':      sfx.smg();      hitscan(_meshToEnemy, W.spread, W.dmg,  W.range); break;
-    case 'CHAINGUN': sfx.chaingun(); hitscan(_meshToEnemy, W.spread, W.dmg,  W.range); break;
-    // Railgun fires 9999 dmg; hitRobot() caps it for bosses so they take ~2 shots
-    case 'RAILGUN':  sfx.railgun();  hitscan(_meshToEnemy, W.spread, 9999,   W.range); break;
-    case 'SHOTGUN':  sfx.shotgun();  for (let i = 0; i < W.pellets; i++) hitscan(_meshToEnemy, W.spread, W.dmg, W.range); break;
-    case 'PLASMA':   sfx.plasma();   firePlasma(); break;
-    case 'ROCKET':   sfx.rocket();   fireRocket(); break;
+    case 'PISTOL':   sfx.pistol();   hitscan(_meshToEnemy, W.spread, modDmg,  W.range); break;
+    case 'SMG':      sfx.smg();      hitscan(_meshToEnemy, W.spread, modDmg,  W.range); break;
+    case 'CHAINGUN': sfx.chaingun(); hitscan(_meshToEnemy, W.spread, modDmg,  W.range); break;
+    case 'RAILGUN':  sfx.railgun();  hitscan(_meshToEnemy, W.spread, 9999,    W.range); break; 
+    case 'SHOTGUN':  sfx.shotgun();  for (let i = 0; i < W.pellets; i++) hitscan(_meshToEnemy, W.spread, modDmg, W.range); break;
+    case 'PLASMA':   sfx.plasma();   firePlasma(); break; // Needs custom logic in projectiles.js if you want plasma damage buffed
+    case 'ROCKET':   sfx.rocket();   fireRocket(); break; // Needs custom logic in projectiles.js if you want rocket damage buffed
   }
 }
 export { shoot };
@@ -156,6 +170,7 @@ export function resetPlayer(x, y, z) {
 }
 
 export function updatePlayer(dt, gameRunning, paused) {
+  for (const key in player.buffs) { if (player.buffs[key] > 0) { player.buffs[key] -= dt; if (player.buffs[key] <= 0) { delete player.buffs[key]; _hudDirty = true; } } }
   if (!gameRunning || paused) return;
 
   if (wepCooldown  > 0) setWepCooldown(wepCooldown - dt);
@@ -194,11 +209,19 @@ export function updatePlayer(dt, gameRunning, paused) {
 
   // Jump pads
   if (player.onGround) {
-    const px = _playerBody.position.x, pz = _playerBody.position.z;
+    const px = _playerBody.position.x, py = _playerBody.position.y, pz = _playerBody.position.z;
     for (const pad of jumpPads) {
+      // Add a height check so you don't trigger pads from the floor below!
+      if (Math.abs(py - pad.pos.y) > 2.0) continue; 
+      
       const dx = px - pad.pos.x, dz = pz - pad.pos.z;
-      if (dx * dx + dz * dz < 0.85 * 0.85) {
-        _yVel = pad.force; player.onGround = false; _coyoteTimer = 0; break;
+      if (dx * dx + dz * dz < 1.0 * 1.0) { // Slightly larger radius
+        _yVel = pad.force * 0.8; // Vertical push
+        _xVel = pad.thrustX;     // Horizontal directional push
+        _zVel = pad.thrustZ;     // Horizontal directional push
+        player.onGround = false; 
+        _coyoteTimer = 0; 
+        break;
       }
     }
   }
@@ -209,8 +232,13 @@ export function updatePlayer(dt, gameRunning, paused) {
     if (_yVel < -TERM_VEL) _yVel = -TERM_VEL;
   }
 
-  // Apply via Babylon collision
-  const dispX = _move.x * dt, dispY = _yVel * dt, dispZ = _move.z * dt;
+  // Apply friction to external horizontal momentum
+  const friction = player.onGround ? 8.0 : 2.5; 
+  _xVel -= _xVel * friction * dt;
+  _zVel -= _zVel * friction * dt;
+
+  // Apply via Babylon collision (combines movement + knockback)
+  const dispX = (_move.x + _xVel) * dt, dispY = _yVel * dt, dispZ = (_move.z + _zVel) * dt;
   const preY  = _playerBody.position.y;
   _playerBody.moveWithCollisions(new BABYLON.Vector3(dispX, dispY, dispZ));
 
@@ -261,22 +289,31 @@ export function updatePlayer(dt, gameRunning, paused) {
   if (_hudDirty) { cb.markHudDirty?.(); _hudDirty = false; }
 }
 
+export let isScoped = false;
 // ── Input wiring (called ONCE from main.js) ───────────────────
 export function setupInput(getGameRunning, getPaused, onTogglePause, onPickupWeapon) {
   const cnv = document.getElementById('c');
 
-  // Railgun scope – canvas capture phase so Babylon's own pointerdown
-  // preventDefault() on the canvas can't suppress these in Firefox.
-  let isScoped = false;
   function setScope(enable) {
-    if (enable && curWep === 'RAILGUN') { camera.fov = SCOPE_FOV;   isScoped = true;  }
-    else                                { camera.fov = DEFAULT_FOV; isScoped = false; }
+    const overlay = document.getElementById('scopeOverlay');
+    isScoped = enable; // <--- Update the exported variable
+    
+    if (enable) {
+        // Railgun gets massive zoom, everything else gets a slight 15% zoom
+        camera.fov = curWep === 'RAILGUN' ? SCOPE_FOV : DEFAULT_FOV * 0.85;   
+        if (curWep === 'RAILGUN' && overlay) overlay.style.display = 'block';
+    } else { 
+        camera.fov = DEFAULT_FOV; 
+        if(overlay) overlay.style.display = 'none';
+    }
   }
-  cnv.addEventListener('mousedown',  e => { if (e.button === 2) setScope(true);  }, true);
-  cnv.addEventListener('mouseup',    e => { if (e.button === 2) setScope(false); }, true);
-  cnv.addEventListener('pointerup',  e => { if (e.button === 2) setScope(false); }, true);
-  document.addEventListener('mouseup', e => { if (e.button === 2) setScope(false); }); // safety fallback
-  scene.onBeforeRenderObservable.add(() => { if (isScoped && curWep !== 'RAILGUN') setScope(false); });
+  cnv.addEventListener('pointerdown', e => { if (e.button === 2) setScope(true);  }, true);
+  cnv.addEventListener('mousedown',   e => { if (e.button === 2) setScope(true);  }, true);
+  cnv.addEventListener('pointerup',   e => { if (e.button === 2) setScope(false); }, true);
+  cnv.addEventListener('mouseup',     e => { if (e.button === 2) setScope(false); }, true);
+  document.addEventListener('mouseup',   e => { if (e.button === 2) setScope(false); });
+  document.addEventListener('pointerup', e => { if (e.button === 2) setScope(false); });
+  //scene.onBeforeRenderObservable.add(() => { if (isScoped && curWep !== 'RAILGUN') setScope(false); }); // Other weapons can also scope
 
   // ── Fire handler ──────────────────────────────────────────
   // Root-cause of "clicking does nothing":
@@ -322,14 +359,31 @@ export function setupInput(getGameRunning, getPaused, onTogglePause, onPickupWea
   document.addEventListener('keydown', e => {
     keys[e.code] = true;
     if (e.code === 'Space') {
-      e.preventDefault(); // stop browser activating focused buttons (restart/start UI)
+      e.preventDefault(); 
       _jumpBufTimer = JUMP_BUFFER;
     }
+
     if (!getGameRunning()) return;
+
+    // Slot selection
     if (e.code === 'Digit1') setActiveSlot(0);
     if (e.code === 'Digit2') setActiveSlot(1);
-    if (e.code === 'KeyQ')  { const other = 1 - activeSlot; if (inventory[other]) setActiveSlot(other); }
-    if (e.code === 'KeyF')  onPickupWeapon();
+    if (e.code === 'Digit3') setActiveSlot(2); // <--- Access the Pistol
+
+    // Improved Quick Swap (Q)
+    if (e.code === 'KeyQ') {
+      // Swaps between slot 1 and 2 if you have a primary weapon, 
+      // otherwise toggles between whatever you have and the pistol.
+      let other = activeSlot === 0 ? 1 : 0;
+      if (activeSlot === 2) other = 0; // If on pistol, go to primary
+      if (inventory[other] || other === 2) {
+          setActiveSlot(other);
+      } else {
+          setActiveSlot(2); // Fallback to pistol
+      }
+    }
+
+    if (e.code === 'KeyF')   onPickupWeapon();
     if (e.code === 'Escape') onTogglePause();
   });
   document.addEventListener('keyup', e => { keys[e.code] = false; });
@@ -378,4 +432,25 @@ export function setupInput(getGameRunning, getPaused, onTogglePause, onPickupWea
   document.addEventListener('pointerlockchange',       syncLock);
   document.addEventListener('mozpointerlockchange',    syncLock);
   document.addEventListener('webkitpointerlockchange', syncLock);
+}
+
+export function applyExplosionImpulse(explosionPos, maxRadius, force) {
+  const dist = BABYLON.Vector3.Distance(camera.position, explosionPos);
+  
+  if (dist < maxRadius) {
+    const power = (1 - dist / maxRadius) * force;
+    
+    // Calculate direction FROM the explosion TO the player
+    const dir = camera.position.subtract(explosionPos).normalize();
+    
+    // Rocket jump logic: massive bonus vertical power if already jumping
+    const jumpBonus = (!player.onGround && _yVel > 0) ? 1.8 : 1.0; 
+    
+    // Apply directional pushes (Multiply X/Z to make horizontal knockback feel impactful)
+    _xVel += dir.x * power * 2.5; 
+    _zVel += dir.z * power * 2.5;
+    
+    // Apply vertical push (always add a little baseline upward pop)
+    _yVel += (dir.y * power * jumpBonus) + (power * 0.4); 
+  }
 }

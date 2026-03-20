@@ -14,6 +14,7 @@ export const player = {
   armor: 0, maxArmor: 100,
   score: 0,
   onGround: false, yVel: 0,
+  buffs: {}
 };
 
 // Cross-module callbacks registered after module init to avoid circular deps

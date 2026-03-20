@@ -5,14 +5,43 @@ import { M } from './textures.js';
 import { pickups, weaponDrops, player, cb } from './gameState.js';
 import { WDEFS, WCOLORS, inventory, activeSlot, makeScaledWeaponModel, setWeapon, refreshSlotHUD, setActiveSlot } from './weapons.js';
 import { sfx } from './audio.js';
+import { TIER_5 } from './level.js';
 
 const SECRET_KIT_RESPAWN_SEC = 300;
-// Secret pickups live on the Command Deck (y=7), the highest platform on the map.
-// Reach it via the Vent Shaft ramp (Smelter Hall, north wall) or jump pad.
 const SECRET_KITS = [
-  { tag: 'secret_health', type: 'health', pos: { x: 10.0, y: 7.45, z: 44.0 } },
-  { tag: 'secret_armor',  type: 'armor',  pos: { x: 18.0, y: 7.45, z: 44.0 } },
+  // Moved to Tier 5 Summit (y: 24.45)
+  { tag: 'secret_health', type: 'health', pos: { x: 0, y: TIER_5 + 0.45, z: 28 } },
+  { tag: 'secret_armor',  type: 'armor',  pos: { x: 0, y: TIER_5 + 0.45, z: 28 } },
 ];
+
+export function initSecretKits() {
+  SECRET_KITS.forEach(kit => {
+    const mesh = BABYLON.MeshBuilder.CreatePlane('kit', { size: 2 }, scene);
+    const mat = new BABYLON.StandardMaterial('kitMat', scene);
+    
+    // ── Fallback colors (Blue for Health, Green for Armor) ──
+    mat.diffuseColor = kit.type === 'health' ? new BABYLON.Color3(0.2, 0.5, 1) : new BABYLON.Color3(0.2, 1, 0.2); 
+    
+    const tex = new BABYLON.Texture(`assets/textures/lq/${kit.type}.png`, scene);
+    tex.hasAlpha = true; // Ensure PNG transparency works
+    mat.diffuseTexture = tex;
+    mesh.material = mat;
+
+    mesh.position.set(kit.pos.x, kit.pos.y, kit.pos.z);
+    mesh.billboardMode = BABYLON.Mesh.BILLBOARDMODE_ALL;
+
+    const ring = BABYLON.MeshBuilder.CreateTorus('kitRing', { diameter: 2.2, thickness: 0.1, tessellation: 24 }, scene);
+    ring.position.copyFrom(mesh.position);
+    ring.position.y -= 0.8; // Move ring down to floor level
+    ring.material = kit.type === 'health' ? M.ledBlue : M.ledGreen;
+    ring.isPickable = false;
+
+    pickups.push({
+      mesh, ring, type: kit.type, baseY: mesh.position.y,
+      respawnTimer: SECRET_KIT_RESPAWN_SEC, expires: false, bob: Math.random() * 5
+    });
+  });
+}
 
 function _makePickupLight(pos, col3) {
   const l = new BABYLON.PointLight('pkLight', pos.clone(), scene);
@@ -27,11 +56,29 @@ export function spawnPickup(pos) {
 }
 
 export function spawnTypedPickup(pos, type, options = {}) {
-  const mat  = type==='health' ? M.healthMat : type==='armor' ? M.armorMat : M.ammoMat;
   const col3 = type==='health' ? new BABYLON.Color3(1,.13,.2)
-               : type==='armor'  ? new BABYLON.Color3(.13,.27,.93)
-               :                   new BABYLON.Color3(.8,.73,0);
-  const mesh = BABYLON.MeshBuilder.CreateSphere('pk', { diameter:.5, segments:8 }, scene);
+             : type==='armor'  ? new BABYLON.Color3(.13,.27,.93)
+             :                   new BABYLON.Color3(.8,.73,0);
+             
+  // Create a flat plane instead of a sphere
+  const mesh = BABYLON.MeshBuilder.CreatePlane('pk', { size: 0.8 }, scene);
+  
+  // Create material with your specific 2D image
+  const mat = new BABYLON.StandardMaterial('pkMat_' + type, scene);
+  mat.diffuseTexture = new BABYLON.Texture(`assets/textures/lq/${type}.png`, scene);
+  mat.diffuseTexture.hasAlpha = true; // Respects transparent backgrounds
+  mat.useAlphaFromDiffuseTexture = true;
+  mat.emissiveColor = new BABYLON.Color3(0.5, 0.5, 0.5); // Keep it visible in dark areas
+  mat.disableLighting = true; 
+  
+  mesh.material = mat;
+  mesh.position.set(pos.x, pos.y ?? 0.6, pos.z);
+  mesh.isPickable = false;
+  
+  // BILLBOARD MODE: Always face the camera
+  mesh.billboardMode = BABYLON.Mesh.BILLBOARDMODE_ALL;
+
+  // ... keep the rest of your ring/light/entry creation code exactly the same ...
   const baseY = pos.y ?? .45;
   mesh.position.set(pos.x, baseY, pos.z); mesh.material = mat; mesh.isPickable = false;
   const rmat = new BABYLON.StandardMaterial('pkRing', scene);
@@ -55,60 +102,84 @@ export function spawnTypedPickup(pos, type, options = {}) {
   return entry;
 }
 
-function ensureSecretKits() {
-  for (const k of SECRET_KITS) {
-    const exists = pickups.some(p => p.tag === k.tag);
-    if (!exists) {
-      spawnTypedPickup(k.pos, k.type, {
-        tag: k.tag,
-        respawnSec: SECRET_KIT_RESPAWN_SEC,
-        persistent: true,
-      });
-    }
-  }
-}
-
 export function updatePickups(dt) {
-  ensureSecretKits();
-  for (let i = pickups.length-1; i >= 0; i--) {
-    const p = pickups[i]; p.bob += dt*2.2;
-    if (p.respawnTimer > 0) {
-      p.respawnTimer = Math.max(0, p.respawnTimer - dt);
-      if (p.respawnTimer === 0) {
-        p.mesh.setEnabled(true);
-        p.ring.setEnabled(true);
-        p.light.setEnabled(true);
-      }
-      continue;
+  const pp = camera.position;
+  
+  for (let i = pickups.length - 1; i >= 0; i--) {
+    const p = pickups[i];
+    if (!p.mesh || p.mesh.isDisposed()) {
+        pickups.splice(i, 1);
+        continue;
     }
 
-    const y = p.baseY + Math.sin(p.bob)*.1;
-    p.mesh.position.y = y; p.ring.position.y = y;
-    p.ring.rotation.y += dt*2.5;
-    if (BABYLON.Vector3.Distance(p.mesh.position, camera.position) < 1.35) {
-      let taken = false;
-      if      (p.type==='health' && player.hp < player.maxHp) { player.hp    = Math.min(player.maxHp,    player.hp+45);    taken=true; }
-      else if (p.type==='armor')                               { player.armor = Math.min(player.maxArmor, player.armor+55); taken=true; }
-      else if (p.type==='ammo') {
-        for (const wn of inventory) {
-          if (!wn || wn==='PISTOL') continue;
-          WDEFS[wn].ammo = Math.min(WDEFS[wn].startAmmo*2, WDEFS[wn].ammo + Math.floor(WDEFS[wn].startAmmo*.4));
+    const dist = BABYLON.Vector3.Distance(p.mesh.position, pp);
+
+    if (dist < 2.5 && p.mesh.isEnabled()) {
+        let picked = false;
+        if (p.type === 'health' && player.hp < player.maxHp) {
+            player.hp = Math.min(player.maxHp, player.hp + 25);
+            picked = true;
+        } else if (p.type === 'armor' && player.armor < player.maxArmor) {
+            player.armor = Math.min(player.maxArmor, player.armor + 25);
+            picked = true;
+        } else if (p.type === 'ammo') {
+            // ── FIX: Actually give ammo to the active weapon ──
+            const activeWep = inventory[activeSlot];
+            if (activeWep && activeWep.ammo !== undefined) {
+                activeWep.ammo += 20; // Adjust amount as needed
+                if (activeWep.ammo > activeWep.maxAmmo) activeWep.ammo = activeWep.maxAmmo;
+                picked = true;
+            }
+        } else if (p.type === 'powerup') {
+          picked = true;} else if (p.type === 'powerup' || p.type === 'ammo') {
+            picked = true;
         }
-        taken = true;
-      }
-      if (taken) {
-        sfx.pickup();
-        if (p.respawnSec > 0) {
-          p.respawnTimer = p.respawnSec;
-          p.mesh.setEnabled(false);
-          p.ring.setEnabled(false);
-          p.light.setEnabled(false);
-        } else {
-          p.mesh.dispose(); p.ring.dispose(); p.light.dispose();
-          pickups.splice(i, 1);
+
+        if (picked) {
+            if (p.collect) p.collect(); // This now calls the cyan flash and cb.markHudDirty()
+            
+            if (p.expires || p.type === 'powerup') {
+                p.mesh.dispose();
+                if(p.ring) p.ring.dispose();
+                pickups.splice(i, 1);
+            } else {
+                p.mesh.setEnabled(false);
+                if(p.ring) p.ring.setEnabled(false);
+                p.respawnTimer = 30.0; 
+            }
+            continue;
         }
-        cb.markHudDirty && cb.markHudDirty();
+    }
+
+    // Flicker for drops
+    if (p.expires) {
+      p.timeDown -= dt;
+      if (p.timeDown < 4.0) {
+          const speed = p.timeDown < 1.5 ? 40 : 20;
+          p.mesh.visibility = Math.sin(Date.now() * 0.001 * speed) > 0 ? 1.0 : 0.2;
       }
+      if (p.timeDown <= 0) {
+        p.mesh.dispose();
+        pickups.splice(i, 1);
+        continue;
+      }
+    }
+
+    // Respawn for secret area kits
+    if (p.respawnTimer > 0) {
+        p.respawnTimer -= dt;
+        if (p.respawnTimer <= 0) {
+            p.mesh.setEnabled(true);
+            if(p.ring) p.ring.setEnabled(true);
+            p.mesh.visibility = 1.0;
+        }
+    }
+
+    // Anim
+    if (p.mesh.isEnabled()) {
+        p.bob = (p.bob || 0) + dt * 3;
+        p.mesh.position.y = p.baseY + Math.sin(p.bob) * 0.2;
+        p.mesh.rotation.y += dt * 2;
     }
   }
 }
@@ -118,20 +189,24 @@ export function spawnWeaponDrop(pos, wName) {
   const c = WCOLORS[wName] || 0xffffff;
   const col3 = new BABYLON.Color3(((c>>16)&0xff)/255, ((c>>8)&0xff)/255, (c&0xff)/255);
   const mesh = makeScaledWeaponModel(wName, 0.85);
-  mesh.position.set(pos.x, .55, pos.z);
+  
+  const startY = pos.y || 0; // Grab the bot's death height!
+  
+  mesh.position.set(pos.x, startY + 0.55, pos.z);
   const rmat = new BABYLON.StandardMaterial('wdRing', scene);
   rmat.emissiveColor = col3; rmat.disableLighting = true;
   const ring = BABYLON.MeshBuilder.CreateTorus('wdRing', { diameter:.7, thickness:.06, tessellation:16 }, scene);
-  ring.position.set(pos.x, .22, pos.z); ring.material = rmat; ring.isPickable = false;
-  const light = _makePickupLight(new BABYLON.Vector3(pos.x, .4, pos.z), col3);
+  ring.position.set(pos.x, startY + 0.22, pos.z); ring.material = rmat; ring.isPickable = false;
+  const light = _makePickupLight(new BABYLON.Vector3(pos.x, startY + 0.4, pos.z), col3);
   light.range = 5.5; light.intensity = 1.4;
-  weaponDrops.push({ mesh, ring, light, wName, bob: Math.random()*Math.PI*2, life: 45 });
+  
+  weaponDrops.push({ mesh, ring, light, wName, bob: Math.random()*Math.PI*2, life: 45, baseY: startY });
 }
 
 let _wPickupHintTimer = 0;
 export function updateWeaponDrops(dt) {
   let nearestDist = 3.5, nearestName = null;
-  for (let i = weaponDrops.length-1; i >= 0; i--) {
+  for (let i = weaponDrops.length - 1; i >= 0; i--) {
     const p = weaponDrops[i];
     p.life -= dt;
     if (p.life <= 0) {
@@ -139,21 +214,38 @@ export function updateWeaponDrops(dt) {
       p.ring.dispose(); p.light.dispose();
       weaponDrops.splice(i, 1); continue;
     }
-    const blink = p.life < 8 && Math.floor(p.life * 4) % 2 === 0;
-    p.mesh.getChildMeshes().forEach(m => m.setEnabled(!blink));
-    p.ring.setEnabled(!blink);
-
-    p.bob += dt*2.0;
-    const y = .55 + Math.sin(p.bob)*.08;
-    p.mesh.position.y = y; p.ring.position.y = y-.33;
-    p.mesh.rotation.y += dt*1.6;
-    p.ring.rotation.y += dt*2.2;
+    
+    // Animation logic
+    p.bob += dt * 2.0;
+    const y = (p.baseY + 0.55) + Math.sin(p.bob) * .08;
+    p.mesh.position.y = y; p.ring.position.y = y - .33;
+    p.mesh.rotation.y += dt * 1.6;
+    
     const dist = BABYLON.Vector3.Distance(p.mesh.position, camera.position);
+
+    // ── Auto-pickup if weapon is already owned ──
+    if (dist < 1.35 && inventory.includes(p.wName)) {
+      const W = WDEFS[p.wName];
+      // Only give ammo to THIS specific weapon
+      W.ammo += W.startAmmo; 
+      
+      sfx.wPickup();
+      refreshSlotHUD();
+      
+      // Remove the drop
+      p.mesh.getChildMeshes().forEach(m => m.dispose()); p.mesh.dispose();
+      p.ring.dispose(); p.light.dispose();
+      weaponDrops.splice(i, 1);
+      continue;
+    }
+
     if (dist < nearestDist) { nearestDist = dist; nearestName = p.wName; }
   }
+
+  // UI Hint logic: Only show [F] if you DON'T own it yet
   const hint = document.getElementById('wPickupHint');
   if (hint) {
-    if (nearestName && nearestDist < 3.0) {
+    if (nearestName && nearestDist < 3.0 && !inventory.includes(nearestName)) {
       hint.textContent = '[F] PICK UP: ' + WDEFS[nearestName].name;
       hint.classList.add('show'); _wPickupHintTimer = .4;
     } else {
@@ -173,30 +265,42 @@ export function tryPickupWeapon(gameRunning, paused) {
   if (!nearest) return;
 
   const wName = nearest.wName;
-  WDEFS[wName].ammo = WDEFS[wName].startAmmo;
+  const W = WDEFS[wName];
 
   // ── Slot assignment rules ────────────────────────────────────────────────
-  // Rule 1: same weapon type already in inventory → refresh ammo in that slot,
-  //         don't change active slot or switch weapon.
   const existingSlot = inventory.findIndex(w => w === wName);
+  
   if (existingSlot !== -1) {
-    // Ammo already refreshed above, nothing else to do.
+    // Rule 1: same weapon type already in inventory → add ammo
+    W.ammo += W.startAmmo;
+    if (W.max) W.ammo = Math.min(W.ammo, W.max);
     refreshSlotHUD();
   } else {
-    // Rule 2: there is an empty slot → fill it; keep the current active weapon.
-    const freeSlot = inventory.findIndex(w => w === null);
+    // Give base ammo for a brand new weapon
+    W.ammo = W.startAmmo;
+    
+    // Rule 2: there is an empty slot (EXCLUDING the reserved slot 3/index 2) → fill it.
+    const freeSlot = inventory.findIndex((w, i) => w === null && i !== 2);
+    
     if (freeSlot !== -1) {
       inventory[freeSlot] = wName;
-      // Only switch to this slot if we currently have nothing equipped
-      if (!inventory[activeSlot]) {
+      if (activeSlot === 2) {
         setActiveSlot(freeSlot);
         setWeapon(wName);
       } else {
         refreshSlotHUD();
       }
     } else {
-      // Rule 3: no empty slot → replace the active slot.
-      inventory[activeSlot] = wName;
+      // Rule 3: no empty slots → replace the active slot.
+      let slotToReplace = activeSlot;
+      
+      // CRITICAL: NEVER replace the permanent pistol in slot 3!
+      if (slotToReplace === 2) {
+        slotToReplace = 0; 
+      }
+      
+      inventory[slotToReplace] = wName;
+      setActiveSlot(slotToReplace);
       setWeapon(wName);
     }
   }
@@ -207,4 +311,44 @@ export function tryPickupWeapon(gameRunning, paused) {
   const idx = weaponDrops.indexOf(nearest);
   if (idx !== -1) weaponDrops.splice(idx, 1);
   refreshSlotHUD();
+}
+
+export function spawnPowerup(pos, type) {
+  const mesh = BABYLON.MeshBuilder.CreatePlane('pwr', { size: 1.2 }, scene);
+  const mat = new BABYLON.StandardMaterial('pwrMat', scene);
+  mat.diffuseTexture = new BABYLON.Texture(`assets/textures/lq/pwr_${type}.png`, scene);
+  mesh.material = mat;
+  mesh.position.copyFrom(pos);
+  mesh.billboardMode = BABYLON.Mesh.BILLBOARDMODE_ALL;
+
+  const ring = BABYLON.MeshBuilder.CreateTorus('pwrRing', {
+    diameter: 1.5,
+    thickness: 0.05,
+    tessellation: 16
+  }, scene);
+  ring.position.copyFrom(pos);
+  ring.material = M.ledGreen; 
+  ring.isPickable = false;
+
+  pickups.push({
+    mesh,
+    ring,
+    type: 'powerup',
+    pwrType: type, 
+    baseY: pos.y,                       
+    bob: Math.random() * Math.PI * 2,
+    collect: () => {
+        // Add 30 seconds to whatever buff this is (quad_damage, double_score, etc.)
+        if (player.buffs[type]) {
+            player.buffs[type] += 30;
+        } else {
+            player.buffs[type] = 30;
+        }
+        
+        // Play sound and immediately update the UI
+        if (sfx.powerup) sfx.powerup(); 
+        else if (sfx.item) sfx.item();
+        if (cb.markHudDirty) cb.markHudDirty();
+    }
+  });
 }

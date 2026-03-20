@@ -8,6 +8,10 @@ export const engine = new BABYLON.Engine(canvas, false, {
 });
 
 export const scene = new BABYLON.Scene(engine);
+
+await window.Recast();
+export const navPlugin = new BABYLON.RecastJSPlugin();
+
 scene.clearColor = new BABYLON.Color4(0x30/255, 0x28/255, 0x1e/255, 1);
 scene.fogMode    = BABYLON.Scene.FOGMODE_LINEAR;
 scene.fogColor   = new BABYLON.Color3(0x30/255, 0x28/255, 0x1e/255);

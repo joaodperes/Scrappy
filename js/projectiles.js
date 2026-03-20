@@ -7,6 +7,7 @@ import { WDEFS } from './weapons.js';
 import { projs, enemies, cb } from './gameState.js';
 import { spawnSparks } from './particles.js';
 import { sfx } from './audio.js';
+import { applyExplosionImpulse } from './player.js';
 
 // ── Player projectiles ────────────────────────────────────────
 export function fireRocket() {
@@ -83,6 +84,8 @@ export function boom(pos, splashR, baseDmg, hurtBots) {
   }
   const dp = BABYLON.Vector3.Distance(camera.position, pos);
   if (dp < splashR) cb.hurtPlayer && cb.hurtPlayer(baseDmg * (1 - dp/splashR) * .65);
+  // We multiply splashR by 1.5 so the physics push reaches slightly further than the damage
+  applyExplosionImpulse(pos, splashR * 1.5, 20);
 }
 
 // ── Hitscan ────────────────────────────────────────────────────
@@ -122,18 +125,28 @@ export function hitscan(meshToEnemy, spread = 0, dmg = 20, range = 90) {
 
   if (hits.length > 0) {
     spawnSparks(hits[0].pickedPoint, 0xffcc44, 5);
-    const e = meshToEnemy.get(hits[0].pickedMesh);
+    const pickedMesh = hits[0].pickedMesh;
+    const e = meshToEnemy.get(pickedMesh);
+    
     if (e) {
       const dist = hits[0].distance;
       const falloffStart = range * 0.4;
-      const scaled = dist > falloffStart
-        ? 1.0 - 0.5 * ((dist - falloffStart) / (range - falloffStart))
-        : 1.0;
-      // Railgun headshot check: if giantbot, immune to insta-kill, but take high damage
-      if (dmg >= 400 && e.type === 'giantbot' && e.railgunImmune) {
-        cb.hitRobot && cb.hitRobot(e, Math.max(dmg * 0.35, 400)); // Deal high but not fatal damage
+      let scaled = dist > falloffStart ? 1.0 - 0.5 * ((dist - falloffStart) / (range - falloffStart)) : 1.0;
+      
+      // DAMAGE MULTIPLIER LOGIC
+      let locMult = 1.0;
+      const mName = pickedMesh.name.toLowerCase();
+      if (mName.includes('hd') || mName.includes('vis') || mName.includes('horn')) {
+          locMult = 2.0; // Headshot!
+      } else if (mName.includes('leg') || mName.includes('ft')) {
+          locMult = 0.5; // Leg shot
+      }
+
+      // Special Railgun / Boss Logic
+      if (dmg >= 100 && e.type === 'giantbot' && e.railgunImmune) {
+        cb.hitRobot && cb.hitRobot(e, Math.max(dmg * 0.35, 100) * locMult); 
       } else {
-        cb.hitRobot && cb.hitRobot(e, Math.max(dmg * scaled, dmg * 0.15));
+        cb.hitRobot && cb.hitRobot(e, Math.max(dmg * scaled, dmg * 0.15) * locMult);
       }
       return { hit: true, target: e };
     }
@@ -185,7 +198,7 @@ export function updateProjs(dt) {
       if (p.owner === 'player' && p.type === 'rocket') {
         for (const e of enemies) {
           if (!e.alive) continue;
-          const bodyCy = e.flyH > 0 ? e.group.position.y + 0.5 : 1.0;
+          const bodyCy = e.group.position.y + (e.flyH > 0 ? 0.5 : 1.0);
           _bodyVec.set(e.group.position.x, bodyCy, e.group.position.z);
           if (BABYLON.Vector3.Distance(obj.position, _bodyVec) < 1.6) {
             boom(obj.position.clone(), p.splash, p.dmg, true);
@@ -195,7 +208,7 @@ export function updateProjs(dt) {
       } else if (p.owner === 'player' && p.type === 'player_plasma') {
         for (const e of enemies) {
           if (!e.alive) continue;
-          const bodyCy = e.flyH > 0 ? e.group.position.y + 0.5 : 1.0;
+          const bodyCy = e.group.position.y + (e.flyH > 0 ? 0.5 : 1.0);
           _bodyVec.set(e.group.position.x, bodyCy, e.group.position.z);
           if (BABYLON.Vector3.Distance(obj.position, _bodyVec) < 1.1) {
             cb.hitRobot && cb.hitRobot(e, p.dmg);

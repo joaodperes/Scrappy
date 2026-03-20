@@ -9,6 +9,18 @@ export function updateHUD() {
   if (hp)  hp.style.width  = (player.hp / player.maxHp * 100) + '%';
   if (arm) arm.style.width = (player.armor / player.maxArmor * 100) + '%';
   if (sc)  sc.textContent  = 'SCORE: ' + player.score;
+
+  const buffEl = document.getElementById('buffDisplay');
+  if (buffEl) {
+    buffEl.innerHTML = ''; // Clear it out
+    for (const [key, time] of Object.entries(player.buffs)) {
+      if (time > 0) {
+        const name = key.replace('_', ' ').toUpperCase();
+        const tStr = Math.ceil(time) + 's';
+        buffEl.innerHTML += `<div>&#9889; ${name} [${tStr}]</div>`;
+      }
+    }
+  }
   refreshSlotHUD();
 }
 

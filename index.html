@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <title>SCRAPPY - Scrapyard FPS</title>
+<script src="https://cdn.babylonjs.com/recast.js"></script>
 <script src="/js/babylon.max.js"></script>
 <script type="importmap">
 {
@@ -179,9 +180,13 @@ body { background:#000; overflow:hidden; font-family:'Arial',sans-serif; }
       <div class="barOuter"><div id="armorBar" style="width:0%"></div></div>
     </div>
     <div id="weaponSlots">
-      <div class="wSlot active" id="wSlot0"><div class="sKey">[1]</div><div class="sName">PISTOL</div><div class="sAmmo">INFINITE</div></div>
-      <div class="wSlot empty"  id="wSlot1"><div class="sKey">[2]</div><div class="sName">EMPTY</div><div class="sAmmo">&mdash;</div></div>
+      <div id="weaponHUD">
+          <div id="wSlot0" class="wSlot empty"><span class="sName"></span><span class="sAmmo"></span></div>
+          <div id="wSlot1" class="wSlot empty"><span class="sName"></span><span class="sAmmo"></span></div>
+          <div id="wSlot2" class="wSlot"><span class="sName">PISTOL</span><span class="sAmmo">∞</span></div>
+      </div>
     </div>
+    <div id="buffDisplay" style="position:fixed; bottom:120px; left:22px; color:#d8f030; font-size:18px; font-weight:bold; text-shadow:0 0 8px #99cc00; display:flex; flex-direction:column; gap:8px;"></div>
   </div>
 </div>
 
@@ -215,5 +220,8 @@ body { background:#000; overflow:hidden; font-family:'Arial',sans-serif; }
 </div>
 
 <script type="module" src="js/main.js"></script>
+<div id="scopeOverlay" style="display:none; position:fixed; inset:0; background: radial-gradient(circle, transparent 25%, rgba(0,0,0,0.9) 75%, black 100%); z-index: 100; pointer-events: none; border: 2px solid #0ff;">
+    <div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); color:#0ff; font-family:monospace; font-size:24px;">+</div>
+</div>
 </body>
 </html>
