@@ -167,6 +167,7 @@ export function resetPlayer(x, y, z) {
   _wasOnGround    = true;
   _jumpBufTimer   = 0;
   _coyoteTimer    = 0;
+  player.buffs = {}; // Clear all active powerups
 }
 
 export function updatePlayer(dt, gameRunning, paused) {

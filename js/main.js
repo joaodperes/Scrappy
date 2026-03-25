@@ -48,6 +48,7 @@ document.addEventListener('keydown', e => {
 function startGame() {
   ensureAudio();
   player.hp=100; player.armor=0; player.score=0; player.yVel=0; player.onGround=true;
+  player.buffs = {};
 
   // Reset weapons
   for (const [k,w] of Object.entries(WDEFS)) w.ammo = (k==='PISTOL') ? Infinity : 0;
@@ -200,9 +201,9 @@ document.getElementById('pauseOverlay')?.addEventListener('click', () => { if (p
 
 //  Init 
 buildLevel();
-initSecretKits();
 setupLighting();
 renderLeaderboard();
+initSecretKits();
 
 engine.resize();
 window.addEventListener('resize', () => engine.resize());

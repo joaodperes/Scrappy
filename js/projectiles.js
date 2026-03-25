@@ -49,10 +49,13 @@ export function firePlasma() {
 const _eBulletSize = { bullet:.12, heavy:.19, sniper:.07, plasma:.14 };
 const _eBulletCol  = { bullet: new BABYLON.Color3(1,.93,.27), heavy: new BABYLON.Color3(1,.53,0), sniper: new BABYLON.Color3(0,1,.8), plasma: new BABYLON.Color3(.27,.53,1) };
 
-export function fireEnemyShot(e, dir, dmg, speed, type) {
-  const muzzleY = e.group.position.y + (e.muzzleOffY || 1.0);
-  const startPos = new BABYLON.Vector3(e.group.position.x, muzzleY, e.group.position.z);
-  startPos.addInPlace(dir.scale(0.6));
+
+export function fireEnemyShot(e, dir, dmg, speed, type, customStartPos = null) {
+  // If a custom position (like a shoulder) is provided, use it. Otherwise, use the center muzzle.
+  const startPos = customStartPos ? customStartPos.clone() : new BABYLON.Vector3(e.group.position.x, e.group.position.y + (e.muzzleOffY || 1.0), e.group.position.z);
+  
+  startPos.addInPlace(dir.scale(0.6)); // Push it slightly forward so it doesn't hit the bot itself
+  
   const d = _eBulletSize[type] || _eBulletSize.bullet;
   const mesh = BABYLON.MeshBuilder.CreateSphere('eshot', { diameter: d*2, segments:5 }, scene);
   mesh.position.copyFrom(startPos);

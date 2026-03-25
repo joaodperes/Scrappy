@@ -264,8 +264,8 @@ export function buildRobot(type) {
       addBox('core', bW * 0.6, bH * 0.4, bD * 1.5, M.ledOrange, 0, bY, bD * 0.2);
       
       // Muscular Arms
-      addBox('armL', 0.45, 1.4, 0.45, bmat, bW/2 + 0.35, bY + 0.2, 0);
-      addBox('armR', 0.45, 1.4, 0.45, bmat, -bW/2 - 0.35, bY + 0.2, 0);
+      const armL = addBox('armL', 0.45, 1.4, 0.45, bmat, bW/2 + 0.35, bY + 0.2, 0);
+      const armR = addBox('armR', 0.45, 1.4, 0.45, bmat, -bW/2 - 0.35, bY + 0.2, 0);
       
       // Textured Cannons mounted to arms
       addCyl('shL', 0.5, 2.2, M.rustWall,  bW/2 + 0.4, bY + bH/2 + 0.1, 0.4, Math.PI/2);
@@ -289,7 +289,7 @@ export function buildRobot(type) {
     const wn = type==='heavy'?'CHAINGUN':type==='sniper'?'RAILGUN':type==='pistol'?'PISTOL':type==='shotgun'?'SHOTGUN':type==='rocket'?'ROCKET':'SMG';
     const ws = type==='heavy'?.62:type==='sniper'?.50:type==='pistol'?.44:type==='shotgun'?.54:type==='rocket'?.56:.50;
     const wm = makeScaledWeaponModel(wn, ws); wm.parent = g;
-    wm.position.set(bW/2+aW/2, bY+bH*.18-.02, .42); wm.rotation.y = Math.PI;
+    wm.position.set(bW/2+aW/2, bY+bH*.18-.02, .42); wm.rotation.y = Math.PI / 5;
     wm.getChildMeshes().forEach(c => { c.isPickable = false; });
   }
 
@@ -441,12 +441,14 @@ export function destroyRobot(e) {
       spawnWeaponDrop(pos, 'ROCKET');
     } else {
       // --- NORMAL BOT LOOT ---
-      if (Math.random() < 1.0) { // Changed from 0.1 to test
-        // ── 3. ADD DOUBLE SCORE TO THE DROP POOL ──────────────
+      // 5% chance to drop a rare Powerup
+      if (Math.random() < 0.05) { 
         const pTypes = ['quad_damage', 'infinite_ammo', 'haste', 'double_score'];
         const pt = pTypes[Math.floor(Math.random() * pTypes.length)];
         spawnPowerup(pos, pt);
-      } else if (Math.random() < .45) {
+      } 
+      // Independent 45% chance to drop Health/Armor/Ammo
+      if (Math.random() < 0.45) {
         spawnPickup(pos);
       }
       const dropWep = ROBOT_DROPS[e.type];
@@ -492,22 +494,43 @@ export function updateEnemies(dt) {
 
     // --- 2. BOSS SPECIAL ABILITIES ---
     if (e.type === 'giantbot') {
-        e.slamTimer = (e.slamTimer || 0) - dt;
-        if (dist < 6.0 && e.slamTimer <= 0) {
-            e.slamTimer = 4.0; 
-            e._yAnimOffset = 2.5; // Visual Jump
-            e.group.scaling.set(2.5, 4.0, 2.5); 
-            setTimeout(() => {
-                if (e && e.alive) {
-                    e._yAnimOffset = 0;
-                    e.group.scaling.set(3, 3, 3); 
-                    import('./projectiles.js').then(({ boom }) => {
-                        boom(e.group.position.clone(), 10, 50, false); 
-                    });
-                }
-            }, 300);
+        // ── 1. THE SUMMON ABILITY ──
+        e.summonTimer = (e.summonTimer || 0) - dt;
+        if (e.summonTimer <= 0 && enemies.length < 25) {
+            e.summonTimer = 20.0; // Cooldown
+            spawnBot('drone', e.group.position.x + 3, e.group.position.y + 5, e.group.position.z, 1.0);
+            spawnBot('drone', e.group.position.x - 3, e.group.position.y + 5, e.group.position.z, 1.0);
         }
-    }
+
+        // ── 2. ATTACK LOGIC ──
+        const weps = ['rocket', 'plasma', 'heavy'];
+        const pt = weps[Math.floor(Date.now() / 3500) % 3];
+        const bossDmg = pt === 'rocket' ? 45 : (pt === 'plasma' ? 20 : 12);
+        const bossSpd = pt === 'rocket' ? 20 : (pt === 'plasma' ? 45 : 60);
+        
+        const rightVec = BABYLON.Vector3.Cross(BABYLON.Axis.Y, dir).normalize();
+        
+        if (pt === 'rocket') {
+            const shoulderY = e.group.position.y + 4.0;
+            const leftShoulder = new BABYLON.Vector3(e.group.position.x, shoulderY, e.group.position.z).add(rightVec.scale(-1.5));
+            const rightShoulder = new BABYLON.Vector3(e.group.position.x, shoulderY, e.group.position.z).add(rightVec.scale(1.5));
+            
+            fireEnemyShot(e, playerEye.subtract(leftShoulder).normalize(), bossDmg, bossSpd, pt, leftShoulder);
+            fireEnemyShot(e, playerEye.subtract(rightShoulder).normalize(), bossDmg, bossSpd, pt, rightShoulder);
+        } else {
+          // HAND WEAPONS
+          const handY = e.group.position.y + 2.0;
+          const rightHand = new BABYLON.Vector3(e.group.position.x, handY, e.group.position.z).add(rightVec.scale(1.2));
+          const dirH = playerEye.subtract(rightHand).normalize();
+          
+          fireEnemyShot(e, dirH, bossDmg, bossSpd, pt, rightHand);
+          
+          // ── CRASH-PROOF ANIMATION ──
+          // Pitch the entire boss slightly forward when firing a heavy weapon
+          e.group.rotation.x = 0.15; 
+          setTimeout(() => { if (e && e.alive) e.group.rotation.x = 0; }, 200); 
+        }
+      }
 
     // --- 3. MOVEMENT LOGIC (DRONE VS GROUND) ---
     if (e.type === 'drone') {
@@ -524,8 +547,15 @@ export function updateEnemies(dt) {
     } 
     else {
         // GROUND BOTS: NavMesh Pathfinding
-        const targetDist = e.type === 'sniper' ? 20 : 1.8; 
-        const shouldMove = _angryMode || (dist > targetDist + .5 || dist < targetDist - 1.5);
+       // GROUND BOTS: NavMesh Pathfinding & Smart Ranges
+        let targetDist = 8.0; // Default range
+        if (e.type === 'sniper') targetDist = 22.0;
+        else if (e.type === 'heavy') targetDist = 12.0;
+        else if (e.type === 'rocket' || e.type === 'drone') targetDist = 14.0;
+        else if (e.type === 'shotgun') targetDist = 3.0;
+        else if (e.type === 'scout' || e.type === 'pistol') targetDist = 6.0;
+
+        const shouldMove = _angryMode || (dist > targetDist + 1.0 || dist < targetDist - 2.0);
 
         if (shouldMove) {
             const botFeet = new BABYLON.Vector3(e.group.position.x, e._floorY + 0.5, e.group.position.z);
@@ -541,72 +571,82 @@ export function updateEnemies(dt) {
                     _eDir.y = 0;
                     _eDir.normalize();
 
-                    // Apply separation from other bots
+                    // Gentle separation that won't blast them into walls
                     for (const o of enemies) {
                         if (o === e || !o.alive) continue;
                         _eSep.copyFrom(e.group.position).subtractInPlace(o.group.position);
-                        if (_eSep.length() < 1.5) _eDir.addInPlace(_eSep.normalize().scale(0.5));
+                        _eSep.y = 0;
+                        if (_eSep.length() > 0.1 && _eSep.length() < 1.5) {
+                            _eDir.addInPlace(_eSep.normalize().scale(0.4));
+                        }
                     }
 
-                    e.group.position.addInPlace(_eDir.normalize().scale(e.Speed * dt));
-
-                    // ── FIX: Start the snap query 1.5 units ABOVE the bot ──
-                    const safeQueryPos = new BABYLON.Vector3(e.group.position.x, e.group.position.y + 1.5, e.group.position.z);
-                    const snapped = navPlugin.getClosestPoint(safeQueryPos);
-
-                    // Add a 0.05 unit buffer so their feet don't z-fight with the floor
-                    if (snapped) e._floorY = snapped.y + 0.05;     
+                    // ── THE FIX: Strict NavMesh Clamping ──
+                    // Calculate where the bot WANTS to go
+                    const intendedPos = e.group.position.add(_eDir.normalize().scale(e.speed * dt));
+                    // Ask the NavMesh for the closest VALID point to that location
+                    const clampedPos = navPlugin.getClosestPoint(new BABYLON.Vector3(intendedPos.x, e._floorY + 0.5, intendedPos.z));
+                    
+                    if (clampedPos) {
+                        e.group.position.x = clampedPos.x;
+                        e.group.position.z = clampedPos.z;
+                        e._floorY = clampedPos.y; // Keep floor strictly synced
+                    }
                 }
             }
         }
-    }
+      }
 
     // --- 4. APPLY FINAL TRANSFORM ---
     e.group.position.y = e._floorY + bob + (e._yAnimOffset || 0);
     _eLookAt.set(_ePP.x, e.group.position.y, _ePP.z);
     e.group.lookAt(_eLookAt);
 
+    // enemies.js - inside updateEnemies(dt)
     // --- 5. ATTACK ---
     if (inRange) {
       e.atkTimer -= dt;
       if (e.atkTimer <= 0) {
         e.atkTimer = e.rate;
         _eMuzzle.set(e.group.position.x, e.group.position.y + e.muzzleOffY, e.group.position.z);
-        const playerEye = _ePP.clone(); playerEye.y += 1.2;
+        
+        const playerEye = _ePP.clone(); playerEye.y -= 0.5; // Aim at chest level
         
         if (_hasLOS(_eMuzzle, playerEye)) {
+          // Normalize preserves the 3D Y-axis, allowing bots to shoot up/down at you
           const dir = playerEye.subtract(_eMuzzle).normalize();
+          
           if (e.type === 'giantbot') {
               const weps = ['rocket', 'plasma', 'heavy'];
-              const wepIdx = Math.floor(Date.now() / 3500) % 3;
-              const pt = weps[wepIdx];
-              
+              const pt = weps[Math.floor(Date.now() / 3500) % 3];
               const bossDmg = pt === 'rocket' ? 45 : (pt === 'plasma' ? 20 : 12);
-              const bossSpd = pt === 'rocket' ? 16 : (pt === 'plasma' ? 40 : 55);
+              const bossSpd = pt === 'rocket' ? 20 : (pt === 'plasma' ? 45 : 60);
+              
+              const rightVec = BABYLON.Vector3.Cross(BABYLON.Axis.Y, dir).normalize();
               
               if (pt === 'rocket') {
-                  // ── DOUBLE SHOULDER ROCKETS ──
-                  const originalPos = e.group.position.clone();
+                  // SHOULDER ROCKETS: Fired from high up and wide
+                  const shoulderY = e.group.position.y + 4.0;
+                  const leftShoulder = new BABYLON.Vector3(e.group.position.x, shoulderY, e.group.position.z).add(rightVec.scale(-1.5));
+                  const rightShoulder = new BABYLON.Vector3(e.group.position.x, shoulderY, e.group.position.z).add(rightVec.scale(1.5));
                   
-                  // Calculate the "Right" vector relative to where the boss is looking
-                  const rightVec = BABYLON.Vector3.Cross(new BABYLON.Vector3(0, 1, 0), dir).normalize();
-                  const shoulderWidth = 1.5; // Distance from center to shoulder
+                  // Calculate exact 3D trajectories from each shoulder to the player
+                  const dirL = playerEye.subtract(leftShoulder).normalize();
+                  const dirR = playerEye.subtract(rightShoulder).normalize();
                   
-                  // Move to Left Shoulder & Fire
-                  e.group.position.addInPlace(rightVec.scale(-shoulderWidth));
-                  fireEnemyShot(e, dir, bossDmg, bossSpd, pt);
-                  
-                  // Move to Right Shoulder & Fire
-                  e.group.position.copyFrom(originalPos).addInPlace(rightVec.scale(shoulderWidth));
-                  fireEnemyShot(e, dir, bossDmg, bossSpd, pt);
-                  
-                  // Snap back to center instantly (the player never sees the shift)
-                  e.group.position.copyFrom(originalPos);
-                  
+                  fireEnemyShot(e, dirL, bossDmg, bossSpd, pt, leftShoulder);
+                  fireEnemyShot(e, dirR, bossDmg, bossSpd, pt, rightShoulder);
               } else {
-                  // Standard center-fire for Plasma and Heavy machine gun
-                  fireEnemyShot(e, dir, bossDmg, bossSpd, pt);
+                  // HAND WEAPONS: Fired from mid-height, slightly right
+                  const handY = e.group.position.y + 2.0;
+                  const rightHand = new BABYLON.Vector3(e.group.position.x, handY, e.group.position.z).add(rightVec.scale(1.2));
+                  const dirH = playerEye.subtract(rightHand).normalize();
+                  
+                  fireEnemyShot(e, dirH, bossDmg, bossSpd, pt, rightHand);
               }
+          } else {
+              // FIX: This is what makes normal bots shoot again!
+              fireEnemyShot(e, dir, e.dmg, e.projV, e.projT);
           }
         }
       }

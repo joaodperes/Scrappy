@@ -36,7 +36,7 @@ function box(name, px, py, pz, sx, sy, sz, mat) {
 
 const wall = (px, py, pz, sx, sy, sz, mat) => {
     const m = box('wall', px, py, pz, sx, sy, sz, mat);
-    walkableMeshes.push(m); // <--- THIS STOPS BOTS FROM CLIPPING THROUGH WALLS
+    //walkableMeshes.push(m); // causes clipping?
     return m;
 };
 
@@ -275,7 +275,7 @@ export function buildLevel() {
         }, scene);
         step.position.set(x, y, z);
         step.material = M.concrete;
-        step.checkCollisions = false; 
+        step.checkCollisions = true; 
     }
   }
 
@@ -293,20 +293,23 @@ export function buildLevel() {
 
   // T2 Half-Walls for cover 
   //box('half', -30, TIER_2 + 1,  32, 8, 2, 2, rwCache2);
-  box('half',  -30, TIER_2 + 1,  24, 8, 2, 2, rwCache2);
-  box('half',  -24, TIER_2 + 1,  30, 2, 2, 8, rwCache2); // TESTING WALLS FOR NON-STAIR CASE PLATFORMS
+  box('half',  -32, TIER_2 + 1,  25, 12, 2, 2, rwCache2);
+  box('half',  -25, TIER_2 + 1,  30, 2, 2, 12, rwCache2); // TESTING WALLS FOR NON-STAIR CASE PLATFORMS
+
+  box('half',  32, TIER_2 + 1,  -25, 12, 2, 2, rwCache2);
+  box('half',  25, TIER_2 + 1,  -30, 2, 2, 12, rwCache2); 
   
   // T2 Barrels hidden behind half-walls
   barrel(-30, 30, TIER_2); barrel(30, 30, TIER_2);
   barrel(-30, -30, TIER_2); barrel(30, -30, TIER_2);
 
-// Jump pads corners of T2 -> to T3
+  // Jump pads corners of T2 -> to T3
   makeJumpPad(-28, TIER_2,  28, 22, Math.PI/4);      // NW Corner pointing inward
   makeJumpPad( 28, TIER_2,  28, 22, 7*Math.PI/4);    // NE Corner pointing inward
   makeJumpPad(-28, TIER_2, -28, 22, 3*Math.PI/4);    // SW Corner pointing inward
   makeJumpPad( 28, TIER_2, -28, 22, 5*Math.PI/4);    // SE Corner pointing inward
   
-// ════════════════════════════════════════════════════════════════════════
+  // ════════════════════════════════════════════════════════════════════════
   //  TIER 3: EXPANDED SNIPER DECKS & SIDE FLANKS (y=12)
   // ════════════════════════════════════════════════════════════════════════
   slab(0, TIER_3,  40, 56, 16, M.concrete); // North Deck
@@ -423,12 +426,12 @@ export function buildLevel() {
    */
   // BAKE THE NAVMESH
   const navmeshParameters = {
-      cs: 0.2,            // Cell size
-      ch: 0.2,            // Cell height
-      walkableSlopeAngle: 65, 
-      walkableHeight: 2.0, // How tall the bots are
-      walkableClimb: 1.0,  // Max step height
-      walkableRadius: 0.1, // Bot radius (keeps them off walls)
+      cs: 0.2,            
+      ch: 0.2,            
+      walkableSlopeAngle: 60,  // Increased so they can climb the invisible stair ramps
+      walkableHeight: 2.0, 
+      walkableClimb: 1.5,      // Increased so they don't get stuck on floor seams
+      walkableRadius: 0.35,     // Increased to keep their bodies strictly OUT of walls
       maxEdgeLen: 12.,
       maxSimplificationError: 1.3,
       minRegionArea: 4,

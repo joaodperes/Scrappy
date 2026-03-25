@@ -8,37 +8,37 @@ import { sfx } from './audio.js';
 import { TIER_5 } from './level.js';
 
 const SECRET_KIT_RESPAWN_SEC = 300;
-const SECRET_KITS = [
-  // Moved to Tier 5 Summit (y: 24.45)
-  { tag: 'secret_health', type: 'health', pos: { x: 0, y: TIER_5 + 0.45, z: 28 } },
-  { tag: 'secret_armor',  type: 'armor',  pos: { x: 0, y: TIER_5 + 0.45, z: 28 } },
-];
 
 export function initSecretKits() {
-  SECRET_KITS.forEach(kit => {
-    const mesh = BABYLON.MeshBuilder.CreatePlane('kit', { size: 2 }, scene);
-    const mat = new BABYLON.StandardMaterial('kitMat', scene);
+  const S_KITS = [
+    { tag: 'secret_health', type: 'health', pos: new BABYLON.Vector3(-2, TIER_5 + 1.0, 28) },
+    { tag: 'secret_armor',  type: 'armor',  pos: new BABYLON.Vector3( 2, TIER_5 + 1.0, 28) },
+  ];
+
+  S_KITS.forEach(kit => {
+    // ── FIX: Use a 3D Box. It is impossible for a box to face the wrong way or be 2D-culled.
+    const mesh = BABYLON.MeshBuilder.CreateBox('kit_' + kit.type, { size: 1.2 }, scene);
+    const mat = new BABYLON.StandardMaterial('kitMat_' + kit.type, scene);
     
-    // ── Fallback colors (Blue for Health, Green for Armor) ──
-    mat.diffuseColor = kit.type === 'health' ? new BABYLON.Color3(0.2, 0.5, 1) : new BABYLON.Color3(0.2, 1, 0.2); 
+    // Give them solid fallback colors
+    mat.diffuseColor = kit.type === 'health' ? new BABYLON.Color3(0, 0.5, 1) : new BABYLON.Color3(0, 1, 0);
+    mat.emissiveColor = mat.diffuseColor;
+    mat.disableLighting = true;
     
-    const tex = new BABYLON.Texture(`assets/textures/lq/${kit.type}.png`, scene);
-    tex.hasAlpha = true; // Ensure PNG transparency works
-    mat.diffuseTexture = tex;
+    // Attempt to load texture
+    const texName = kit.type === 'health' ? 'health' : 'armor';
+    mat.diffuseTexture = new BABYLON.Texture(`assets/textures/lq/${texName}.png`, scene);
     mesh.material = mat;
+    mesh.position.copyFrom(kit.pos);
 
-    mesh.position.set(kit.pos.x, kit.pos.y, kit.pos.z);
-    mesh.billboardMode = BABYLON.Mesh.BILLBOARDMODE_ALL;
-
-    const ring = BABYLON.MeshBuilder.CreateTorus('kitRing', { diameter: 2.2, thickness: 0.1, tessellation: 24 }, scene);
-    ring.position.copyFrom(mesh.position);
-    ring.position.y -= 0.8; // Move ring down to floor level
+    const ring = BABYLON.MeshBuilder.CreateTorus('kitRing', { diameter: 2.0, thickness: 0.1, tessellation: 24 }, scene);
+    ring.position.set(kit.pos.x, kit.pos.y - 0.5, kit.pos.z); 
     ring.material = kit.type === 'health' ? M.ledBlue : M.ledGreen;
     ring.isPickable = false;
 
     pickups.push({
       mesh, ring, type: kit.type, baseY: mesh.position.y,
-      respawnTimer: SECRET_KIT_RESPAWN_SEC, expires: false, bob: Math.random() * 5
+      respawnTimer: 0, expires: false, bob: Math.random() * 5
     });
   });
 }
@@ -60,8 +60,11 @@ export function spawnTypedPickup(pos, type, options = {}) {
              : type==='armor'  ? new BABYLON.Color3(.13,.27,.93)
              :                   new BABYLON.Color3(.8,.73,0);
              
-  // Create a flat plane instead of a sphere
-  const mesh = BABYLON.MeshBuilder.CreatePlane('pk', { size: 0.8 }, scene);
+// Change the MeshBuilder line to make it double-sided AND billboarded
+  const mesh = BABYLON.MeshBuilder.CreatePlane('pk', { size: 0.8, sideOrientation: BABYLON.Mesh.DOUBLESIDE }, scene);
+  
+  // Ensure this line is present right below it:
+  mesh.billboardMode = BABYLON.Mesh.BILLBOARDMODE_ALL;
   
   // Create material with your specific 2D image
   const mat = new BABYLON.StandardMaterial('pkMat_' + type, scene);
@@ -123,22 +126,28 @@ export function updatePickups(dt) {
             player.armor = Math.min(player.maxArmor, player.armor + 25);
             picked = true;
         } else if (p.type === 'ammo') {
-            // ── FIX: Actually give ammo to the active weapon ──
-            const activeWep = inventory[activeSlot];
-            if (activeWep && activeWep.ammo !== undefined) {
-                activeWep.ammo += 20; // Adjust amount as needed
-                if (activeWep.ammo > activeWep.maxAmmo) activeWep.ammo = activeWep.maxAmmo;
-                picked = true;
+            const wepName = inventory[activeSlot];
+            if (wepName && wepName !== 'PISTOL') {
+                const W = WDEFS[wepName];
+                if (W && W.ammo !== Infinity) {
+                    W.ammo += (W.startAmmo || 20); 
+                    picked = true;
+                }
             }
         } else if (p.type === 'powerup') {
-          picked = true;} else if (p.type === 'powerup' || p.type === 'ammo') {
             picked = true;
         }
 
         if (picked) {
-            if (p.collect) p.collect(); // This now calls the cyan flash and cb.markHudDirty()
+            // ── FIX: Ensure ALL items play a sound and update the HUD ──
+            if (p.collect) {
+                p.collect(); // Powerups play their own specific SFX
+            } else {
+                if (sfx.item) sfx.item(); // Standard item SFX
+            }
+            if (cb.markHudDirty) cb.markHudDirty();
             
-            if (p.expires || p.type === 'powerup') {
+            if (p.expires || p.type === 'powerup' || p.type === 'ammo') {
                 p.mesh.dispose();
                 if(p.ring) p.ring.dispose();
                 pickups.splice(i, 1);
