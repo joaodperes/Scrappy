@@ -10,18 +10,22 @@ import { TIER_5 } from './level.js';
 const SECRET_KIT_RESPAWN_SEC = 300;
 
 export function initSecretKits() {
+  // Floor surface of any floating slab = surfY + 0.22 (see _liftFloatingY in level.js).
+  // T5 north-room floor slab has surfY = TIER_5, so its surface is at TIER_5 + 0.22.
+  // Place kit centres 1.0 unit above that surface so they bob clearly in the open.
+  const KIT_Y = TIER_5 + 0.22 + 1.0; // = 25.22
+
   const S_KITS = [
-    { tag: 'secret_health', type: 'health', pos: new BABYLON.Vector3(-2, TIER_5 + 1.0, 28) },
-    { tag: 'secret_armor',  type: 'armor',  pos: new BABYLON.Vector3( 2, TIER_5 + 1.0, 28) },
+    { tag: 'secret_health', type: 'health', pos: new BABYLON.Vector3(-3, KIT_Y, 22) },
+    { tag: 'secret_armor',  type: 'armor',  pos: new BABYLON.Vector3( 3, KIT_Y, 22) },
   ];
 
   S_KITS.forEach(kit => {
-    // ── FIX: Use a 3D Box. It is impossible for a box to face the wrong way or be 2D-culled.
     const mesh = BABYLON.MeshBuilder.CreateBox('kit_' + kit.type, { size: 1.2 }, scene);
     const mat = new BABYLON.StandardMaterial('kitMat_' + kit.type, scene);
     
-    // Give them solid fallback colors
-    mat.diffuseColor = kit.type === 'health' ? new BABYLON.Color3(0, 0.5, 1) : new BABYLON.Color3(0, 1, 0);
+    // FIX: Red for Health, Blue for Armor
+    mat.diffuseColor = kit.type === 'health' ? new BABYLON.Color3(1, 0.13, 0.2) : new BABYLON.Color3(0.13, 0.27, 0.93);
     mat.emissiveColor = mat.diffuseColor;
     mat.disableLighting = true;
     
@@ -30,6 +34,7 @@ export function initSecretKits() {
     mat.diffuseTexture = new BABYLON.Texture(`assets/textures/lq/${texName}.png`, scene);
     mesh.material = mat;
     mesh.position.copyFrom(kit.pos);
+    mesh.setEnabled(true); // Explicitly visible — guard against any inherited disabled state
 
     const ring = BABYLON.MeshBuilder.CreateTorus('kitRing', { diameter: 2.0, thickness: 0.1, tessellation: 24 }, scene);
     ring.position.set(kit.pos.x, kit.pos.y - 0.5, kit.pos.z); 
@@ -126,24 +131,28 @@ export function updatePickups(dt) {
             player.armor = Math.min(player.maxArmor, player.armor + 25);
             picked = true;
         } else if (p.type === 'ammo') {
-            const wepName = inventory[activeSlot];
-            if (wepName && wepName !== 'PISTOL') {
-                const W = WDEFS[wepName];
-                if (W && W.ammo !== Infinity) {
-                    W.ammo += (W.startAmmo || 20); 
-                    picked = true;
+            // Give ceil(startAmmo/3) to EVERY non-infinite weapon in the loadout
+            let gave = false;
+            for (const wName of Object.keys(WDEFS)) {
+                const W = WDEFS[wName];
+                if (W.ammo !== Infinity) {
+                    const bonus = Math.ceil((W.startAmmo || 20) / 3);
+                    W.ammo += bonus;
+                    if (W.max) W.ammo = Math.min(W.ammo, W.max);
+                    gave = true;
                 }
             }
+            picked = gave;
         } else if (p.type === 'powerup') {
             picked = true;
         }
 
         if (picked) {
-            // ── FIX: Ensure ALL items play a sound and update the HUD ──
             if (p.collect) {
-                p.collect(); // Powerups play their own specific SFX
+                p.collect(); // Powerup handles its own SFX inside collect()
             } else {
-                if (sfx.item) sfx.item(); // Standard item SFX
+                // Always call sfx.pickup — it is always defined in audio.js
+                sfx.pickup();
             }
             if (cb.markHudDirty) cb.markHudDirty();
             
@@ -347,16 +356,12 @@ export function spawnPowerup(pos, type) {
     baseY: pos.y,                       
     bob: Math.random() * Math.PI * 2,
     collect: () => {
-        // Add 30 seconds to whatever buff this is (quad_damage, double_score, etc.)
         if (player.buffs[type]) {
             player.buffs[type] += 30;
         } else {
             player.buffs[type] = 30;
         }
-        
-        // Play sound and immediately update the UI
-        if (sfx.powerup) sfx.powerup(); 
-        else if (sfx.item) sfx.item();
+        sfx.powerup(); // Distinct 6-note sweep — always defined in audio.js
         if (cb.markHudDirty) cb.markHudDirty();
     }
   });

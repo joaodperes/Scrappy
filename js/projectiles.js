@@ -94,7 +94,7 @@ export function boom(pos, splashR, baseDmg, hurtBots) {
 // ── Hitscan ────────────────────────────────────────────────────
 const _rcDir = new BABYLON.Vector3();
 
-export function hitscan(meshToEnemy, spread = 0, dmg = 20, range = 90) {
+export function hitscan(meshToEnemy, spread = 0, dmg = 20, range = 90, falloff = 0.5) {
   camera.getForwardRay(1).direction.normalizeToRef(_rcDir);
   // Muzzle flash: bright sphere 0.5m in front
   const flashPos = camera.position.clone().addInPlace(_rcDir.scale(0.5));
@@ -134,7 +134,7 @@ export function hitscan(meshToEnemy, spread = 0, dmg = 20, range = 90) {
     if (e) {
       const dist = hits[0].distance;
       const falloffStart = range * 0.4;
-      let scaled = dist > falloffStart ? 1.0 - 0.5 * ((dist - falloffStart) / (range - falloffStart)) : 1.0;
+      let scaled = dist > falloffStart ? 1.0 - falloff * ((dist - falloffStart) / (range - falloffStart)) : 1.0;
       
       // DAMAGE MULTIPLIER LOGIC
       let locMult = 1.0;

@@ -5,13 +5,14 @@ import { M } from './textures.js';
 import { isScoped } from './player.js';
 
 export const WDEFS = {
-  PISTOL:   { name:'PISTOL',          dmg:20,  range:90,  cd:.18,  hitscan:true,  ammo:Infinity, aps:1, spread:.0,   pellets:1, startAmmo:Infinity },
-  SMG:      { name:'SMG',             dmg:11,  range:55,  cd:.09,  hitscan:true,  ammo:0,        aps:1, spread:.035, pellets:1, startAmmo:45 },
-  SHOTGUN:  { name:'SHOTGUN',         dmg:32,  range:25,  cd:.25,  hitscan:true,  ammo:0,        aps:1, spread:0.12, pellets:10, startAmmo:16 },
-  CHAINGUN: { name:'CHAINGUN',        dmg:14,  range:60,  cd:.08,  hitscan:true,  ammo:0,        aps:1, spread:.055, pellets:1, startAmmo:80 },
-  RAILGUN:  { name:'RAILGUN',         dmg:110, range:130, cd:1.8,  hitscan:true,  ammo:0,        aps:1, spread:.0,   pellets:1, startAmmo:6  },
-  PLASMA:   { name:'PLASMA RIFLE',    dmg:25,  range:90,  cd:.28,  hitscan:false, ammo:0,        aps:1,              pellets:1, startAmmo:30, speed:42 },
-  ROCKET:   { name:'ROCKET LAUNCHER', dmg:95,  range:90,  cd:1.2,  hitscan:false, ammo:0,        aps:1,              pellets:1, startAmmo:6,  speed:16, splash:4.5 },
+  // falloff: fraction of damage lost at max range (0 = no dropoff, 0.75 = -75% at max range)
+  PISTOL:   { name:'PISTOL',          dmg:20,  range:75,  cd:.18,  hitscan:true,  ammo:Infinity, aps:1, spread:.0,   pellets:1, startAmmo:Infinity, falloff:0.30 },
+  SMG:      { name:'SMG',             dmg:11,  range:55,  cd:.09,  hitscan:true,  ammo:0,        aps:1, spread:.035, pellets:1, startAmmo:45,       falloff:0.50 },
+  SHOTGUN:  { name:'SHOTGUN',         dmg:32,  range:25,  cd:.25,  hitscan:true,  ammo:0,        aps:1, spread:0.12, pellets:10,startAmmo:16,       falloff:0.80 },
+  CHAINGUN: { name:'CHAINGUN',        dmg:14,  range:30,  cd:.08,  hitscan:true,  ammo:0,        aps:1, spread:.055, pellets:1, startAmmo:80,       falloff:0.70 },
+  RAILGUN:  { name:'RAILGUN',         dmg:110, range:130, cd:1.8,  hitscan:true,  ammo:0,        aps:1, spread:.0,   pellets:1, startAmmo:6,        falloff:0.00 },
+  PLASMA:   { name:'PLASMA RIFLE',    dmg:25,  range:90,  cd:.28,  hitscan:false, ammo:0,        aps:1,             pellets:1, startAmmo:30, speed:42, falloff:0.00 },
+  ROCKET:   { name:'ROCKET LAUNCHER', dmg:95,  range:90,  cd:1.2,  hitscan:false, ammo:0,        aps:1,             pellets:1, startAmmo:6,  speed:16, splash:4.5, falloff:0.00 },
 };
 
 export const WCOLORS = {

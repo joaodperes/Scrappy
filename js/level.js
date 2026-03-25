@@ -94,7 +94,13 @@ function barrel(x, z, yOff = 0) {
   const band1 = hoop(baseY - 0.46 + 0.184); 
   const band2 = hoop(baseY - 0.46 + 0.717); 
 
-  explosiveBarrels.push({ mesh: bm, meshes: [bm, band1, band2], alive: true, pos: new BABYLON.Vector3(x, baseY, z) });
+  explosiveBarrels.push({ 
+      mesh: bm, 
+      meshes: [bm, band1, band2], 
+      alive: true, 
+      pos: new BABYLON.Vector3(x, baseY, z),
+      originalPos: new BABYLON.Vector3(x, baseY, z) // <--- Added this memory
+  });
 }
 
 export function isBarrelMesh(mesh) {
@@ -122,6 +128,7 @@ export function detonateBarrelByMesh(mesh) {
 
 export function resetBarrels() {
   for (const b of explosiveBarrels) {
+    b.respawnTimer = 0; // <-- FIX: Prevents instant respawn loop
     if (!b.alive) {
       b.alive = true;
       for (const m of b.meshes) { m.setEnabled(true); m.checkCollisions = true; }
@@ -190,10 +197,9 @@ export function buildLevel() {
   // ════════════════════════════════════════════════════════════════════════
   //  TIER 1: MAIN FLOOR (y=0) & THE PIT (y=-1.5)
   // ════════════════════════════════════════════════════════════════════════
-  slab(0, -1.5, 0, 16, 16, M.concrete);
-  //makeJumpPad(0, -1.5, 0, 20); // Center escape pad
+  slab(0, -1.5, 0, 24, 24, M.concrete);
   
-  // Floor Slabs
+  // Floor Slabs (Expanded central square to match longer walls)
   slab(-30, 0,   0, 36, 96, M.concrete); // West
   slab( 30, 0,   0, 36, 96, M.concrete); // East
   slab(  0, 0,  30, 24, 36, M.concrete); // North
@@ -275,21 +281,19 @@ export function buildLevel() {
         }, scene);
         step.position.set(x, y, z);
         step.material = M.concrete;
-        step.checkCollisions = true; 
+        step.checkCollisions = false; 
     }
   }
 
-  // 3. Placing the Stairs 
+  // 3. Placing the T1 -> T2 Stairs 
   // North-West 
-  stairs(42, 0, 9.6, 12, 15, 12, 0, 1);
-
-  // North-East 
-  //stairs(18, 0, 24, 12, 14, 14, 1, 0);
-  // South-East 
-  //stairs(36, 0, -18, 12, 10, 14, 0, 1); 
-
+  //stairs(42, 0, 9.6, 12, 15, 12, 0, 1);
   // South-West 
-  stairs(-42, 0, -9.6, 12, 15, 12, 0, -1);
+  //stairs(-42, 0, -9.6, 12, 15, 12, 0, -1);
+
+  // North-West & South-East (from z=12 up to z=26)
+  stairs(-32, 0,  12, 10, 14, 12, 0,  1); 
+  stairs( 32, 0,  -12, 10, 14, 12, 0,  1);
 
   // T2 Half-Walls for cover 
   //box('half', -30, TIER_2 + 1,  32, 8, 2, 2, rwCache2);
@@ -299,9 +303,9 @@ export function buildLevel() {
   box('half',  32, TIER_2 + 1,  -25, 12, 2, 2, rwCache2);
   box('half',  25, TIER_2 + 1,  -30, 2, 2, 12, rwCache2); 
   
-  // T2 Barrels hidden behind half-walls
-  barrel(-30, 30, TIER_2); barrel(30, 30, TIER_2);
-  barrel(-30, -30, TIER_2); barrel(30, -30, TIER_2);
+  // T2 Barrels — moved outward to safe corners away from jump pads
+  barrel(-34, 34, TIER_2); barrel(34, 34, TIER_2);
+  barrel(-34, -34, TIER_2); barrel(34, -34, TIER_2);
 
   // Jump pads corners of T2 -> to T3
   makeJumpPad(-28, TIER_2,  28, 22, Math.PI/4);      // NW Corner pointing inward
@@ -309,45 +313,97 @@ export function buildLevel() {
   makeJumpPad(-28, TIER_2, -28, 22, 3*Math.PI/4);    // SW Corner pointing inward
   makeJumpPad( 28, TIER_2, -28, 22, 5*Math.PI/4);    // SE Corner pointing inward
   
-  // ════════════════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════════════════
   //  TIER 3: EXPANDED SNIPER DECKS & SIDE FLANKS (y=12)
   // ════════════════════════════════════════════════════════════════════════
   slab(0, TIER_3,  40, 56, 16, M.concrete); // North Deck
   slab(0, TIER_3, -40, 56, 16, M.concrete); // South Deck
   
-  // NEW: Side flanks to increase playable area
+  // Side flanks
   slab(-36, TIER_3, 0, 16, 40, M.concrete); // West Flank
   slab( 36, TIER_3, 0, 16, 40, M.concrete); // East Flank
 
-  box('half',  0, TIER_3+1,  47, 24, 2, 2, rwCache2); // Guard rails
-  box('half',  0, TIER_3+1, -47, 24, 2, 2, rwCache2);
+  // ── T3 Guard rails 
+  box('half',  0, TIER_3+1, -32, 24, 2, 2, rwCache2); // South deck inner rail
+  box('half',  0, TIER_3+1,  32, 24, 2, 2, rwCache2); // North deck inner rail
 
+  // ── T3 Side-slab half-walls for cover (Extended to touch the T4 stairs exactly)
+  // Flanks go to z=20. Stairs are width 8 (z=-4 to 4). So half walls are length 16.
+  box('half', -36, TIER_3+1,  12, 2, 2, 16, rwCache2); // West flank N cover
+  box('half', -36, TIER_3+1, -12, 2, 2, 16, rwCache2); // West flank S cover
+  box('half',  36, TIER_3+1,  12, 2, 2, 16, rwCache2); // East flank N cover
+  box('half',  36, TIER_3+1, -12, 2, 2, 16, rwCache2); // East flank S cover
+
+  // ── T3 Bot Catwalks (L-Shapes connecting Flanks to North/South Decks)
+  // NW Corner
+  slab(-36, TIER_3,  26, 4, 12, M.bridge); // N from West flank
+  slab(-32, TIER_3,  32, 8,  4, M.bridge); // E to North deck
+  // NE Corner
+  slab( 36, TIER_3,  26, 4, 12, M.bridge); // N from East flank
+  slab( 32, TIER_3,  32, 8,  4, M.bridge); // W to North deck
+  // SW Corner
+  slab(-36, TIER_3, -26, 4, 12, M.bridge); // S from West flank
+  slab(-32, TIER_3, -32, 8,  4, M.bridge); // E to South deck
+  // SE Corner
+  slab( 36, TIER_3, -26, 4, 12, M.bridge); // S from East flank
+  slab( 32, TIER_3, -32, 8,  4, M.bridge); // W to South deck
+
+  // ── T3 Barrels
   barrel(-16, 42, TIER_3); barrel(16, 42, TIER_3);
   barrel(-16, -42, TIER_3); barrel(16, -42, TIER_3);
+  barrel(-36, 16, TIER_3); barrel(-36, -16, TIER_3); 
+  barrel( 36, 16, TIER_3); barrel( 36, -16, TIER_3);
 
-  // Jump pads to connect the side flanks to T4
-  makeJumpPad(-36, TIER_3, 0, 24, Math.PI/2); // West Flank -> Center T4
-  makeJumpPad( 36, TIER_3, 0, 24, Math.PI*1.5); // East Flank -> Center T4
+  // ── T3 Jump pads (Point inward)
+  makeJumpPad( 0, TIER_3,  38, 22, Math.PI);      
+  makeJumpPad( 0, TIER_3, -38, 22, 0);            
+  makeJumpPad(-36, TIER_3,  12, 24, Math.PI/2);   
+  makeJumpPad(-36, TIER_3, -12, 24, Math.PI/2);   
+  makeJumpPad( 36, TIER_3,  12, 24, -Math.PI/2);  
+  makeJumpPad( 36, TIER_3, -12, 24, -Math.PI/2);  
 
-  stairs(-36, TIER_3, 0, 12, 20, 24, 1, 0); // Stairs to T4?
+  // ── NEW T2 to T3 Flank Stairs 
+  // Moved next to the catwalk (x=±32), starts right where T1->T2 stairs ended
+  stairs(-32, TIER_2,  26, 8, 8, 12, 0, -1); // NW T2 -> West flank
+  stairs( 32, TIER_2,  26, 8, 8, 12, 0, -1); // NE T2 -> East flank
+  stairs(-32, TIER_2, -26, 8, 8, 12, 0,  1); // SW T2 -> West flank
+  stairs( 32, TIER_2, -26, 8, 8, 12, 0,  1); // SE T2 -> East flank
 
-  makeJumpPad(0, TIER_3,  42, 22, Math.PI/2); 
-  makeJumpPad(0, TIER_3, -42, 22, Math.PI * 1.5);
+  // ── T3 to T4 Window Stairs (Aligns perfectly with T4 gaps)
+  stairs(-36, TIER_3, 0, 8, 23, 12, 1, 0);  // West flank -> West window
+  stairs( 36, TIER_3, 0, 8, 23, 12, -1, 0); // East flank -> East window
 
-  // ════════════════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════════════════
   //  TIER 4: THE CORRIDOR (y=18)
   // ════════════════════════════════════════════════════════════════════════
   slab(0, TIER_4, 0, 24, 64, M.bridge); // Wider floor
-  //ceil(0, TIER_4 + 5, 0, 16, 64);       // Enclosed ceiling
   
-  // Outer corridor walls (Made THICKER [width: 4] so bots can't shoot through them)
-  wall(-10, TIER_4 + 2.5, 0, 4, 5, 64, rwCache1); // West Wall
-  wall( 10, TIER_4 + 2.5, 0, 4, 5, 64, rwCache1); // East Wall
+  // Outer corridor walls — Perfectly gapped at z=0 for the windows
+  wall(-13, TIER_4 + 2.5,  26, 2, 5, 12, rwCache1); // West wall N panel
+  wall( 13, TIER_4 + 2.5,  26, 2, 5, 12, rwCache1); // East wall N panel
+  
+  wall(-13, TIER_4 + 2.5,  12, 2, 5, 16, rwCache1); // West wall mid-N panel (ends at z=4)
+  wall( 13, TIER_4 + 2.5,  12, 2, 5, 16, rwCache1); // East wall mid-N panel
+  
+  wall(-13, TIER_4 + 2.5, -12, 2, 5, 16, rwCache1); // West wall mid-S panel (starts at z=-4)
+  wall( 13, TIER_4 + 2.5, -12, 2, 5, 16, rwCache1); // East wall mid-S panel
+  
+  wall(-13, TIER_4 + 2.5, -26, 2, 5, 12, rwCache1); // West wall S panel
+  wall( 13, TIER_4 + 2.5, -26, 2, 5, 12, rwCache1); // East wall S panel
+  
+  // Window sills at z=0 (sz=8 fills the gap perfectly)
+  box('win', -13, TIER_4 + 0.5, 0, 2, 1, 8, rwCache2); // West window sill
+  box('win',  13, TIER_4 + 0.5, 0, 2, 1, 8, rwCache2); // East window sill
 
-  // Alternating half-walls inside the corridor for cover
-  box('half', -6, TIER_4 + 1,  15, 6, 2, 2, rwCache2);
-  //box('half',  6, TIER_4 + 1,   0, 6, 2, 2, rwCache2);
-  box('half', 6, TIER_4 + 1, -15, 6, 2, 2, rwCache2);
+  // Interior serpentine half-walls
+  box('half', -6, TIER_4 + 1,  20, 6, 2, 2, rwCache2);
+  box('half',  6, TIER_4 + 1,  10, 6, 2, 2, rwCache2);
+  box('half', -6, TIER_4 + 1,   0, 6, 2, 2, rwCache2); // Aligned with the windows
+  box('half',  6, TIER_4 + 1, -10, 6, 2, 2, rwCache2);
+  box('half', -6, TIER_4 + 1, -20, 6, 2, 2, rwCache2);
+  
+  // T4 Barrels
+  barrel(-10, 0, TIER_4); barrel(10, 0, TIER_4);
 
   // Central Jump Pad to T5!
   makeJumpPad(0, TIER_4, 0, 32, 0); // Straight up
@@ -366,8 +422,8 @@ export function buildLevel() {
   const topCeil = ceil(0, TIER_5 + 8, 0, 40, 80);
   topCeil.checkCollisions = true; 
 
-  // THE EXIT: A simple ramp leading back down to T4
-  stairs(-10, TIER_5, -5, 4, 5, 1, 1, 0); // Stairs leading down towards the center hole
+  // Exit stairs back toward the center hole
+  //stairs(-10, TIER_5, -5, 4, 5, 1, 1, 0);
 
   // North Safe Room (Where the pickups are)
   wall(-12, TIER_5 + 3, 20,  1, 6, 24, rwCache1); // West Wall 
@@ -382,48 +438,6 @@ export function buildLevel() {
   const secretGlow = new BABYLON.PointLight('secretGlow', new BABYLON.Vector3(0, TIER_5+3, 20), scene);
   secretGlow.diffuse = new BABYLON.Color3(0, 1, 1); secretGlow.intensity = 2.0; secretGlow.range = 20;
 
-  /* // ════════════════════════════════════════════════════════════════════════
-  //  TIER 3: SNIPER DECKS (y=12)
-  // ════════════════════════════════════════════════════════════════════════
-  slab(0, 12,  40, 56, 16, M.concrete); // North Deck
-  slab(0, 12, -40, 56, 16, M.concrete); // South Deck
-
-  // T3 Half-Walls guarding the edges
-  box('half',  0, 13,  33, 24, 2, 2, rwCache2);
-  box('half',  0, 13, -33, 24, 2, 2, rwCache2);
-
-  // T3 Barrels
-  barrel(-16, 42, 12); barrel(16, 42, 12);
-  barrel(-16, -42, 12); barrel(16, -42, 12);
-
-  // Jump pads against the center walls -> to T4
-  makeJumpPad(0, TIER_3,  45, 22, Math.PI/2); 
-  makeJumpPad(0, TIER_3, -45, 22, Math.PI * 1.5);
-
-  // ════════════════════════════════════════════════════════════════════════
-  //  TIER 4: SKY BRIDGE (y=18)
-  // ════════════════════════════════════════════════════════════════════════
-  slab(0, 18, 0, 12, 64, M.bridge); // Massive bridge crossing the entire arena
-
-  // T4 Half-Walls
-  box('half', -5, 19,  16, 2, 2, 8, rwCache2);
-  box('half',  5, 19, -16, 2, 2, 8, rwCache2);
-  
-  barrel(0,  20, 18); barrel(0, -20, 18);
-
-  // Center jump pad -> to T5
-  //makeJumpPad(0, 18, 0, 20); - below the actual platform
-  makeJumpPad(0, TIER_4, -26, 20, 0);// North edge of bridge -> to T5
-
-  // ════════════════════════════════════════════════════════════════════════
-  //  TIER 5: THE SUMMIT (y=24)
-  // ════════════════════════════════════════════════════════════════════════
-  // Floating high-risk platform at the very top of the map
-  slab(0, 24, 0, 16, 16, M.concrete);
-
-  const secretGlow = new BABYLON.PointLight('secretGlow', new BABYLON.Vector3(0, 25, 0), scene);
-  secretGlow.diffuse = new BABYLON.Color3(0, 1, 1); secretGlow.intensity = 2.0; secretGlow.range = 20;
-   */
   // BAKE THE NAVMESH
   const navmeshParameters = {
       cs: 0.2,            
@@ -452,10 +466,6 @@ export function buildLevel() {
   navmeshdebug.material.alpha = 0.5; */
 }
 
-const TIER_1_SPAWNS = [
-  [-24, 24], [-24, -24], [24, 24], [24, -24], [-38, 0], [38, 0], [0, 30], [0, -30]
-];
-
 export function updateBarrels(dt) {
   for (const b of explosiveBarrels) {
     if (!b.alive) {
@@ -464,15 +474,13 @@ export function updateBarrels(dt) {
         b.alive = true;
         b.respawnTimer = 0;
         
-        const spot = TIER_1_SPAWNS[Math.floor(Math.random() * TIER_1_SPAWNS.length)];
-        b.pos.x = spot[0];
-        b.pos.z = spot[1];
-        b.pos.y = _liftFloatingY(TIER_1) + 0.46; // <--- FIX: Force Y to Tier 1 height!
+        // Grab the exact 3D position it was originally spawned at
+        b.pos.copyFrom(b.originalPos);
 
         for (const m of b.meshes) { 
           m.position.x = b.pos.x;
-          m.position.z = b.pos.z;
           m.position.y = b.pos.y;
+          m.position.z = b.pos.z;
           m.setEnabled(true); 
           m.checkCollisions = true; 
         }

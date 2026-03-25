@@ -289,7 +289,7 @@ export function buildRobot(type) {
     const wn = type==='heavy'?'CHAINGUN':type==='sniper'?'RAILGUN':type==='pistol'?'PISTOL':type==='shotgun'?'SHOTGUN':type==='rocket'?'ROCKET':'SMG';
     const ws = type==='heavy'?.62:type==='sniper'?.50:type==='pistol'?.44:type==='shotgun'?.54:type==='rocket'?.56:.50;
     const wm = makeScaledWeaponModel(wn, ws); wm.parent = g;
-    wm.position.set(bW/2+aW/2, bY+bH*.18-.02, .42); wm.rotation.y = Math.PI / 5;
+    wm.position.set(bW/2+aW/2, bY+bH*.18-.02, .42); wm.rotation.y = 0;
     wm.getChildMeshes().forEach(c => { c.isPickable = false; });
   }
 
@@ -323,22 +323,26 @@ export function buildRobot(type) {
 
 // ── Curated walkable spawn positions (Expanded for 5 Tiers & Kept away from walls) ───────
 const WALKABLE_SPAWNS = [
-  // TIER 1: Main Floor (y = 0)
+  // TIER 1: Main Floor (y = 0) — kept well clear of all centre walls
   [-30, 0,  30], [ 30, 0,  30], [-30, 0, -30], [ 30, 0, -30], // Far corners
-  [-20, 0,   0], [ 20, 0,   0], [  0, 0,  20], [  0, 0, -20], // Mid-points
+  [-22, 0,   0], [ 22, 0,   0], [  0, 0,  26], [  0, 0, -26], // Mid-points (shifted from ±20/±20 to avoid wall proximity)
 
   // TIER 2: Mezzanine (y = 6)
-  [-34, 6,  34], [ 34, 6,  34], [-34, 6, -34], [ 34, 6, -34], 
+  [-34, 6,  34], [ 34, 6,  34], [-34, 6, -34], [ 34, 6, -34],
 
   // TIER 3: Sniper Decks (y = 12)
-  [  0, 12,  38], [-20, 12,  38], [ 20, 12,  38], // North Deck
-  [  0, 12, -38], [-20, 12, -38], [ 20, 12, -38], // South Deck
+  [  0, 12,  38], [-18, 12,  38], [ 18, 12,  38], // North Deck
+  [  0, 12, -38], [-18, 12, -38], [ 18, 12, -38], // South Deck
+  // T3 Side flanks (new geometry)
+  [-36, 12,  10], [-36, 12, -10],                  // West flank
+  [ 36, 12,  10], [ 36, 12, -10],                  // East flank
 
-  // TIER 4: Sky Bridge (y = 18)
-  [ 0, 18,  16], [ 0, 18, -16],
+  // TIER 4: Corridor (y = 18) — x=0 keeps bots safely in the centre, away from walls at x=±12
+  [ 0, 18,  20], [ 0, 18,  8], [ 0, 18, -8], [ 0, 18, -20],
 
   // TIER 5: The Summit (y = 24)
-  [ 0, 24,   0]
+  // [0,24,0] was in the floor HOLE — use north safe-room centre instead
+  [ 0, 24, 22], [-4, 24, 22], [ 4, 24, 22],
 ];
 const MIN_SPAWN_DIST = 16;
 
@@ -366,10 +370,19 @@ export function spawnBot(type, _x, _spawnY_IGNORED, _z, scale = 1.0) {
   e.dmg = Math.round(e.dmg * scale);
   e.speed = e.speed * (0.85 + 0.15 * Math.min(scale, 2.0));
   if (type === 'giantbot') {
-      e.group.scaling.set(3, 3, 3); // Make him 3x bigger
+      e.group.scaling.set(3, 3, 3);
   }
-  
-  // Set the true vertical height
+
+  // Snap the chosen spawn to the nearest valid NavMesh point so bots can never
+  // materialise inside wall geometry even if the raw coordinate is slightly off.
+  const rawSpawn = new BABYLON.Vector3(px, py + (e.flyH > 0 ? e.flyH : 0) + 0.5, pz);
+  const snapped  = navPlugin.getClosestPoint(rawSpawn);
+  if (snapped) {
+    px = snapped.x;
+    py = snapped.y;
+    pz = snapped.z;
+  }
+
   e.group.position.set(px, py + (e.flyH > 0 ? e.flyH : 0), pz);
   
   if (isAngryMode()) { e.dmg = Math.round(e.dmg * 1.6); e.speed *= 1.5; e.score *= 2; _addRedArrow(e); }
@@ -393,18 +406,26 @@ export function destroyRobot(e) {
   e.alive = false;
   if (e._arrowNode) { e._arrowNode.getChildMeshes().forEach(m => m.dispose()); e._arrowNode.dispose(); }
   
-  // ── 1. RAYCAST: Find the floor beneath the dying bot ────────
-  const ray = new BABYLON.Ray(e.group.position, new BABYLON.Vector3(0, -1, 0), 100);
-  const hit = scene.pickWithRay(ray, (m) => m.checkCollisions);
+  // ── 1. RAYCAST: Find the floor beneath the dying bot using intersectsMesh
+  //    (pickWithRay skips isPickable=false meshes, which all our floors are)
+  const dropRay = new BABYLON.Ray(e.group.position, new BABYLON.Vector3(0, -1, 0), 120);
+  let _closestDist = Infinity, _closestPt = null;
+  for (const m of scene.meshes) {
+    if (!m.isEnabled() || !m.checkCollisions || m.metadata?.enemy) continue;
+    const info = dropRay.intersectsMesh(m, false);
+    if (info.hit && info.distance < _closestDist) {
+      _closestDist = info.distance;
+      _closestPt   = info.pickedPoint;
+    }
+  }
   
   // Create our loot drop position
   const pos = e.group.position.clone();
-  if (hit && hit.pickedPoint) {
-      pos.y = hit.pickedPoint.y + 0.5; // Snap the loot to the floor we just hit!
+  if (_closestPt) {
+    pos.y = _closestPt.y + 0.5; // Snap loot to floor below
   } else {
-      pos.y += 1.0; // Fallback if no floor was found
+    pos.y = 0.6; // Fallback to near ground if nothing found
   }
-  // ────────────────────────────────────────────────────────────
 
   spawnSparks(pos, 0xff8844, 16);
   sfx.robotDie();
@@ -581,16 +602,41 @@ export function updateEnemies(dt) {
                         }
                     }
 
+                    // Re-normalise after separation contributions
+                    const _dirLen = _eDir.length();
+                    if (_dirLen > 0.001) _eDir.scaleInPlace(1 / _dirLen);
+                    else { _eDir.set(Math.random()-0.5, 0, Math.random()-0.5); _eDir.normalize(); }
+
                     // ── THE FIX: Strict NavMesh Clamping ──
                     // Calculate where the bot WANTS to go
-                    const intendedPos = e.group.position.add(_eDir.normalize().scale(e.speed * dt));
+                    const intendedPos = e.group.position.add(_eDir.scale(e.speed * dt));
                     // Ask the NavMesh for the closest VALID point to that location
                     const clampedPos = navPlugin.getClosestPoint(new BABYLON.Vector3(intendedPos.x, e._floorY + 0.5, intendedPos.z));
                     
                     if (clampedPos) {
-                        e.group.position.x = clampedPos.x;
-                        e.group.position.z = clampedPos.z;
-                        e._floorY = clampedPos.y; // Keep floor strictly synced
+                        // Extra safety: make sure the clamped step doesn't pass through a wall
+                        const _stepVec = new BABYLON.Vector3(clampedPos.x - e.group.position.x, 0, clampedPos.z - e.group.position.z);
+                        const _stepLen = _stepVec.length();
+                        if (_stepLen > 0.001) {
+                            const _wallCheck = new BABYLON.Ray(
+                                new BABYLON.Vector3(e.group.position.x, e._floorY + 0.8, e.group.position.z),
+                                _stepVec.normalize(),
+                                _stepLen + 0.4
+                            );
+                            // Add checks to ignore the visual steps and the invisible ramps
+                            const _wHit = scene.pickWithRay(_wallCheck, m => 
+                                m.checkCollisions && 
+                                !m.metadata?.enemy && 
+                                m.isEnabled() && 
+                                !m.name.includes('step') && 
+                                !m.name.includes('invRamp')
+                            );
+                            if (!_wHit?.hit) {
+                                e.group.position.x = clampedPos.x;
+                                e.group.position.z = clampedPos.z;
+                                e._floorY = clampedPos.y;
+                            }
+                        }
                     }
                 }
             }
@@ -610,7 +656,9 @@ export function updateEnemies(dt) {
         e.atkTimer = e.rate;
         _eMuzzle.set(e.group.position.x, e.group.position.y + e.muzzleOffY, e.group.position.z);
         
-        const playerEye = _ePP.clone(); playerEye.y -= 0.5; // Aim at chest level
+        // Aim at the player's camera position – no Y offset so distant shots
+        // don't arc above the 0.95-radius hit sphere around the camera.
+        const playerEye = _ePP.clone();
         
         if (_hasLOS(_eMuzzle, playerEye)) {
           // Normalize preserves the 3D Y-axis, allowing bots to shoot up/down at you

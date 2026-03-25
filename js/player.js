@@ -108,13 +108,13 @@ function shoot() {
   const modDmg = W.dmg * dmgMult;
   
   switch (curWep) {
-    case 'PISTOL':   sfx.pistol();   hitscan(_meshToEnemy, W.spread, modDmg,  W.range); break;
-    case 'SMG':      sfx.smg();      hitscan(_meshToEnemy, W.spread, modDmg,  W.range); break;
-    case 'CHAINGUN': sfx.chaingun(); hitscan(_meshToEnemy, W.spread, modDmg,  W.range); break;
-    case 'RAILGUN':  sfx.railgun();  hitscan(_meshToEnemy, W.spread, 9999,    W.range); break; 
-    case 'SHOTGUN':  sfx.shotgun();  for (let i = 0; i < W.pellets; i++) hitscan(_meshToEnemy, W.spread, modDmg, W.range); break;
-    case 'PLASMA':   sfx.plasma();   firePlasma(); break; // Needs custom logic in projectiles.js if you want plasma damage buffed
-    case 'ROCKET':   sfx.rocket();   fireRocket(); break; // Needs custom logic in projectiles.js if you want rocket damage buffed
+    case 'PISTOL':   sfx.pistol();   hitscan(_meshToEnemy, W.spread, modDmg,  W.range, W.falloff ?? 0.30); break;
+    case 'SMG':      sfx.smg();      hitscan(_meshToEnemy, W.spread, modDmg,  W.range, W.falloff ?? 0.50); break;
+    case 'CHAINGUN': sfx.chaingun(); hitscan(_meshToEnemy, W.spread, modDmg,  W.range, W.falloff ?? 0.60); break;
+    case 'RAILGUN':  sfx.railgun();  hitscan(_meshToEnemy, W.spread, 9999,    W.range, 0.00); break;
+    case 'SHOTGUN':  sfx.shotgun();  for (let i = 0; i < W.pellets; i++) hitscan(_meshToEnemy, W.spread, modDmg, W.range, W.falloff ?? 0.80); break;
+    case 'PLASMA':   sfx.plasma();   firePlasma(); break;
+    case 'ROCKET':   sfx.rocket();   fireRocket(); break;
   }
 }
 export { shoot };

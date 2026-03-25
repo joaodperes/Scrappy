@@ -89,6 +89,7 @@ function startGame() {
 
   setWeapon('PISTOL'); updateHUD();
   gameRunning=true; paused=false;
+  initSecretKits(); // Recreate T5 secret kits (cleared above with pickups.length=0)
   document.getElementById('c').requestPointerLock();
 }
 
@@ -203,7 +204,8 @@ document.getElementById('pauseOverlay')?.addEventListener('click', () => { if (p
 buildLevel();
 setupLighting();
 renderLeaderboard();
-initSecretKits();
+// NOTE: initSecretKits() is called inside startGame() after pickups are cleared,
+// so kits are never created here only to be disposed a moment later.
 
 engine.resize();
 window.addEventListener('resize', () => engine.resize());

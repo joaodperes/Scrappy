@@ -33,4 +33,9 @@ export const sfx = {
   railgun:   () => { tone({ f:90, t:'sawtooth', d:.48, v:.2, f2:2400 }); tone({ f:900, t:'square', d:.08, v:.2 }); },
   plasma:    () => { tone({ f:1800, t:'sine', d:.11, v:.13, f2:600 }); tone({ f:2100, t:'square', d:.05, v:.1 }); },
   wPickup:   () => [330,440,550,660,880].forEach((f,i) => setTimeout(() => tone({ f, t:'sine', d:.1, v:.13 }), i*40)),
+  powerup:   () => {
+    // Dramatic 6-note ascending sweep with a higher final note — clearly distinct from pickup/wPickup
+    [220,330,440,660,880,1320].forEach((f,i) => setTimeout(() => tone({ f, t:'sine', d:.18, v:.18 }), i*55));
+    tone({ f:80, t:'sawtooth', d:.55, v:.12 }); // Deep bass rumble underneath
+  },
 };
