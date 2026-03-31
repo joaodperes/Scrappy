@@ -7,6 +7,7 @@ import { enemies, player, cb } from './gameState.js';
 import { spawnSparks } from './particles.js';
 import { fireEnemyShot } from './projectiles.js';
 import { sfx } from './audio.js';
+import { jumpPads } from './level.js';
 
 // ── Mesh→enemy lookup ─────────────────────────────────────────
 export const _meshToEnemy = new Map();
@@ -19,8 +20,7 @@ export function rebuildMeshMap() {
 }
 
 // ── Boss types: railgun deals reduced damage, not instant-kill ─
-// Heavy + rocket bot are boss-tier. Railgun still needs ~2 shots.
-const BOSS_TYPES = new Set(['heavy', 'rocket']);
+const BOSS_TYPES = new Set(['giantbot']);
 
 // ── Round timer & angry mode ──────────────────────────────────
 let _gameTime    = 0;   // seconds since wave started, counts UP
@@ -215,13 +215,14 @@ function _hasLOS(from, to) {
 export function buildRobot(type) {
   const g = new BABYLON.TransformNode('robot_' + type, scene);
   const sc = {
-    scout:   { r: 72,  gr: 80, b: 72,  led: M.ledGreen,  flyH: 0   },
-    heavy:   { r: 100, gr: 68, b: 48,  led: M.ledRed,    flyH: 0   },
-    sniper:  { r: 45,  gr: 58, b: 78,  led: M.ledCyan,   flyH: 0   },
-    drone:   { r: 52,  gr: 52, b: 88,  led: M.ledBlue,   flyH: 1.4 },
-    pistol:  { r: 90,  gr: 90, b: 90,  led: M.ledWhite,  flyH: 0   },
-    shotgun: { r: 120, gr: 90, b: 60,  led: M.ledYellow, flyH: 0   },
-    rocket:  { r: 80,  gr: 40, b: 40,  led: M.ledOrange, flyH: 0   },
+    scout:     { r: 72,  gr: 80, b: 72,  led: M.ledGreen,  flyH: 0   },
+    heavy:     { r: 100, gr: 68, b: 48,  led: M.ledRed,    flyH: 0   },
+    sniper:    { r: 45,  gr: 58, b: 78,  led: M.ledCyan,   flyH: 0   },
+    drone:     { r: 52,  gr: 52, b: 88,  led: M.ledBlue,   flyH: 1.4 },
+    pistol:    { r: 90,  gr: 90, b: 90,  led: M.ledWhite,  flyH: 0   },
+    shotgun:   { r: 120, gr: 90, b: 60,  led: M.ledYellow, flyH: 0   },
+    rocket:    { r: 80,  gr: 40, b: 40,  led: M.ledOrange, flyH: 0   },
+    grenadier: { r: 55,  gr: 110, b: 55, led: M.ledGreen,  flyH: 0   },
   }[type] || { r: 70, gr: 70, b: 70, led: M.ledGreen, flyH: 0 };
   const bmat = robotTex('r_' + type + '_' + Math.random().toString(36).slice(2), sc.r, sc.gr, sc.b);
   const led  = sc.led;
@@ -258,6 +259,7 @@ export function buildRobot(type) {
     if (type === 'sniper')  { bW=.66; bH=1.1;  bD=.44; aL=.64; aW=.11; lW=.20; lH=.52; fL=.28; fH=.14; hW=.4;  hH=.31; hD=.29; }
     if (type === 'shotgun') { bW=.54; bH=1.12; bD=.34; aL=.72; aW=.12; lW=.16; lH=.68; fL=.25; fH=.12; hW=.34; hH=.33; hD=.26; }
     if (type === 'rocket')  { bW=.52; bH=1.15; bD=.36; aL=.74; aW=.13; lW=.17; lH=.70; fL=.28; fH=.13; hW=.36; hH=.34; hD=.29; }
+    if (type === 'grenadier') { bW=.60; bH=1.20; bD=.42; aL=.70; aW=.13; lW=.18; lH=.65; fL=.28; fH=.13; hW=.38; hH=.34; hD=.30; }
     const bY = bH / 2 + .28;
     const hY = bY + bH/2 + hH*.42;
     if (type === 'giantbot') {
@@ -281,13 +283,27 @@ export function buildRobot(type) {
     addBox('pan', bW*.55, bH*.38, .06, bmat, 0, bY, bW*.28);
     addSphere('glow', .08, led, 0, bY+.05, bW*.31);
     for (const s of [-1, 1]) { addBox('leg'+s, lW, lH, lW*1.2, bmat, s*(bW/2-.12), .22, 0); addBox('ft'+s, fL, fH, fL*1.1, bmat, s*(bW/2-.12), .03, .06); }
-    
     addBox('hd', hW, hH, hD, bmat, 0, hY, 0);
     addBox('vis', hW*.78, .14, hW*.18, led, 0, hY, hW*.38);
     addBox('aL', aW, aW, aL, bmat,  bW/2+aW/2, bY+bH*.18, -aL*.1);
     addBox('aR', aW, aW, aL, bmat, -bW/2-aW/2, bY+bH*.18, -aL*.1);
-    const wn = type==='heavy'?'CHAINGUN':type==='sniper'?'RAILGUN':type==='pistol'?'PISTOL':type==='shotgun'?'SHOTGUN':type==='rocket'?'ROCKET':'SMG';
-    const ws = type==='heavy'?.62:type==='sniper'?.50:type==='pistol'?.44:type==='shotgun'?.54:type==='rocket'?.56:.50;
+
+    // ── Grenadier-specific extra geometry ──────────────────────────────
+    if (type === 'grenadier') {
+      // Ammo drum backpack — wide cylinder on the back
+      addCyl('pack', .34, .48, bmat,  0, bY + bH*.15, -bD*.9, 0);
+      // Two visible grenade rounds clipped to the drum
+      addCyl('rnd1', .10, .22, M.ledGreen,  .13, bY + bH*.30, -bD*.9 - .05, Math.PI/2);
+      addCyl('rnd2', .10, .22, M.ledGreen, -.13, bY + bH*.30, -bD*.9 - .05, Math.PI/2);
+      // Over-shoulder launcher tube on the right arm
+      addCyl('ltube', .12, .64, M.gunMetal, bW/2 + aW + .08, bY + bH*.30, .18, Math.PI/2);
+      // Muzzle cap
+      addCyl('lmuz', .16, .05, M.black,     bW/2 + aW + .08, bY + bH*.30, .52, Math.PI/2);
+      // Green hazard stripe across the chest
+      addBox('stripe', bW*.90, .06, .04, M.ledGreen, 0, bY + bH*.38, bD*.52);
+    }
+    const wn = type==='heavy'?'CHAINGUN':type==='sniper'?'RAILGUN':type==='pistol'?'PISTOL':type==='shotgun'?'SHOTGUN':type==='rocket'?'ROCKET':type==='grenadier'?'GLAUNCHER':'SMG';
+    const ws = type==='heavy'?.62:type==='sniper'?.50:type==='pistol'?.44:type==='shotgun'?.54:type==='rocket'?.56:type==='grenadier'?.56:.50;
     const wm = makeScaledWeaponModel(wn, ws); wm.parent = g;
     wm.position.set(bW/2+aW/2, bY+bH*.18-.02, .42); wm.rotation.y = 0;
     wm.getChildMeshes().forEach(c => { c.isPickable = false; });
@@ -296,12 +312,14 @@ export function buildRobot(type) {
   const stat = {
     scout:   { hp:55,  maxHp:55,  spd:5.5, dmg:4,  range:26, rate:0.55,  pt:'bullet',  pv:26, score:100, mOY:1.0 }, // High RoF, low damage
     heavy:   { hp:200, maxHp:200, spd:1.2, dmg:12, range:24, rate:0.25, pt:'heavy',   pv:55, score:260, mOY:1.35 },     // Slow move, VERY high RoF
-    sniper:  { hp:38,  maxHp:38,  spd:2.8, dmg:80, range:48, rate:3.5,  pt:'sniper',  pv:40, score:210, mOY:1.0 },     // Massive damage, slow RoF
+    sniper:  { hp:30,  maxHp:30,  spd:2.8, dmg:60, range:48, rate:5.0,  pt:'sniper',  pv:40, score:210, mOY:1.0 },     // Massive damage, slow RoF
     drone:   { hp:48,  maxHp:48,  spd:6.0, dmg:7,  range:22, rate:0.6,  pt:'plasma',  pv:24, score:155, mOY:0.5 }, // Balanced
     pistol:  { hp:30,  maxHp:30,  spd:4.2, dmg:7,  range:22, rate:0.65, pt:'bullet',  pv:22, score:70,  mOY:1.0 }, // Balanced
-    shotgun: { hp:80,  maxHp:80,  spd:2.7, dmg:18, range:18, rate:1.1, pt:'shotgun', pv:18, score:140, mOY:1.0 },
+    shotgun: { hp:80,  maxHp:80,  spd:6.0, dmg:18, range:18, rate:1.1, pt:'shotgun', pv:18, score:140, mOY:1.0 },
     rocket:  { hp:120, maxHp:120, spd:2.0, dmg:40, range:28, rate:2.2, pt:'rocket',  pv:14, score:200, mOY:1.1 },
     giantbot:  { hp: 1500, maxHp: 1500, spd: 1.8, dmg: 45, range: 40, rate: 1.5, pt: 'rocket', pv: 20, score: 5000, mOY: 2.5, railgunImmune: true },
+    // Grenadier: Similar to rocket, but shoots bouncing explosives in an arc
+    grenadier: { hp:45, maxHp:45, spd:3.2, dmg:65, range:40, rate:2.5, pt:'grenade', pv:22, score:160, mOY:1.0 },
   }[type] || {};
 
   return {
@@ -341,8 +359,8 @@ const WALKABLE_SPAWNS = [
   [ 0, 18,  20], [ 0, 18,  8], [ 0, 18, -8], [ 0, 18, -20],
 
   // TIER 5: The Summit (y = 24)
-  // [0,24,0] was in the floor HOLE — use north safe-room centre instead
-  [ 0, 24, 22], [-4, 24, 22], [ 4, 24, 22],
+  // Moved to South platform (z = -16) to keep the North safe room strictly for players
+  [ 0, 24, -16], [-4, 24, -16], [ 4, 24, -16],
 ];
 const MIN_SPAWN_DIST = 16;
 
@@ -392,9 +410,9 @@ export function spawnBot(type, _x, _spawnY_IGNORED, _z, scale = 1.0) {
 
 export function hitRobot(e, dmg) {
   if (!e.alive) return;
-  // Railgun fires 9999 – cap it for boss-tier enemies so they need ~2 shots
-  if (BOSS_TYPES.has(e.type) && dmg > e.maxHp * 0.55) {
-    dmg = Math.round(e.maxHp * 0.55);
+  // Railgun fires 9999 – cap it for boss-tier enemies so they need multiple shots - currently capped at 20% HP
+  if (BOSS_TYPES.has(e.type) && dmg > e.maxHp * 0.20) {
+    dmg = Math.round(e.maxHp * 0.20);
   }
   e.hp -= dmg;
   if (cb.showHitMarker) cb.showHitMarker();
@@ -439,12 +457,20 @@ export function destroyRobot(e) {
       pointsToAward *= 2; 
   }
   player.score += pointsToAward;
-  // ────────────────────────────────────────────────────────────
+
+  // ── 3. PROGRESSION: XP + kill tracking ──────────────────────
+  import('./progression.js').then(({ awardXp, recordKill, XP_GRANTS }) => {
+    const xpKey = 'kill' + e.type.charAt(0).toUpperCase() + e.type.slice(1);
+    const xp = XP_GRANTS[xpKey] ?? XP_GRANTS.killScout;
+    awardXp(xp, 'Kill: ' + e.type);
+    // Record which weapon was used for kill tracking (curWep from weapons.js)
+    import('./weapons.js').then(({ curWep }) => recordKill(e.type, curWep));
+  });
 
   _totalKills++;
   _roundKills++;
   
-  const names = { scout:'Scout destroyed!',heavy:'Heavy down!',sniper:'Sniper eliminated!',drone:'Drone shot down!',pistol:'Pistol bot down!',shotgun:'Shotgunner destroyed!',rocket:'Rocket bot destroyed!' };
+  const names = { scout:'Scout destroyed!',heavy:'Heavy down!',sniper:'Sniper eliminated!',drone:'Drone shot down!',pistol:'Pistol bot down!',shotgun:'Shotgunner destroyed!',rocket:'Rocket bot destroyed!',grenadier:'Grenadier down!' };
   const feed = document.getElementById('killFeed');
   if (feed) { 
       feed.textContent = (names[e.type] || 'Robot destroyed!') + (_angryMode ? ' [ENRAGED]' : ''); 
@@ -499,203 +525,257 @@ export function updateEnemies(dt) {
     if (!e.alive) continue;
     e.animT += dt;
 
-    // --- 1. BASE Y & VISUAL BOBBING ---
-    if (e._floorY === undefined) {
-        e._floorY = e.group.position.y - (e.flyH > 0 ? e.flyH : 0);
-    }
+    // Initialize physical properties
+    if (e._floorY === undefined) e._floorY = e.group.position.y - (e.flyH > 0 ? e.flyH : 0);
+    e._hopY = e._hopY || 0;
+    e._yVel = e._yVel || 0;
+    e._stuckTimer = e._stuckTimer || 0;
 
-    let bob = 0;
-    if (e.flyH > 0) bob = e.flyH + Math.sin(e.animT * 1.9) * .18;
-    else            bob = Math.abs(Math.sin(e.animT * 5.8)) * .04;
-
+    let bob = (e.flyH > 0) ? (e.flyH + Math.sin(e.animT * 1.9) * .18) : (Math.abs(Math.sin(e.animT * 5.8)) * .04);
     _updateArrow(e);
 
     const dist = BABYLON.Vector3.Distance(e.group.position, _ePP);
-    const inRange = dist < e.range;
+    
+    // Calculate Line of Sight (Crucial for vertical behavior)
+    _eMuzzle.set(e.group.position.x, e.group.position.y + e.muzzleOffY, e.group.position.z);
+    const playerEye = _ePP.clone();
 
-    // --- 2. BOSS SPECIAL ABILITIES ---
+    // Calculate 2D distance (ignoring height)
+    const dist2D = Math.sqrt(
+      Math.pow(e.group.position.x - _ePP.x, 2) + 
+      Math.pow(e.group.position.z - _ePP.z, 2)
+    );
+    
+    // NEW LOGIC: 
+    // 1. If I don't have Line of Sight (LOS), I MUST move toward the player (up stairs).
+    // 2. If I have LOS, I only move if I'm outside my preferred 2D range.
+    const hasLOS = _hasLOS(_eMuzzle, playerEye);
+
+    // --- 1. BOSS SPECIAL ABILITIES ---
     if (e.type === 'giantbot') {
-        // ── 1. THE SUMMON ABILITY ──
-        e.summonTimer = (e.summonTimer || 0) - dt;
-        if (e.summonTimer <= 0 && enemies.length < 25) {
-            e.summonTimer = 20.0; // Cooldown
+        // Initialise summon timer on first tick so it doesn't fire immediately
+        if (e.summonTimer === undefined) e.summonTimer = 30.0;
+        e.summonTimer -= dt;
+
+        // Only summon when: cooldown elapsed AND the arena isn't already packed
+        // AND the boss has taken some damage (< 75 % HP) — gate prevents
+        // the boss spamming minions before the player even engages it.
+        const hpPct = e.hp / e.maxHp;
+        if (e.summonTimer <= 0 && enemies.length < 22 && hpPct < 0.75) {
+            e.summonTimer = 45.0;  // 45-second cooldown between summons
             spawnBot('drone', e.group.position.x + 3, e.group.position.y + 5, e.group.position.z, 1.0);
             spawnBot('drone', e.group.position.x - 3, e.group.position.y + 5, e.group.position.z, 1.0);
+            _roundEnemies += 2;  // keep round kill counter accurate
         }
+    }
 
-        // ── 2. ATTACK LOGIC ──
-        const weps = ['rocket', 'plasma', 'heavy'];
-        const pt = weps[Math.floor(Date.now() / 3500) % 3];
-        const bossDmg = pt === 'rocket' ? 45 : (pt === 'plasma' ? 20 : 12);
-        const bossSpd = pt === 'rocket' ? 20 : (pt === 'plasma' ? 45 : 60);
-        
-        const rightVec = BABYLON.Vector3.Cross(BABYLON.Axis.Y, dir).normalize();
-        
-        if (pt === 'rocket') {
-            const shoulderY = e.group.position.y + 4.0;
-            const leftShoulder = new BABYLON.Vector3(e.group.position.x, shoulderY, e.group.position.z).add(rightVec.scale(-1.5));
-            const rightShoulder = new BABYLON.Vector3(e.group.position.x, shoulderY, e.group.position.z).add(rightVec.scale(1.5));
-            
-            fireEnemyShot(e, playerEye.subtract(leftShoulder).normalize(), bossDmg, bossSpd, pt, leftShoulder);
-            fireEnemyShot(e, playerEye.subtract(rightShoulder).normalize(), bossDmg, bossSpd, pt, rightShoulder);
-        } else {
-          // HAND WEAPONS
-          const handY = e.group.position.y + 2.0;
-          const rightHand = new BABYLON.Vector3(e.group.position.x, handY, e.group.position.z).add(rightVec.scale(1.2));
-          const dirH = playerEye.subtract(rightHand).normalize();
-          
-          fireEnemyShot(e, dirH, bossDmg, bossSpd, pt, rightHand);
-          
-          // ── CRASH-PROOF ANIMATION ──
-          // Pitch the entire boss slightly forward when firing a heavy weapon
-          e.group.rotation.x = 0.15; 
-          setTimeout(() => { if (e && e.alive) e.group.rotation.x = 0; }, 200); 
-        }
-      }
-
-    // --- 3. MOVEMENT LOGIC (DRONE VS GROUND) ---
+    // --- 2. MOVEMENT LOGIC ---
     if (e.type === 'drone') {
-        // DRONE: Direct flight toward player's head level
         const targetY = camera.position.y + 0.5;
         e._floorY += (targetY - e._floorY) * dt * 2.0;
-
-        if (dist > 6.0) {
+        if (dist > 6.0 || !hasLOS) {
             _eDir.copyFrom(_ePP).subtractInPlace(e.group.position);
             _eDir.y = 0; 
             _eDir.normalize();
             e.group.position.addInPlace(_eDir.scale(e.speed * dt));
         }
-    } 
-    else {
-        // GROUND BOTS: NavMesh Pathfinding
-       // GROUND BOTS: NavMesh Pathfinding & Smart Ranges
-        let targetDist = 8.0; // Default range
+    // ... [Inside updateEnemies(dt), replacing the GROUND BOTS section] ...
+
+    } else {
+        // GROUND BOTS: NavMesh Pathfinding & Smart Ranges
+        let targetDist = 8.0; 
         if (e.type === 'sniper') targetDist = 22.0;
         else if (e.type === 'heavy') targetDist = 12.0;
         else if (e.type === 'rocket' || e.type === 'drone') targetDist = 14.0;
         else if (e.type === 'shotgun') targetDist = 3.0;
         else if (e.type === 'scout' || e.type === 'pistol') targetDist = 6.0;
 
-        const shouldMove = _angryMode || (dist > targetDist + 1.0 || dist < targetDist - 2.0);
+        // NEW FIX: Use 2D distance so bots prioritize finding stairs instead of standing directly below you
+        const dist2D = Math.sqrt(
+            Math.pow(e.group.position.x - _ePP.x, 2) + 
+            Math.pow(e.group.position.z - _ePP.z, 2)
+        );
+
+        const shouldMove = _angryMode || !hasLOS || (dist2D > targetDist + 1.0 || dist2D < targetDist - 2.0);
 
         if (shouldMove) {
-            const botFeet = new BABYLON.Vector3(e.group.position.x, e._floorY + 0.5, e.group.position.z);
-            const playerFeet = new BABYLON.Vector3(_ePP.x, _ePP.y - 0.72, _ePP.z); 
+            const botFeet   = new BABYLON.Vector3(e.group.position.x, e._floorY + 0.5, e.group.position.z);
+            const playerFeet = new BABYLON.Vector3(_ePP.x, _ePP.y - 0.72, _ePP.z);
 
             const startPt = navPlugin.getClosestPoint(botFeet);
-            let endPt = navPlugin.getClosestPoint(playerFeet);
+            let endPt     = navPlugin.getClosestPoint(playerFeet);
+            let hasPath   = false;
+            let nextWaypoint = null; // full 3D waypoint from navmesh
 
             if (startPt && endPt) {
                 const path = navPlugin.computePath(startPt, endPt);
                 if (path && path.length > 1) {
-                    _eDir.copyFrom(path[1]).subtractInPlace(startPt);
-                    _eDir.y = 0;
-                    _eDir.normalize();
+                    nextWaypoint = path[1];
+                    _eDir.copyFrom(nextWaypoint).subtractInPlace(startPt);
+                    hasPath = true;
+                }
+            }
 
-                    // Gentle separation that won't blast them into walls
-                    for (const o of enemies) {
-                        if (o === e || !o.alive) continue;
-                        _eSep.copyFrom(e.group.position).subtractInPlace(o.group.position);
-                        _eSep.y = 0;
-                        if (_eSep.length() > 0.1 && _eSep.length() < 1.5) {
-                            _eDir.addInPlace(_eSep.normalize().scale(0.4));
-                        }
-                    }
+            // Fallback: direct vector toward player feet
+            if (!hasPath) _eDir.copyFrom(playerFeet).subtractInPlace(botFeet);
 
-                    // Re-normalise after separation contributions
-                    const _dirLen = _eDir.length();
-                    if (_dirLen > 0.001) _eDir.scaleInPlace(1 / _dirLen);
-                    else { _eDir.set(Math.random()-0.5, 0, Math.random()-0.5); _eDir.normalize(); }
+            // ── Stair climbing: if the next waypoint is meaningfully higher,
+            //    initiate a hop so the bot actually rises onto the step.
+            if (nextWaypoint && e._hopY <= 0) {
+                const stepUp = nextWaypoint.y - e._floorY;
+                if (stepUp > 0.25 && stepUp < 3.5) {
+                    // Proportional jump velocity: just enough to clear the step
+                    e._yVel  = Math.sqrt(2 * 35.0 * stepUp) * 1.1;
+                    e._hopY  = 0.01; // seed mid-air branch
+                }
+            }
 
-                    // ── THE FIX: Strict NavMesh Clamping ──
-                    // Calculate where the bot WANTS to go
-                    const intendedPos = e.group.position.add(_eDir.scale(e.speed * dt));
-                    // Ask the NavMesh for the closest VALID point to that location
-                    const clampedPos = navPlugin.getClosestPoint(new BABYLON.Vector3(intendedPos.x, e._floorY + 0.5, intendedPos.z));
-                    
-                    if (clampedPos) {
-                        // Extra safety: make sure the clamped step doesn't pass through a wall
-                        const _stepVec = new BABYLON.Vector3(clampedPos.x - e.group.position.x, 0, clampedPos.z - e.group.position.z);
-                        const _stepLen = _stepVec.length();
-                        if (_stepLen > 0.001) {
-                            const _wallCheck = new BABYLON.Ray(
-                                new BABYLON.Vector3(e.group.position.x, e._floorY + 0.8, e.group.position.z),
-                                _stepVec.normalize(),
-                                _stepLen + 0.4
-                            );
-                            // Add checks to ignore the visual steps and the invisible ramps
-                            const _wHit = scene.pickWithRay(_wallCheck, m => 
-                                m.checkCollisions && 
-                                !m.metadata?.enemy && 
-                                m.isEnabled() && 
-                                !m.name.includes('step') && 
-                                !m.name.includes('invRamp')
-                            );
-                            if (!_wHit?.hit) {
-                                e.group.position.x = clampedPos.x;
-                                e.group.position.z = clampedPos.z;
-                                e._floorY = clampedPos.y;
-                            }
-                        }
+            _eDir.y = 0;
+            if (_eDir.length() > 0.001) _eDir.normalize();
+
+            // ── Jump pad detection ─────────────────────────────────────────
+            // Check whether the bot is close enough to a jump pad and trigger it.
+            if (e._hopY <= 0) {
+                for (const pad of jumpPads) {
+                    const dx = e.group.position.x - pad.pos.x;
+                    const dz = e.group.position.z - pad.pos.z;
+                    const onPad = (dx*dx + dz*dz) < 1.6 * 1.6;
+                    const nearFloor = Math.abs(e._floorY - pad.pos.y) < 1.5;
+                    if (onPad && nearFloor) {
+                        e._yVel = pad.force * 0.7;
+                        e._hopY = 0.01;
+                        // Apply horizontal thrust from pad direction
+                        e.group.position.x += pad.thrustX * 0.05;
+                        e.group.position.z += pad.thrustZ * 0.05;
+                        break;
                     }
                 }
             }
-        }
-      }
 
-    // --- 4. APPLY FINAL TRANSFORM ---
-    e.group.position.y = e._floorY + bob + (e._yAnimOffset || 0);
+            // Separation push
+            for (const o of enemies) {
+                if (o === e || !o.alive) continue;
+                _eSep.copyFrom(e.group.position).subtractInPlace(o.group.position);
+                _eSep.y = 0;
+                const sepLen = _eSep.length();
+                if (sepLen > 0.05 && sepLen < 1.8) _eDir.addInPlace(_eSep.normalize().scale(0.5));
+            }
+            if (_eDir.length() > 0.001) _eDir.normalize();
+
+            const speed = e.speed * dt;
+
+            // MID-AIR MOVEMENT (The Hop / Fall)
+            if (e._hopY > 0) {
+                const wallCheck = new BABYLON.Ray(new BABYLON.Vector3(e.group.position.x, e._floorY + e._hopY + 0.5, e.group.position.z), _eDir, speed + 0.5);
+                const wHit = scene.pickWithRay(wallCheck, m => m.checkCollisions && !m.metadata?.enemy && m.isEnabled());
+                if (!wHit?.hit) {
+                    e.group.position.x += _eDir.x * speed;
+                    e.group.position.z += _eDir.z * speed;
+                }
+                
+                // NEW FIX: Cast ray down to find actual solid floor instead of snapping wildly through geometry
+                const downRay = new BABYLON.Ray(new BABYLON.Vector3(e.group.position.x, e._floorY + e._hopY + 0.5, e.group.position.z), new BABYLON.Vector3(0, -1, 0), 100);
+                const dHit = scene.pickWithRay(downRay, m => m.checkCollisions && !m.metadata?.enemy && m.isEnabled());
+                if (dHit?.hit) {
+                    const groundY = dHit.pickedPoint.y;
+                    if (Math.abs(e._floorY - groundY) > 0.1) {
+                        e._hopY += (e._floorY - groundY);
+                        e._floorY = groundY;
+                    }
+                }
+                e._stuckTimer = 0;
+            } 
+            // GROUND MOVEMENT
+            else {
+                const intendedPos = e.group.position.add(_eDir.scale(speed));
+                const clampedPos = navPlugin.getClosestPoint(new BABYLON.Vector3(intendedPos.x, e._floorY + 0.5, intendedPos.z));
+                
+                if (clampedPos) {
+                    // NEW FIX: Determine if there's a huge drop-off. If so, cleanly convert to a fall!
+                    if (e._floorY - clampedPos.y > 1.0) {
+                        e._hopY = e._floorY - clampedPos.y; 
+                        e._floorY = clampedPos.y;
+                        e._yVel = 0; // Initiate fall
+                        e.group.position.x = clampedPos.x;
+                        e.group.position.z = clampedPos.z;
+                    } else {
+                        const distMoved = BABYLON.Vector3.Distance(new BABYLON.Vector3(e.group.position.x, 0, e.group.position.z), new BABYLON.Vector3(clampedPos.x, 0, clampedPos.z));
+                        if (distMoved < speed * 0.1) e._stuckTimer += dt;
+                        else {
+                            e._stuckTimer = 0;
+                            e.group.position.x = clampedPos.x;
+                            e.group.position.z = clampedPos.z;
+                            e._floorY = clampedPos.y;
+                        }
+                    }
+                } else {
+                    e._stuckTimer += dt; 
+                }
+
+                // TRIGGER JUMP: If stuck at a gap or wall for 0.4 seconds, vault over!
+                if (e._stuckTimer > 0.4) {
+                    e._yVel = 12.0; 
+                    e._stuckTimer = 0;
+                }
+            }
+        }
+        
+        // Apply Gravity 
+        if (e._hopY > 0 || e._yVel !== 0) {
+            e._yVel -= 35.0 * dt; 
+            e._hopY += e._yVel * dt;
+            if (e._hopY <= 0) {
+                e._hopY = 0;
+                e._yVel = 0;
+            }
+        }
+    }
+
+    // --- 3. APPLY TRANSFORM ---
+    e.group.position.y = e._floorY + e._hopY + bob + (e._yAnimOffset || 0);
     _eLookAt.set(_ePP.x, e.group.position.y, _ePP.z);
     e.group.lookAt(_eLookAt);
 
-    // enemies.js - inside updateEnemies(dt)
-    // --- 5. ATTACK ---
-    if (inRange) {
+    // --- 4. ATTACK ---
+    if (dist < e.range && hasLOS) {
       e.atkTimer -= dt;
       if (e.atkTimer <= 0) {
         e.atkTimer = e.rate;
-        _eMuzzle.set(e.group.position.x, e.group.position.y + e.muzzleOffY, e.group.position.z);
-        
-        // Aim at the player's camera position – no Y offset so distant shots
-        // don't arc above the 0.95-radius hit sphere around the camera.
-        const playerEye = _ePP.clone();
-        
-        if (_hasLOS(_eMuzzle, playerEye)) {
-          // Normalize preserves the 3D Y-axis, allowing bots to shoot up/down at you
-          const dir = playerEye.subtract(_eMuzzle).normalize();
-          
-          if (e.type === 'giantbot') {
-              const weps = ['rocket', 'plasma', 'heavy'];
-              const pt = weps[Math.floor(Date.now() / 3500) % 3];
-              const bossDmg = pt === 'rocket' ? 45 : (pt === 'plasma' ? 20 : 12);
-              const bossSpd = pt === 'rocket' ? 20 : (pt === 'plasma' ? 45 : 60);
-              
-              const rightVec = BABYLON.Vector3.Cross(BABYLON.Axis.Y, dir).normalize();
-              
-              if (pt === 'rocket') {
-                  // SHOULDER ROCKETS: Fired from high up and wide
-                  const shoulderY = e.group.position.y + 4.0;
-                  const leftShoulder = new BABYLON.Vector3(e.group.position.x, shoulderY, e.group.position.z).add(rightVec.scale(-1.5));
-                  const rightShoulder = new BABYLON.Vector3(e.group.position.x, shoulderY, e.group.position.z).add(rightVec.scale(1.5));
-                  
-                  // Calculate exact 3D trajectories from each shoulder to the player
-                  const dirL = playerEye.subtract(leftShoulder).normalize();
-                  const dirR = playerEye.subtract(rightShoulder).normalize();
-                  
-                  fireEnemyShot(e, dirL, bossDmg, bossSpd, pt, leftShoulder);
-                  fireEnemyShot(e, dirR, bossDmg, bossSpd, pt, rightShoulder);
-              } else {
-                  // HAND WEAPONS: Fired from mid-height, slightly right
-                  const handY = e.group.position.y + 2.0;
-                  const rightHand = new BABYLON.Vector3(e.group.position.x, handY, e.group.position.z).add(rightVec.scale(1.2));
-                  const dirH = playerEye.subtract(rightHand).normalize();
-                  
-                  fireEnemyShot(e, dirH, bossDmg, bossSpd, pt, rightHand);
-              }
-          } else {
-              // FIX: This is what makes normal bots shoot again!
-              fireEnemyShot(e, dir, e.dmg, e.projV, e.projT);
-          }
+        // For grenadiers, arc the shot upward to account for grenade gravity
+        let dir;
+        if (e.projT === 'grenade') {
+            const gDist = BABYLON.Vector3.Distance(_eMuzzle, playerEye);
+            const verticalLift = Math.min(gDist * 0.12, 6.0);
+            const arcTarget = playerEye.add(new BABYLON.Vector3(0, verticalLift, 0));
+            dir = arcTarget.subtract(_eMuzzle).normalize();
+        } else {
+            dir = playerEye.subtract(_eMuzzle).normalize();
+        }
+
+        if (e.type === 'giantbot') {
+            const weps = ['rocket', 'plasma', 'heavy'];
+            const pt = weps[Math.floor(Date.now() / 3500) % 3];
+            const bossDmg = pt === 'rocket' ? 45 : (pt === 'plasma' ? 20 : 12);
+            const bossSpd = pt === 'rocket' ? 20 : (pt === 'plasma' ? 45 : 60);
+            const rightVec = BABYLON.Vector3.Cross(BABYLON.Axis.Y, dir).normalize();
+            
+            if (pt === 'rocket') {
+                const shoulderY = e.group.position.y + 4.0;
+                const leftShoulder = new BABYLON.Vector3(e.group.position.x, shoulderY, e.group.position.z).add(rightVec.scale(-1.5));
+                const rightShoulder = new BABYLON.Vector3(e.group.position.x, shoulderY, e.group.position.z).add(rightVec.scale(1.5));
+                const dirL = playerEye.subtract(leftShoulder).normalize();
+                const dirR = playerEye.subtract(rightShoulder).normalize();
+                fireEnemyShot(e, dirL, bossDmg, bossSpd, pt, leftShoulder);
+                fireEnemyShot(e, dirR, bossDmg, bossSpd, pt, rightShoulder);
+            } else {
+                const handY = e.group.position.y + 2.0;
+                const rightHand = new BABYLON.Vector3(e.group.position.x, handY, e.group.position.z).add(rightVec.scale(1.2));
+                const dirH = playerEye.subtract(rightHand).normalize();
+                fireEnemyShot(e, dirH, bossDmg, bossSpd, pt, rightHand);
+            }
+        } 
+        else {
+            fireEnemyShot(e, dir, e.dmg, e.projV, e.projT);
         }
       }
     }

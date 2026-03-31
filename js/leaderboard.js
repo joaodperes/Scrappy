@@ -1,102 +1,62 @@
-// leaderboard.js – Firebase Firestore integration for score persistence
-//
-// ┌─────────────────────────────────────────────────────────────┐
-// │  SETUP:                                                       │
-// │  1. Create a Firebase project at https://console.firebase.google.com │
-// │  2. Enable Firestore Database (start in test mode is fine)   │
-// │  3. Copy your config values below                            │
-// │  4. In Firestore, create a collection called "scores"        │
-// └─────────────────────────────────────────────────────────────┘
+// leaderboard.js – Firebase Firestore backend for scores + progression
 
-import { initializeApp }        from 'firebase/app';
-import { getFirestore, collection, addDoc, getDocs, query, orderBy, limit } from 'firebase/firestore';
-
-// ── Firebase config ── Replace with your project's values ──────
-const FIREBASE_CONFIG = {
-  apiKey:            "REPLACE_ME",
-  authDomain:        "REPLACE_ME.firebaseapp.com",
-  projectId:         "REPLACE_ME",
-  storageBucket:     "REPLACE_ME.appspot.com",
-  messagingSenderId: "REPLACE_ME",
-  appId:             "REPLACE_ME",
-};
-
-let _db = null;
-let _enabled = false;
-
-function getDb() {
-  if (!_db) {
-    if (FIREBASE_CONFIG.apiKey === 'REPLACE_ME') {
-      console.warn('[leaderboard] Firebase not configured – scores will not be saved.');
-      return null;
-    }
-    const app = initializeApp(FIREBASE_CONFIG);
-    _db = getFirestore(app);
-    _enabled = true;
-  }
-  return _db;
+function _db() {
+  return typeof firebase !== 'undefined' ? firebase.firestore() : null;
 }
 
-/**
- * Submit a run score to Firestore.
- * @param {string} name
- * @param {number} score
- * @param {number} wave
- * @param {'solo'|'pvp'} mode
- */
 export async function submitScore(name, score, wave, mode = 'solo') {
-  const db = getDb(); if (!db) return;
-  try {
-    await addDoc(collection(db, 'scores'), {
-      name, score, wave, mode,
-      date: new Date().toISOString(),
-    });
-    console.log('[leaderboard] Score submitted:', name, score);
-  } catch (err) {
-    console.error('[leaderboard] Submit failed:', err);
-  }
+  const db = _db();
+  if (!db) { console.warn('[leaderboard] Firebase not loaded'); return; }
+  await db.collection('scores').add({
+    name, score, wave, mode,
+    date: firebase.firestore.FieldValue.serverTimestamp(),
+  }).catch(e => console.error('[leaderboard] Submit failed:', e));
 }
 
-/**
- * Fetch top 10 solo scores.
- * @returns {Promise<Array<{name:string, score:number, wave:number}>>}
- */
 export async function fetchTopScores(mode = 'solo', count = 10) {
-  const db = getDb(); if (!db) return [];
-  try {
-    const q = query(
-      collection(db, 'scores'),
-      orderBy('score', 'desc'),
-      limit(count)
-    );
-    const snap = await getDocs(q);
-    return snap.docs.map(d => d.data());
-  } catch (err) {
-    console.error('[leaderboard] Fetch failed:', err);
-    return [];
-  }
+  const db = _db(); if (!db) return [];
+  const snap = await db.collection('scores')
+    .where('mode', '==', mode)
+    .orderBy('score', 'desc')
+    .limit(count)
+    .get()
+    .catch(e => { console.error('[leaderboard] Fetch failed:', e); return null; });
+  if (!snap) return [];
+  return snap.docs.map(d => d.data());
 }
 
-/** Render leaderboard into #leaderboardList element. */
 export async function renderLeaderboard() {
   const el = document.getElementById('leaderboardList');
   if (!el) return;
   el.innerHTML = '<li style="color:#557733">LOADING…</li>';
   const rows = await fetchTopScores();
-  if (rows.length === 0) {
-    el.innerHTML = '<li style="color:#557733">NO SCORES YET</li>';
-    return;
-  }
+  if (!rows.length) { el.innerHTML = '<li style="color:#557733">NO SCORES YET</li>'; return; }
   el.innerHTML = rows.map((r, i) =>
     `<li>
-      <span style="color:#d8f030;min-width:22px;display:inline-block">${i+1}.</span>
-      <span style="color:#ffffff;min-width:110px;display:inline-block">${escHtml(r.name)}</span>
+      <span style="color:#d8f030;min-width:22px;display:inline-block">${i + 1}.</span>
+      <span style="color:#fff;min-width:110px;display:inline-block">${_esc(r.name)}</span>
       <span style="color:#d8f030;font-weight:700">${r.score}</span>
-      <span style="color:#557733;font-size:12px;margin-left:8px">W${r.wave??'?'}</span>
+      <span style="color:#557733;font-size:12px;margin-left:8px">W${r.wave ?? '?'}</span>
     </li>`
   ).join('');
 }
 
-function escHtml(s) {
-  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+export async function syncProgressionUp(profile) {
+  const db = _db(); if (!db || !profile?.name) return;
+  await db.collection('progression').doc(profile.name).set(
+    { profile, updated_at: firebase.firestore.FieldValue.serverTimestamp() },
+    { merge: true }
+  ).catch(e => console.error('[leaderboard] Sync failed:', e));
+}
+
+export async function fetchProgression(playerName) {
+  const db = _db(); if (!db) return null;
+  const doc = await db.collection('progression').doc(playerName).get()
+    .catch(() => null);
+  return doc?.exists ? doc.data().profile : null;
+}
+
+function _esc(s) {
+  return String(s).replace(/[&<>"']/g,
+    c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }

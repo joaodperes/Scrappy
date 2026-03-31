@@ -19,13 +19,13 @@ export function isConnected() { return _connected; }
  * @param {string} playerName
  * @param {string} roomId
  */
-export function connect(serverUrl, playerName, roomId) {
+export function connect(serverUrl, playerName, roomId, meta = {}) {
   if (_ws) disconnect();
   _ws = new WebSocket(serverUrl);
 
   _ws.addEventListener('open', () => {
     _connected = true;
-    send({ type: 'join', name: playerName, room: roomId });
+    send({ type: 'join', name: playerName, room: roomId, ...meta });
     console.log('[net] Connected to', serverUrl);
   });
 

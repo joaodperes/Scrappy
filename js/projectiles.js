@@ -137,17 +137,19 @@ export function hitscan(meshToEnemy, spread = 0, dmg = 20, range = 90, falloff =
       let scaled = dist > falloffStart ? 1.0 - falloff * ((dist - falloffStart) / (range - falloffStart)) : 1.0;
       
       // DAMAGE MULTIPLIER LOGIC
+      // For instakill-level damage (railgun = 9999), skip the leg-shot penalty
+      // so it always one-shots non-boss enemies regardless of hit location.
       let locMult = 1.0;
       const mName = pickedMesh.name.toLowerCase();
       if (mName.includes('hd') || mName.includes('vis') || mName.includes('horn')) {
-          locMult = 2.0; // Headshot!
-      } else if (mName.includes('leg') || mName.includes('ft')) {
-          locMult = 0.5; // Leg shot
+          locMult = 2.0; // Headshot bonus applies to all weapons
+      } else if ((mName.includes('leg') || mName.includes('ft')) && dmg < 1000) {
+          locMult = 0.5; // Leg penalty only for non-instakill weapons
       }
 
       // Special Railgun / Boss Logic
       if (dmg >= 100 && e.type === 'giantbot' && e.railgunImmune) {
-        cb.hitRobot && cb.hitRobot(e, Math.max(dmg * 0.35, 100) * locMult); 
+        cb.hitRobot && cb.hitRobot(e, 250 * locMult); 
       } else {
         cb.hitRobot && cb.hitRobot(e, Math.max(dmg * scaled, dmg * 0.15) * locMult);
       }
@@ -164,7 +166,84 @@ const _bodyVec = new BABYLON.Vector3();
 
 export function updateProjs(dt) {
   for (let i = projs.length - 1; i >= 0; i--) {
-    const p = projs[i]; p.life -= dt;
+    const p = projs[i];
+    p.life -= dt;
+
+    // ── GRENADE: fully self-contained physics — skip shared movement code ──
+    if (p.type === 'grenade') {
+      p.fuse -= dt;
+
+      // Apply gravity to velocity — tuned for a satisfying lobbed arc
+      p.vel.y -= 9.8 * dt;
+
+      const speed   = p.vel.length();
+      const moveDir = speed > 0.001 ? p.vel.scale(1 / speed) : new BABYLON.Vector3(0, -1, 0);
+
+      // ── Barrel proximity check (same radius as other projectiles) ──
+      let grenadeHitBarrel = false;
+      for (const b of explosiveBarrels) {
+        if (!b.alive) continue;
+        if (BABYLON.Vector3.Distance(p.mesh.position, b.pos) < 0.85) {
+          b.alive = false;
+          for (const m of b.meshes) { m.setEnabled(false); m.checkCollisions = false; }
+          boom(b.pos.clone(), 3.5, 70, true);
+          spawnSparks(b.pos.clone(), 0xffaa44, 10);
+          p.mesh.dispose();
+          if (p.light) p.light.dispose();
+          projs.splice(i, 1);
+          grenadeHitBarrel = true;
+          break;
+        }
+      }
+      if (grenadeHitBarrel) continue;
+
+      // Raycast in velocity direction for collisions
+      const gRay = new BABYLON.Ray(p.mesh.position, moveDir, speed * dt + 0.3);
+      const gHit = scene.pickWithRay(gRay, m => m.checkCollisions && m.isEnabled());
+
+      if (gHit?.hit) {
+        if (gHit.pickedMesh.metadata?.enemy || gHit.pickedMesh.name === '_playerBody') {
+          // Direct hit on enemy/player → instant explosion
+          boom(p.mesh.position.clone(), p.splash, p.dmg, true);
+          p.mesh.dispose();
+          if (p.light) p.light.dispose();
+          projs.splice(i, 1);
+        } else if (isBarrelMesh(gHit.pickedMesh)) {
+          // Hit an explosive barrel → chain-detonate the barrel, then the grenade too
+          const bPos = detonateBarrelByMesh(gHit.pickedMesh);
+          if (bPos) boom(bPos.clone(), 3.6, 78, true);
+          boom(p.mesh.position.clone(), p.splash, p.dmg, true);
+          p.mesh.dispose();
+          if (p.light) p.light.dispose();
+          projs.splice(i, 1);
+        } else {
+          // Wall/floor → bounce
+          const n   = gHit.getNormal(true);
+          const dot = BABYLON.Vector3.Dot(p.vel, n);
+          p.vel.subtractInPlace(n.scale(2 * dot));
+          p.vel.scaleInPlace(0.65);
+          // Push off surface so it doesn't re-intersect next frame
+          p.mesh.position.copyFrom(gHit.pickedPoint).addInPlace(n.scale(0.12));
+        }
+      } else {
+        // Free-flight: advance by velocity
+        p.mesh.position.addInPlace(p.vel.scale(dt));
+      }
+
+      // Track light with grenade
+      if (p.light) p.light.position.copyFrom(p.mesh.position);
+
+      // Fuse expired → explode
+      if (p.fuse <= 0) {
+        boom(p.mesh.position.clone(), p.splash, p.dmg, true);
+        p.mesh.dispose();
+        if (p.light) p.light.dispose();
+        projs.splice(i, 1);
+      }
+      continue; // Skip all shared movement / hit code below
+    }
+
+    // ── All other projectiles: shared linear movement ─────────────
     const step = p.dir.scale(p.speed * dt);
     const obj  = p.g || p.mesh;
     obj.position.addInPlace(step);
@@ -235,4 +314,33 @@ export function updateProjs(dt) {
       projs.splice(i, 1);
     }
   }
+}
+
+export function fireGrenade(owner, origin, dir, speed, dmg, splash) {
+  const mesh = BABYLON.MeshBuilder.CreateSphere('grenade', { diameter: 0.28, segments: 6 }, scene);
+  mesh.position.copyFrom(origin);
+
+  const mat = new BABYLON.StandardMaterial('grenadeMat', scene);
+  mat.emissiveColor = new BABYLON.Color3(0.1, 0.9, 0.1);
+  mat.disableLighting = true;
+  mesh.material = mat;
+  mesh.isPickable = false;
+
+  const light = new BABYLON.PointLight('grenadeLight', origin.clone(), scene);
+  light.diffuse  = new BABYLON.Color3(0.2, 1.0, 0.2);
+  light.intensity = 1.2;
+  light.range     = 4.0;
+
+  projs.push({
+    type:   'grenade',
+    mesh,
+    light,
+    owner,
+    dmg,
+    splash,
+    fuse:   1.5,
+    vel:    dir.scale(speed),
+    // life gives a hard upper-bound safety fallback (fuse is the real timer)
+    life:   6.0,
+  });
 }

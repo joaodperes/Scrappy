@@ -18,6 +18,7 @@ export const TIER_2 = 6;
 export const TIER_3 = 12;
 export const TIER_4 = 18;
 export const TIER_5 = 24;
+export const TIER_6 = TIER_5 + 12;
 
 function _liftFloatingY(y) {
   return y > 0.05 ? y + FLOAT_LIFT_Y : y;
@@ -31,6 +32,7 @@ function box(name, px, py, pz, sx, sy, sz, mat) {
   m.material = mat || rwCache1;
   m.checkCollisions = true;
   m.isPickable = false;
+  walkableMeshes.push(m); // <--- AI now treats walls as solid obstacles
   return m;
 }
 
@@ -205,9 +207,9 @@ export function buildLevel() {
   slab(  0, 0,  30, 24, 36, M.concrete); // North
   slab(  0, 0, -30, 24, 36, M.concrete); // South
 
-  // T1 Barrels
-  barrel(-24, 24, 0.4); barrel(-24, -24, 0.4); barrel(24, 24, 0.4); barrel(24, -24, 0.4);
-  barrel(-38, 0, 0.4); barrel(38, 0, 0.4);
+  // T1 Barrels (yOff set to 0 so they sit flush on the floor)
+    barrel(-24, 24, 0); barrel(-24, -24, 0); barrel(24, 24, 0); barrel(24, -24, 0);
+    barrel(-38, 0, 0); barrel(38, 0, 0);
 
   // Center L-Wall 1 (North-West)
   wall(-12, 2,  5, 2, 4, 17, M.rustWall); // Vertical 
@@ -231,57 +233,33 @@ export function buildLevel() {
 
   function stairs(px, py, pz, width, depth, steps, dirX, dirZ) {
     const stepDepth = depth / steps;
-    const stepHeight = 0.5; 
-    
-    const rampLength = Math.sqrt(depth * depth + (steps * stepHeight) * (steps * stepHeight));
-    const invRamp = BABYLON.MeshBuilder.CreateBox('invRamp', { width: width, height: 10, depth: rampLength + 2.0 }, scene);
+    const stepHeight = 0.5;
 
-    // Calculate center of the ramp
-    const cx = px + (dirX * depth / 2) - (dirX * stepDepth / 2);
-    const cy = py + ((steps * stepHeight) / 2) - 5.0; 
-    const cz = pz + (dirZ * depth / 2) - (dirZ * stepDepth / 2);
-    
-    invRamp.position.set(cx, cy, cz);
-    invRamp.rotation.x = dirZ ? -Math.atan2(steps * stepHeight, depth) * dirZ : 0;
-    invRamp.rotation.z = dirX ? Math.atan2(steps * stepHeight, depth) * dirX : 0;
-    invRamp.isVisible = false;
-    
-    // THIS is what stops them sliding up from underneath
-    invRamp.checkCollisions = true; 
-    walkableMeshes.push(invRamp); 
-
-    // ── THE FIX: The Blocking Wall ──
-    // Calculate exactly where the "top/back" of the stairs is
-    const backX = px + (dirX * depth);
-    const backZ = pz + (dirZ * depth);
-    const totalHeight = steps * stepHeight;
-
-    // Place a flat wall flush against the back of the topmost step
-    // The width/depth flip depending on whether the stairs go X or Z
-    const blockWall = BABYLON.MeshBuilder.CreateBox('stairBlocker', {
-        width: dirZ ? width : 0.5,
-        height: totalHeight,
-        depth: dirX ? width : 0.5
-    }, scene);
-    
-    // Position it at the back edge, starting from the ground up
-    blockWall.position.set(backX, py + (totalHeight / 2), backZ);
-    blockWall.isVisible = false;       // Hide it
-    blockWall.checkCollisions = true;  // Solid collision
-
-    // Create the visual steps (no collisions, purely visual)
-    for(let i = 0; i < steps; i++) {
+    for (let i = 0; i < steps; i++) {
+        // Calculate position
         const x = px + (dirX * i * stepDepth);
         const y = py + (i * stepHeight);
         const z = pz + (dirZ * i * stepDepth);
-        const step = BABYLON.MeshBuilder.CreateBox('step', { 
-            width: dirZ ? width : stepDepth, 
-            height: stepHeight, 
-            depth: dirX ? width : stepDepth 
+
+        // Create the step
+        // We make the step slightly deeper than stepDepth so they overlap (no gaps)
+        const s = BABYLON.MeshBuilder.CreateBox('step', {
+            width: dirZ ? width : stepDepth + 0.2,
+            height: stepHeight,
+            depth: dirX ? width : stepDepth + 0.2
         }, scene);
-        step.position.set(x, y, z);
-        step.material = M.concrete;
-        step.checkCollisions = false; 
+
+        s.position.set(x, y + (stepHeight / 2), z);
+        s.material = M.concrete;
+        s.checkCollisions = true;
+        
+        // Extend the top and bottom steps into the floor by 0.5 units 
+        // to bridge the NavMesh and Physics gaps perfectly
+        if (i === 0 || i === steps - 1) {
+            s.scaling[dirX ? 'x' : 'z'] = 1.5; 
+        }
+
+        walkableMeshes.push(s);
     }
   }
 
@@ -291,9 +269,10 @@ export function buildLevel() {
   // South-West 
   //stairs(-42, 0, -9.6, 12, 15, 12, 0, -1);
 
-  // North-West & South-East (from z=12 up to z=26)
-  stairs(-32, 0,  12, 10, 14, 12, 0,  1); 
-  stairs( 32, 0,  -12, 10, 14, 12, 0,  1);
+  // ── T1 to T2 Stairs
+  // Depth increased to 11 to embed into the T2 platform
+  stairs( 32, 0,  14, 6, 11, 12, 0,  1); // NE Corner
+  stairs(-32, 0, -14, 6, 11, 12, 0, -1); // SW Corner
 
   // T2 Half-Walls for cover 
   //box('half', -30, TIER_2 + 1,  32, 8, 2, 2, rwCache2);
@@ -313,40 +292,33 @@ export function buildLevel() {
   makeJumpPad(-28, TIER_2, -28, 22, 3*Math.PI/4);    // SW Corner pointing inward
   makeJumpPad( 28, TIER_2, -28, 22, 5*Math.PI/4);    // SE Corner pointing inward
   
-// ════════════════════════════════════════════════════════════════════════
+  // ════════════════════════════════════════════════════════════════════════
   //  TIER 3: EXPANDED SNIPER DECKS & SIDE FLANKS (y=12)
   // ════════════════════════════════════════════════════════════════════════
-  slab(0, TIER_3,  40, 56, 16, M.concrete); // North Deck
-  slab(0, TIER_3, -40, 56, 16, M.concrete); // South Deck
+  // Depth reduced to 12 and shifted to ±38 to perfectly touch the catwalks without overlapping
+  slab(0, TIER_3,  38, 56, 12, M.concrete); // North Deck
+  slab(0, TIER_3, -38, 56, 12, M.concrete); // South Deck
   
   // Side flanks
   slab(-36, TIER_3, 0, 16, 40, M.concrete); // West Flank
   slab( 36, TIER_3, 0, 16, 40, M.concrete); // East Flank
 
   // ── T3 Guard rails 
-  box('half',  0, TIER_3+1, -32, 24, 2, 2, rwCache2); // South deck inner rail
-  box('half',  0, TIER_3+1,  32, 24, 2, 2, rwCache2); // North deck inner rail
+  box('half',  0, TIER_3+1, -33, 24, 2, 2, rwCache2); // South deck inner rail
+  box('half',  0, TIER_3+1,  33, 24, 2, 2, rwCache2); // North deck inner rail
 
-  // ── T3 Side-slab half-walls for cover (Extended to touch the T4 stairs exactly)
-  // Flanks go to z=20. Stairs are width 8 (z=-4 to 4). So half walls are length 16.
-  box('half', -36, TIER_3+1,  12, 2, 2, 16, rwCache2); // West flank N cover
-  box('half', -36, TIER_3+1, -12, 2, 2, 16, rwCache2); // West flank S cover
-  box('half',  36, TIER_3+1,  12, 2, 2, 16, rwCache2); // East flank N cover
-  box('half',  36, TIER_3+1, -12, 2, 2, 16, rwCache2); // East flank S cover
+  // ── T3 Side-slab half-walls (Bordering the T4 stairs at x=±29)
+  box('half', -29, TIER_3+1,  12, 2, 2, 16, rwCache2); // West flank N cover
+  box('half', -29, TIER_3+1, -12, 2, 2, 16, rwCache2); // West flank S cover
+  box('half',  29, TIER_3+1,  12, 2, 2, 16, rwCache2); // East flank N cover
+  box('half',  29, TIER_3+1, -12, 2, 2, 16, rwCache2); // East flank S cover
 
-  // ── T3 Bot Catwalks (L-Shapes connecting Flanks to North/South Decks)
-  // NW Corner
-  slab(-36, TIER_3,  26, 4, 12, M.bridge); // N from West flank
-  slab(-32, TIER_3,  32, 8,  4, M.bridge); // E to North deck
-  // NE Corner
-  slab( 36, TIER_3,  26, 4, 12, M.bridge); // N from East flank
-  slab( 32, TIER_3,  32, 8,  4, M.bridge); // W to North deck
-  // SW Corner
-  slab(-36, TIER_3, -26, 4, 12, M.bridge); // S from West flank
-  slab(-32, TIER_3, -32, 8,  4, M.bridge); // E to South deck
-  // SE Corner
-  slab( 36, TIER_3, -26, 4, 12, M.bridge); // S from East flank
-  slab( 32, TIER_3, -32, 8,  4, M.bridge); // W to South deck
+  // ── T3 Perimeter Bot Catwalks (Z-Fighting Fix - 0.2 unit overlap)
+  // Width 4.2 centered at ±45.9 perfectly spans the gap with minimal texture clipping
+  slab(-45.9, TIER_3, 0, 4.2, 91.8, M.bridge); // West lateral
+  slab( 45.9, TIER_3, 0, 4.2, 91.8, M.bridge); // East lateral
+  slab(0, TIER_3,  45.9, 87.6, 4.2, M.bridge); // North connector
+  slab(0, TIER_3, -45.9, 87.6, 4.2, M.bridge); // South connector
 
   // ── T3 Barrels
   barrel(-16, 42, TIER_3); barrel(16, 42, TIER_3);
@@ -362,38 +334,41 @@ export function buildLevel() {
   makeJumpPad( 36, TIER_3,  12, 24, -Math.PI/2);  
   makeJumpPad( 36, TIER_3, -12, 24, -Math.PI/2);  
 
-  // ── NEW T2 to T3 Flank Stairs 
-  // Moved next to the catwalk (x=±32), starts right where T1->T2 stairs ended
-  stairs(-32, TIER_2,  26, 8, 8, 12, 0, -1); // NW T2 -> West flank
-  stairs( 32, TIER_2,  26, 8, 8, 12, 0, -1); // NE T2 -> East flank
-  stairs(-32, TIER_2, -26, 8, 8, 12, 0,  1); // SW T2 -> West flank
-  stairs( 32, TIER_2, -26, 8, 8, 12, 0,  1); // SE T2 -> East flank
+  // ── T2 to T3 Flank Stairs 
+  // Depth increased to 11 to embed into the T3 flank
+  stairs( 40, TIER_2,  30, 6, 11, 12, 0, -1); // NE corner -> climbs South
+  stairs(-40, TIER_2, -30, 6, 11, 12, 0,  1); // SW corner -> climbs North
 
-  // ── T3 to T4 Window Stairs (Aligns perfectly with T4 gaps)
-  stairs(-36, TIER_3, 0, 8, 23, 12, 1, 0);  // West flank -> West window
-  stairs( 36, TIER_3, 0, 8, 23, 12, -1, 0); // East flank -> East window
+  // ── T3 to T4 Window Stairs
+  // We use 18 steps for a smoother climb to the 6-unit height difference
+  stairs(-27, TIER_3, 0, 8, 15, 13, 1, 0);  // West 
+  stairs( 27, TIER_3, 0, 8, 15, 13, -1, 0); // East
 
-// ════════════════════════════════════════════════════════════════════════
+  // ════════════════════════════════════════════════════════════════════════
   //  TIER 4: THE CORRIDOR (y=18)
   // ════════════════════════════════════════════════════════════════════════
   slab(0, TIER_4, 0, 24, 64, M.bridge); // Wider floor
   
-  // Outer corridor walls — Perfectly gapped at z=0 for the windows
+  // Outer corridor walls
   wall(-13, TIER_4 + 2.5,  26, 2, 5, 12, rwCache1); // West wall N panel
   wall( 13, TIER_4 + 2.5,  26, 2, 5, 12, rwCache1); // East wall N panel
   
-  wall(-13, TIER_4 + 2.5,  12, 2, 5, 16, rwCache1); // West wall mid-N panel (ends at z=4)
-  wall( 13, TIER_4 + 2.5,  12, 2, 5, 16, rwCache1); // East wall mid-N panel
-  
-  wall(-13, TIER_4 + 2.5, -12, 2, 5, 16, rwCache1); // West wall mid-S panel (starts at z=-4)
-  wall( 13, TIER_4 + 2.5, -12, 2, 5, 16, rwCache1); // East wall mid-S panel
+  // NEW: Converted mid-panels into half-walls for expanded visibility/shooting!
+  box('half', -13, TIER_4 + 1.25,  12, 2, 2.5, 16, rwCache2); // West mid-N panel
+  box('half',  13, TIER_4 + 1.25,  12, 2, 2.5, 16, rwCache2); // East mid-N panel
+  box('half', -13, TIER_4 + 1.25, -12, 2, 2.5, 16, rwCache2); // West mid-S panel
+  box('half',  13, TIER_4 + 1.25, -12, 2, 2.5, 16, rwCache2); // East mid-S panel
   
   wall(-13, TIER_4 + 2.5, -26, 2, 5, 12, rwCache1); // West wall S panel
   wall( 13, TIER_4 + 2.5, -26, 2, 5, 12, rwCache1); // East wall S panel
   
-  // Window sills at z=0 (sz=8 fills the gap perfectly)
-  box('win', -13, TIER_4 + 0.5, 0, 2, 1, 8, rwCache2); // West window sill
-  box('win',  13, TIER_4 + 0.5, 0, 2, 1, 8, rwCache2); // East window sill
+  // Window sills at z=0 
+  //box('win', -13, TIER_4 + 0.5, 0, 2, 1, 8, rwCache2); // West window sill
+  //box('win',  13, TIER_4 + 0.5, 0, 2, 1, 8, rwCache2); // East window sill
+
+  // NEW: Small windows for Jump Pad access (on the East/West edges of the T4 North side)
+  wall(-11.5, TIER_4 + 1, 12, 1, 2, 1, M.concrete); // Far left window-sill
+  wall( 11.5, TIER_4 + 1, 12, 1, 2, 1, M.concrete); // Far right window-sill
 
   // Interior serpentine half-walls
   box('half', -6, TIER_4 + 1,  20, 6, 2, 2, rwCache2);
@@ -405,47 +380,53 @@ export function buildLevel() {
   // T4 Barrels
   barrel(-10, 0, TIER_4); barrel(10, 0, TIER_4);
 
-  // Central Jump Pad to T5!
-  makeJumpPad(0, TIER_4, 0, 32, 0); // Straight up
+  // Central Jump Pad to T5 (Rotated 180 degrees to face South)
+  makeJumpPad(0, TIER_4, 0, 28, Math.PI);
 
   // ════════════════════════════════════════════════════════════════════════
   //  TIER 5: THE SECRET SUMMIT (y=24)
   // ════════════════════════════════════════════════════════════════════════
-  // Narrowing the T5 hole and fixing ceiling collision
-  // Build T5 with a smaller gap (4x4 instead of 8x8)
-  slab(0, TIER_5,  22, 24, 24, M.concrete); // North
-  slab(0, TIER_5, -22, 24, 20, M.concrete); // South
-  slab(-10, TIER_5,  0, 4, 24, M.concrete); // West side of hole
-  slab( 10, TIER_5,  0, 4, 24, M.concrete); // East side of hole
+  // Floor slabs — Expanded to seamlessly merge into the outer walls and close sky gaps
+  slab(0, TIER_5,  19, 28, 26, M.concrete); // North room floor
+  slab(0, TIER_5, -19, 28, 26, M.concrete); // South platform
+  slab(-10, TIER_5,  0, 10,  12, M.concrete); // West side of hole
+  slab( 10, TIER_5,  0, 10,  12, M.concrete); // East side of hole
 
-  // THE CEILING - MUST HAVE COLLISIONS
-  const topCeil = ceil(0, TIER_5 + 8, 0, 40, 80);
-  topCeil.checkCollisions = true; 
+  // CEILING 
+  const topCeil = ceil(0, TIER_6, 0, 48, 84);
+  topCeil.checkCollisions = true;
 
-  // Exit stairs back toward the center hole
-  //stairs(-10, TIER_5, -5, 4, 5, 1, 1, 0);
+  // ── North Safe Room Walls 
+  wall(-12, TIER_5 + 6, 20, 1, 12, 24, rwCache1);  // West Wall
+  wall( 12, TIER_5 + 6, 20, 1, 12, 24, rwCache1);  // East Wall
+  wall(  0, TIER_5 + 6, 32, 24, 12,  1, rwCache1); // North Wall
 
-  // North Safe Room (Where the pickups are)
-  wall(-12, TIER_5 + 3, 20,  1, 6, 24, rwCache1); // West Wall 
-  wall( 12, TIER_5 + 3, 20,  1, 6, 24, rwCache1); // East Wall 
-  wall(  0, TIER_5 + 3, 32, 24, 6,  1, rwCache1); // North Wall 
+  // Interior facing wall (North Room Windows)
+  wall(-9.5, TIER_5 + 6, 8, 5, 12, 1, rwCache1);   // Left panel
+  wall( 9.5, TIER_5 + 6, 8, 5, 12, 1, rwCache1);   // Right panel
   
-  // Interior Wall with window
-  wall(-8, TIER_5 + 3, 8, 8, 6, 1, rwCache1);
-  wall( 8, TIER_5 + 3, 8, 8, 6, 1, rwCache1);
-  box('half', 0, TIER_5 + 1.5, 8, 8, 3, 1, rwCache2); // Window sill half wall
+  // High half-wall (No lintel needed)
+  box('half',   0, TIER_5 + 2.0, 8, 14, 4, 1, rwCache2); 
+
+  // ── South Platform Enclosure Walls 
+  wall(-12, TIER_5 + 6, -14, 1, 12, 28, rwCache1); // West Wall
+  wall( 12, TIER_5 + 6, -14, 1, 12, 28, rwCache1); // East Wall
+  wall(  0, TIER_5 + 6, -28, 24, 12,  1, rwCache1); // South Wall
 
   const secretGlow = new BABYLON.PointLight('secretGlow', new BABYLON.Vector3(0, TIER_5+3, 20), scene);
   secretGlow.diffuse = new BABYLON.Color3(0, 1, 1); secretGlow.intensity = 2.0; secretGlow.range = 20;
+
+  // Escape Jump Pad inside the secret room (Blasts player South out the window)
+  makeJumpPad(0, TIER_5, 28, 22, Math.PI);
 
   // BAKE THE NAVMESH
   const navmeshParameters = {
       cs: 0.2,            
       ch: 0.2,            
       walkableSlopeAngle: 60,  // Increased so they can climb the invisible stair ramps
-      walkableHeight: 2.0, 
-      walkableClimb: 1.5,      // Increased so they don't get stuck on floor seams
-      walkableRadius: 0.35,     // Increased to keep their bodies strictly OUT of walls
+      walkableHeight: 2.5, 
+      walkableClimb: 0.6,      // Increased so they don't get stuck on floor seams
+      walkableRadius: 2.5,     // Increased to keep their bodies strictly OUT of walls
       maxEdgeLen: 12.,
       maxSimplificationError: 1.3,
       minRegionArea: 4,

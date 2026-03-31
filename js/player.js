@@ -8,8 +8,9 @@ import {
   WDEFS, inventory, activeSlot, curWep, wepCooldown, swingT, AUTO_WEAPONS,
   setWepCooldown, setSwingT, setActiveSlot, refreshSlotHUD,
 } from './weapons.js';
-import { hitscan, fireRocket, firePlasma } from './projectiles.js';
+import { hitscan, fireRocket, firePlasma, fireGrenade } from './projectiles.js';
 import { _meshToEnemy } from './enemies.js';
+import { getEffectiveStats, isAkimbo, isAutoFire, hasPowerCell, hasClusterRounds, hasLaserDot } from './progression.js';
 
 export const PH = 1.72, PR = .44;
 // Base speed is now the old sprint speed – Shift gives a dash boost on top
@@ -84,37 +85,60 @@ export function hurtPlayer(rawDmg) {
 function shoot() {
   if (wepCooldown > 0) return;
   const W = WDEFS[curWep];
-  
-  // Check Infinite Ammo Buff
   const hasInfiniteAmmo = player.buffs['infinite_ammo'] > 0;
-  
+
   if (W.ammo !== Infinity && W.ammo < W.aps && !hasInfiniteAmmo) {
     sfx.noAmmo();
     const na = document.getElementById('noAmmo');
     if (na) { na.classList.add('show'); noAmmoTimer = 1.2; }
     return;
   }
-  
-  // Haste Buff modifies cooldown
-  const cdMult = player.buffs['haste'] > 0 ? 0.5 : 1.0; 
-  setWepCooldown(W.cd * cdMult); 
+
+  const cdMult = player.buffs['haste'] > 0 ? 0.5 : 1.0;
+  setWepCooldown(W.cd * cdMult);
   setSwingT(1);
-  
+
   if (W.ammo !== Infinity && !hasInfiniteAmmo) W.ammo -= W.aps;
   refreshSlotHUD();
-  
-  // Quad Damage Buff modifies damage
+
   const dmgMult = player.buffs['quad_damage'] > 0 ? 4 : 1;
-  const modDmg = W.dmg * dmgMult;
-  
+  const EW     = getEffectiveStats(curWep, W);
+  const modDmg = EW.dmg * dmgMult;
+  const spread = EW.spread ?? W.spread;
+  const range  = EW.range  ?? W.range;
+  const falloff= EW.falloff ?? W.falloff ?? 0;
+  const akimbo  = isAkimbo(curWep);
+
   switch (curWep) {
-    case 'PISTOL':   sfx.pistol();   hitscan(_meshToEnemy, W.spread, modDmg,  W.range, W.falloff ?? 0.30); break;
-    case 'SMG':      sfx.smg();      hitscan(_meshToEnemy, W.spread, modDmg,  W.range, W.falloff ?? 0.50); break;
-    case 'CHAINGUN': sfx.chaingun(); hitscan(_meshToEnemy, W.spread, modDmg,  W.range, W.falloff ?? 0.60); break;
-    case 'RAILGUN':  sfx.railgun();  hitscan(_meshToEnemy, W.spread, 9999,    W.range, 0.00); break;
-    case 'SHOTGUN':  sfx.shotgun();  for (let i = 0; i < W.pellets; i++) hitscan(_meshToEnemy, W.spread, modDmg, W.range, W.falloff ?? 0.80); break;
+    case 'PISTOL':
+      sfx.pistol();
+      hitscan(_meshToEnemy, spread, modDmg, range, falloff);
+      if (akimbo) hitscan(_meshToEnemy, spread * 1.15, modDmg * 0.85, range, falloff); // second hand
+      break;
+    case 'SMG':      sfx.smg();      hitscan(_meshToEnemy, spread, modDmg, range, falloff); break;
+    case 'CHAINGUN': sfx.chaingun(); hitscan(_meshToEnemy, spread, modDmg, range, falloff); break;
+    case 'RAILGUN':
+      sfx.railgun();
+      hitscan(_meshToEnemy, spread, 9999, range, 0.00);
+      break;
+    case 'SHOTGUN': {
+      sfx.shotgun();
+      const pellets = EW.pellets ?? W.pellets;
+      for (let i = 0; i < pellets; i++) hitscan(_meshToEnemy, spread, modDmg, range, falloff);
+      if (akimbo) for (let i = 0; i < pellets; i++) hitscan(_meshToEnemy, spread * 1.2, modDmg * 0.8, range, falloff);
+      break;
+    }
     case 'PLASMA':   sfx.plasma();   firePlasma(); break;
     case 'ROCKET':   sfx.rocket();   fireRocket(); break;
+    case 'GLAUNCHER': {
+      const fwd = new BABYLON.Vector3();
+      camera.getForwardRay(1).direction.normalizeToRef(fwd);
+      fwd.y += 0.05; fwd.normalize();
+      const origin = camera.position.clone().add(fwd.scale(0.8));
+      fireGrenade('player', origin, fwd, WDEFS.GLAUNCHER.projSpeed, EW.dmg * dmgMult, WDEFS.GLAUNCHER.splash, hasClusterRounds());
+      sfx.shotgun();
+      break;
+    }
   }
 }
 export { shoot };
@@ -297,17 +321,41 @@ export function setupInput(getGameRunning, getPaused, onTogglePause, onPickupWea
 
   function setScope(enable) {
     const overlay = document.getElementById('scopeOverlay');
-    isScoped = enable; // <--- Update the exported variable
-    
+    isScoped = enable;
+
     if (enable) {
-        // Railgun gets massive zoom, everything else gets a slight 15% zoom
-        camera.fov = curWep === 'RAILGUN' ? SCOPE_FOV : DEFAULT_FOV * 0.85;   
-        if (curWep === 'RAILGUN' && overlay) overlay.style.display = 'block';
-    } else { 
-        camera.fov = DEFAULT_FOV; 
-        if(overlay) overlay.style.display = 'none';
+      // Determine ADS FOV from equipped sight attachment, or fallback defaults
+      let adsFov = null;
+      try {
+        // Dynamic import is async but getAdsFov result is cached in the module
+        // We call the already-imported version synchronously via a cached ref
+        if (window.__getAdsFov) adsFov = window.__getAdsFov(curWep);
+      } catch (_) {}
+
+      if (adsFov !== null) {
+        camera.fov = adsFov;
+        // Show railgun reticle only for scope-style sights on the railgun
+        const isRailScope = curWep === 'RAILGUN' && adsFov < DEFAULT_FOV * 0.7;
+        if (overlay) overlay.style.display = isRailScope ? 'block' : 'none';
+      } else if (curWep === 'RAILGUN') {
+        // No sight attached – default railgun iron-sight zoom
+        camera.fov = SCOPE_FOV;
+        if (overlay) overlay.style.display = 'block';
+      } else {
+        // No sight – hipfire with slight pull-in
+        camera.fov = DEFAULT_FOV * 0.88;
+        if (overlay) overlay.style.display = 'none';
+      }
+    } else {
+      camera.fov = DEFAULT_FOV;
+      if (overlay) overlay.style.display = 'none';
     }
   }
+
+  // Wire up getAdsFov once progression module is loaded
+  import('./progression.js').then(({ getAdsFov }) => {
+    window.__getAdsFov = getAdsFov;
+  });
   cnv.addEventListener('pointerdown', e => { if (e.button === 2) setScope(true);  }, true);
   cnv.addEventListener('mousedown',   e => { if (e.button === 2) setScope(true);  }, true);
   cnv.addEventListener('pointerup',   e => { if (e.button === 2) setScope(false); }, true);

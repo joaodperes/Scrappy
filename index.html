@@ -6,13 +6,131 @@
 <title>SCRAPPY - Scrapyard FPS</title>
 <script src="https://cdn.babylonjs.com/recast.js"></script>
 <script src="/js/babylon.max.js"></script>
-<script type="importmap">
-{
-  "imports": {
-    "firebase/app":       "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js",
-    "firebase/firestore": "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js"
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyAzRs3lq-6NPuR3n0yCB8P6PQoHbSSd1HE",
+    authDomain: "botarena-77004.firebaseapp.com",
+    projectId: "botarena-77004",
+    storageBucket: "botarena-77004.firebasestorage.app",
+    messagingSenderId: "339617168378",
+    appId: "1:339617168378:web:a4b563450f0af36b254243"
+  };
+  
+  if (!firebase.apps.length) {
+    firebase.initializeApp(firebaseConfig);
+    
   }
-}
+
+  // Basic Profanity Filter
+  const bannedWords = ['fuck', 'shit', 'ass', 'bitch', 'cunt', 'nigger', 'nigga', 'faggot', 'dick', 'cock', 'pussy', 'whore', 'slut'];
+  function containsProfanity(name) {
+    const lower = name.toLowerCase();
+    return bannedWords.some(word => lower.includes(word));
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    const loginBtn = document.getElementById('loginBtn');
+    const startBtn = document.getElementById('startBtn');
+    const pvpBtn = document.getElementById('pvpBtn');
+    const nameModal = document.getElementById('nameModal');
+    const nameInput = document.getElementById('nameInput');
+    const nameSubmit = document.getElementById('nameSubmit');
+    const nameError = document.getElementById('nameError');
+
+    let currentUser = null;
+
+    // 1. Trigger Login on Click
+    loginBtn.onclick = () => {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      firebase.auth().signInWithPopup(provider).catch(console.error);
+    };
+
+    // 2. Listen for Auth State Changes
+    firebase.auth().onAuthStateChanged(async (user) => {
+      if (user) {
+        currentUser = user;
+        loginBtn.style.display = 'none';
+        
+        // Check if user already set a display name
+        const userDoc = await firebase.firestore().collection('users').doc(user.uid).get();
+        if (userDoc.exists && userDoc.data().displayName) {
+           enableGame(userDoc.data().displayName);
+        } else {
+           nameModal.classList.remove('hidden');
+           nameModal.classList.add('visible');
+        }
+      } else {
+        loginBtn.style.display = 'inline-block';
+        startBtn.style.display = 'none';
+        pvpBtn.style.display = 'none';
+      }
+    });
+
+    // 3. Handle Name Submission
+    nameSubmit.onclick = async () => {
+       const rawName = nameInput.value.trim();
+       const name = rawName.toUpperCase(); // Force uppercase for style
+       
+       if (name.length < 3) { nameError.textContent = "Name must be at least 3 characters."; return; }
+       if (!/^[A-Z0-9_]+$/.test(name)) { nameError.textContent = "Letters, numbers, and underscores only."; return; }
+       if (containsProfanity(name)) { nameError.textContent = "Please choose a more appropriate name."; return; }
+
+       nameSubmit.disabled = true;
+       nameSubmit.textContent = "CHECKING...";
+
+       try {
+          // Check Uniqueness (case-insensitive)
+          const snapshot = await firebase.firestore().collection('users')
+            .where('displayName_lower', '==', name.toLowerCase()).get();
+            
+          if (!snapshot.empty) {
+             nameError.textContent = "Name already taken!";
+             nameSubmit.disabled = false;
+             nameSubmit.textContent = "CONFIRM";
+             return;
+          }
+
+          // Save Name
+          await firebase.firestore().collection('users').doc(currentUser.uid).set({
+             displayName: name,
+             displayName_lower: name.toLowerCase()
+          });
+
+          nameModal.classList.remove('visible');
+          nameModal.classList.add('hidden');
+          enableGame(name);
+       } catch (err) {
+          nameError.textContent = "Network error. Try again.";
+          console.error(err);
+          nameSubmit.disabled = false;
+          nameSubmit.textContent = "CONFIRM";
+       }
+    };
+
+    // 4. Unlock Game & Inject Name into UI
+    function enableGame(displayName) {
+       startBtn.style.display = 'inline-block';
+       pvpBtn.style.display = 'inline-block';
+       
+       // Pre-fill and lock the PvP Lobby input
+       const pvpNameField = document.getElementById('pvpName');
+       if (pvpNameField) {
+           pvpNameField.value = displayName;
+           pvpNameField.disabled = true;
+       }
+       
+       // Pre-fill and lock the Solo Death Screen input
+       const deathNameField = document.getElementById('playerNameInput');
+       if (deathNameField) {
+           deathNameField.value = displayName;
+           deathNameField.disabled = true;
+       }
+    }
+  });
 </script>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
@@ -117,15 +235,26 @@ body { background:#000; overflow:hidden; font-family:'Arial',sans-serif; }
 </style>
 </head>
 <body>
+<div id="nameModal" class="screen hidden" style="background:rgba(0,0,0,0.95); z-index: 2000;">
+  <div style="background:#0d1a05; border:2px solid #557733; padding:30px; border-radius:8px; text-align:center; width: 340px;">
+    <h2 style="color:#d8f030; margin-bottom:10px; font-size:24px; letter-spacing:2px;">CREATE CALLSIGN</h2>
+    <p style="color:#88aa44; font-size:13px; margin-bottom:20px;">This name is permanent and will be used on the leaderboard and in multiplayer.</p>
+    <input type="text" id="nameInput" maxlength="15" placeholder="ENTER NAME" style="padding:10px 14px; font-size:18px; background:#000; color:#d8f030; border:1px solid #7a9940; width:100%; text-align:center; margin-bottom:10px; text-transform:uppercase; font-family:'Courier New', monospace;">
+    <div id="nameError" style="color:#ff5533; font-size:12px; margin-bottom:15px; min-height:14px; font-weight:bold;"></div>
+    <button class="btn-sm" id="nameSubmit" style="width:100%;">CONFIRM</button>
+  </div>
+</div>
 <canvas id="c"></canvas>
 
 <div id="menuScreen" class="screen visible">
   <h1>&#9881; SCRAPPY &#9881;</h1>
   <div class="sub">Scrapyard Survival Shooter</div>
   <div id="loadMsg" style="color:#7a9940;font-size:13px;letter-spacing:3px;margin-bottom:10px;display:none">&#9654; LOADING LIBREQUAKE TEXTURES&hellip;</div>
-  <button class="btn" id="startBtn">&#9654; SOLO RUN</button>
-  <button class="btn" id="pvpBtn" style="background:linear-gradient(to bottom,#2a1a50,#10082a);border-color:#5533aa;color:#c8aaff;">&#9876; PvP TDM</button>
-  <div class="controls-hint">
+  
+  <button class="btn" id="loginBtn" style="background:linear-gradient(to bottom,#1a3a50,#081a2a);border-color:#3377aa;color:#aaccff;">&#128273; LOGIN WITH GOOGLE</button>
+  
+  <button class="btn" id="startBtn" style="display:none;">&#9654; SOLO RUN</button>
+  <button class="btn" id="pvpBtn" style="display:none;background:linear-gradient(to bottom,#2a1a50,#10082a);border-color:#5533aa;color:#c8aaff;">&#9876; PvP TDM</button>  <div class="controls-hint">
     <b>WASD</b> Move &nbsp;|&nbsp; <b>Mouse</b> Aim &nbsp;|&nbsp; <b>LMB</b> Shoot (hold auto)<br>
     <b>Shift</b> Sprint &nbsp;|&nbsp; <b>Space</b> Jump &nbsp;|&nbsp; <b>1/2</b> Weapon &nbsp;|&nbsp; <b>Q</b> Quick-swap &nbsp;|&nbsp; <b>F</b> Pick up &nbsp;|&nbsp; <b>ESC</b> Pause
   </div>
