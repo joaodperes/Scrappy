@@ -14,7 +14,13 @@ export const player = {
   armor: 0, maxArmor: 100,
   score: 0,
   onGround: false, yVel: 0,
-  buffs: {}
+  buffs: {},
+  
+  // New weapon state tracking:
+  wepHeat: 0,
+  overheated: false,
+  isReloading: false,
+  reloadTimer: 0
 };
 
 // Cross-module callbacks registered after module init to avoid circular deps

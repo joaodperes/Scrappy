@@ -3,26 +3,31 @@ const BABYLON = window.BABYLON;
 import { scene, camera } from './scene.js';
 import { M } from './textures.js';
 import { isScoped } from './player.js';
+import { player } from './gameState.js';
+import { hasLaserDot, isAkimbo } from './progression.js';
 
 export const WDEFS = {
-  PISTOL:   { name:'PISTOL',          dmg:20,  range:75,  cd:.18,  hitscan:true,  ammo:Infinity, aps:1, spread:.0,   pellets:1, startAmmo:Infinity, falloff:0.30 },
-  SMG:      { name:'SMG',             dmg:11,  range:55,  cd:.09,  hitscan:true,  ammo:0,        aps:1, spread:.035, pellets:1, startAmmo:45,       falloff:0.50 },
-  SHOTGUN:  { name:'SHOTGUN',         dmg:32,  range:25,  cd:.25,  hitscan:true,  ammo:0,        aps:1, spread:0.12, pellets:10,startAmmo:16,       falloff:0.80 },
-  CHAINGUN: { name:'CHAINGUN',        dmg:14,  range:30,  cd:.08,  hitscan:true,  ammo:0,        aps:1, spread:.055, pellets:1, startAmmo:80,       falloff:0.70 },
-  RAILGUN:  { name:'RAILGUN',         dmg:110, range:130, cd:1.8,  hitscan:true,  ammo:0,        aps:1, spread:.0,   pellets:1, startAmmo:6,        falloff:0.00 },
-  PLASMA:   { name:'PLASMA RIFLE',    dmg:25,  range:90,  cd:.28,  hitscan:false, ammo:0,        aps:1,             pellets:1, startAmmo:30, speed:42, falloff:0.00 },
-  ROCKET:   { name:'ROCKET LAUNCHER', dmg:95,  range:90,  cd:1.2,  hitscan:false, ammo:0,        aps:1,             pellets:1, startAmmo:6,  speed:16, splash:4.5, falloff:0.00 },
+  PISTOL:   { name:'PISTOL',   dmg:20, range:75, cd:.18, hitscan:true, ammo:Infinity, aps:1, spread:.0, pellets:1, startAmmo:Infinity, falloff:0.30 },
+  SMG:      { name:'SMG',      dmg:11, range:55, cd:.09, hitscan:true, ammo:0, aps:1, spread:.035, pellets:1, startAmmo:45, falloff:0.50, magSize: 30, currentMag: 30 },
+  SHOTGUN:  { name:'SHOTGUN',  dmg:32, range:25, cd:.25, hitscan:true, ammo:0, aps:1, spread:0.12, pellets:10, startAmmo:16, falloff:0.80, magSize: 8,  currentMag: 8 },
+  CHAINGUN: { name:'CHAINGUN', dmg:14, range:30, cd:.08, hitscan:true, ammo:0, aps:1, spread:.055, pellets:1, startAmmo:80, falloff:0.70, magSize: 100, currentMag: 100 },
+  RAILGUN:  { name:'RAILGUN',         dmg:110, range:130, cd:1.8,  hitscan:true,  ammo:0,        aps:1, spread:.0,   pellets:1, startAmmo:6,        falloff:0.00, magSize: 6, currentMag: 6  },
+  ROCKET:   { name:'ROCKET LAUNCHER', dmg:95,  range:90,  cd:1.2,  hitscan:false, ammo:0,        aps:1,             pellets:1, startAmmo:6,  speed:16, splash:4.5, falloff:0.00, magSize: 8, currentMag: 8 },
   GLAUNCHER: { 
     name:'LAUNCHER', dmg:65, range:60, cd:0.8, hitscan:false, 
     ammo:0, aps:1, spread:0.02, pellets:1, startAmmo:12, falloff:0,
-    projSpeed: 30, splash: 7.0 
+    projSpeed: 30, splash: 7.0 , magSize: 8, currentMag: 8 
   },
+  // Energy weapons — use heat instead of ammo (ammo:Infinity so HUD shows ∞)
+  ELECTRON: { name:'ELECTRON', dmg:18, range:60, cd:.12, hitscan:true, ammo:Infinity, aps:1, spread:.04, pellets:1, startAmmo:Infinity, falloff:0.40, heat: 0, maxHeat: 100, coolingRate: 35, useHeat: true, heatPerShot: 0.12 },
+  ION:      { name:'ION',      dmg:85, range:90, cd:1.2, hitscan:true, ammo:Infinity, aps:1, spread:.0,  pellets:1, startAmmo:Infinity, falloff:0.10, heat: 0, maxHeat: 100, coolingRate: 20, useHeat: true, heatPerShot: 0.40 },
+  PLASMA:   { name:'PLASMA',   dmg:25, range:50, cd:.15, hitscan:false,ammo:Infinity, aps:1, spread:.02, pellets:1, startAmmo:Infinity, falloff:0.0,  heat: 0, maxHeat: 100, coolingRate: 40, useHeat: true, heatPerShot: 0.18 },
 };
 
 export const WCOLORS = {
   PISTOL:0x999999, SMG:0xff8800, SHOTGUN:0x885533,
   CHAINGUN:0xff3300, RAILGUN:0x00ffcc, PLASMA:0x4488ff, ROCKET:0xcc3300,
-  GLAUNCHER:0x44cc44,
+  GLAUNCHER:0x44cc44, ELECTRON:0x00ccff, ION:0xaa44ff,
 };
 
 export const ROBOT_DROPS = {
@@ -34,9 +39,11 @@ export const ROBOT_DROPS = {
   shotgun:   'SHOTGUN',
   rocket:    'ROCKET',
   grenadier: 'GLAUNCHER',
+  electron_bot: 'ELECTRON',
+  ion_sniper:   'ION',
 };
 
-export const AUTO_WEAPONS = new Set(['SMG', 'CHAINGUN']);
+export const AUTO_WEAPONS = new Set(['SMG', 'CHAINGUN', 'ELECTRON', 'PLASMA']);
 
 export const inventory = [null, null, 'PISTOL']; 
 export let activeSlot = 2;
@@ -132,11 +139,30 @@ function _buildGlauncher(p) {
   _box(p,'fore', .09, .08, .20, M.gunBrown, 0, -.06,  .24);
   _box(p,'grn',  .016,.05, .34, M.ledGreen, -.052, .10, .12);
 }
+function _buildElectron(p) {
+  // Sleek rifle body with energy coils and a glowing emitter lens
+  _box(p,'body', .08, .10, .68, M.gunMetal, 0,  .02,  .12);
+  _cyl(p,'bbl',  .04, .42, M.grey,     0,   .02,  .48, Math.PI/2);
+  _sph(p,'lens', .07, M.ledCyan,       0,   .02,  .70);
+  _box(p,'grip', .06, .18, .10, M.gunBrown, 0,  -.10, -.10, .16);
+  _torus(p,'coil1', .08, .016, M.ledCyan, 0, .02, .30);
+  _torus(p,'coil2', .08, .016, M.ledCyan, 0, .02, .45);
+}
+function _buildIon(p) {
+  // Long precision sniper chassis with purple emitter ring
+  _box(p,'body', .07, .09, .92, M.gunMetal, 0,  .02,  .18);
+  _cyl(p,'bbl',  .032,.70, M.grey,     0,   .02,  .72, Math.PI/2);
+  _sph(p,'lens', .06, M.plasmaMat,     0,   .02, 1.08);
+  _box(p,'grip', .06, .20, .10, M.gunBrown, 0,  -.10, -.10, .14);
+  _torus(p,'ring',.09, .020, M.ledCyan, 0,  .02,  .88);
+  _box(p,'stck', .05, .10, .28, M.gunBrown, 0,   .02, -.20, -.08);
+}
 
 const _modelBuilders = {
   PISTOL: _buildPistol, SMG: _buildSmg, SHOTGUN: _buildShotgun,
   CHAINGUN: _buildChaingun, RAILGUN: _buildRailgun,
   PLASMA: _buildPlasma, ROCKET: _buildRocket, GLAUNCHER: _buildGlauncher,
+  ELECTRON: _buildElectron, ION: _buildIon,
 };
 
 export function makeScaledWeaponModel(wName, sc) {
@@ -152,9 +178,44 @@ for (const [k, fn] of Object.entries(_modelBuilders)) {
   const node = new BABYLON.TransformNode('wep_' + k, scene);
   fn(node);
   node.parent = wepGroup;
-  node.getChildMeshes().forEach(m => { m.isPickable = false; m.setEnabled(false); });
+  // FIX: Don't disable children. Disable the parent node!
+  node.getChildMeshes().forEach(m => { m.isPickable = false; });
+  node.setEnabled(false); 
   wepModels[k] = node;
 }
+
+// ── Spinning Module state (Chaingun minigun mode) ─────────────
+// spinProgress: 0–1 (0 = not spun up, 1 = fully spun, ready to fire)
+// sustainTime:  seconds the trigger has been held continuously while spun up (drives RoF ramp)
+export const chaingunSpin = { progress: 0, sustainTime: 0, isSpunUp: false };
+
+/** Call each frame while chaingun trigger is held. Returns true when spin-up is complete. */
+export function tickChaingunSpin(dt) {
+  const SPIN_UP_SEC = 1.0; // time to reach full spin
+  chaingunSpin.progress = Math.min(1, chaingunSpin.progress + dt / SPIN_UP_SEC);
+  chaingunSpin.isSpunUp = chaingunSpin.progress >= 1.0;
+  if (chaingunSpin.isSpunUp) chaingunSpin.sustainTime += dt;
+  return chaingunSpin.isSpunUp;
+}
+
+/** Call when trigger is released to wind down. */
+export function releaseChaingunSpin(dt) {
+  const SPIN_DOWN_SEC = 0.6;
+  chaingunSpin.progress = Math.max(0, chaingunSpin.progress - dt / SPIN_DOWN_SEC);
+  chaingunSpin.sustainTime = 0;
+  chaingunSpin.isSpunUp = false;
+}
+
+/** Returns the effective CD multiplier for spinning module RoF ramp (0.4→1.0 over 3s of sustained fire). */
+export function chaingunSpinCdMult() {
+  // Ramps from 1.0 (normal) down to 0.4 (2.5× faster) over 3 seconds of sustained fire
+  return Math.max(0.4, 1.0 - chaingunSpin.sustainTime / 3.0 * 0.6);
+}
+
+// ── Dual Trigger mode state (Plasma Rifle) ────────────────────
+// false = semi-auto burst (3 shots), true = sniper (single shot, 3× dmg)
+export let dualTriggerSniperMode = false;
+export function toggleDualTriggerMode() { dualTriggerSniperMode = !dualTriggerSniperMode; }
 
 // ── Attachment visual meshes ──────────────────────────────────
 // Keyed by wName → array of extra meshes attached to wepGroup
@@ -181,11 +242,13 @@ const MUZZLE_Z = {
   PLASMA:    0.72,
   ROCKET:    0.62,
   GLAUNCHER: 0.65,
+  ELECTRON:  0.74,
+  ION:       1.12,
 };
 
 // Rail/top position per weapon
-const TOP_Y  = { PISTOL:0.09, SMG:0.08, SHOTGUN:0.09, CHAINGUN:0.10, RAILGUN:0.08, PLASMA:0.10, ROCKET:0.14, GLAUNCHER:0.16 };
-const GRIP_Z = { PISTOL:-0.05, SMG:-0.02, SHOTGUN:0.18, CHAINGUN:-0.08, RAILGUN:-0.05, PLASMA:-0.02, ROCKET:-0.10, GLAUNCHER:0.10 };
+const TOP_Y  = { PISTOL:0.09, SMG:0.08, SHOTGUN:0.09, CHAINGUN:0.10, RAILGUN:0.08, PLASMA:0.10, ROCKET:0.14, GLAUNCHER:0.16, ELECTRON:0.08, ION:0.07 };
+const GRIP_Z = { PISTOL:-0.05, SMG:-0.02, SHOTGUN:0.18, CHAINGUN:-0.08, RAILGUN:-0.05, PLASMA:-0.02, ROCKET:-0.10, GLAUNCHER:0.10, ELECTRON:-0.04, ION:-0.06 };
 
 function _makeSightRedDot(parent, wName) {
   const mz = MUZZLE_Z[wName] ?? 0.40;
@@ -203,11 +266,18 @@ function _makeSightRedDot(parent, wName) {
   const dot = BABYLON.MeshBuilder.CreateSphere('att_rds_dot', { diameter:0.006, segments:4 }, scene);
   dot.position.set(0, ty + 0.046, mz - 0.17);
   dot.material = red; dot.parent = parent; dot.isPickable = false;
-  // Turrets (windage/elevation knobs)
-  const knob1 = BABYLON.MeshBuilder.CreateCylinder('att_rds_knob1', { diameter:0.014, height:0.022, tessellation:6 }, scene);
-  knob1.rotation.z = Math.PI/2; knob1.position.set(0.03, ty + 0.056, mz - 0.22);
-  knob1.material = black; knob1.parent = parent; knob1.isPickable = false;
-  return [housing, glass, dot, knob1];
+  
+  // ── FIX: Restore the physical Laser Beam ──
+  const laserLength = 50;
+  const laser = BABYLON.MeshBuilder.CreateCylinder('att_laser_beam', { diameter:0.004, height:laserLength, tessellation:6 }, scene);
+  // Shift it slightly below the top rail so it doesn't clip the gun body
+  laser.position.set(0, ty - 0.02, mz + (laserLength / 2));
+  // Negate the weapon's natural resting tilt so it shoots true-center
+  laser.rotation.x = Math.PI/2 - (WROT[wName]?.x || 0); 
+  laser.rotation.y = -(WROT[wName]?.y || 0);                 
+  laser.material = red; laser.parent = parent; laser.isPickable = false;
+
+  return [housing, glass, dot, laser];
 }
 
 function _makeSightAcog(parent, wName) {
@@ -387,14 +457,14 @@ function _makeStockHeavy(parent, wName) {
 
 function _makeStockFolded(parent, wName) {
   const black = _attMats.black();
-  // Wire/skeleton stock folded to the side
+  // ── FIX: Centered the bars so they align with the back of the SMG ──
   const bar = BABYLON.MeshBuilder.CreateBox('att_fstock_bar', { width:0.006, height:0.006, depth:0.18 }, scene);
-  bar.position.set(0.032, 0.0, -0.26);
+  bar.position.set(0.015, 0.0, -0.26);
   bar.material = black; bar.parent = parent; bar.isPickable = false;
   const bar2 = BABYLON.MeshBuilder.CreateBox('att_fstock_bar2', { width:0.006, height:0.006, depth:0.18 }, scene);
-  bar2.position.set(-0.032, 0.0, -0.26);
+  bar2.position.set(-0.015, 0.0, -0.26);
   bar2.material = black; bar2.parent = parent; bar2.isPickable = false;
-  const cross = BABYLON.MeshBuilder.CreateBox('att_fstock_cross', { width:0.068, height:0.006, depth:0.006 }, scene);
+  const cross = BABYLON.MeshBuilder.CreateBox('att_fstock_cross', { width:0.04, height:0.006, depth:0.006 }, scene);
   cross.position.set(0, 0.0, -0.35);
   cross.material = black; cross.parent = parent; cross.isPickable = false;
   return [bar, bar2, cross];
@@ -425,6 +495,19 @@ const _attVisualBuilders = {
   stock: {
     heavy:  _makeStockHeavy,
     folded: _makeStockFolded,
+  },
+  // Special attachments — purely mechanical effects, no extra geometry needed
+  special: {
+    akimbo:           () => [],
+    auto:             () => [],
+    power_cell:       () => [],
+    cluster:          () => [],
+    energy_coil:      () => [],
+    slow_trigger:     () => [],
+    spinning_module:  () => [],
+    dual_trigger:     () => [],
+    efficiency_module:() => [],
+    seasoned_vet:     () => [],
   },
 };
 
@@ -477,6 +560,8 @@ const WPOS = {
   RAILGUN:   new BABYLON.Vector3(.34,-.35, .68),
   PLASMA:    new BABYLON.Vector3(.35,-.35, .64),
   GLAUNCHER: new BABYLON.Vector3(.30,-.34, .62),
+  ELECTRON:  new BABYLON.Vector3(.34,-.34, .62),
+  ION:       new BABYLON.Vector3(.34,-.35, .70),
 };
 const WROT = {
   PISTOL:    new BABYLON.Vector3(.06,-.08,0),
@@ -487,6 +572,8 @@ const WROT = {
   RAILGUN:   new BABYLON.Vector3(.04,-.10,0),
   PLASMA:    new BABYLON.Vector3(.05,-.10,0),
   GLAUNCHER: new BABYLON.Vector3(.05,-.11,0),
+  ELECTRON:  new BABYLON.Vector3(.04,-.09,0),
+  ION:       new BABYLON.Vector3(.04,-.10,0),
 };
 
 export function refreshSlotHUD() {
@@ -498,10 +585,19 @@ export function refreshSlotHUD() {
     el.className = 'wSlot' + (isActive ? ' active' : '') + (wep ? '' : ' empty');
     const nameEl = el.querySelector('.sName');
     const ammoEl = el.querySelector('.sAmmo');
+    
     if (wep) {
         nameEl.textContent = WDEFS[wep].name;
-        const a = WDEFS[wep].ammo;
-        ammoEl.textContent = (a === Infinity) ? 'INFINITE' : a + ' RDS';
+        const W = WDEFS[wep];
+        
+        // Display Heat, Magazines, or standard ammo
+        if (W.useHeat) {
+            ammoEl.textContent = 'HEAT';
+        } else if (W.magSize) {
+            ammoEl.textContent = W.currentMag + ' / ' + (W.ammo === Infinity ? '∞' : W.ammo);
+        } else {
+            ammoEl.textContent = (W.ammo === Infinity) ? '∞' : W.ammo + ' RDS';
+        }
     } else {
         nameEl.textContent = 'EMPTY';
         ammoEl.textContent = '—';
@@ -514,13 +610,30 @@ export function setWeapon(name) {
   const prev = curWep;
   curWep = name;
 
-  // Hide all weapon models + their attachment visuals
+  // Cancel any active reload when swapping weapons!
+  player.isReloading = false;
+  player.reloadTimer = 0;
+
   for (const [k, node] of Object.entries(wepModels)) {
-    const show = (k === name);
-    node.getChildMeshes().forEach(m => m.setEnabled(show));
-    // Toggle attachment meshes for prev/new weapon
-    const attMeshes = _attachmentMeshes[k] || [];
-    for (const m of attMeshes) m.setEnabled(show);
+      if (k === name) {
+          node.setEnabled(true);
+          
+          // AKIMBO FIX: Check if we should dual wield
+          if (isAkimbo(name)) {
+              if (!node._leftHandClone) {
+                  node._leftHandClone = node.clone("left_hand_" + name);
+                  node._leftHandClone.parent = wepGroup;
+                  // Position it symmetrically on the left
+                  node._leftHandClone.position.x = -WPOS[name].x * 2; 
+              }
+              node._leftHandClone.setEnabled(true);
+          } else if (node._leftHandClone) {
+              node._leftHandClone.setEnabled(false);
+          }
+      } else {
+          node.setEnabled(false);
+          if (node._leftHandClone) node._leftHandClone.setEnabled(false);
+      }
   }
 
   wepGroup.position.copyFrom(WPOS[name]);
@@ -569,17 +682,21 @@ export function applyLoadoutToScene(wName) {
   });
 }
 
+// Energy weapons don't physically recoil a muzzle — suppress the z-kick swing for them
+const _NO_SWING_WEAPONS = new Set(['ELECTRON', 'ION', 'PLASMA']);
+
 export function animWeapon(dt) {
   const targetX = isScoped ? 0 : WPOS[curWep].x;
   const targetY = isScoped ? WPOS[curWep].y + 0.08 : WPOS[curWep].y + Math.sin(Date.now() * .0018) * .007;
   wepGroup.position.x += (targetX - wepGroup.position.x) * dt * 15;
   wepGroup.position.y += (targetY - wepGroup.position.y) * dt * 15;
-  if (swingT > 0) {
+  if (swingT > 0 && !_NO_SWING_WEAPONS.has(curWep)) {
     swingT = Math.max(0, swingT - dt * 7.5);
     const k = Math.sin(swingT * Math.PI);
     wepGroup.position.z = WPOS[curWep].z - k * .09;
-    wepGroup.rotation.x = WROT[curWep].x + k * .28;
+    wepGroup.rotation.x = WROT[curWep].x - (k * 0.15); // <--- minus sign tilts barrel UP
   } else {
+    if (_NO_SWING_WEAPONS.has(curWep)) swingT = 0; // drain instantly for energy weapons
     wepGroup.position.z = WPOS[curWep].z;
     wepGroup.rotation.x = WROT[curWep].x;
   }
@@ -589,6 +706,10 @@ export function animWeapon(dt) {
 export function initAttachmentVisuals() {
   for (const wName of Object.keys(WDEFS)) {
     _attachmentMeshes[wName] = [];
-    _rebuildAttachmentVisuals(wName);
+    applyLoadoutToScene(wName); // <--- Forces initial skin/attachment building
   }
+}
+
+export function setWeaponVisibility(isVisible) {
+  if (wepGroup) wepGroup.setEnabled(isVisible);
 }

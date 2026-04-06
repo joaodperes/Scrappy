@@ -7,6 +7,14 @@ function _db() {
 export async function submitScore(name, score, wave, mode = 'solo') {
   const db = _db();
   if (!db) { console.warn('[leaderboard] Firebase not loaded'); return; }
+
+  // Also update progression maxWave so the loadout stat is never stale
+  if (mode === 'solo' && typeof wave === 'number') {
+    import('./progression.js').then(({ recordWaveComplete }) => {
+      recordWaveComplete(wave, false);
+    });
+  }
+
   await db.collection('scores').add({
     name, score, wave, mode,
     date: firebase.firestore.FieldValue.serverTimestamp(),

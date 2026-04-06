@@ -1,239 +1,192 @@
-// server.js – Scrappy PvP WebSocket server
-// Team Deathmatch: two teams (RED/BLUE), 10-minute rounds, respawn after 5s.
-//
-// Run:  node server.js [port]   (default port 8080)
-// Hosting: Railway / Render / Fly.io free tier all work; just set the PORT env var.
+// server.js – BotArena FFA WebSocket server
+// Supports pre-game lobby: players join and wait until the host sends hostStartGame.
+const { WebSocketServer } = require('ws');
+const port = process.env.PORT || 8080;
+const wss  = new WebSocketServer({ port });
 
-'use strict';
-const { WebSocketServer, WebSocket } = require('ws');
-
-const PORT          = parseInt(process.env.PORT || process.argv[2] || '8080', 10);
-const ROUND_SECS    = 600;   // 10 minutes
-const RESPAWN_DELAY = 5;     // seconds
-const STATE_HZ      = 20;    // broadcast state at 20 Hz
-const MAX_ROOM_SIZE = 8;
-
-const wss = new WebSocketServer({ port: PORT });
-console.log(`[server] Scrappy PvP listening on ws://0.0.0.0:${PORT}`);
-
-// ── Rooms ─────────────────────────────────────────────────────
-/** @type {Map<string, Room>} */
 const rooms = new Map();
-
-class Room {
-  constructor(id) {
-    this.id       = id;
-    /** @type {Map<string, Player>} */
-    this.players  = new Map();
-    this.redScore = 0;
-    this.blueScore= 0;
-    this.timeLeft = ROUND_SECS;
-    this.active   = false;  // round running
-    this.started  = false;
-    this._stateInterval = null;
-    this._roundInterval = null;
-  }
-
-  redCount()  { return [...this.players.values()].filter(p=>p.team==='RED').length; }
-  blueCount() { return [...this.players.values()].filter(p=>p.team==='BLUE').length; }
-
-  assignTeam() { return this.redCount() <= this.blueCount() ? 'RED' : 'BLUE'; }
-
-  addPlayer(player) {
-    this.players.set(player.id, player);
-    this._tryStart();
-  }
-
-  removePlayer(id) {
-    this.players.delete(id);
-    if (this.players.size === 0) this._stop();
-  }
-
-  _tryStart() {
-    if (this.started) return;
-    if (this.redCount() > 0 && this.blueCount() > 0) {
-      this.started = true;
-      this.active  = true;
-      this.timeLeft = ROUND_SECS;
-      this.broadcast({ type:'roundStart', duration: ROUND_SECS });
-      console.log(`[room ${this.id}] Round started – ${this.players.size} players`);
-
-      this._stateInterval = setInterval(() => this._broadcastState(), 1000/STATE_HZ);
-      this._roundInterval = setInterval(() => this._tick(), 1000);
-    }
-  }
-
-  _tick() {
-    if (!this.active) return;
-    this.timeLeft = Math.max(0, this.timeLeft - 1);
-    // Broadcast scores every second
-    this.broadcast({ type:'scores', redScore:this.redScore, blueScore:this.blueScore, timeLeft:this.timeLeft });
-    if (this.timeLeft <= 0) this._endRound();
-  }
-
-  _endRound() {
-    this.active = false;
-    let winner;
-    if (this.redScore > this.blueScore)       winner = 'RED';
-    else if (this.blueScore > this.redScore)  winner = 'BLUE';
-    else                                       winner = 'TIE';
-    this.broadcast({ type:'roundEnd', redScore:this.redScore, blueScore:this.blueScore, winner });
-    console.log(`[room ${this.id}] Round ended – ${winner} (R${this.redScore} B${this.blueScore})`);
-    this._stop();
-  }
-
-  _stop() {
-    clearInterval(this._stateInterval);
-    clearInterval(this._roundInterval);
-    this._stateInterval = null;
-    this._roundInterval = null;
-    this.started = false;
-  }
-
-  _broadcastState() {
-    const players = [];
-    for (const p of this.players.values()) {
-      players.push({ id:p.id, name:p.name, x:p.x, y:p.y, z:p.z, yaw:p.yaw, hp:p.hp, team:p.team });
-    }
-    this.broadcast({ type:'state', players });
-  }
-
-  broadcast(msg, excludeId = null) {
-    const str = JSON.stringify(msg);
-    for (const p of this.players.values()) {
-      if (p.id === excludeId) continue;
-      if (p.ws.readyState === WebSocket.OPEN) p.ws.send(str);
-    }
-  }
-
-  send(id, msg) {
-    const p = this.players.get(id);
-    if (p && p.ws.readyState === WebSocket.OPEN) p.ws.send(JSON.stringify(msg));
-  }
-}
-
-// ── Player state ─────────────────────────────────────────────
+// rooms: Map<roomId, { players: Map<id, player>, config, started, hostId }>
 let _nextId = 1;
-class Player {
-  constructor(ws, name, room) {
-    this.ws   = ws;
-    this.name = name;
-    this.room = room;
-    this.id   = String(_nextId++);
-    this.team = room.assignTeam();
-    this.hp   = 100;
-    this.alive= true;
-    // Position – updated on 'move' messages
-    this.x = 0; this.y = 1.72; this.z = 0; this.yaw = 0;
-    // Spawn positions per team – Smelting District map
-    const RED_SPAWNS  = [[-18, 0, -24], [-24, 0, -16], [-14, 0, -10]]; // Loading bay
-    const BLUE_SPAWNS = [[ 16, 0,  18], [ 22, 0,  12], [ 20, 0,  20]]; // Smelter hall
-    const opts = this.team === 'RED' ? RED_SPAWNS : BLUE_SPAWNS;
-    const [sx,,sz] = opts[Math.floor(Math.random()*opts.length)];
-    this.x = sx; this.z = sz;
-  }
-}
 
-// ── Connection handler ────────────────────────────────────────
 wss.on('connection', ws => {
-  let player   = null;
-  let roomRef  = null;
+  const id = String(_nextId++);
+  let roomId = null, name = 'ANON';
 
   ws.on('message', raw => {
-    let msg;
-    try { msg = JSON.parse(raw); } catch { return; }
+    let msg; try { msg = JSON.parse(raw); } catch { return; }
 
+    // ── JOIN ──────────────────────────────────────────────────
     if (msg.type === 'join') {
-      // Get or create room
-      const roomId = (msg.room || 'default').slice(0, 32);
-      if (!rooms.has(roomId)) rooms.set(roomId, new Room(roomId));
-      roomRef = rooms.get(roomId);
-      if (roomRef.players.size >= MAX_ROOM_SIZE) {
-        ws.send(JSON.stringify({ type:'error', msg:'Room full' })); ws.close(); return;
+      name   = (msg.name || 'ANON').slice(0, 20);
+      roomId = (msg.room || 'default').slice(0, 20);
+      const isHost = !!msg.isHost;
+
+      if (!rooms.has(roomId)) {
+        rooms.set(roomId, {
+          players: new Map(),
+          config:  msg.config ?? null,
+          started: false,
+          hostId:  null,
+        });
       }
+      const room = rooms.get(roomId);
 
-      player = new Player(ws, (msg.name || 'ANON').slice(0, 20), roomRef);
+      // First joiner or explicit host flag sets the host
+      if (isHost || room.players.size === 0) room.hostId = id;
 
-      // Tell the joining player who they are and who's already here
-      const existingPlayers = [...roomRef.players.values()].map(p => ({
-        id:p.id, name:p.name, team:p.team, x:p.x, y:p.y, z:p.z, yaw:p.yaw, hp:p.hp,
+      // Use existing config if room already had one set by host
+      const roomCfg = room.config ?? msg.config ?? {};
+
+      // Send welcome with list of existing players + room details
+      const existingPlayers = [...room.players.values()].map(p => ({
+        id: p.id, name: p.name, x: p.x, y: p.y, z: p.z, yaw: p.yaw, hp: p.hp, score: p.score,
       }));
       ws.send(JSON.stringify({
-        type: 'welcome', id: player.id, team: player.team,
+        type:    'welcome',
+        id,
+        roomId,                // ← clients use this to display the room code in the lobby
         players: existingPlayers,
+        config:  roomCfg,
+        isHost:  room.hostId === id,
+        started: room.started,
       }));
 
-      // Tell others someone joined
-      roomRef.broadcast({ type:'playerJoined', id:player.id, name:player.name, team:player.team }, player.id);
-      roomRef.addPlayer(player);
-      console.log(`[room ${roomId}] ${player.name} (${player.team}) joined — ${roomRef.players.size} players`);
-      return;
-    }
+      // Add this player to the room
+      room.players.set(id, {
+        id, ws, name,
+        x: 0, y: 1.72, z: 0, yaw: 0,
+        hp: 100, score: 0,
+        config: roomCfg,
+      });
 
-    if (!player) return; // not yet joined
+      // Notify existing players
+      _broadcast(room, id, { type: 'playerJoined', id, name });
 
-    switch (msg.type) {
-      case 'move':
-        player.x   = +msg.x   || 0;
-        player.y   = +msg.y   || 1.72;
-        player.z   = +msg.z   || 0;
-        player.yaw = +msg.yaw || 0;
-        break;
-
-      case 'hit': {
-        // Client says it hit a target
-        const target = roomRef.players.get(msg.targetId);
-        if (!target || !target.alive) break;
-        // Sanity-check teams (no friendly fire)
-        if (target.team === player.team) break;
-        const dmg = Math.min(Math.max(+msg.dmg || 0, 0), 120); // cap damage
-        target.hp = Math.max(0, target.hp - dmg);
-        // Relay hit to target
-        roomRef.send(target.id, { type:'hit', targetId:target.id, dmg, killerId:player.id });
-        if (target.hp <= 0 && target.alive) {
-          target.alive = false;
-          // Update team score
-          if (player.team === 'RED') roomRef.redScore++;
-          else                       roomRef.blueScore++;
-          roomRef.broadcast({ type:'died', playerId:target.id, killerId:player.id });
-          roomRef.broadcast({ type:'scores', redScore:roomRef.redScore, blueScore:roomRef.blueScore, timeLeft:roomRef.timeLeft });
-          console.log(`[room ${roomRef.id}] ${player.name} killed ${target.name} — R${roomRef.redScore} B${roomRef.blueScore}`);
-          // Schedule respawn
-          setTimeout(() => {
-            if (!roomRef.players.has(target.id)) return;
-            target.hp = 100; target.alive = true;
-            const opts = target.team === 'RED'
-              ? [[-24,0,-24],[-20,0,-28],[-28,0,-20]]
-              : [[ 24,0, 24],[ 20,0, 28],[ 28,0, 20]];
-            const [rx,,rz] = opts[Math.floor(Math.random()*opts.length)];
-            target.x = rx; target.z = rz;
-            roomRef.broadcast({ type:'respawn', playerId:target.id, x:rx, y:1.72, z:rz });
-          }, RESPAWN_DELAY * 1000);
-        }
-        break;
+      // If game already started (late joiner), send roundStart immediately
+      if (room.started) {
+        ws.send(JSON.stringify({
+          type:     'roundStart',
+          duration: roomCfg?.roundDuration ?? 600,
+        }));
       }
-
-      case 'shoot':
-        // Relay cosmetic shoot event to other players
-        roomRef.broadcast({ type:'shoot', shooterId:player.id,
-          ox:msg.ox, oy:msg.oy, oz:msg.oz, dx:msg.dx, dy:msg.dy, dz:msg.dz, weapon:msg.weapon,
-        }, player.id);
-        break;
-
-      case 'ready':
-        // Counted by room._tryStart – no extra action needed
-        break;
     }
+
+    // ── HOST STARTS THE GAME ──────────────────────────────────
+    else if (msg.type === 'hostStartGame') {
+      const room = rooms.get(roomId);
+      if (!room || room.hostId !== id) return;   // only host can start
+      if (room.started) return;                   // don't double-start
+      room.started = true;
+
+      const roundDuration = room.config?.roundDuration ?? 600;
+      // Broadcast to ALL players including the host
+      _broadcastAll(room, {
+        type:     'roundStart',
+        duration: roundDuration,
+      });
+    }
+
+    // ── POSITION UPDATE ───────────────────────────────────────
+    else if (msg.type === 'move') {
+      const room = rooms.get(roomId); if (!room) return;
+      const p = room.players.get(id); if (!p) return;
+      p.x = msg.x; p.y = msg.y; p.z = msg.z; p.yaw = msg.yaw;
+    }
+
+    // ── HIT REGISTRATION ─────────────────────────────────────
+    else if (msg.type === 'hit') {
+      const room = rooms.get(roomId); if (!room) return;
+      if (!room.started) return;   // no damage before game starts
+      const target = room.players.get(msg.targetId); if (!target) return;
+      target.hp = Math.max(0, (target.hp || 100) - (msg.dmg || 0));
+      target.ws.send(JSON.stringify({ type: 'hit', targetId: msg.targetId, dmg: msg.dmg }));
+
+      if (target.hp <= 0) {
+        const killer = room.players.get(id);
+        if (killer) killer.score++;
+        target.hp = 100;
+        const sp = _randSpawn();
+        _broadcastAll(room, {
+          type:        'killed',
+          victimId:    msg.targetId,
+          killerId:    id,
+          killerName:  room.players.get(id)?.name,
+          killerScore: killer?.score ?? 0,
+        });
+
+        // Check score limit
+        const scoreLimit = room.config?.scoreLimit ?? 0;
+        if (scoreLimit > 0 && (killer?.score ?? 0) >= scoreLimit) {
+          room.started = false;
+          _broadcastAll(room, {
+            type:   'roundEnd',
+            winner: room.players.get(id)?.name ?? 'Unknown',
+            scores: [...room.players.values()].map(p => ({ id: p.id, name: p.name, score: p.score })),
+          });
+        }
+
+        // Respawn victim
+        const respawnDelay = (room.config?.respawnDelay ?? 5) * 1000;
+        setTimeout(() => {
+          if (!room.players.has(msg.targetId)) return;
+          target.ws.send(JSON.stringify({
+            type: 'respawn', playerId: msg.targetId, x: sp[0], z: sp[2],
+          }));
+          _broadcastAll(room, {
+            type: 'respawn', playerId: msg.targetId, x: sp[0], z: sp[2],
+          });
+        }, respawnDelay);
+      }
+    }
+
+    else if (msg.type === 'ready') { /* acknowledged */ }
   });
 
   ws.on('close', () => {
-    if (player && roomRef) {
-      roomRef.broadcast({ type:'playerLeft', id:player.id }, player.id);
-      roomRef.removePlayer(player.id);
-      console.log(`[room ${roomRef.id}] ${player.name} left — ${roomRef.players.size} remaining`);
-      if (roomRef.players.size === 0) rooms.delete(roomRef.id);
+    const room = rooms.get(roomId); if (!room) return;
+    room.players.delete(id);
+    _broadcast(room, id, { type: 'playerLeft', id });
+
+    // If host left, reassign to first remaining player
+    if (room.hostId === id && room.players.size > 0) {
+      room.hostId = [...room.players.keys()][0];
+      const newHost = room.players.get(room.hostId);
+      if (newHost) {
+        newHost.ws.send(JSON.stringify({ type: 'hostAssigned', id: room.hostId }));
+      }
     }
+
+    if (room.players.size === 0) rooms.delete(roomId);
   });
 
-  ws.on('error', err => console.error('[ws]', err.message));
+  // Push state 20×/sec
+  const stateTick = setInterval(() => {
+    const room = rooms.get(roomId); if (!room) return;
+    const players = [...room.players.values()].map(p => ({
+      id: p.id, name: p.name, x: p.x, y: p.y, z: p.z, yaw: p.yaw, hp: p.hp, score: p.score,
+    }));
+    if (ws.readyState === 1) ws.send(JSON.stringify({ type: 'state', players }));
+  }, 50);
+
+  ws.on('close', () => clearInterval(stateTick));
 });
+
+function _broadcast(room, excludeId, msg) {
+  const json = JSON.stringify(msg);
+  for (const [pid, p] of room.players)
+    if (pid !== excludeId && p.ws.readyState === 1) p.ws.send(json);
+}
+
+function _broadcastAll(room, msg) {
+  const json = JSON.stringify(msg);
+  for (const p of room.players.values())
+    if (p.ws.readyState === 1) p.ws.send(json);
+}
+
+const SPAWNS = [
+  [-20,0,20],[20,0,20],[-20,0,-20],[20,0,-20],
+  [0,0,28],[0,0,-28],[-28,0,0],[28,0,0],
+];
+function _randSpawn() { return SPAWNS[Math.floor(Math.random() * SPAWNS.length)]; }
+
+console.log(`BotArena WS server running on port ${port}`);

@@ -2,7 +2,7 @@
 const BABYLON = window.BABYLON;
 import { scene, camera, navPlugin } from './scene.js';
 import { M, robotTex } from './textures.js';
-import { makeScaledWeaponModel, ROBOT_DROPS } from './weapons.js';
+import { makeScaledWeaponModel, ROBOT_DROPS, curWep } from './weapons.js';
 import { enemies, player, cb } from './gameState.js';
 import { spawnSparks } from './particles.js';
 import { fireEnemyShot } from './projectiles.js';
@@ -223,6 +223,8 @@ export function buildRobot(type) {
     shotgun:   { r: 120, gr: 90, b: 60,  led: M.ledYellow, flyH: 0   },
     rocket:    { r: 80,  gr: 40, b: 40,  led: M.ledOrange, flyH: 0   },
     grenadier: { r: 55,  gr: 110, b: 55, led: M.ledGreen,  flyH: 0   },
+    electron_bot: { r: 10,  gr: 180, b: 255, led: M.ledCyan, flyH: 0 },
+    ion_sniper:   { r: 140, gr: 20,  b: 200, led: M.plasmaMat, flyH: 0 },
   }[type] || { r: 70, gr: 70, b: 70, led: M.ledGreen, flyH: 0 };
   const bmat = robotTex('r_' + type + '_' + Math.random().toString(36).slice(2), sc.r, sc.gr, sc.b);
   const led  = sc.led;
@@ -260,6 +262,8 @@ export function buildRobot(type) {
     if (type === 'shotgun') { bW=.54; bH=1.12; bD=.34; aL=.72; aW=.12; lW=.16; lH=.68; fL=.25; fH=.12; hW=.34; hH=.33; hD=.26; }
     if (type === 'rocket')  { bW=.52; bH=1.15; bD=.36; aL=.74; aW=.13; lW=.17; lH=.70; fL=.28; fH=.13; hW=.36; hH=.34; hD=.29; }
     if (type === 'grenadier') { bW=.60; bH=1.20; bD=.42; aL=.70; aW=.13; lW=.18; lH=.65; fL=.28; fH=.13; hW=.38; hH=.34; hD=.30; }
+    if (type === 'electron_bot') { bW=.50; bH=1.15; bD=.35; aL=.70; aW=.12; lW=.15; lH=.68; fL=.25; fH=.12; hW=.35; hH=.32; hD=.28; }
+    if (type === 'ion_sniper')   { bW=.60; bH=1.1; bD=.40; aL=.64; aW=.12; lW=.18; lH=.55; fL=.28; fH=.13; hW=.38; hH=.30; hD=.28; }
     const bY = bH / 2 + .28;
     const hY = bY + bH/2 + hH*.42;
     if (type === 'giantbot') {
@@ -318,7 +322,8 @@ export function buildRobot(type) {
     shotgun: { hp:80,  maxHp:80,  spd:6.0, dmg:18, range:18, rate:1.1, pt:'shotgun', pv:18, score:140, mOY:1.0 },
     rocket:  { hp:120, maxHp:120, spd:2.0, dmg:40, range:28, rate:2.2, pt:'rocket',  pv:14, score:200, mOY:1.1 },
     giantbot:  { hp: 1500, maxHp: 1500, spd: 1.8, dmg: 45, range: 40, rate: 1.5, pt: 'rocket', pv: 20, score: 5000, mOY: 2.5, railgunImmune: true },
-    // Grenadier: Similar to rocket, but shoots bouncing explosives in an arc
+    electron_bot: { hp: 120, maxHp: 120, spd: 6.5, dmg: 15, range: 90, rate: 0.3, pt: 'electron', pv: 48, score: 160, mOY: 1.0 },
+    ion_sniper:   { hp: 85,  maxHp: 85,  spd: 4.5, dmg: 45, range: 140, rate: 2.0, pt: 'ion', pv: 120, score: 200, mOY: 1.0 },
     grenadier: { hp:45, maxHp:45, spd:3.2, dmg:65, range:40, rate:2.5, pt:'grenade', pv:22, score:160, mOY:1.0 },
   }[type] || {};
 
@@ -408,7 +413,7 @@ export function spawnBot(type, _x, _spawnY_IGNORED, _z, scale = 1.0) {
   rebuildMeshMap();
 }
 
-export function hitRobot(e, dmg) {
+export function hitRobot(e, dmg, isHeadshot = false) {
   if (!e.alive) return;
   // Railgun fires 9999 – cap it for boss-tier enemies so they need multiple shots - currently capped at 20% HP
   if (BOSS_TYPES.has(e.type) && dmg > e.maxHp * 0.20) {
@@ -417,12 +422,20 @@ export function hitRobot(e, dmg) {
   e.hp -= dmg;
   if (cb.showHitMarker) cb.showHitMarker();
   sfx.hit();
-  if (e.hp <= 0) destroyRobot(e);
+  if (e.hp <= 0) destroyRobot(e, isHeadshot);
 }
 
-export function destroyRobot(e) {
+export function destroyRobot(e, isHeadshot = false) {
   e.alive = false;
   if (e._arrowNode) { e._arrowNode.getChildMeshes().forEach(m => m.dispose()); e._arrowNode.dispose(); }
+
+  // ── Capture kill context NOW (synchronously) before any async/microtask delay ──
+  // Reading curWep via the live ES-module binding is always instant and accurate.
+  // The old pattern used nested dynamic imports (2 microtask ticks) so curWep
+  // could have changed by the time recordKill ran — e.g. shotgun kill credited to SMG.
+  const _killedWithWeapon  = curWep;
+  const _killedWhileAir    = !player.onGround;
+  const _killedWhileScoped = !!player.isScoped;
   
   // ── 1. RAYCAST: Find the floor beneath the dying bot using intersectsMesh
   //    (pickWithRay skips isPickable=false meshes, which all our floors are)
@@ -459,18 +472,23 @@ export function destroyRobot(e) {
   player.score += pointsToAward;
 
   // ── 3. PROGRESSION: XP + kill tracking ──────────────────────
-  import('./progression.js').then(({ awardXp, recordKill, XP_GRANTS }) => {
+  import('./progression.js').then(({ awardXp, recordKill, XP_GRANTS, hasEnergyCoil }) => {
     const xpKey = 'kill' + e.type.charAt(0).toUpperCase() + e.type.slice(1);
     const xp = XP_GRANTS[xpKey] ?? XP_GRANTS.killScout;
     awardXp(xp, 'Kill: ' + e.type);
-    // Record which weapon was used for kill tracking (curWep from weapons.js)
-    import('./weapons.js').then(({ curWep }) => recordKill(e.type, curWep));
+    // Use pre-captured weapon key — no nested import, no race condition.
+    recordKill(e.type, _killedWithWeapon, { isJumping: _killedWhileAir, isScoped: _killedWhileScoped });
+
+    // ── Energy Coil: headshot kills on ION vent 40% heat ──────
+    if (isHeadshot && _killedWithWeapon === 'ION' && hasEnergyCoil()) {
+      player.wepHeat = Math.max(0, (player.wepHeat || 0) - 0.40);
+    }
   });
 
   _totalKills++;
   _roundKills++;
   
-  const names = { scout:'Scout destroyed!',heavy:'Heavy down!',sniper:'Sniper eliminated!',drone:'Drone shot down!',pistol:'Pistol bot down!',shotgun:'Shotgunner destroyed!',rocket:'Rocket bot destroyed!',grenadier:'Grenadier down!' };
+  const names = { scout:'Scout destroyed!',heavy:'Heavy down!',sniper:'Sniper eliminated!',drone:'Drone shot down!',pistol:'Pistol bot down!',shotgun:'Shotgunner destroyed!',rocket:'Rocket bot destroyed!',grenadier:'Grenadier down!',electron_bot:'Electron Bot destroyed!',ion_sniper:'Ion Sniper eliminated!' };
   const feed = document.getElementById('killFeed');
   if (feed) { 
       feed.textContent = (names[e.type] || 'Robot destroyed!') + (_angryMode ? ' [ENRAGED]' : ''); 
@@ -673,10 +691,9 @@ export function updateEnemies(dt) {
                     e.group.position.z += _eDir.z * speed;
                 }
                 
-                // NEW FIX: Cast ray down to find actual solid floor instead of snapping wildly through geometry
-                const downRay = new BABYLON.Ray(new BABYLON.Vector3(e.group.position.x, e._floorY + e._hopY + 0.5, e.group.position.z), new BABYLON.Vector3(0, -1, 0), 100);
-                const dHit = scene.pickWithRay(downRay, m => m.checkCollisions && !m.metadata?.enemy && m.isEnabled());
-                if (dHit?.hit) {
+                // FIX: Cast ray down from +2.0 units high to ensure it always starts above the steps!
+                const downRay = new BABYLON.Ray(new BABYLON.Vector3(e.group.position.x, e._floorY + e._hopY + 2.0, e.group.position.z), new BABYLON.Vector3(0, -1, 0), 100);
+                const dHit = scene.pickWithRay(downRay, m => m.checkCollisions && !m.metadata?.enemy && m.isEnabled());                if (dHit?.hit) {
                     const groundY = dHit.pickedPoint.y;
                     if (Math.abs(e._floorY - groundY) > 0.1) {
                         e._hopY += (e._floorY - groundY);
@@ -688,7 +705,8 @@ export function updateEnemies(dt) {
             // GROUND MOVEMENT
             else {
                 const intendedPos = e.group.position.add(_eDir.scale(speed));
-                const clampedPos = navPlugin.getClosestPoint(new BABYLON.Vector3(intendedPos.x, e._floorY + 0.5, intendedPos.z));
+                // Lifted from +0.5 to +1.2 so the ray clears the stair steps
+                const clampedPos = navPlugin.getClosestPoint(new BABYLON.Vector3(intendedPos.x, e._floorY + 1.2, intendedPos.z));
                 
                 if (clampedPos) {
                     // NEW FIX: Determine if there's a huge drop-off. If so, cleanly convert to a fall!

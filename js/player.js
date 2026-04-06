@@ -6,11 +6,11 @@ import { player, cb } from './gameState.js';
 import { sfx } from './audio.js';
 import {
   WDEFS, inventory, activeSlot, curWep, wepCooldown, swingT, AUTO_WEAPONS,
-  setWepCooldown, setSwingT, setActiveSlot, refreshSlotHUD,
+  setWepCooldown, setSwingT, setActiveSlot, refreshSlotHUD, setWeaponVisibility
 } from './weapons.js';
 import { hitscan, fireRocket, firePlasma, fireGrenade } from './projectiles.js';
 import { _meshToEnemy } from './enemies.js';
-import { getEffectiveStats, isAkimbo, isAutoFire, hasPowerCell, hasClusterRounds, hasLaserDot } from './progression.js';
+import { getEffectiveStats, isAkimbo, isAutoFire, hasPowerCell, hasClusterRounds, hasLaserDot, hasSlowTrigger } from './progression.js';
 
 export const PH = 1.72, PR = .44;
 // Base speed is now the old sprint speed – Shift gives a dash boost on top
@@ -24,6 +24,11 @@ const SCOPE_FOV   = 0.32;
 
 const COYOTE_TIME = 0.10;  // seconds after leaving ground where jump still works
 const JUMP_BUFFER = 0.14;  // seconds a Space press is remembered before landing
+
+let _thermalHl = null;
+let _thermalActive = false;
+let _thermalOverlay = null;
+let _heatDelayTimer = 0;
 
 // ── Player body mesh ──────────────────────────────────────────
 const _playerBody = BABYLON.MeshBuilder.CreateBox('_playerBody', { size: 0.01 }, scene);
@@ -39,6 +44,10 @@ export const keys = {};
 export let yaw = 0, pitch = 0;
 export let locked = false;
 export let mouseHeld = false;
+export let isReloading = false;
+export let reloadTimer = 0;
+export let wepHeat = 0;
+export let overheated = false;
 
 let noAmmoTimer  = 0;
 let _hudDirty    = false;
@@ -51,6 +60,9 @@ let _wasOnGround  = false;
 // Auto-unstuck: if player holds movement but barely moves for 1.5 s, nudge up
 let _stuckTimer   = 0;
 let _lastStuckPos = new BABYLON.Vector3();
+// ── Slow Trigger burst state (ELECTRON special attachment) ────
+let _burstShotsLeft = 0;   // shots remaining in current burst (0 = ready for new burst)
+let _burstCooldown  = 0;   // inter-burst pause timer (seconds)
 
 function _getPointerLockElement() {
   return document.pointerLockElement || document.mozPointerLockElement || document.webkitPointerLockElement || null;
@@ -82,66 +94,127 @@ export function hurtPlayer(rawDmg) {
   if (player.hp <= 0) cb.endGame?.();
 }
 
-function shoot() {
-  if (wepCooldown > 0) return;
+export function shoot() {
+  if (wepCooldown > 0 || player.isReloading) return;
   const W = WDEFS[curWep];
   const hasInfiniteAmmo = player.buffs['infinite_ammo'] > 0;
 
-  if (W.ammo !== Infinity && W.ammo < W.aps && !hasInfiniteAmmo) {
+  // 1. Heat Logic for Energy Weapons
+  if (W.useHeat) {
+    if (player.overheated) { sfx.noAmmo(); return; }
+
+    // ── Slow Trigger burst gate (ELECTRON only) ────────────────
+    if (curWep === 'ELECTRON' && hasSlowTrigger()) {
+      if (_burstCooldown > 0) return;           // between-burst pause
+      if (_burstShotsLeft === 0) _burstShotsLeft = 3; // start new burst
+    }
+
+    const heatMult = (curWep === 'ELECTRON' && hasSlowTrigger()) ? 0.30 : 1.0;
+    player.wepHeat += W.heatPerShot * heatMult;
+    _heatDelayTimer = 0.5;
+    markHudDirty();
+    if (player.wepHeat >= 1.0) {
+      player.wepHeat = 1.0;
+      player.overheated = true;
+      sfx.noAmmo(); // Overheat warning
+      return;
+    }
+  } 
+  // 2. Magazine Logic for Standard Weapons
+  else if (W.magSize && W.currentMag <= 0) {
+    if (W.ammo <= 0 && !hasInfiniteAmmo) {
+      sfx.noAmmo();
+      const na = document.getElementById('noAmmo');
+      if (na) { na.classList.add('show'); noAmmoTimer = 1.2; }
+      return;
+  }
+    startReload();
+    return;
+  }
+  // 3. Normal Ammo Logic
+  else if (W.ammo !== Infinity && W.ammo < W.aps && !hasInfiniteAmmo) {
     sfx.noAmmo();
     const na = document.getElementById('noAmmo');
     if (na) { na.classList.add('show'); noAmmoTimer = 1.2; }
     return;
   }
 
+  // Deduct Ammo
+  if (W.magSize && !hasInfiniteAmmo) {
+      W.currentMag--;
+  } else if (W.ammo !== Infinity && !hasInfiniteAmmo) {
+      W.ammo -= W.aps;
+  }
+  
   const cdMult = player.buffs['haste'] > 0 ? 0.5 : 1.0;
   setWepCooldown(W.cd * cdMult);
   setSwingT(1);
-
-  if (W.ammo !== Infinity && !hasInfiniteAmmo) W.ammo -= W.aps;
   refreshSlotHUD();
 
+  // Damage & Spread
   const dmgMult = player.buffs['quad_damage'] > 0 ? 4 : 1;
-  const EW     = getEffectiveStats(curWep, W);
-  const modDmg = EW.dmg * dmgMult;
-  const spread = EW.spread ?? W.spread;
-  const range  = EW.range  ?? W.range;
-  const falloff= EW.falloff ?? W.falloff ?? 0;
-  const akimbo  = isAkimbo(curWep);
+  import('./progression.js').then(({ getEffectiveStats, isAkimbo, hasClusterRounds }) => {
+      const EW      = getEffectiveStats(curWep, W);
+      const modDmg  = EW.dmg * dmgMult;
+      const spread  = EW.spread ?? W.spread;
+      const range   = EW.range  ?? W.range;
+      const falloff = EW.falloff ?? W.falloff ?? 0;
+      const akimbo  = isAkimbo(curWep);
 
-  switch (curWep) {
-    case 'PISTOL':
-      sfx.pistol();
-      hitscan(_meshToEnemy, spread, modDmg, range, falloff);
-      if (akimbo) hitscan(_meshToEnemy, spread * 1.15, modDmg * 0.85, range, falloff); // second hand
-      break;
-    case 'SMG':      sfx.smg();      hitscan(_meshToEnemy, spread, modDmg, range, falloff); break;
-    case 'CHAINGUN': sfx.chaingun(); hitscan(_meshToEnemy, spread, modDmg, range, falloff); break;
-    case 'RAILGUN':
-      sfx.railgun();
-      hitscan(_meshToEnemy, spread, 9999, range, 0.00);
-      break;
-    case 'SHOTGUN': {
-      sfx.shotgun();
-      const pellets = EW.pellets ?? W.pellets;
-      for (let i = 0; i < pellets; i++) hitscan(_meshToEnemy, spread, modDmg, range, falloff);
-      if (akimbo) for (let i = 0; i < pellets; i++) hitscan(_meshToEnemy, spread * 1.2, modDmg * 0.8, range, falloff);
-      break;
-    }
-    case 'PLASMA':   sfx.plasma();   firePlasma(); break;
-    case 'ROCKET':   sfx.rocket();   fireRocket(); break;
-    case 'GLAUNCHER': {
-      const fwd = new BABYLON.Vector3();
-      camera.getForwardRay(1).direction.normalizeToRef(fwd);
-      fwd.y += 0.05; fwd.normalize();
-      const origin = camera.position.clone().add(fwd.scale(0.8));
-      fireGrenade('player', origin, fwd, WDEFS.GLAUNCHER.projSpeed, EW.dmg * dmgMult, WDEFS.GLAUNCHER.splash, hasClusterRounds());
-      sfx.shotgun();
-      break;
-    }
-  }
+      switch (curWep) {
+        case 'PISTOL':
+          sfx.pistol();
+          hitscan(_meshToEnemy, spread, modDmg, range, falloff);
+          if (akimbo) hitscan(_meshToEnemy, spread * 1.15, modDmg * 0.85, range, falloff);
+          break;
+        case 'SMG':      sfx.smg();      hitscan(_meshToEnemy, spread, modDmg, range, falloff); break;
+        case 'CHAINGUN': sfx.chaingun(); hitscan(_meshToEnemy, spread, modDmg, range, falloff); break;
+        case 'RAILGUN':  sfx.railgun();  hitscan(_meshToEnemy, spread, 9999, range, 0.00); break;
+        case 'SHOTGUN': 
+          // Huge double-overlapping shotgun blast
+          sfx.shotgun(); 
+          setTimeout(() => sfx.shotgun(), 20); 
+          pitch -= 0.06; // Camera kick recoil
+          
+          const pellets = EW.pellets ?? W.pellets;
+          for (let i = 0; i < pellets; i++) hitscan(_meshToEnemy, spread, modDmg, range, falloff);
+          if (akimbo) for (let i = 0; i < pellets; i++) hitscan(_meshToEnemy, spread * 1.2, modDmg * 0.8, range, falloff);
+          break;
+        case 'PLASMA':   
+        case 'ELECTRON': 
+          sfx.plasma(); firePlasma(); 
+          break;
+        case 'ION':      
+          sfx.railgun(); hitscan(_meshToEnemy, spread, modDmg, range, 0.00); 
+          break;
+        case 'ROCKET':   sfx.rocket(); fireRocket(); break;
+        case 'GLAUNCHER': 
+          const fwd = new BABYLON.Vector3();
+          camera.getForwardRay(1).direction.normalizeToRef(fwd);
+          fwd.y += 0.05; fwd.normalize();
+          const origin = camera.position.clone().add(fwd.scale(0.8));
+          import('./projectiles.js').then(({ fireGrenade }) => {
+              fireGrenade('player', origin, fwd, WDEFS.GLAUNCHER.projSpeed, modDmg, WDEFS.GLAUNCHER.splash, hasClusterRounds());
+          });
+          sfx.shotgun();
+          break;
+      }
+
+      // ── Slow Trigger burst counter ─────────────────────────────
+      if (curWep === 'ELECTRON' && hasSlowTrigger() && _burstShotsLeft > 0) {
+        _burstShotsLeft--;
+        if (_burstShotsLeft === 0) _burstCooldown = 0.45; // pause between bursts
+      }
+  });
 }
-export { shoot };
+
+export function startReload() {
+    const W = WDEFS[curWep];
+    if (!W.magSize || W.currentMag === W.magSize || W.ammo <= 0 || player.isReloading) return;
+    player.isReloading = true;
+    player.reloadTimer = 1.6; 
+    sfx.pickup(); // Metal click sound
+}
 
 // ── Movement helpers ──────────────────────────────────────────
 const _fwd  = new BABYLON.Vector3();
@@ -195,15 +268,61 @@ export function resetPlayer(x, y, z) {
 }
 
 export function updatePlayer(dt, gameRunning, paused) {
-  for (const key in player.buffs) { if (player.buffs[key] > 0) { player.buffs[key] -= dt; if (player.buffs[key] <= 0) { delete player.buffs[key]; _hudDirty = true; } } }
+  for (const key in player.buffs) { 
+    if (player.buffs[key] > 0) { 
+      player.buffs[key] -= dt; 
+      if (player.buffs[key] <= 0) { 
+        delete player.buffs[key]; 
+        _hudDirty = true; 
+      } 
+    } 
+  }
+  
   if (!gameRunning || paused) return;
 
-  if (wepCooldown  > 0) setWepCooldown(wepCooldown - dt);
+  if (wepCooldown > 0) setWepCooldown(wepCooldown - dt);
+  if (_burstCooldown > 0) _burstCooldown = Math.max(0, _burstCooldown - dt);
+  
   if (_jumpBufTimer > 0) _jumpBufTimer -= dt;
   if (_coyoteTimer  > 0) _coyoteTimer  -= dt;
   if (noAmmoTimer   > 0) {
     noAmmoTimer -= dt;
-    if (noAmmoTimer <= 0) { const na = document.getElementById('noAmmo'); if (na) na.classList.remove('show'); }
+    if (noAmmoTimer <= 0) { 
+      const na = document.getElementById('noAmmo'); 
+      if (na) na.classList.remove('show'); 
+    }
+  }
+
+  // Weapon Heat & Reload Loop Updates
+  const W = WDEFS[curWep];
+  if (W && W.useHeat) {
+      if (curWep === 'ION' && isScoped) {
+          player.wepHeat += dt * 0.15; // Slightly faster charge
+          if (player.wepHeat >= 1.0) { player.wepHeat = 1.0; player.overheated = true; setScope(false); }
+          markHudDirty();
+      } else {
+        if (_heatDelayTimer > 0) {
+            _heatDelayTimer -= dt;
+        } else if (player.wepHeat > 0) {
+            player.wepHeat -= W.coolRate * dt;
+            if (player.wepHeat <= 0) { player.wepHeat = 0; player.overheated = false; }
+            markHudDirty();
+        }
+      }
+    }
+
+  if (player.isReloading) {
+      player.reloadTimer -= dt;
+      markHudDirty();
+      if (player.reloadTimer <= 0) {
+          player.isReloading = false;
+          const needed = W.magSize - W.currentMag;
+          const available = player.buffs['infinite_ammo'] ? needed : Math.min(needed, W.ammo);
+          W.currentMag += available;
+          if (!player.buffs['infinite_ammo']) W.ammo -= available;
+          sfx.pickup(); 
+          refreshSlotHUD();
+      }
   }
 
   // Horizontal input
@@ -220,7 +339,7 @@ export function updatePlayer(dt, gameRunning, paused) {
   if (mLen2 > 0) _move.scaleInPlace(spd / Math.sqrt(mLen2));
 
   // Auto-fire (mouse look is never blocked here – it runs on DOM events independently)
-  if (mouseHeld && AUTO_WEAPONS.has(curWep)) shoot();
+  if (mouseHeld && (AUTO_WEAPONS.has(curWep) || isAkimbo(curWep) || isAutoFire(curWep))) shoot();
 
   // Jump: buffer + coyote time
   const canJump    = player.onGround || (_coyoteTimer > 0);
@@ -312,50 +431,147 @@ export function updatePlayer(dt, gameRunning, paused) {
   const vigEl = document.getElementById('hpVignette');
   if (vigEl) vigEl.style.opacity = player.hp < 40 ? (1 - player.hp / 40) * .82 : 0;
   if (_hudDirty) { cb.markHudDirty?.(); _hudDirty = false; }
+  if (_thermalActive && _thermalHl) {
+    import('./gameState.js').then(({ enemies }) => {
+        enemies.forEach(e => {
+            if (e.alive && e.group) {
+                e.group.getChildMeshes().forEach(m => {
+                    // Give enemies an intense, blazing heat signature
+                    if (!_thermalHl.hasMesh(m)) _thermalHl.addMesh(m, new BABYLON.Color3(1, 0.8, 0.1));
+                });
+            }
+        });
+    });
+  }
 }
+
+  // ── Circular scope overlay (ACOG / thermal) ───────────────────
+  function _drawCircleScope() {
+    let el = document.getElementById('_circleScope');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = '_circleScope';
+      el.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:700;display:flex;align-items:center;justify-content:center;';
+      el.innerHTML = '<canvas id="_circleScopeCanvas" style="position:absolute;inset:0;width:100%;height:100%"></canvas>';
+      document.body.appendChild(el);
+    }
+    el.style.display = 'flex';
+    const cv = document.getElementById('_circleScopeCanvas');
+    const W = window.innerWidth, H = window.innerHeight;
+    cv.width = W; cv.height = H;
+    const ctx = cv.getContext('2d');
+    const R = Math.min(W, H) * 0.38;
+    // Dark vignette outside
+    ctx.fillStyle = 'rgba(0,0,0,0.88)'; ctx.fillRect(0, 0, W, H);
+    // Punch clear circle
+    ctx.globalCompositeOperation = 'destination-out';
+    ctx.beginPath(); ctx.arc(W/2, H/2, R, 0, Math.PI*2); ctx.fill();
+    ctx.globalCompositeOperation = 'source-over';
+    // Rim
+    ctx.strokeStyle = 'rgba(0,220,110,0.6)'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(W/2, H/2, R, 0, Math.PI*2); ctx.stroke();
+    // Crosshair
+    ctx.strokeStyle = 'rgba(0,255,140,0.75)'; ctx.lineWidth = 1.2;
+    const cht = R * 0.12;
+    ctx.beginPath(); ctx.moveTo(W/2 - cht, H/2); ctx.lineTo(W/2 + cht, H/2); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(W/2, H/2 - cht); ctx.lineTo(W/2, H/2 + cht); ctx.stroke();
+    // Mil-dot marks
+    ctx.fillStyle = 'rgba(0,255,140,0.6)';
+    for (let a = 0; a < 360; a += 45) {
+      const rad = a * Math.PI / 180;
+      ctx.beginPath(); ctx.arc(W/2 + Math.cos(rad)*R, H/2 + Math.sin(rad)*R, 2.5, 0, Math.PI*2); ctx.fill();
+    }
+    // Range marks inside circle
+    ctx.strokeStyle = 'rgba(0,255,140,0.3)'; ctx.lineWidth = 0.8;
+    ctx.beginPath(); ctx.arc(W/2, H/2, R*0.35, 0, Math.PI*2); ctx.stroke();
+    ctx.beginPath(); ctx.arc(W/2, H/2, R*0.65, 0, Math.PI*2); ctx.stroke();
+  }
+  function _clearCircleScope() {
+    const el = document.getElementById('_circleScope');
+    if (el) el.style.display = 'none';
+  }
+
+  function setScope(enable) {
+    const overlay = document.getElementById('scopeOverlay');
+    if (enable && isAkimbo(curWep)) return;
+    isScoped = enable;
+    player.isScoped = enable;  // expose on player object so destroyRobot can read it synchronously
+    
+    import('./progression.js').then(({ getLoadout }) => {
+        const sight = getLoadout(curWep).attachments?.sight;
+        
+        // Hide the entire gun model when using high-power/electronic scopes
+        if (enable && ['acog', 'thermal', 'sniper_scope'].includes(sight)) {
+            setWeaponVisibility(false);
+        } else {
+            setWeaponVisibility(true);
+        }
+
+        if (enable && sight === 'thermal') {
+            _thermalActive = true;
+            if (!_thermalOverlay) {
+                _thermalOverlay = document.createElement('div');
+                // Increased intensity: deep vignette with hard-light blending
+                _thermalOverlay.style.cssText = 'position:fixed;inset:0;background:radial-gradient(circle, rgba(15,40,110,0.45) 0%, rgba(0,10,35,0.95) 100%); mix-blend-mode: hard-light; pointer-events:none; z-index:650; box-shadow: inset 0 0 120px rgba(0,0,0,1);';
+                document.body.appendChild(_thermalOverlay);
+            }
+            _thermalOverlay.style.display = 'block';
+            if (!_thermalHl) {
+                _thermalHl = new BABYLON.HighlightLayer("thermalHl", scene);
+                // Increased intensity: glowing hot spots
+                _thermalHl.outerGlow = true;
+                _thermalHl.innerGlow = true;
+                _thermalHl.blurHorizontalSize = 2.0;
+                _thermalHl.blurVerticalSize = 2.0;
+            }
+        } else {
+            _thermalActive = false;
+            if (_thermalOverlay) _thermalOverlay.style.display = 'none';
+            if (_thermalHl) _thermalHl.removeAllMeshes();
+        }
+    });
+
+    if (enable) {
+      let adsFov = null;
+      try { if (window.__getAdsFov) adsFov = window.__getAdsFov(curWep); } catch {}
+
+      if (adsFov !== null) {
+        camera.fov = adsFov;
+        // Show square railgun reticle only for high-zoom on railgun
+        const isRailScope = curWep === 'RAILGUN' && adsFov < DEFAULT_FOV * 0.6;
+        if (overlay) overlay.style.display = isRailScope ? 'block' : 'none';
+        // Show circular overlay for scopes that declare scopeShape:'circle'
+        const shape = window.__getScopeShape ? window.__getScopeShape(curWep) : null;
+        if (shape === 'circle') _drawCircleScope();
+        else _clearCircleScope();
+      } else if (curWep === 'RAILGUN') {
+        camera.fov = SCOPE_FOV;
+        if (overlay) overlay.style.display = 'block';
+        _clearCircleScope();
+      } else {
+        camera.fov = DEFAULT_FOV * 0.88;
+        if (overlay) overlay.style.display = 'none';
+        _clearCircleScope();
+      }
+    } else {
+      camera.fov = DEFAULT_FOV;
+      if (overlay) overlay.style.display = 'none';
+      _clearCircleScope();
+    }
+  }
 
 export let isScoped = false;
 // ── Input wiring (called ONCE from main.js) ───────────────────
 export function setupInput(getGameRunning, getPaused, onTogglePause, onPickupWeapon) {
   const cnv = document.getElementById('c');
 
-  function setScope(enable) {
-    const overlay = document.getElementById('scopeOverlay');
-    isScoped = enable;
-
-    if (enable) {
-      // Determine ADS FOV from equipped sight attachment, or fallback defaults
-      let adsFov = null;
-      try {
-        // Dynamic import is async but getAdsFov result is cached in the module
-        // We call the already-imported version synchronously via a cached ref
-        if (window.__getAdsFov) adsFov = window.__getAdsFov(curWep);
-      } catch (_) {}
-
-      if (adsFov !== null) {
-        camera.fov = adsFov;
-        // Show railgun reticle only for scope-style sights on the railgun
-        const isRailScope = curWep === 'RAILGUN' && adsFov < DEFAULT_FOV * 0.7;
-        if (overlay) overlay.style.display = isRailScope ? 'block' : 'none';
-      } else if (curWep === 'RAILGUN') {
-        // No sight attached – default railgun iron-sight zoom
-        camera.fov = SCOPE_FOV;
-        if (overlay) overlay.style.display = 'block';
-      } else {
-        // No sight – hipfire with slight pull-in
-        camera.fov = DEFAULT_FOV * 0.88;
-        if (overlay) overlay.style.display = 'none';
-      }
-    } else {
-      camera.fov = DEFAULT_FOV;
-      if (overlay) overlay.style.display = 'none';
-    }
-  }
-
-  // Wire up getAdsFov once progression module is loaded
-  import('./progression.js').then(({ getAdsFov }) => {
-    window.__getAdsFov = getAdsFov;
+  // Cache progression helpers for synchronous use inside event handlers
+  import('./progression.js').then(({ getAdsFov, getScopeShape }) => {
+    window.__getAdsFov    = getAdsFov;
+    window.__getScopeShape = getScopeShape;
   });
+
+
   cnv.addEventListener('pointerdown', e => { if (e.button === 2) setScope(true);  }, true);
   cnv.addEventListener('mousedown',   e => { if (e.button === 2) setScope(true);  }, true);
   cnv.addEventListener('pointerup',   e => { if (e.button === 2) setScope(false); }, true);
@@ -434,6 +650,14 @@ export function setupInput(getGameRunning, getPaused, onTogglePause, onPickupWea
 
     if (e.code === 'KeyF')   onPickupWeapon();
     if (e.code === 'Escape') onTogglePause();
+    if (e.code === 'KeyR') {
+        startReload();
+    };
+    if (e.code === 'KeyV' && curWep === 'PLASMA') {
+      player.plasmaAltMode = !player.plasmaAltMode;
+      // Force HUD update so the hint text changes immediately
+      cb.markHudDirty?.(); 
+    }
   });
   document.addEventListener('keyup', e => { keys[e.code] = false; });
 

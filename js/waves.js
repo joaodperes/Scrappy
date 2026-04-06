@@ -33,6 +33,8 @@ const _INTRO_WAVE = {
   drone:     3,
   heavy:     5,
   sniper:    7,
+  electron_bot: 8,
+  ion_sniper: 9,
   pistol:    11,   // must be > 10 (first boss wave)
   shotgun:   12,
   rocket:    13,
@@ -40,7 +42,7 @@ const _INTRO_WAVE = {
 };
 
 // All non-boss types in the order they become available
-const _BOT_POOL = ['scout', 'drone', 'heavy', 'sniper', 'pistol', 'shotgun', 'rocket', 'grenadier'];
+const _BOT_POOL = ['scout', 'drone', 'heavy', 'sniper', 'pistol', 'shotgun', 'rocket', 'grenadier', 'electron_bot', 'ion_sniper'];
 
 function _isBossWave(idx) {
   // idx is 0-based; wave number = idx + 1.
@@ -78,8 +80,8 @@ export function getWaveComposition(idx) {
       5:  [{ type:'scout', count:4 }, { type:'drone', count:1 }, { type:'heavy', count:1 }],
       6:  [{ type:'scout', count:4 }, { type:'drone', count:2 }, { type:'heavy', count:2 }],
       7:  [{ type:'scout', count:4 }, { type:'drone', count:2 }, { type:'heavy', count:2 }, { type:'sniper', count:1 }],
-      8:  [{ type:'scout', count:5 }, { type:'drone', count:2 }, { type:'heavy', count:2 }, { type:'sniper', count:2 }],
-      9:  [{ type:'scout', count:5 }, { type:'drone', count:3 }, { type:'heavy', count:3 }, { type:'sniper', count:2 }],
+      8:  [{ type:'scout', count:4 }, { type:'drone', count:2 }, { type:'heavy', count:2 }, { type:'sniper', count:2 }, { type:'electron_bot', count:1 }],
+      9:  [{ type:'scout', count:4 }, { type:'drone', count:2 }, { type:'heavy', count:2 }, { type:'sniper', count:2 }, { type:'electron_bot', count:2 }, { type:'ion_sniper', count:1 }],
       // wave 10 = boss (handled above)
       11: [{ type:'scout', count:4 }, { type:'drone', count:2 }, { type:'heavy', count:2 }, { type:'sniper', count:2 }, { type:'pistol', count:1 }],
       12: [{ type:'scout', count:4 }, { type:'drone', count:2 }, { type:'heavy', count:2 }, { type:'sniper', count:2 }, { type:'pistol', count:2 }, { type:'shotgun', count:1 }],
@@ -167,6 +169,14 @@ export function updateWaves(dt, gameRunning) {
   if (!gameRunning) return;
   if (waveOn) {
     if (enemies.filter(e=>e.alive).length === 0) {
+      // curWave was incremented right after launchWave, so the just-cleared wave is curWave-1
+      // Wave numbers shown to player are 1-based (wave index 0 = "Wave 1")
+      const completedWaveIdx = curWave - 1;                  // 0-based index of cleared wave
+      const completedWaveNum = completedWaveIdx + 1;          // 1-based number shown on HUD
+      const isBoss = (completedWaveNum % 10 === 0);
+      import('./progression.js').then(({ recordWaveComplete }) => {
+        recordWaveComplete(completedWaveNum, isBoss);
+      });
       waveOn = false; waveDly = 4.5;
     }
   } else {

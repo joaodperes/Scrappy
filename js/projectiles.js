@@ -46,8 +46,8 @@ export function firePlasma() {
 }
 
 // ── Enemy shots ───────────────────────────────────────────────
-const _eBulletSize = { bullet:.12, heavy:.19, sniper:.07, plasma:.14 };
-const _eBulletCol  = { bullet: new BABYLON.Color3(1,.93,.27), heavy: new BABYLON.Color3(1,.53,0), sniper: new BABYLON.Color3(0,1,.8), plasma: new BABYLON.Color3(.27,.53,1) };
+const _eBulletSize = { bullet:.12, heavy:.19, sniper:.07, plasma:.14, electron:.10, ion:.08 };
+const _eBulletCol  = { bullet: new BABYLON.Color3(1,.93,.27), heavy: new BABYLON.Color3(1,.53,0), sniper: new BABYLON.Color3(0,1,.8), plasma: new BABYLON.Color3(.27,.53,1), electron: new BABYLON.Color3(0,.9,1), ion: new BABYLON.Color3(.7,.1,1) };
 
 
 export function fireEnemyShot(e, dir, dmg, speed, type, customStartPos = null) {
@@ -78,6 +78,17 @@ export function boom(pos, splashR, baseDmg, hurtBots) {
   el.diffuse = new BABYLON.Color3(1, .47, 0); el.intensity = 10; el.range = splashR*4.5;
   setTimeout(() => { flash.dispose(); el.dispose(); }, 230);
   spawnSparks(pos, 0xff8800, 22);
+  // Make explosions detonate nearby barrels (with a slight delay to allow cool chain-reactions)
+  for (const b of explosiveBarrels) {
+    if (!b.alive) continue;
+    if (BABYLON.Vector3.Distance(pos, b.pos) < splashR * 1.2) {
+      setTimeout(() => {
+        if (!b.alive) return; // Prevent double-triggering
+        const bPos = detonateBarrelByMesh(b.meshes[0]);
+        if (bPos) boom(bPos.clone(), 3.6, 78, true);
+      }, 100);
+    }
+  }
   if (hurtBots) {
     for (const e of enemies) {
       if (!e.alive) continue;
@@ -141,7 +152,8 @@ export function hitscan(meshToEnemy, spread = 0, dmg = 20, range = 90, falloff =
       // so it always one-shots non-boss enemies regardless of hit location.
       let locMult = 1.0;
       const mName = pickedMesh.name.toLowerCase();
-      if (mName.includes('hd') || mName.includes('vis') || mName.includes('horn')) {
+      const isHeadshot = mName.includes('hd') || mName.includes('vis') || mName.includes('horn');
+      if (isHeadshot) {
           locMult = 2.0; // Headshot bonus applies to all weapons
       } else if ((mName.includes('leg') || mName.includes('ft')) && dmg < 1000) {
           locMult = 0.5; // Leg penalty only for non-instakill weapons
@@ -149,10 +161,26 @@ export function hitscan(meshToEnemy, spread = 0, dmg = 20, range = 90, falloff =
 
       // Special Railgun / Boss Logic
       if (dmg >= 100 && e.type === 'giantbot' && e.railgunImmune) {
-        cb.hitRobot && cb.hitRobot(e, 250 * locMult); 
+        cb.hitRobot && cb.hitRobot(e, 250 * locMult, isHeadshot);
       } else {
-        cb.hitRobot && cb.hitRobot(e, Math.max(dmg * scaled, dmg * 0.15) * locMult);
+        cb.hitRobot && cb.hitRobot(e, Math.max(dmg * scaled, dmg * 0.15) * locMult, isHeadshot);
       }
+
+      // Power Cell: 20% chance to recover 1 railgun round on kill
+      // We check hp after applying damage by listening for the alive flag change
+      if (dmg >= 9000 || (e.hp !== undefined && e.hp - Math.max(dmg * scaled, dmg * 0.15) * locMult <= 0)) {
+        import('./progression.js').then(({ hasPowerCell }) => {
+          if (hasPowerCell() && Math.random() < 0.20) {
+            import('./weapons.js').then(({ WDEFS, curWep, refreshSlotHUD }) => {
+              if (curWep === 'RAILGUN') {
+                WDEFS.RAILGUN.ammo = Math.min((WDEFS.RAILGUN.ammo || 0) + 1, WDEFS.RAILGUN.startAmmo);
+                refreshSlotHUD();
+              }
+            });
+          }
+        });
+      }
+
       return { hit: true, target: e };
     }
   }
@@ -218,12 +246,34 @@ export function updateProjs(dt) {
           projs.splice(i, 1);
         } else {
           // Wall/floor → bounce
-          const n   = gHit.getNormal(true);
-          const dot = BABYLON.Vector3.Dot(p.vel, n);
-          p.vel.subtractInPlace(n.scale(2 * dot));
-          p.vel.scaleInPlace(0.65);
-          // Push off surface so it doesn't re-intersect next frame
-          p.mesh.position.copyFrom(gHit.pickedPoint).addInPlace(n.scale(0.12));
+          // Cluster grenades split into 4 bomblets on FIRST wall hit
+          if (p.isCluster && !p._hasSplit) {
+            p._hasSplit = true;
+            const splitDmg    = p.dmg * 0.5;
+            const splitSplash = p.splash * 0.55;
+            const splitSpeed  = Math.max(p.vel.length() * 0.6, 6.0);
+            const right = new BABYLON.Vector3(1, 0, 0);
+            const up    = new BABYLON.Vector3(0, 1, 0);
+            const fwd   = p.vel.clone().normalize();
+            // 4 bomblets spread in a cone from impact point
+            const spreadDirs = [
+              fwd.add(right.scale( 0.50)).add(up.scale(0.35)).normalize(),
+              fwd.add(right.scale(-0.50)).add(up.scale(0.35)).normalize(),
+              fwd.add(right.scale( 0.20)).add(up.scale(0.65)).normalize(),
+              fwd.add(right.scale(-0.20)).add(up.scale(0.65)).normalize(),
+            ];
+            for (const sd of spreadDirs) {
+              fireGrenade(p.owner, p.mesh.position.clone(), sd, splitSpeed, splitDmg, splitSplash, false);
+            }
+            p.mesh.dispose(); if (p.light) p.light.dispose();
+            projs.splice(i, 1);
+          } else {
+            const n   = gHit.getNormal(true);
+            const dot = BABYLON.Vector3.Dot(p.vel, n);
+            p.vel.subtractInPlace(n.scale(2 * dot));
+            p.vel.scaleInPlace(0.65);
+            p.mesh.position.copyFrom(gHit.pickedPoint).addInPlace(n.scale(0.12));
+          }
         }
       } else {
         // Free-flight: advance by velocity
@@ -316,31 +366,29 @@ export function updateProjs(dt) {
   }
 }
 
-export function fireGrenade(owner, origin, dir, speed, dmg, splash) {
+export function fireGrenade(owner, origin, dir, speed, dmg, splash, isCluster = false) {
   const mesh = BABYLON.MeshBuilder.CreateSphere('grenade', { diameter: 0.28, segments: 6 }, scene);
   mesh.position.copyFrom(origin);
 
   const mat = new BABYLON.StandardMaterial('grenadeMat', scene);
-  mat.emissiveColor = new BABYLON.Color3(0.1, 0.9, 0.1);
+  // Cluster grenades are red to distinguish them
+  mat.emissiveColor = isCluster ? new BABYLON.Color3(0.9, 0.1, 0.1) : new BABYLON.Color3(0.1, 0.9, 0.1);
   mat.disableLighting = true;
   mesh.material = mat;
   mesh.isPickable = false;
 
   const light = new BABYLON.PointLight('grenadeLight', origin.clone(), scene);
-  light.diffuse  = new BABYLON.Color3(0.2, 1.0, 0.2);
+  light.diffuse  = isCluster ? new BABYLON.Color3(1.0, 0.2, 0.2) : new BABYLON.Color3(0.2, 1.0, 0.2);
   light.intensity = 1.2;
   light.range     = 4.0;
 
   projs.push({
-    type:   'grenade',
-    mesh,
-    light,
-    owner,
-    dmg,
-    splash,
-    fuse:   1.5,
-    vel:    dir.scale(speed),
-    // life gives a hard upper-bound safety fallback (fuse is the real timer)
-    life:   6.0,
+    type:      'grenade',
+    mesh, light, owner, dmg, splash,
+    fuse:      1.5,
+    vel:       dir.scale(speed),
+    life:      6.0,
+    isCluster,
+    _hasSplit: false,   // cluster only splits once
   });
 }

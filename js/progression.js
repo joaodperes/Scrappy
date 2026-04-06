@@ -9,6 +9,7 @@ export function levelFromTotalXp(xp) { let lv=1; while(xp>=totalXpForLevel(lv+1)
 export const XP_GRANTS = {
   killScout:15,killHeavy:30,killSniper:25,killDrone:20,killShotgun:22,killRocket:28,
   killPistol:12,killGrenadier:24,killGiantbot:200,killPvpPlayer:50,
+  killElectron_bot:22, killIon_sniper:30,
   waveComplete:40,bossWave:120,matchWin:80,
 };
 
@@ -58,7 +59,7 @@ export const ATTACHMENTS = {
     icon:'📏', mods:{range:+0.20,spread:-0.10},
     visual:{type:'barrel',style:'extended'},
   },
-  // Magazines — sizes: quick < normal < extended < drum
+  // Magazines
   quick_mag: {
     id:'quick_mag', name:'Quick Mag', slot:'magazine',
     desc:'+10% fire rate. Smaller than standard mag.',
@@ -120,7 +121,7 @@ export const ATTACHMENTS = {
   },
   power_cell: {
     id:'power_cell', name:'Power Cell', slot:'special',
-    desc:'20% chance to recover 1 Railgun round on kill.',
+    desc:'20% chance to recover 1 round on kill.',
     icon:'🔋', mods:{},
     visual:{type:'special',style:'power_cell'},
   },
@@ -130,22 +131,89 @@ export const ATTACHMENTS = {
     icon:'💥', mods:{damage:-0.20},
     visual:{type:'special',style:'cluster'},
   },
+  energy_coil: {
+    id:'energy_coil', name:'Energy Coil', slot:'special',
+    desc:'Headshot kills instantly vent 40% heat. Body shots still generate full heat.',
+    icon:'🌀', mods:{},
+    visual:{type:'special',style:'energy_coil'},
+  },
+  slow_trigger: {
+    id:'slow_trigger', name:'Slow Trigger', slot:'special',
+    desc:'Converts to 3-shot burst mode. −70% heat per shot. Brief pause between bursts.',
+    icon:'⏱️', mods:{heatMult:-0.70},
+    visual:{type:'special',style:'slow_trigger'},
+  },
+  // ── Chaingun ──────────────────────────────────────────────────
+  spinning_module: {
+    id:'spinning_module', name:'Spinning Module', slot:'special',
+    desc:'Converts to minigun mode: 1-second spin-up before firing, no magazine limit (fires until empty), rate of fire increases the longer it fires.',
+    icon:'🌪️', mods:{},
+    visual:{type:'special',style:'spinning_module'},
+  },
+  // ── Plasma Rifle ──────────────────────────────────────────────
+  energy_converter: {
+    id:'energy_converter', name:'Energy Converter', slot:'magazine',
+    desc:'Converts to energy weapon. Plasma Rifle pickups now reset heat instead of refunding ammo.',
+    icon:'⚡', mods:{},
+    visual:{type:'magazine',style:'quick',magScale:1.0},
+  },
+  dual_trigger: {
+    id:'dual_trigger', name:'Dual Trigger', slot:'special',
+    desc:'Swap between semi-auto (3-shot burst) and sniper mode (single shot, 3× damage) with [Q].',
+    icon:'🔀', mods:{},
+    visual:{type:'special',style:'dual_trigger'},
+  },
+  plasma_accelerator: {
+    id:'plasma_accelerator', name:'Plasma Accelerator', slot:'barrel',
+    desc:'+60% projectile speed. Bolts are harder to dodge at range.',
+    icon:'💨', mods:{speed:+0.60},
+    visual:{type:'barrel',style:'extended'},
+  },
+  // ── Railgun ───────────────────────────────────────────────────
+  efficiency_module: {
+    id:'efficiency_module', name:'Efficiency Module', slot:'special',
+    desc:'Railgun pickups grant 1 extra round.',
+    icon:'🔩', mods:{},
+    visual:{type:'special',style:'efficiency_module'},
+  },
+  // ── Launchers ─────────────────────────────────────────────────
+  seasoned_vet_rocket: {
+    id:'seasoned_vet_rocket', name:'Seasoned Vet', slot:'special',
+    desc:'Kills with the Rocket Launcher grant 2× XP.',
+    icon:'🎖️', mods:{},
+    visual:{type:'special',style:'seasoned_vet'},
+    secret:true,
+  },
+  seasoned_vet_glauncher: {
+    id:'seasoned_vet_glauncher', name:'Seasoned Vet', slot:'special',
+    desc:'Kills with the Grenade Launcher grant 2× XP.',
+    icon:'🎖️', mods:{},
+    visual:{type:'special',style:'seasoned_vet'},
+    secret:true,
+  },
 };
 
 export const WEAPON_ATTACHMENT_SLOTS = {
   PISTOL:    ['sight','barrel','special'],
   SMG:       ['sight','barrel','magazine','grip','stock'],
   SHOTGUN:   ['sight','barrel','magazine','grip','stock','special'],
-  CHAINGUN:  ['barrel','magazine','grip'],
+  CHAINGUN:  ['barrel','magazine','grip','special'],
   RAILGUN:   ['sight','barrel','special'],
-  PLASMA:    ['sight','magazine'],
-  ROCKET:    ['sight'],
+  PLASMA:    ['sight','barrel','magazine','special'],
+  ROCKET:    ['sight','special'],
   GLAUNCHER: ['sight','barrel','special'],
+  ELECTRON:  ['sight','barrel','special'],
+  ION:       ['sight','barrel','special'],
 };
 
 export const WEAPON_SPECIALS = {
   PISTOL:['akimbo'], SHOTGUN:['akimbo','auto_fire'],
-  RAILGUN:['power_cell'], GLAUNCHER:['cluster_rounds'],
+  CHAINGUN:['spinning_module'],
+  RAILGUN:['power_cell','efficiency_module'], GLAUNCHER:['cluster_rounds','seasoned_vet_glauncher'],
+  PLASMA:['dual_trigger'],
+  ROCKET:['seasoned_vet_rocket'],
+  ELECTRON:['slow_trigger'],
+  ION:['power_cell','energy_coil'],
 };
 
 // ── Skins ─────────────────────────────────────────────────────
@@ -154,11 +222,14 @@ export const WEAPON_SKINS = {
   midnight:   {id:'midnight',  name:'Midnight', desc:'All-black tactical.',      body:[0.05,0.05,0.05],accent:[0.10,0.10,0.10],grip:[0.05,0.05,0.05]},
   desert:     {id:'desert',    name:'Desert',   desc:'Sand and tan camo.',       body:[0.70,0.60,0.35],accent:[0.55,0.44,0.22],grip:[0.42,0.30,0.14]},
   arctic:     {id:'arctic',    name:'Arctic',   desc:'Snow-pattern white.',      body:[0.90,0.92,0.95],accent:[0.75,0.80,0.85],grip:[0.60,0.65,0.70]},
-  hazard:     {id:'hazard',    name:'Hazard',   desc:'Safety orange and black.', body:[0.85,0.40,0.02],accent:[0.10,0.10,0.10],grip:[0.06,0.06,0.06]},
+  hazard:     {id:'hazard',    name:'Hazard',   desc:'Safety orange and black.', body:[0.90,0.30,0.02],accent:[0.10,0.10,0.10],grip:[0.06,0.06,0.06]},
   plasma_glow:{id:'plasma_glow',name:'Plasma', desc:'Cyan energy accents.',     body:[0.10,0.15,0.25],accent:[0.05,0.80,0.90],grip:[0.05,0.10,0.15]},
   gold:       {id:'gold',      name:'Gold',     desc:'Prestige finish.',         body:[0.80,0.65,0.10],accent:[0.90,0.75,0.20],grip:[0.50,0.35,0.05]},
   crimson:    {id:'crimson',   name:'Crimson',  desc:'Blood red.',               body:[0.55,0.05,0.05],accent:[0.35,0.02,0.02],grip:[0.18,0.04,0.04]},
 };
+
+// Ordered from easiest to hardest unlock — used by loadout UI to sort skin cards
+export const SKIN_DIFFICULTY_ORDER = ['default','Standard','midnight','desert','crimson','arctic','hazard','plasma_glow','gold'];
 
 export const PLAYER_SKINS = {
   default:{id:'default',name:'Standard',body:[0.30,0.35,0.40],visor:[0.20,0.80,0.90]},
@@ -167,98 +238,284 @@ export const PLAYER_SKINS = {
   forest: {id:'forest', name:'Forest',  body:[0.15,0.30,0.10],visor:[0.30,0.80,0.20]},
   void:   {id:'void',   name:'Void',    body:[0.04,0.02,0.08],visor:[0.50,0.10,0.90]},
   gold:   {id:'gold',   name:'Prestige',body:[0.70,0.55,0.08],visor:[1.00,0.85,0.20]},
+  gladiator: {id:'gladiator', name:'Gladiator', body:[0.2,0.2,0.2], visor:[1.0,0.0,0.2]}, // Red/Black PvP skin
 };
 
 // ── Unlock table ──────────────────────────────────────────────
+//
+// Philosophy: ALL unlocks are weapon-kill based — no player level gates.
+//   • Attachments: kill X enemies with that specific weapon (or a specific enemy type)
+//   • Weapon skins: 6 tiers per weapon, each with a unique weapon-related challenge
+//   • Specials: secret:true — icon shows as ??? until 10% progress, then reveals description
+//
+// skin tiers (easiest → hardest):
+//   midnight  ~25–50 kills   — first reward for committing to a weapon
+//   desert    ~60–120 kills  — steady progression
+//   crimson   ~90–150 kills  — mid-tier mastery
+//   arctic    ~150–240 kills — long-term dedication
+//   hazard    enemy-type goal— rewards reading the battlefield
+//   plasma_glow higher goal  — advanced challenge
+//   gold      prestige        — maximum dedication
+
+const _WNAME = { PISTOL:'Pistol', SMG:'SMG', SHOTGUN:'Shotgun', CHAINGUN:'Chaingun',
+  RAILGUN:'Railgun', PLASMA:'Plasma Rifle', ROCKET:'Rocket Launcher',
+  GLAUNCHER:'Grenade Launcher', ELECTRON:'Electron', ION:'Ion Sniper' };
+
 export const UNLOCK_TABLE = [
-  // PISTOL
-  {id:'red_dot',weapon:'PISTOL',type:'attachment',level:2},{id:'suppressor',weapon:'PISTOL',type:'attachment',level:5},
-  {id:'heavy_barrel',weapon:'PISTOL',type:'attachment',level:9},{id:'extended_barrel',weapon:'PISTOL',type:'attachment',level:14},
-  {id:'akimbo',weapon:'PISTOL',type:'attachment',level:8},
-  // SMG
-  {id:'red_dot',weapon:'SMG',type:'attachment',level:3},{id:'compensator',weapon:'SMG',type:'attachment',level:4},
-  {id:'extended_mag',weapon:'SMG',type:'attachment',level:5},{id:'angled_grip',weapon:'SMG',type:'attachment',level:6},
-  {id:'folded_stock',weapon:'SMG',type:'attachment',level:10},{id:'quick_mag',weapon:'SMG',type:'attachment',level:11},
-  {id:'drum_mag',weapon:'SMG',type:'attachment',level:18},
-  // SHOTGUN
-  {id:'red_dot',weapon:'SHOTGUN',type:'attachment',level:4},{id:'compensator',weapon:'SHOTGUN',type:'attachment',level:7},
-  {id:'extended_mag',weapon:'SHOTGUN',type:'attachment',level:9},{id:'vertical_grip',weapon:'SHOTGUN',type:'attachment',level:11},
-  {id:'heavy_stock',weapon:'SHOTGUN',type:'attachment',level:14},{id:'akimbo',weapon:'SHOTGUN',type:'attachment',level:12},
-  {id:'auto_fire',weapon:'SHOTGUN',type:'attachment',level:16},
-  // CHAINGUN
-  {id:'heavy_barrel',weapon:'CHAINGUN',type:'attachment',level:8},{id:'drum_mag',weapon:'CHAINGUN',type:'attachment',level:12},
-  {id:'vertical_grip',weapon:'CHAINGUN',type:'attachment',level:16},{id:'compensator',weapon:'CHAINGUN',type:'attachment',level:20},
-  // RAILGUN
-  {id:'acog',weapon:'RAILGUN',type:'attachment',level:13},{id:'extended_barrel',weapon:'RAILGUN',type:'attachment',level:15},
-  {id:'power_cell',weapon:'RAILGUN',type:'attachment',level:20},
-  // PLASMA
-  {id:'thermal',weapon:'PLASMA',type:'attachment',level:20},{id:'extended_mag',weapon:'PLASMA',type:'attachment',level:22},
-  // ROCKET
-  {id:'red_dot',weapon:'ROCKET',type:'attachment',level:18},
-  // GLAUNCHER
-  {id:'acog',weapon:'GLAUNCHER',type:'attachment',level:14},{id:'compensator',weapon:'GLAUNCHER',type:'attachment',level:16},
-  {id:'cluster_rounds',weapon:'GLAUNCHER',type:'attachment',level:22},
-  // Weapon skins
-  {id:'midnight',weapon:'PISTOL',type:'weaponSkin',level:3},{id:'midnight',weapon:'SMG',type:'weaponSkin',level:4},
-  {id:'midnight',weapon:'SHOTGUN',type:'weaponSkin',level:5},{id:'midnight',weapon:'CHAINGUN',type:'weaponSkin',level:6},
-  {id:'midnight',weapon:'RAILGUN',type:'weaponSkin',level:7},{id:'midnight',weapon:'PLASMA',type:'weaponSkin',level:8},
-  {id:'midnight',weapon:'ROCKET',type:'weaponSkin',level:9},{id:'midnight',weapon:'GLAUNCHER',type:'weaponSkin',level:10},
-  {id:'desert',weapon:'PISTOL',type:'weaponSkin',level:6},{id:'desert',weapon:'SMG',type:'weaponSkin',level:7},
-  {id:'desert',weapon:'SHOTGUN',type:'weaponSkin',level:8},{id:'desert',weapon:'CHAINGUN',type:'weaponSkin',level:9},
-  {id:'desert',weapon:'RAILGUN',type:'weaponSkin',level:10},{id:'desert',weapon:'PLASMA',type:'weaponSkin',level:11},
-  {id:'desert',weapon:'ROCKET',type:'weaponSkin',level:12},{id:'desert',weapon:'GLAUNCHER',type:'weaponSkin',level:13},
-  {id:'arctic',weapon:'PISTOL',type:'weaponSkin',level:12},{id:'arctic',weapon:'SMG',type:'weaponSkin',level:13},
-  {id:'arctic',weapon:'SHOTGUN',type:'weaponSkin',level:14},{id:'arctic',weapon:'CHAINGUN',type:'weaponSkin',level:15},
-  {id:'arctic',weapon:'RAILGUN',type:'weaponSkin',level:16},{id:'arctic',weapon:'PLASMA',type:'weaponSkin',level:17},
-  {id:'arctic',weapon:'ROCKET',type:'weaponSkin',level:18},{id:'arctic',weapon:'GLAUNCHER',type:'weaponSkin',level:19},
-  {id:'hazard',weapon:'PISTOL',type:'weaponSkin',level:18},{id:'hazard',weapon:'SMG',type:'weaponSkin',level:19},
-  {id:'hazard',weapon:'SHOTGUN',type:'weaponSkin',level:20},{id:'hazard',weapon:'CHAINGUN',type:'weaponSkin',level:21},
-  {id:'hazard',weapon:'RAILGUN',type:'weaponSkin',level:22},{id:'hazard',weapon:'PLASMA',type:'weaponSkin',level:23},
-  {id:'hazard',weapon:'ROCKET',type:'weaponSkin',level:24},{id:'hazard',weapon:'GLAUNCHER',type:'weaponSkin',level:25},
-  {id:'plasma_glow',weapon:'PISTOL',type:'weaponSkin',level:24},{id:'plasma_glow',weapon:'SMG',type:'weaponSkin',level:25},
-  {id:'plasma_glow',weapon:'SHOTGUN',type:'weaponSkin',level:26},{id:'plasma_glow',weapon:'CHAINGUN',type:'weaponSkin',level:27},
-  {id:'plasma_glow',weapon:'RAILGUN',type:'weaponSkin',level:28},{id:'plasma_glow',weapon:'PLASMA',type:'weaponSkin',level:29},
-  {id:'plasma_glow',weapon:'ROCKET',type:'weaponSkin',level:30},{id:'plasma_glow',weapon:'GLAUNCHER',type:'weaponSkin',level:31},
-  // Player skins
-  {id:'ghost',type:'playerSkin',level:10},{id:'forest',type:'playerSkin',level:17},
-  {id:'oni',type:'playerSkin',level:24},{id:'void',type:'playerSkin',level:30},
-  // Challenges
-  {id:'crimson',weapon:'PISTOL',type:'weaponSkin',challenge:{desc:'Kill 25 enemies with the Pistol',track:'killsWith:PISTOL',target:25}},
-  {id:'crimson',weapon:'SMG',type:'weaponSkin',challenge:{desc:'Kill 100 enemies with the SMG',track:'killsWith:SMG',target:100}},
-  {id:'crimson',weapon:'SHOTGUN',type:'weaponSkin',challenge:{desc:'Kill 50 enemies with the Shotgun',track:'killsWith:SHOTGUN',target:50}},
-  {id:'crimson',weapon:'CHAINGUN',type:'weaponSkin',challenge:{desc:'Kill 75 enemies with the Chaingun',track:'killsWith:CHAINGUN',target:75}},
-  {id:'crimson',weapon:'RAILGUN',type:'weaponSkin',challenge:{desc:'Kill 30 enemies with the Railgun',track:'killsWith:RAILGUN',target:30}},
-  {id:'crimson',weapon:'PLASMA',type:'weaponSkin',challenge:{desc:'Kill 40 enemies with the Plasma',track:'killsWith:PLASMA',target:40}},
-  {id:'crimson',weapon:'ROCKET',type:'weaponSkin',challenge:{desc:'Kill 30 enemies with the Rocket',track:'killsWith:ROCKET',target:30}},
-  {id:'crimson',weapon:'GLAUNCHER',type:'weaponSkin',challenge:{desc:'Kill 25 enemies with the Launcher',track:'killsWith:GLAUNCHER',target:25}},
-  {id:'gold',weapon:'RAILGUN',type:'weaponSkin',challenge:{desc:'Kill 50 enemies with the Railgun',track:'killsWith:RAILGUN',target:50}},
-  {id:'gold',weapon:'CHAINGUN',type:'weaponSkin',challenge:{desc:'Kill 150 with the Chaingun',track:'killsWith:CHAINGUN',target:150}},
-  {id:'gold',weapon:'ROCKET',type:'weaponSkin',challenge:{desc:'Kill 50 enemies with the Rocket',track:'killsWith:ROCKET',target:50}},
-  {id:'gold',type:'playerSkin',challenge:{desc:'Reach Wave 20 in solo mode',track:'maxWave',target:20}},
-  {id:'suppressor',weapon:'SMG',type:'attachment',challenge:{desc:'Kill 25 Snipers',track:'killsOfType:sniper',target:25}},
-  {id:'acog',weapon:'SMG',type:'attachment',challenge:{desc:'Kill 30 Drones',track:'killsOfType:drone',target:30}},
-  {id:'thermal',weapon:'RAILGUN',type:'attachment',challenge:{desc:'Defeat 3 Boss waves',track:'bossWaveClears',target:3}},
-  {id:'void',type:'playerSkin',challenge:{desc:'Kill 25 players in FFA',track:'pvpKills',target:25}},
+
+  // ════════════════════════════════════════════════════════════════
+  //  ATTACHMENTS — all weapon-kill challenges
+  // ════════════════════════════════════════════════════════════════
+
+  // ── PISTOL ────────────────────────────────────────────────────
+  { id:'red_dot',         weapon:'PISTOL', type:'attachment',
+    challenge:{ desc:'Kill {target} enemies with the Pistol',  track:'killsWith:PISTOL', target:10 } },
+  { id:'suppressor',      weapon:'PISTOL', type:'attachment',
+    challenge:{ desc:'Kill {target} enemies with the Pistol',  track:'killsWith:PISTOL', target:25 } },
+  { id:'heavy_barrel',    weapon:'PISTOL', type:'attachment',
+    challenge:{ desc:'Kill {target} enemies while airborne with the Pistol', track:'killsWhileJumping:PISTOL', target:15 } },
+  { id:'extended_barrel', weapon:'PISTOL', type:'attachment',
+    challenge:{ desc:'Kill {target} enemies with the Pistol',  track:'killsWith:PISTOL', target:50 } },
+  { id:'akimbo',          weapon:'PISTOL', type:'attachment', secret:true,
+    challenge:{ desc:'Kill {target} enemies with the Pistol',  track:'killsWith:PISTOL', target:75 } },
+
+  // ── SMG ───────────────────────────────────────────────────────
+  { id:'red_dot',      weapon:'SMG', type:'attachment',
+    challenge:{ desc:'Kill {target} enemies with the SMG',                      track:'killsWith:SMG',       target:15  } },
+  { id:'compensator',  weapon:'SMG', type:'attachment',
+    challenge:{ desc:'Kill {target} enemies with the SMG',                      track:'killsWith:SMG',       target:30  } },
+  { id:'angled_grip',  weapon:'SMG', type:'attachment',
+    challenge:{ desc:'Kill {target} enemies while airborne with the SMG',       track:'killsWhileJumping:SMG', target:20 } },
+  { id:'folded_stock', weapon:'SMG', type:'attachment',
+    challenge:{ desc:'Kill {target} enemies with the SMG',                      track:'killsWith:SMG',       target:65  } },
+  { id:'extended_mag', weapon:'SMG', type:'attachment',
+    challenge:{ desc:'Kill {target} enemies with the SMG',                      track:'killsWith:SMG',       target:50  } },
+  { id:'quick_mag',    weapon:'SMG', type:'attachment',
+    challenge:{ desc:'Kill {target} enemies with the SMG',                      track:'killsWith:SMG',       target:80  } },
+  { id:'drum_mag',     weapon:'SMG', type:'attachment',
+    challenge:{ desc:'Kill {target} enemies with the SMG',                     track:'killsWith:SMG',       target:130 } },
+  { id:'acog',         weapon:'SMG', type:'attachment',
+    challenge:{ desc:'Kill {target} Drones with the SMG',                       track:'killsOfType:drone',   target:30  } },
+  { id:'suppressor',   weapon:'SMG', type:'attachment',
+    challenge:{ desc:'Kill {target} Snipers with the SMG',                      track:'killsOfType:sniper',  target:25  } },
+
+  // ── SHOTGUN ──────────────────────────────────────────────────
+  { id:'red_dot',       weapon:'SHOTGUN', type:'attachment',
+    challenge:{ desc:'Kill {target} enemies with the Shotgun',                  track:'killsWith:SHOTGUN',   target:15  } },
+  { id:'vertical_grip', weapon:'SHOTGUN', type:'attachment',
+    challenge:{ desc:'Kill {target} enemies with the Shotgun',                  track:'killsWith:SHOTGUN',   target:30  } },
+  { id:'heavy_stock',   weapon:'SHOTGUN', type:'attachment',
+    challenge:{ desc:'Kill {target} enemies while airborne with the Shotgun',   track:'killsWhileJumping:SHOTGUN', target:15 } },
+  { id:'compensator',   weapon:'SHOTGUN', type:'attachment',
+    challenge:{ desc:'Kill {target} enemies with the Shotgun',                  track:'killsWith:SHOTGUN',   target:20  } },
+  { id:'extended_mag',  weapon:'SHOTGUN', type:'attachment',
+    challenge:{ desc:'Kill {target} enemies with the Shotgun',                  track:'killsWith:SHOTGUN',   target:40  } },
+  { id:'akimbo',        weapon:'SHOTGUN', type:'attachment', secret:true,
+    challenge:{ desc:'Kill {target} enemies with the Shotgun',                  track:'killsWith:SHOTGUN',   target:60  } },
+  { id:'auto_fire',     weapon:'SHOTGUN', type:'attachment', secret:true,
+    challenge:{ desc:'Kill {target} Heavy robots with the Shotgun',             track:'killsOfType:heavy',   target:30  } },
+
+  // ── CHAINGUN ─────────────────────────────────────────────────
+  { id:'heavy_barrel',  weapon:'CHAINGUN', type:'attachment',
+    challenge:{ desc:'Kill {target} enemies with the Chaingun',                 track:'killsWith:CHAINGUN',  target:30  } },
+  { id:'vertical_grip', weapon:'CHAINGUN', type:'attachment',
+    challenge:{ desc:'Kill {target} enemies with the Chaingun',                 track:'killsWith:CHAINGUN',  target:60  } },
+  { id:'compensator',   weapon:'CHAINGUN', type:'attachment',
+    challenge:{ desc:'Kill {target} Scouts with the Chaingun',                  track:'killsOfType:scout',   target:40  } },
+  { id:'drum_mag',      weapon:'CHAINGUN', type:'attachment',
+    challenge:{ desc:'Kill {target} enemies with the Chaingun',                track:'killsWith:CHAINGUN',  target:150 } },
+  { id:'spinning_module', weapon:'CHAINGUN', type:'attachment', secret:true,
+    challenge:{ desc:'Kill {target} enemies while airborne with the Chaingun',  track:'killsWhileJumping:CHAINGUN', target:80 } },
+
+  // ── RAILGUN ──────────────────────────────────────────────────
+  { id:'red_dot',         weapon:'RAILGUN', type:'attachment',
+    challenge:{ desc:'Kill {target} enemies with the Railgun',                   track:'killsWith:RAILGUN',   target:5   } },
+  { id:'extended_barrel', weapon:'RAILGUN', type:'attachment',
+    challenge:{ desc:'Kill {target} enemies with the Railgun',                  track:'killsWith:RAILGUN',   target:20  } },
+  { id:'thermal',         weapon:'RAILGUN', type:'attachment',
+    challenge:{ desc:'Kill {target} Heavy robots with the Railgun',             track:'killsOfType:heavy',   target:15  } },
+  { id:'power_cell',      weapon:'RAILGUN', type:'attachment', secret:true,
+    challenge:{ desc:'Kill {target} Snipers with the Railgun',                  track:'killsOfType:sniper',  target:25  } },
+  { id:'efficiency_module', weapon:'RAILGUN', type:'attachment', secret:true,
+    challenge:{ desc:'Pick up {target} Railgun drops',                          track:'energyPickups:RAILGUN', target:20 } },
+
+  // ── PLASMA ───────────────────────────────────────────────────
+  { id:'red_dot',      weapon:'PLASMA', type:'attachment',
+    challenge:{ desc:'Kill {target} enemies with the Plasma Rifle',             track:'killsWith:PLASMA',    target:10  } },
+  { id:'thermal',      weapon:'PLASMA', type:'attachment',
+    challenge:{ desc:'Kill {target} enemies with the Plasma Rifle',             track:'killsWith:PLASMA',    target:20  } },
+  { id:'acog',         weapon:'PLASMA', type:'attachment',
+    challenge:{ desc:'Kill {target} enemies with the Plasma Rifle',             track:'killsWith:PLASMA',    target:40  } },
+  { id:'extended_mag', weapon:'PLASMA', type:'attachment',
+    challenge:{ desc:'Kill {target} Drones with the Plasma Rifle',              track:'killsOfType:drone',   target:30  } },
+  { id:'plasma_accelerator', weapon:'PLASMA', type:'attachment',
+    challenge:{ desc:'Kill {target} enemies with the Plasma Rifle while scoped', track:'killsWhileScoped:PLASMA', target:25 } },
+  { id:'energy_converter', weapon:'PLASMA', type:'attachment', secret:true,
+    challenge:{ desc:'Pick up {target} Plasma Rifle drops',                     track:'energyPickups:PLASMA', target:15 } },
+  { id:'dual_trigger', weapon:'PLASMA', type:'attachment', secret:true,
+    challenge:{ desc:'Kill {target} enemies with the Plasma Rifle',             track:'killsWith:PLASMA',    target:60  } },
+
+  // ── ROCKET ────────────────────────────────────────────────────
+  { id:'red_dot',      weapon:'ROCKET', type:'attachment',
+    challenge:{ desc:'Kill {target} enemies with the Rocket Launcher',          track:'killsWith:ROCKET',    target:10  } },
+  { id:'heavy_barrel', weapon:'ROCKET', type:'attachment',
+    challenge:{ desc:'Kill {target} enemies with the Rocket Launcher',          track:'killsWith:ROCKET',    target:20  } },
+  { id:'seasoned_vet_rocket', weapon:'ROCKET', type:'attachment', secret:true,
+    challenge:{ desc:'Kill {target} bosses with the Rocket Launcher',              track:'killedBossWith:ROCKET', target:1  } },
+
+  // ── GLAUNCHER ─────────────────────────────────────────────────
+  { id:'acog',        weapon:'GLAUNCHER', type:'attachment',
+    challenge:{ desc:'Kill {target} enemies with the Grenade Launcher',         track:'killsWith:GLAUNCHER', target:15  } },
+  { id:'compensator', weapon:'GLAUNCHER', type:'attachment',
+    challenge:{ desc:'Kill {target} enemies with the Grenade Launcher',         track:'killsWith:GLAUNCHER', target:25  } },
+  { id:'cluster_rounds', weapon:'GLAUNCHER', type:'attachment', secret:true,
+    challenge:{ desc:'Kill {target} enemies with the Grenade Launcher',         track:'killsWith:GLAUNCHER', target:40  } },
+  { id:'seasoned_vet_glauncher', weapon:'GLAUNCHER', type:'attachment', secret:true,
+    challenge:{ desc:'Kill {target} bosses with the Grenade Launcher',             track:'killedBossWith:GLAUNCHER', target:1 } },
+
+  // ── ELECTRON ──────────────────────────────────────────────────
+  { id:'red_dot',      weapon:'ELECTRON', type:'attachment',
+    challenge:{ desc:'Kill {target} enemies with the Electron',                 track:'killsWith:ELECTRON',  target:20  } },
+  { id:'compensator',  weapon:'ELECTRON', type:'attachment',
+    challenge:{ desc:'Kill {target} enemies with the Electron',                 track:'killsWith:ELECTRON',  target:35  } },
+  { id:'heavy_barrel', weapon:'ELECTRON', type:'attachment',
+    challenge:{ desc:'Kill {target} Scouts with the Electron',                  track:'killsOfType:scout',   target:25  } },
+  { id:'extended_barrel', weapon:'ELECTRON', type:'attachment',
+    challenge:{ desc:'Kill {target} enemies with the Electron while airborne',  track:'killsWhileJumping:ELECTRON', target:50 } },
+
+  // ── ION ───────────────────────────────────────────────────────
+  { id:'acog',            weapon:'ION', type:'attachment',
+    challenge:{ desc:'Kill {target} enemies with the Ion Sniper',               track:'killsWith:ION',       target:15  } },
+  { id:'extended_barrel', weapon:'ION', type:'attachment',
+    challenge:{ desc:'Kill {target} enemies with the Ion Sniper',               track:'killsWith:ION',       target:30  } },
+  { id:'power_cell',      weapon:'ION', type:'attachment', secret:true,
+    challenge:{ desc:'Kill {target} enemies with the Ion Sniper',               track:'killsWith:ION',       target:50  } },
+  { id:'energy_coil',     weapon:'ION', type:'attachment', secret:true,
+    challenge:{ desc:'Kill {target} Ion Sniper bots while scoped',              track:'killsWhileScoped:ION', target:30  } },
+
+  // ── ELECTRON extra (Slow Trigger) ────────────────────────────
+  { id:'slow_trigger',    weapon:'ELECTRON', type:'attachment', secret:true,
+    challenge:{ desc:'Kill {target} enemies with the Electron while airborne', track:'killsWhileJumping:ELECTRON', target:20 } },
+
+  // ════════════════════════════════════════════════════════════════
+  //  WEAPON SKINS — 7 tiers, all weapon-kill based, no level gates
+  //  PISTOL · SMG · SHOTGUN · CHAINGUN · RAILGUN · PLASMA
+  //  ROCKET · GLAUNCHER · ELECTRON · ION
+  // ════════════════════════════════════════════════════════════════
+
+  // ── MIDNIGHT (tier 1) ─────────────────────────────────────────
+  { id:'midnight', weapon:'PISTOL',    type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the Pistol',           track:'killsWith:PISTOL',    target:30  } },
+  { id:'midnight', weapon:'SMG',       type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the SMG',              track:'killsWith:SMG',       target:20  } },
+  { id:'midnight', weapon:'SHOTGUN',   type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the Shotgun',          track:'killsWith:SHOTGUN',   target:25  } },
+  { id:'midnight', weapon:'CHAINGUN',  type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the Chaingun',         track:'killsWith:CHAINGUN',  target:15  } },
+  { id:'midnight', weapon:'RAILGUN',   type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the Railgun',          track:'killsWith:RAILGUN',   target:10  } },
+  { id:'midnight', weapon:'PLASMA',    type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the Plasma Rifle',     track:'killsWith:PLASMA',    target:20  } },
+  { id:'midnight', weapon:'ROCKET',    type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the Rocket Launcher',  track:'killsWith:ROCKET',    target:15  } },
+  { id:'midnight', weapon:'GLAUNCHER', type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the Grenade Launcher', track:'killsWith:GLAUNCHER', target:20  } },
+  { id:'midnight', weapon:'ELECTRON',  type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the Electron',         track:'killsWith:ELECTRON',  target:20  } },
+  { id:'midnight', weapon:'ION',       type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the Ion Sniper',       track:'killsWith:ION',       target:10  } },
+
+  // ── DESERT (tier 2) ───────────────────────────────────────────
+  { id:'desert', weapon:'PISTOL',    type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the Pistol',           track:'killsWith:PISTOL',    target:75  } },
+  { id:'desert', weapon:'SMG',       type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the SMG',              track:'killsWith:SMG',       target:50  } },
+  { id:'desert', weapon:'SHOTGUN',   type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the Shotgun',          track:'killsWith:SHOTGUN',   target:60  } },
+  { id:'desert', weapon:'CHAINGUN',  type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the Chaingun',         track:'killsWith:CHAINGUN',  target:40  } },
+  { id:'desert', weapon:'RAILGUN',   type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the Railgun',          track:'killsWith:RAILGUN',   target:25  } },
+  { id:'desert', weapon:'PLASMA',    type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the Plasma Rifle',     track:'killsWith:PLASMA',    target:50  } },
+  { id:'desert', weapon:'ROCKET',    type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the Rocket Launcher',  track:'killsWith:ROCKET',    target:35  } },
+  { id:'desert', weapon:'GLAUNCHER', type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the Grenade Launcher', track:'killsWith:GLAUNCHER', target:45  } },
+  { id:'desert', weapon:'ELECTRON',  type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the Electron',         track:'killsWith:ELECTRON',  target:50  } },
+  { id:'desert', weapon:'ION',       type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the Ion Sniper',       track:'killsWith:ION',       target:25  } },
+
+  // ── CRIMSON (tier 3) ──────────────────────────────────────────
+  { id:'crimson', weapon:'PISTOL',    type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the Pistol',           track:'killsWith:PISTOL',    target:120 } },
+  { id:'crimson', weapon:'SMG',       type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the SMG',               track:'killsWith:SMG',       target:90  } },
+  { id:'crimson', weapon:'SHOTGUN',   type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the Shotgun',          track:'killsWith:SHOTGUN',   target:100 } },
+  { id:'crimson', weapon:'CHAINGUN',  type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the Chaingun',          track:'killsWith:CHAINGUN',  target:75  } },
+  { id:'crimson', weapon:'RAILGUN',   type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the Railgun',           track:'killsWith:RAILGUN',   target:50  } },
+  { id:'crimson', weapon:'PLASMA',    type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the Plasma Rifle',      track:'killsWith:PLASMA',    target:85  } },
+  { id:'crimson', weapon:'ROCKET',    type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the Rocket Launcher',   track:'killsWith:ROCKET',    target:60  } },
+  { id:'crimson', weapon:'GLAUNCHER', type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the Grenade Launcher',  track:'killsWith:GLAUNCHER', target:75  } },
+  { id:'crimson', weapon:'ELECTRON',  type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the Electron',          track:'killsWith:ELECTRON',  target:85  } },
+  { id:'crimson', weapon:'ION',       type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the Ion Sniper',        track:'killsWith:ION',       target:50  } },
+
+  // ── ARCTIC (tier 4) ───────────────────────────────────────────
+  { id:'arctic', weapon:'PISTOL',    type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the Pistol',           track:'killsWith:PISTOL',    target:180 } },
+  { id:'arctic', weapon:'SMG',       type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the SMG',              track:'killsWith:SMG',       target:150 } },
+  { id:'arctic', weapon:'SHOTGUN',   type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the Shotgun',          track:'killsWith:SHOTGUN',   target:160 } },
+  { id:'arctic', weapon:'CHAINGUN',  type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the Chaingun',         track:'killsWith:CHAINGUN',  target:120 } },
+  { id:'arctic', weapon:'RAILGUN',   type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the Railgun',           track:'killsWith:RAILGUN',   target:80  } },
+  { id:'arctic', weapon:'PLASMA',    type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the Plasma Rifle',     track:'killsWith:PLASMA',    target:140 } },
+  { id:'arctic', weapon:'ROCKET',    type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the Rocket Launcher',  track:'killsWith:ROCKET',    target:100 } },
+  { id:'arctic', weapon:'GLAUNCHER', type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the Grenade Launcher', track:'killsWith:GLAUNCHER', target:130 } },
+  { id:'arctic', weapon:'ELECTRON',  type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the Electron',         track:'killsWith:ELECTRON',  target:140 } },
+  { id:'arctic', weapon:'ION',       type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the Ion Sniper',        track:'killsWith:ION',       target:80  } },
+
+  // ── HAZARD (tier 5 — enemy-type challenges) ───────────────────
+  { id:'hazard', weapon:'PISTOL', type:'weaponSkin', challenge:{ desc:'Kill {target} Scouts with the Pistol', track:'killsOfCombo:scout_PISTOL', target:50 } },
+  { id:'hazard', weapon:'SMG',       type:'weaponSkin', challenge:{ desc:'Kill {target} Drones (any weapon)',              track:'killsOfCombo:drone_SMG',        target:30  } },
+  { id:'hazard', weapon:'SHOTGUN',   type:'weaponSkin', challenge:{ desc:'Kill {target} Heavy robots (any weapon)',        track:'killsOfCombo:heavy_SHOTGUN',        target:25  } },
+  { id:'hazard', weapon:'CHAINGUN',  type:'weaponSkin', challenge:{ desc:'Kill {target} Scouts (any weapon)',              track:'killsOfCombo:scout_CHAINGUN',        target:80  } },
+  { id:'hazard', weapon:'RAILGUN',   type:'weaponSkin', challenge:{ desc:'Kill {target} Snipers (any weapon)',             track:'killsOfCombo:sniper_RAILGUN',       target:20  } },
+  { id:'hazard', weapon:'PLASMA',    type:'weaponSkin', challenge:{ desc:'Kill {target} Drones (any weapon)',              track:'killsOfCombo:drone_PLASMA',        target:25  } },
+  { id:'hazard', weapon:'ROCKET',    type:'weaponSkin', challenge:{ desc:'Destroy {target} bosses (any weapon)',            track:'bossWaveClears',           target:3   } },
+  { id:'hazard', weapon:'GLAUNCHER', type:'weaponSkin', challenge:{ desc:'Kill {target} Grenadiers (any weapon)',          track:'killsOfCombo:grenadier_GLAUNCHER',    target:20  } },
+  { id:'hazard', weapon:'ELECTRON',  type:'weaponSkin', challenge:{ desc:'Kill {target} Electron Bots (any weapon)',       track:'killsOfCombo:electron_bot_ELECTRON', target:25  } },
+  { id:'hazard', weapon:'ION',       type:'weaponSkin', challenge:{ desc:'Kill {target} Ion Snipers (any weapon)',         track:'killsOfCombo:ion_sniper_ION',   target:15  } },
+
+  // ── PLASMA GLOW (tier 6 — advanced weapon-kill challenges) ────
+  { id:'plasma_glow', weapon:'PISTOL',    type:'weaponSkin', challenge:{ desc:'Kill {target} Drones (any weapon)',             track:'killsOfCombo:drone_PISTOL',        target:60  } },
+  { id:'plasma_glow', weapon:'SMG',       type:'weaponSkin', challenge:{ desc:'Kill {target} Heavy robots (any weapon)',       track:'killsOfCombo:heavy_SMG',        target:20  } },
+  { id:'plasma_glow', weapon:'SHOTGUN',   type:'weaponSkin', challenge:{ desc:'Kill {target} Shotgunners (any weapon)',        track:'killsOfCombo:shotgun_SHOTGUN',      target:30  } },
+  { id:'plasma_glow', weapon:'CHAINGUN',  type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the Chaingun',      track:'killsWith:CHAINGUN',       target:200 } },
+  { id:'plasma_glow', weapon:'RAILGUN',   type:'weaponSkin', challenge:{ desc:'Kill {target} bosses (any weapon)',              track:'bossWaveClears',           target:5   } },
+  { id:'plasma_glow', weapon:'PLASMA',    type:'weaponSkin', challenge:{ desc:'Kill {target} Electron Bots (any weapon)',      track:'killsOfCombo:electron_bot_PLASMA', target:20  } },
+  { id:'plasma_glow', weapon:'ROCKET',    type:'weaponSkin', challenge:{ desc:'Kill {target} Rocket bots (any weapon)',        track:'killsOfCombo:rocket_ROCKET',       target:20  } },
+  { id:'plasma_glow', weapon:'GLAUNCHER', type:'weaponSkin', challenge:{ desc:'Kill {target} Rocket bots (any weapon)',        track:'killsOfCombo:rocket_GLAUNCHER',       target:15  } },
+  { id:'plasma_glow', weapon:'ELECTRON',  type:'weaponSkin', challenge:{ desc:'Kill {target} Drones (any weapon)',             track:'killsOfCombo:drone_ELECTRON',        target:20  } },
+  { id:'plasma_glow', weapon:'ION',       type:'weaponSkin', challenge:{ desc:'Kill {target} Snipers (any weapon)',            track:'killsOfCombo:sniper_ION',       target:15  } },
+
+  // ── GOLD (tier 7 — prestige, high kill counts) ────────────────
+  { id:'gold', weapon:'PISTOL',    type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the Pistol',           track:'killsWith:PISTOL',    target:250 } },
+  { id:'gold', weapon:'SMG',       type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the SMG',              track:'killsWith:SMG',       target:450 } },
+  { id:'gold', weapon:'SHOTGUN',   type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the Shotgun',          track:'killsWith:SHOTGUN',   target:180 } },
+  { id:'gold', weapon:'CHAINGUN',  type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the Chaingun',         track:'killsWith:CHAINGUN',  target:400 } },
+  { id:'gold', weapon:'RAILGUN',   type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the Railgun',          track:'killsWith:RAILGUN',   target:150 } },
+  { id:'gold', weapon:'PLASMA',    type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the Plasma Rifle',     track:'killsWith:PLASMA',    target:220 } },
+  { id:'gold', weapon:'ROCKET',    type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the Rocket Launcher',  track:'killsWith:ROCKET',    target:150 } },
+  { id:'gold', weapon:'GLAUNCHER', type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the Grenade Launcher', track:'killsWith:GLAUNCHER', target:200 } },
+  { id:'gold', weapon:'ELECTRON',  type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the Electron',         track:'killsWith:ELECTRON',  target:200 } },
+  { id:'gold', weapon:'ION',       type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the Ion Sniper',       track:'killsWith:ION',       target:150 } },
+
+  // ════════════════════════════════════════════════════════════════
+  //  PLAYER SKINS — kept separate, not weapon-related
+  // ════════════════════════════════════════════════════════════════
+  { id:'ghost',     type:'playerSkin', level:10 },
+  { id:'forest',    type:'playerSkin', level:15 },
+  { id:'oni',       type:'playerSkin', level:25 },
+  { id:'void',      type:'playerSkin', level:30 },
+  { id:'gold',       type:'playerSkin', level:40 },
+  { id:'gladiator', type:'playerSkin', challenge:{ desc:'Defeat {target} players in FFA', track:'pvpKills', target:25 } },
 ];
 
 // ── Profile ───────────────────────────────────────────────────
 const STORAGE_KEY = 'botarena_profile';
-const _WEAPONS = ['PISTOL','SMG','SHOTGUN','CHAINGUN','RAILGUN','PLASMA','ROCKET','GLAUNCHER'];
 
 const _defaultProfile = () => ({
   name:'ANON', totalXp:0, level:1,
   unlocked:['default'],
-  unlockedWeaponSkins:{PISTOL:[],SMG:[],SHOTGUN:[],CHAINGUN:[],RAILGUN:[],PLASMA:[],ROCKET:[],GLAUNCHER:[]},
-  unlockedAttachments:{PISTOL:['red_dot'],SMG:[],SHOTGUN:[],CHAINGUN:[],RAILGUN:[],PLASMA:[],ROCKET:[],GLAUNCHER:[]},
+  unlockedWeaponSkins:{PISTOL:[],SMG:[],SHOTGUN:[],CHAINGUN:[],RAILGUN:[],PLASMA:[],ROCKET:[],GLAUNCHER:[],ELECTRON:[],ION:[]},
+  unlockedAttachments:{PISTOL:['red_dot'],SMG:[],SHOTGUN:[],CHAINGUN:[],RAILGUN:[],PLASMA:[],ROCKET:[],GLAUNCHER:[],ELECTRON:[],ION:[]},
   loadouts:{
     PISTOL:{skin:'default',attachments:{}},SMG:{skin:'default',attachments:{}},
     SHOTGUN:{skin:'default',attachments:{}},CHAINGUN:{skin:'default',attachments:{}},
     RAILGUN:{skin:'default',attachments:{}},PLASMA:{skin:'default',attachments:{}},
     ROCKET:{skin:'default',attachments:{}},GLAUNCHER:{skin:'default',attachments:{}},
+    ELECTRON:{skin:'default',attachments:{}},ION:{skin:'default',attachments:{}},
   },
   playerSkin:'default',
   firebaseUid:null,
-  stats:{totalKills:0,pvpKills:0,bossWaveClears:0,maxWave:0,killsOfType:{},killsWith:{}},
+  stats:{totalKills:0,pvpKills:0,bossWaveClears:0,maxWave:0,killsOfType:{},killsWith:{},killsWhileJumping:{},killsWhileScoped:{},energyPickups:{},bossKillsWith:{}},
 });
 
 export let profile = _defaultProfile();
@@ -269,20 +526,17 @@ let _fbReady = false;
 export async function initFirebaseAuth() {
   if (typeof firebase === 'undefined') return;
   try {
-    // signInAnonymously is idempotent — same UID returned every time for this browser
     const cred = await firebase.auth().signInAnonymously();
     const uid  = cred.user.uid;
     _fbReady   = true;
 
     const cloudProfile = await _loadFromFirestore(uid);
     if (cloudProfile && cloudProfile.totalXp >= profile.totalXp) {
-      // Cloud save is at least as advanced — use it
       profile = _deepMerge(_defaultProfile(), cloudProfile);
       profile.firebaseUid = uid;
       _saveToLocalStorage();
       console.log('[progression] Cross-session profile restored from cloud');
     } else {
-      // Local save is newer or cloud is empty — push up
       profile.firebaseUid = uid;
       await _saveToFirestore();
     }
@@ -317,12 +571,12 @@ export function loadProfile() {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) { const saved = JSON.parse(raw); profile = _deepMerge(_defaultProfile(), saved); _migrateOldWeaponSkins(); }
   } catch {}
-  initFirebaseAuth(); // async — runs after returning
+  initFirebaseAuth();
 }
 
 export function saveProfile() {
   _saveToLocalStorage();
-  _saveToFirestore(); // fire-and-forget
+  _saveToFirestore();
 }
 
 function _migrateOldWeaponSkins() {
@@ -377,12 +631,42 @@ export function awardXp(amount) {
 }
 
 // ── Stats ─────────────────────────────────────────────────────
-export function recordKill(botType, weaponKey) {
+export function recordKill(botType, weaponKey, { isJumping = false, isScoped = false } = {}) {
   const s=profile.stats; s.totalKills++;
   if (botType==='pvp') s.pvpKills++;
   else { s.killsOfType[botType]=(s.killsOfType[botType]||0)+1; if(botType==='giantbot')s.bossWaveClears=(s.bossWaveClears||0)+1; }
-  if (weaponKey) s.killsWith[weaponKey]=(s.killsWith[weaponKey]||0)+1;
+  if (weaponKey) {
+    s.killsWith[weaponKey]=(s.killsWith[weaponKey]||0)+1;
+    // Track Bot + Weapon combo
+    const comboKey = botType + '_' + weaponKey;
+    if (!s.killsOfCombo) s.killsOfCombo = {};
+    s.killsOfCombo[comboKey] = (s.killsOfCombo[comboKey]||0)+1;
+    if (isJumping) {
+      if (!s.killsWhileJumping) s.killsWhileJumping = {};
+      s.killsWhileJumping[weaponKey]=(s.killsWhileJumping[weaponKey]||0)+1;
+    }
+    if (isScoped) {
+      if (!s.killsWhileScoped) s.killsWhileScoped = {};
+      s.killsWhileScoped[weaponKey]=(s.killsWhileScoped[weaponKey]||0)+1;
+    }
+    // Track boss kills per weapon for 'seasoned vet' attachments
+    if (botType==='giantbot') {
+      if (!s.bossKillsWith) s.bossKillsWith = {};
+      s.bossKillsWith[weaponKey]=(s.bossKillsWith[weaponKey]||0)+1;
+    }
+  }
   const n=_checkChallenges(); if(n.length)_showUnlockToasts(n);
+  checkProgressMilestones(); // ← milestone notifications
+  saveProfile(); return n;
+}
+
+// Track energy weapon pickups (for energy-weapon-specific unlock challenges)
+export function recordEnergyPickup(weaponKey) {
+  const s = profile.stats;
+  if (!s.energyPickups) s.energyPickups = {};
+  s.energyPickups[weaponKey] = (s.energyPickups[weaponKey] || 0) + 1;
+  const n = _checkChallenges(); if (n.length) _showUnlockToasts(n);
+  checkProgressMilestones();
   saveProfile(); return n;
 }
 
@@ -391,6 +675,7 @@ export function recordWaveComplete(waveNum, isBoss) {
   profile.stats.maxWave=Math.max(profile.stats.maxWave||0, waveNum);
   if (isBoss) profile.stats.bossWaveClears=(profile.stats.bossWaveClears||0)+1;
   const n=_checkChallenges(); if(n.length)_showUnlockToasts(n);
+  checkProgressMilestones();
   saveProfile();
 }
 
@@ -398,7 +683,12 @@ function _checkChallenges() {
   const s=profile.stats; const news=[];
   for (const u of UNLOCK_TABLE) {
     if (!u.challenge) continue;
-    if (u.type==='attachment'){const w=profile.unlockedAttachments[u.weapon];if(!w||w.includes(u.id))continue;}
+    if (u.type==='attachment'){
+      // Guard: attachment must belong to a known weapon slot in unlockedAttachments
+      if (!u.weapon) continue;
+      const w=profile.unlockedAttachments[u.weapon];
+      if(!w||w.includes(u.id))continue;
+    }
     else if (u.type==='weaponSkin'){const w=profile.unlockedWeaponSkins[u.weapon];if(w&&w.includes(u.id))continue;}
     else{if(profile.unlocked.includes(u.id))continue;}
     const {track,target}=u.challenge; let val=0;
@@ -406,15 +696,105 @@ function _checkChallenges() {
     else if(track==='maxWave')val=s.maxWave||0;
     else if(track==='bossWaveClears')val=s.bossWaveClears||0;
     else if(track.startsWith('killsOfType:'))val=s.killsOfType[track.split(':')[1]]||0;
-    else if(track.startsWith('killsWith:'))val=s.killsWith[track.split(':')[1]]||0;
-    if(val>=target){
+    // killsWith: must match the exact weapon key in the track, not just any weapon
+    else if(track.startsWith('killsWith:')){
+      const trackWep=track.split(':')[1];
+      // Only count progress toward this challenge entry if the tracked weapon matches
+      // (prevents e.g. 'killsWith:SHOTGUN' from crediting an SMG challenge)
+      val=s.killsWith[trackWep]||0;
+    }
+    else if(track.startsWith('killsWhileJumping:')){
+      const trackWep=track.split(':')[1];
+      val=(s.killsWhileJumping||{})[trackWep]||0;
+    }
+    else if(track.startsWith('killsWhileScoped:')){
+      const trackWep=track.split(':')[1];
+      val=(s.killsWhileScoped||{})[trackWep]||0;
+    }
+    else if(track.startsWith('killsOfCombo:'))val=(s.killsOfCombo||{})[track.split(':')[1]]||0;
+    else if(track.startsWith('energyPickups:')){
+      const trackWep=track.split(':')[1];
+      val=(s.energyPickups||{})[trackWep]||0;
+    }
+    else if(track.startsWith('killedBossWith:')){
+      const trackWep=track.split(':')[1];
+      val=(s.bossKillsWith||{})[trackWep]||0;
+    }
+      if(val>=target){
       if(u.type==='attachment')profile.unlockedAttachments[u.weapon].push(u.id);
       else if(u.type==='weaponSkin'){if(!profile.unlockedWeaponSkins[u.weapon])profile.unlockedWeaponSkins[u.weapon]=[];profile.unlockedWeaponSkins[u.weapon].push(u.id);}
       else profile.unlocked.push(u.id);
-      news.push({...u,reason:u.challenge.desc});
+      news.push({...u,reason:getChallengeDescription(u)});
     }
   }
   return news;
+}
+
+// Returns a human-friendly description for a challenge. Accepts either a
+// challenge object or an unlock entry that contains `.challenge`. If the
+// challenge already provides a string `desc`, the first numeric substring
+// will be replaced with the `target` value so descriptions always reflect
+// the authoritative target number.
+export function getChallengeDescription(uOrCh){
+  const c = uOrCh && uOrCh.challenge ? uOrCh.challenge : uOrCh;
+  if(!c) return '';
+  if(typeof c.desc === 'function') return c.desc(c);
+  if(typeof c.desc === 'string'){
+    if(c.target != null){
+      if(c.desc.indexOf('{target}') !== -1) return c.desc.replace(/\{target\}/g, String(c.target));
+      // Backwards-compat: replace first numeric substring if no {target} token
+      return c.desc.replace(/\d+/, String(c.target));
+    }
+    return c.desc;
+  }
+  const track = c.track||''; const target = c.target||0;
+  if(track.startsWith('killsWith:')){
+    const wep = track.split(':')[1]; const wlabel = _WNAME?.[wep]??wep;
+    return `Kill ${target} enemies with the ${wlabel}`;
+  }
+  if(track.startsWith('killsOfType:')){
+    const t = track.split(':')[1].replace(/_/g,' ');
+    return `Kill ${target} ${t} (any weapon)`;
+  }
+  if(track==='pvpKills') return `Defeat ${target} players in FFA`;
+  if(track==='bossWaveClears') return `Defeat ${target} bosses`;
+  return `${target} ${track}`;
+}
+
+// ── Progress milestones (in-game notification at 25/50/75%) ───
+// Persisted in localStorage so we don't re-show on reload.
+const _MILESTONE_STORAGE = 'botarena_milestones';
+let _shownMilestones = null;
+
+function _loadShownMilestones() {
+  if (_shownMilestones) return;
+  try { _shownMilestones = new Set(JSON.parse(localStorage.getItem(_MILESTONE_STORAGE) ?? '[]')); }
+  catch { _shownMilestones = new Set(); }
+}
+function _saveShownMilestones() {
+  try { localStorage.setItem(_MILESTONE_STORAGE, JSON.stringify([..._shownMilestones])); } catch {}
+}
+
+export function checkProgressMilestones() {
+  _loadShownMilestones();
+  const THRESHOLDS = [0.25, 0.50, 0.75];
+  for (const u of UNLOCK_TABLE) {
+    if (!u.challenge) continue;
+    // Skip already fully unlocked items
+    if (u.type==='attachment' && profile.unlockedAttachments[u.weapon]?.includes(u.id)) continue;
+    if (u.type==='weaponSkin' && profile.unlockedWeaponSkins[u.weapon]?.includes(u.id)) continue;
+    if (u.type==='playerSkin' && profile.unlocked?.includes(u.id)) continue;
+
+    const prog = getChallengeProgress(u.challenge);
+    for (const t of THRESHOLDS) {
+      if (prog.pct < t) continue;
+      const key = `${u.id}:${u.weapon??''}:${Math.round(t*100)}`;
+      if (_shownMilestones.has(key)) continue;
+      _shownMilestones.add(key);
+      _saveShownMilestones();
+      _showMilestoneToast(u, prog, t);
+    }
+  }
 }
 
 // ── Loadout ───────────────────────────────────────────────────
@@ -451,19 +831,31 @@ export function getEffectiveStats(wName,baseDefs){
       else if(mod==='spread')out.spread=Math.max(0,(baseDefs.spread||0)*(1+delta));
       else if(mod==='range')out.range=Math.round(baseDefs.range*(1+delta));
       else if(mod==='cd')out.cd=Math.max(0.02,baseDefs.cd*(1+delta));
+      else if(mod==='speed')out.speed=Math.round((baseDefs.speed||0)*(1+delta));
     }
   }
   return out;
 }
 
-// Helpers for gameplay logic
 export function getAdsFov(wName){const id=getLoadout(wName).attachments?.sight;return ATTACHMENTS[id]?.visual?.adsZoom??null;}
 export function getScopeShape(wName){const id=getLoadout(wName).attachments?.sight;return ATTACHMENTS[id]?.visual?.scopeShape??null;}
 export function isAkimbo(wName){return getLoadout(wName).attachments?.special==='akimbo';}
 export function isAutoFire(wName){return getLoadout(wName).attachments?.special==='auto_fire';}
-export function hasPowerCell(){return getLoadout('RAILGUN').attachments?.special==='power_cell';}
+export function hasPowerCell(){return getLoadout('RAILGUN').attachments?.special==='power_cell'||getLoadout('ION').attachments?.special==='power_cell';}
+export function hasPowerCellFor(wName){return getLoadout(wName).attachments?.special==='power_cell';}
 export function hasClusterRounds(){return getLoadout('GLAUNCHER').attachments?.special==='cluster_rounds';}
 export function hasLaserDot(wName){return getLoadout(wName).attachments?.sight==='red_dot';}
+export function hasEnergyCoil(){return getLoadout('ION').attachments?.special==='energy_coil';}
+export function hasSlowTrigger(){return getLoadout('ELECTRON').attachments?.special==='slow_trigger';}
+export function hasSpinningModule(){return getLoadout('CHAINGUN').attachments?.special==='spinning_module';}
+export function hasEnergyConverter(){return getLoadout('PLASMA').attachments?.magazine==='energy_converter';}
+export function hasDualTrigger(){return getLoadout('PLASMA').attachments?.special==='dual_trigger';}
+export function hasEfficiencyModule(){return getLoadout('RAILGUN').attachments?.special==='efficiency_module';}
+export function hasSeasonedVet(wName){
+  if(wName==='ROCKET')   return getLoadout('ROCKET').attachments?.special==='seasoned_vet_rocket';
+  if(wName==='GLAUNCHER')return getLoadout('GLAUNCHER').attachments?.special==='seasoned_vet_glauncher';
+  return false;
+}
 
 export function getLevelProgress(){
   const lv=profile.level;const x=profile.totalXp-totalXpForLevel(lv);const n=xpForLevel(lv);
@@ -471,32 +863,96 @@ export function getLevelProgress(){
 }
 export function getChallengeProgress(ch){
   const s=profile.stats;const{track,target}=ch;let val=0;
-  if(track==='pvpKills')val=s.pvpKills||0;else if(track==='maxWave')val=s.maxWave||0;
+  if(track==='pvpKills')val=s.pvpKills||0;
+  else if(track==='maxWave')val=s.maxWave||0;
   else if(track==='bossWaveClears')val=s.bossWaveClears||0;
   else if(track.startsWith('killsOfType:'))val=s.killsOfType[track.split(':')[1]]||0;
   else if(track.startsWith('killsWith:'))val=s.killsWith[track.split(':')[1]]||0;
+  else if(track.startsWith('killsWhileJumping:'))val=(s.killsWhileJumping||{})[track.split(':')[1]]||0;
+  else if(track.startsWith('killsWhileScoped:'))val=(s.killsWhileScoped||{})[track.split(':')[1]]||0;
+  else if(track.startsWith('killsOfCombo:'))val=(s.killsOfCombo||{})[track.split(':')[1]]||0;
+  else if(track.startsWith('energyPickups:'))val=(s.energyPickups||{})[track.split(':')[1]]||0;
+  else if(track.startsWith('killedBossWith:'))val=(s.bossKillsWith||{})[track.split(':')[1]]||0;
   return{val,target,pct:Math.min(1,val/target)};
 }
-export function getUnlockHint(u){if(u.level)return`Reach Level ${u.level}`;if(u.challenge)return u.challenge.desc;return '';}
+export function getUnlockHint(u){
+  if(u.secret)return u.challenge?getChallengeDescription(u):'???';
+  if(u.level)return`Reach Level ${u.level}`;
+  if(u.challenge)return getChallengeDescription(u);
+  return '';
+}
 
-// ── Toasts ────────────────────────────────────────────────────
+// ── Toasts & Notification Queue ───────────────────────────────
+const _toastQueue = [];
+let _isToasting = false;
+
+function _ensureToastStyle() {
+  if (!document.getElementById('toastAnim')) {
+    const s = document.createElement('style');
+    s.id = 'toastAnim';
+    s.innerHTML = '@keyframes _fadeToast { 0%{opacity:0;transform:translateY(10px)} 10%{opacity:1;transform:translateY(0)} 90%{opacity:1;transform:translateY(0)} 100%{opacity:0;transform:translateY(-10px)} }';
+    document.head.appendChild(s);
+  }
+}
+
+function _enqueueToast(html, duration, cssProps) {
+  _toastQueue.push({ html, duration, cssProps });
+  if (!_isToasting) _processToastQueue();
+}
+
+function _processToastQueue() {
+  if (_toastQueue.length === 0) {
+    _isToasting = false;
+    return;
+  }
+  _isToasting = true;
+  const { html, duration, cssProps } = _toastQueue.shift();
+  
+  const d = document.createElement('div');
+  d.style.cssText = cssProps;
+  d.innerHTML = html;
+  
+  _ensureToastStyle();
+  document.body.appendChild(d);
+  
+  setTimeout(() => {
+    d.remove();
+    _processToastQueue();
+  }, duration);
+}
+
+function _showMilestoneToast(u, prog, milestone) {
+  const pct = Math.round(milestone * 100);
+  const isSecret = u.secret === true;
+  const label = isSecret ? `??? SECRET ACHIEVEMENT` : `${u.id.replace(/_/g,' ').toUpperCase()}${u.weapon ? ` (${u.weapon})` : ''}`;
+  const desc = isSecret ? 'Keep playing to discover this unlock...' : getChallengeDescription(u);
+
+  const html = `
+    <div style="font-size:13px;color:#557733;letter-spacing:2px;margin-bottom:3px">UNLOCK PROGRESS</div>
+    <div style="font-size:16px;color:#d8f030;font-weight:bold;margin-bottom:2px">${label}</div>
+    <div style="font-size:13px;color:#aaa;margin-bottom:5px">${desc}</div>
+    <div style="display:flex;align-items:center;gap:6px">
+      <div style="flex:1;height:6px;background:#1e1e1e;border-radius:3px">
+        <div style="width:${pct}%;height:100%;background:#d8f030;border-radius:3px"></div>
+      </div>
+      <span style="font-size:14px;color:#d8f030;font-weight:bold">${pct}%</span>
+    </div>
+    <div style="font-size:13px;color:#557733;margin-top:3px">${prog.val} / ${prog.target}</div>`;
+    
+  const css = 'position:fixed;bottom:130px;right:20px;min-width:260px;max-width:320px;background:rgba(0,0,0,.88);border:1px solid rgba(216,240,48,.45);padding:12px 16px;z-index:1200;font-family:"Courier New",monospace;pointer-events:none;animation:_fadeToast 5.0s forwards';
+  _enqueueToast(html, 5000, css);
+}
+
 function _showLevelUpToast(oldLv,newLv,unlocks){
-  const d=document.createElement('div');
-  d.style.cssText='position:fixed;top:22%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,.55);border:1px solid rgba(216,240,48,.5);padding:14px 28px;z-index:1100;text-align:center;font-family:"Courier New",monospace;pointer-events:none;animation:_fadeToast 2.2s forwards';
-  d.innerHTML=`<div style="font-size:10px;color:#557733;letter-spacing:3px">LEVEL UP</div><div style="font-size:32px;font-weight:bold;color:#d8f030;margin:2px 0">${newLv}</div>${unlocks.map(u=>`<div style="font-size:11px;color:#aaa;margin-top:2px">🔓 ${u.id.replace(/_/g,' ').toUpperCase()}${u.weapon?' ('+u.weapon+')':''}</div>`).join('')}`;
-  _ensureToastStyle();document.body.appendChild(d);setTimeout(()=>d.remove(),2300);
+  const html = `<div style="font-size:14px;color:#557733;letter-spacing:3px">LEVEL UP</div><div style="font-size:42px;font-weight:bold;color:#d8f030;margin:2px 0">${newLv}</div>${unlocks.map(u=>`<div style="font-size:14px;color:#aaa;margin-top:4px">🔓 ${u.id.replace(/_/g,' ').toUpperCase()}${u.weapon?' ('+u.weapon+')':''}</div>`).join('')}`;
+  const css = 'position:fixed;top:22%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,.85);border:1px solid rgba(216,240,48,.5);padding:20px 40px;z-index:1100;text-align:center;font-family:"Courier New",monospace;pointer-events:none;animation:_fadeToast 2.2s forwards';
+  _enqueueToast(html, 2300, css);
 }
+
 function _showUnlockToasts(unlocks){
-  unlocks.forEach((u,i)=>setTimeout(()=>{
-    const d=document.createElement('div');
-    d.style.cssText='position:fixed;bottom:90px;right:20px;background:rgba(0,0,0,.55);border:1px solid rgba(216,240,48,.4);padding:7px 14px;z-index:1100;font-family:"Courier New",monospace;font-size:11px;color:#d8f030;animation:_fadeToast 2.0s forwards';
-    d.innerHTML=`🔓 ${u.id.replace(/_/g,' ').toUpperCase()}${u.weapon?' — '+u.weapon:''}<br><span style="color:#557733;font-size:9px">${u.reason}</span>`;
-    _ensureToastStyle();document.body.appendChild(d);setTimeout(()=>d.remove(),2100);
-  },i*500));
-}
-function _ensureToastStyle(){
-  if(document.getElementById('_toastStyle'))return;
-  const s=document.createElement('style');s.id='_toastStyle';
-  s.textContent='@keyframes _fadeToast{0%{opacity:0}12%{opacity:1}70%{opacity:1}100%{opacity:0}}';
-  document.head.appendChild(s);
+  unlocks.forEach((u) => {
+    const html = `🔓 ${u.id.replace(/_/g,' ').toUpperCase()}${u.weapon?' — '+u.weapon:''}<br><span style="color:#557733;font-size:13px">${u.reason}</span>`;
+    const css = 'position:fixed;bottom:90px;right:20px;background:rgba(0,0,0,.85);border:1px solid rgba(216,240,48,.4);padding:10px 18px;z-index:1100;font-family:"Courier New",monospace;font-size:15px;color:#d8f030;animation:_fadeToast 2.0s forwards';
+    _enqueueToast(html, 2100, css);
+  });
 }

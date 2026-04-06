@@ -7,6 +7,11 @@ import { WDEFS, WCOLORS, inventory, activeSlot, makeScaledWeaponModel, setWeapon
 import { sfx } from './audio.js';
 import { TIER_1, TIER_2, TIER_3, TIER_4, TIER_5 } from './level.js';
 
+// Energy weapons refill heat rather than ammo when picked up.
+// The Railgun is also treated as energy (has heat/charge mechanic in some codepaths)
+// but for drop purposes only the explicitly heat-based weapons are listed here.
+const ENERGY_WEAPONS = new Set(['ELECTRON', 'ION', 'PLASMA']);
+
 // All static pickups (secret kits + map weapons) share this respawn timer.
 const SECRET_KIT_RESPAWN_SEC = 300;
 
@@ -99,10 +104,7 @@ export function initWeaponSpawns() {
   const CEIL_TOP = TIER_5 + 12.18; // top face of solid ceiling slab
 
   const WEAPON_SPAWNS = [
-    // ── T1: SMGs at the foot of the NE and SW staircases ────────
-    { wName: 'SMG',       x:  32,  y: T1, z:  14 },
-    { wName: 'SMG',       x: -32,  y: T1, z: -14 },
-
+    // SMG no longer spawn
     // ── T1: Shotguns flanking the central I-wall (x=0, z=0) ─────
     { wName: 'SHOTGUN',   x:  -5,  y: T1, z:   0 },
     { wName: 'SHOTGUN',   x:   5,  y: T1, z:   0 },
@@ -111,12 +113,14 @@ export function initWeaponSpawns() {
     { wName: 'PLASMA',    x: -38,  y: T2, z:  38 },
     { wName: 'PLASMA',    x:  38,  y: T2, z: -38 },
 
-    // ── T3: Chainguns in front of the T3→T4 stair feet ──────────
+    // ── T3: 50/50 Chainguns or Electron Rifles at stair feet ─────
+    //{ wName: Math.random() > 0.5 ? 'CHAINGUN' : 'ELECTRON',  x: -30,  y: T3, z:   0 },
+    //{ wName: Math.random() > 0.5 ? 'CHAINGUN' : 'ELECTRON',  x:  30,  y: T3, z:   0 },
     { wName: 'CHAINGUN',  x: -30,  y: T3, z:   0 },
-    { wName: 'CHAINGUN',  x:  30,  y: T3, z:   0 },
+    { wName: 'ELECTRON',  x:  30,  y: T3, z:   0 },
 
-    // ── T5: Railgun on the north edge overlooking T3 north deck ──
-    { wName: 'RAILGUN',   x:   0,  y: T5, z:  -30 },
+    // ── T5: 50/50 Railgun or ION Sniper on the north edge ────────
+    { wName: Math.random() > 0.5 ? 'RAILGUN' : 'ION',   x:   0,  y: T5, z:  -30 },
 
     // ── T5 South: Grenade Launcher in front of south entrance ────
     { wName: 'GLAUNCHER', x:   0,  y: T5, z:  -9 },
@@ -361,10 +365,25 @@ export function updateWeaponDrops(dt) {
 
     const dist = BABYLON.Vector3.Distance(p.mesh.position, camera.position);
 
-    // ── Auto-pickup if weapon already owned (refill ammo) ────────
+    // ── Auto-pickup if weapon already owned ─────────────────────
     if (dist < 1.35 && inventory.includes(p.wName)) {
       const W = WDEFS[p.wName];
-      W.ammo += W.startAmmo;
+      if (ENERGY_WEAPONS.has(p.wName)) {
+        // Energy weapon: instantly vent / reset heat instead of refunding ammo
+        if (cb.resetWeaponHeat) cb.resetWeaponHeat(p.wName);
+        // Also track the pickup for unlock challenges
+        import('./progression.js').then(({ recordEnergyPickup }) => recordEnergyPickup(p.wName));
+      } else if (p.wName === 'RAILGUN') {
+        // Railgun: refund ammo; with Efficiency Module grant 1 extra
+        import('./progression.js').then(({ hasEfficiencyModule }) => {
+          const bonus = hasEfficiencyModule() ? 1 : 0;
+          W.ammo = Math.min((W.ammo || 0) + W.startAmmo + bonus, (W.max || 999));
+          refreshSlotHUD();
+        });
+      } else {
+        W.ammo += W.startAmmo;
+        if (W.max) W.ammo = Math.min(W.ammo, W.max);
+      }
       sfx.wPickup();
       refreshSlotHUD();
 
@@ -414,11 +433,28 @@ export function tryPickupWeapon(gameRunning, paused) {
 
   const existingSlot = inventory.findIndex(w => w === wName);
   if (existingSlot !== -1) {
-    W.ammo += W.startAmmo;
-    if (W.max) W.ammo = Math.min(W.ammo, W.max);
+    if (ENERGY_WEAPONS.has(wName)) {
+      // Energy weapon: instant heat cooldown instead of ammo
+      if (cb.resetWeaponHeat) cb.resetWeaponHeat(wName);
+      import('./progression.js').then(({ recordEnergyPickup }) => recordEnergyPickup(wName));
+      showToast("ENERGY OVERCHARGE!", "#33aaff");
+    } else if (wName === 'RAILGUN') {
+      import('./progression.js').then(({ hasEfficiencyModule }) => {
+        const bonus = hasEfficiencyModule() ? 1 : 0;
+        W.ammo = Math.min((W.ammo || 0) + W.startAmmo + bonus, (W.max || 999));
+        refreshSlotHUD();
+      });
+    } else {
+      W.ammo += W.startAmmo;
+      if (W.max) W.ammo = Math.min(W.ammo, W.max);
+    }
     refreshSlotHUD();
   } else {
     W.ammo = W.startAmmo;
+    // Track first-time energy weapon pickups too
+    if (ENERGY_WEAPONS.has(wName)) {
+      import('./progression.js').then(({ recordEnergyPickup }) => recordEnergyPickup(wName));
+    }
     const freeSlot = inventory.findIndex((w, i) => w === null && i !== 2);
     if (freeSlot !== -1) {
       inventory[freeSlot] = wName;

@@ -1,6 +1,6 @@
 // ui.js – HUD updates, hit marker, leaderboard name modal
 import { player } from './gameState.js';
-import { WDEFS, inventory, refreshSlotHUD } from './weapons.js';
+import { WDEFS, inventory, curWep, refreshSlotHUD } from './weapons.js';
 
 export function updateHUD() {
   const hp  = document.getElementById('hpBar');
@@ -12,7 +12,7 @@ export function updateHUD() {
 
   const buffEl = document.getElementById('buffDisplay');
   if (buffEl) {
-    buffEl.innerHTML = ''; // Clear it out
+    buffEl.innerHTML = '';
     for (const [key, time] of Object.entries(player.buffs)) {
       if (time > 0) {
         const name = key.replace('_', ' ').toUpperCase();
@@ -21,6 +21,66 @@ export function updateHUD() {
       }
     }
   }
+
+  // Heat & Reload Overlay
+  let heatContainer = document.getElementById('heatBarContainer');
+  if (!heatContainer) {
+    heatContainer = document.createElement('div');
+    heatContainer.id = 'heatBarContainer';
+    heatContainer.style.cssText = [
+      'position:fixed;bottom:120px;left:50%;transform:translateX(-50%)',
+      'width:260px;height:12px;background:rgba(0,0,0,0.8)',
+      'border:2px solid #333;display:none;z-index:100;box-shadow:0 0 10px rgba(0,0,0,0.5)',
+    ].join(';');
+    heatContainer.innerHTML = [
+      '<div id="heatBarFill" style="width:0%;height:100%;background:#00ffff;transition:width 0.05s,background 0.2s"></div>',
+      '<div id="reloadText" style="position:absolute;top:-28px;width:100%;text-align:center;',
+      'color:#fff;font-size:18px;font-weight:bold;display:none;',
+      'text-shadow:0 0 6px #000;letter-spacing:2px">RELOADING...</div>',
+    ].join('');
+    document.body.appendChild(heatContainer);
+  }
+
+  const W    = WDEFS[curWep];
+  const fill = document.getElementById('heatBarFill');
+  const rTxt = document.getElementById('reloadText');
+
+  if (W && W.useHeat) {
+    heatContainer.style.display = 'block';
+    fill.style.width      = ((player.wepHeat || 0) * 100) + '%';
+    fill.style.background = player.overheated ? '#ff3333' : (curWep === 'ION' ? '#cc00ff' : '#00ffff');
+    if (rTxt) {
+      rTxt.style.display = player.overheated ? 'block' : 'none';
+      if (player.overheated) rTxt.textContent = 'OVERHEATED!';
+    }
+  } else if (player.isReloading) {
+    heatContainer.style.display = 'block';
+    // Calculate progress: Max timer is 1.6s
+    const progress = Math.max(0, Math.min(100, (1 - (player.reloadTimer / 1.6)) * 100));
+    if (fill) { fill.style.width = progress + '%'; fill.style.background = '#888888'; }
+    if (rTxt) { rTxt.style.display = 'block'; rTxt.textContent = 'RELOADING...'; }
+  } else {
+    heatContainer.style.display = 'none';
+  }
+
+  // Add a hint near the ammo/heat counter
+  let modeHint = document.getElementById('plasmaModeHint');
+
+  if (curWep === 'PLASMA') {
+    // Create the element if it's missing
+    if (!modeHint) {
+        modeHint = document.createElement('div');
+        modeHint.id = 'plasmaModeHint';
+        modeHint.style.cssText = 'position:fixed;bottom:160px;left:50%;transform:translateX(-50%);color:#d8f030;font-family:monospace;font-size:14px;text-shadow:1px 1px #000;';
+        document.body.appendChild(modeHint);
+    }
+    modeHint.style.display = 'block';
+    // Use player.plasmaAltMode (ensure this is initialized in gameState.js or player.js)
+    modeHint.innerText = `[V] MODE: ${player.plasmaAltMode ? 'BURST' : 'AUTO'}`;
+  } else if (modeHint) {
+      modeHint.style.display = 'none';
+  }
+
   refreshSlotHUD();
 }
 
@@ -38,7 +98,6 @@ export function tickHitMarker(dt) {
 }
 
 // ── Death-screen score submit form ───────────────────────────
-// Called by main.js after endGame() so the form is wired up once
 export function wireDeathSubmit(onSubmit) {
   const btn = document.getElementById('submitScoreBtn');
   const inp = document.getElementById('playerNameInput');
@@ -94,7 +153,7 @@ export function hideFfaHUD() {
   if (_ffaHudEl) _ffaHudEl.style.display = 'none';
 }
 
-// ── Room config banner — shows active mutators below the scoreboard ──
+// ── Room config banner ────────────────────────────────────────
 let _configBannerEl = null;
 
 export function showRoomConfigBanner(cfg) {
@@ -132,18 +191,11 @@ export function showRoomConfigBanner(cfg) {
   if (!cfg.armorSpawns)   tags.push('NO ARMOR');
   if (cfg.addBots)        tags.push(`${cfg.botCount ?? 4} BOTS`);
 
-  if (tags.length === 0) {
-    _configBannerEl.style.display = 'none';
-    return;
-  }
+  if (tags.length === 0) { _configBannerEl.style.display = 'none'; return; }
 
   _configBannerEl.innerHTML = tags.map(t => `<span style="color:#d8f030;margin:0 6px">${_esc(t)}</span>`).join('<span style="color:#333">|</span>');
   _configBannerEl.style.display = 'block';
-
-  // Auto-hide after 12 s; player can Tab to show scoreboard anyway
-  setTimeout(() => {
-    if (_configBannerEl) _configBannerEl.style.display = 'none';
-  }, 12000);
+  setTimeout(() => { if (_configBannerEl) _configBannerEl.style.display = 'none'; }, 12000);
 }
 
 export function hideRoomConfigBanner() {
@@ -154,7 +206,6 @@ function _esc(s) {
   return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 
-// ── PvP round timer / team scores HUD (legacy TDM) ───────────
 export function updatePvpHUD(redScore, blueScore, timeLeft) {
   const el = document.getElementById('pvpHud');
   if (!el) return;

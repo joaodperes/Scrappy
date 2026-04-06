@@ -76,6 +76,11 @@ service cloud.firestore {
       allow read: if true;
       allow write: if request.auth != null;
     }
+    // Cross-session player profiles — keyed by Firebase UID
+    // Each user can only read/write their own profile
+    match /player_profiles/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
   }
 }
 ```

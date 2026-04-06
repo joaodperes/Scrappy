@@ -1,429 +1,470 @@
-// loadout.js – In-game loadout screen: weapon skins, attachments, player appearance
-// Self-contained: injects its own DOM panel, no HTML changes required.
-
+// loadout.js – In-game loadout screen
 import {
   profile, getLoadout, setWeaponSkin, setAttachment, setPlayerSkin,
-  ATTACHMENTS, WEAPON_SKINS, PLAYER_SKINS, WEAPON_ATTACHMENT_SLOTS,
+  ATTACHMENTS, WEAPON_SKINS, PLAYER_SKINS, WEAPON_ATTACHMENT_SLOTS, WEAPON_SPECIALS,
   UNLOCK_TABLE, getLevelProgress, getChallengeProgress, getEffectiveStats,
-  isAttachmentUnlocked, isWeaponSkinUnlocked, isSkinUnlocked, getUnlockHint,
+  isAttachmentUnlocked, isWeaponSkinUnlocked, isSkinUnlocked, getUnlockHint, getChallengeDescription,
+  SKIN_DIFFICULTY_ORDER,
 } from './progression.js';
-import { WDEFS } from './weapons.js';
-import { applyLoadoutToScene } from './weapons.js';
+import { WDEFS, applyLoadoutToScene } from './weapons.js';
 
-// ── Panel state ───────────────────────────────────────────────
 let _activeWeapon = 'PISTOL';
-let _activeTab    = 'attachments';   // 'attachments' | 'skins' | 'player' | 'progress'
+let _activeTab    = 'attachments';
 
-// ── Open / close ──────────────────────────────────────────────
 export function showLoadout(onClose) {
   document.getElementById('loadoutPanel')?.remove();
-  const panel = _buildPanel(onClose);
-  document.body.appendChild(panel);
+  document.body.appendChild(_buildPanel(onClose));
   _renderContent();
 }
+export function hideLoadout() { document.getElementById('loadoutPanel')?.remove(); }
 
-export function hideLoadout() {
-  document.getElementById('loadoutPanel')?.remove();
-}
-
-// ── Helpers ───────────────────────────────────────────────────
+// ── Shared styles ─────────────────────────────────────────────
+const F = '"Courier New",monospace';
 const CSS = {
-  panel: [
-    'position:fixed;inset:0;background:#080808;z-index:1050;overflow:hidden',
-    'display:flex;flex-direction:column',
-    'font-family:"Courier New",monospace;color:#d8f030',
-  ].join(';'),
-  topBar: [
-    'display:flex;align-items:center;justify-content:space-between',
-    'padding:12px 20px;border-bottom:1px solid #1e1e1e;flex-shrink:0',
-  ].join(';'),
-  body: 'display:flex;flex:1;overflow:hidden',
-  sidebar: [
-    'width:190px;flex-shrink:0;border-right:1px solid #1e1e1e',
-    'overflow-y:auto;padding:10px 0',
-  ].join(';'),
-  main: 'flex:1;overflow-y:auto;padding:16px 20px',
-  tabBar: 'display:flex;border-bottom:1px solid #1e1e1e;padding:0 20px;flex-shrink:0',
-  btn: (active) => [
-    `background:${active ? '#1a2800' : 'transparent'}`,
-    `border:none;border-bottom:2px solid ${active ? '#d8f030' : 'transparent'}`,
-    'color:#d8f030;padding:9px 14px;cursor:pointer',
-    'font-family:"Courier New",monospace;font-size:12px;font-weight:bold;letter-spacing:1px',
-  ].join(';'),
-  card: (selected) => [
-    `background:${selected ? '#1a2800' : '#0d0d0d'}`,
-    `border:1px solid ${selected ? '#d8f030' : '#252525'}`,
-    'padding:10px 12px;cursor:pointer;margin-bottom:6px',
-    'display:flex;align-items:center;gap:10px',
-    'transition:border-color .15s',
-  ].join(';'),
-  lockBadge: 'font-size:10px;color:#557733;margin-left:auto;flex-shrink:0',
-  unlockHint: 'font-size:9px;color:#446622;margin-top:3px;font-style:italic',
+  panel: `position:fixed;inset:0;background:#0a0b10;z-index:1050;overflow:hidden;display:flex;flex-direction:column;font-family:${F};color:#ffffff`,
+  topBar:`display:flex;align-items:center;justify-content:space-between;padding:20px 32px;background:#10121a;border-bottom:2px solid #2a2e3d;flex-shrink:0`,
+  tabBar:`display:flex;background:#10121a;border-bottom:2px solid #2a2e3d;padding:0 32px;flex-shrink:0`,
+  body:  `display:flex;flex:1;overflow:hidden`,
+  sidebar:`width:260px;flex-shrink:0;background:#14161f;border-right:2px solid #2a2e3d;overflow-y:auto;padding:16px 0`,
+  main:  `flex:1;overflow-y:auto;padding:32px 48px`,
+  tab:   (a) => `background:${a?'#1e2436':'transparent'};border:none;border-bottom:4px solid ${a?'#00e5ff':'transparent'};color:${a?'#ffffff':'#8c9ab3'};padding:18px 24px;cursor:pointer;font-family:${F};font-size:20px;font-weight:bold;letter-spacing:1.5px;transition:all 0.15s`,
+  wcard: (s) => `background:${s?'#1e2436':'transparent'};border-left:6px solid ${s?'#00e5ff':'transparent'};padding:18px 24px;cursor:pointer;display:flex;align-items:center;gap:18px;font-size:20px;color:${s?'#ffffff':'#8c9ab3'};transition:background 0.1s`,
+  card:  (s) => `background:#181b26;border:2px solid ${s?'#00e5ff':'#2a2e3d'};border-radius:6px;padding:16px 20px;cursor:pointer;display:flex;align-items:flex-start;gap:16px;transition:all .15s`,
+  hint:  `font-size:16px;color:#a0aabf;margin-top:8px;font-style:italic`,
+  lock:  `font-size:20px;color:#ff4d4d;margin-left:auto;flex-shrink:0;font-weight:bold`,
 };
 
-function el(tag, css, html) {
+function _el(tag, css, html) {
   const d = document.createElement(tag);
   if (css)  d.style.cssText = css;
   if (html !== undefined) d.innerHTML = html;
   return d;
 }
-function esc(s) {
-  return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function _esc(s) { return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+// ── Progress bar HTML helper ───────────────────────────────────
+function _progressBar(pct, val, target, col = '#d8f030') {
+  const w = Math.round(Math.min(1, pct) * 100);
+  return `
+    <div style="display:flex;align-items:center;gap:5px;margin-top:4px">
+      <div style="flex:1;height:3px;background:#1e1e1e;border-radius:2px;overflow:hidden">
+        <div style="width:${w}%;height:100%;background:${col};border-radius:2px"></div>
+      </div>
+      <span style="font-size:9px;color:${col};min-width:42px;text-align:right">${val} / ${target}</span>
+    </div>`;
 }
-function pctStr(v) { return (v >= 0 ? '+' : '') + Math.round(v * 100) + '%'; }
 
-// ── Panel skeleton ─────────────────────────────────────────────
+// ── Panel skeleton ────────────────────────────────────────────
 function _buildPanel(onClose) {
-  const panel = el('div', CSS.panel);
-  panel.id = 'loadoutPanel';
+  const panel = _el('div', CSS.panel); panel.id = 'loadoutPanel';
 
-  // Top bar
-  const topBar = el('div', CSS.topBar);
+  const topBar = _el('div', CSS.topBar);
   const { level, xpThisLevel, xpNeeded, pct } = getLevelProgress();
-
   topBar.innerHTML = `
     <div>
-      <span style="font-size:18px;font-weight:bold;letter-spacing:3px">LOADOUT</span>
-      <span style="color:#557733;font-size:11px;margin-left:12px">CUSTOMISE YOUR ARSENAL</span>
+      <span style="font-size:17px;font-weight:bold;letter-spacing:3px">LOADOUT</span>
+      <span style="color:#557733;font-size:10px;margin-left:10px">CUSTOMISE YOUR ARSENAL</span>
     </div>
     <div style="text-align:right">
-      <div style="font-size:13px;font-weight:bold">LVL ${esc(level)}</div>
-      <div style="width:160px;height:5px;background:#1e1e1e;margin:4px 0;position:relative">
+      <div style="font-size:12px;font-weight:bold">LVL ${level}</div>
+      <div style="width:150px;height:4px;background:#1e1e1e;margin:3px 0;position:relative">
         <div style="position:absolute;left:0;top:0;height:100%;width:${Math.round(pct*100)}%;background:#d8f030"></div>
       </div>
       <div style="font-size:10px;color:#557733">${xpThisLevel} / ${xpNeeded} XP</div>
     </div>`;
-
-  const closeBtn = el('button', 'background:transparent;border:1px solid #333;color:#d8f030;padding:8px 16px;cursor:pointer;font-family:inherit;font-size:13px');
+  const closeBtn = _el('button','background:transparent;border:1px solid #333;color:#d8f030;padding:7px 14px;cursor:pointer;font-family:inherit;font-size:12px');
   closeBtn.textContent = '✕ CLOSE';
   closeBtn.onclick = () => { hideLoadout(); onClose?.(); };
   topBar.appendChild(closeBtn);
   panel.appendChild(topBar);
 
-  // Tab bar
-  const tabs = [
-    { id:'attachments', label:'ATTACHMENTS' },
-    { id:'skins',       label:'WEAPON SKINS' },
-    { id:'player',      label:'PLAYER SKIN' },
-    { id:'progress',    label:'PROGRESS' },
-  ];
-  const tabBar = el('div', CSS.tabBar);
+  const tabs = [{ id:'attachments',label:'ATTACHMENTS' },{ id:'skins',label:'WEAPON SKINS' },{ id:'player',label:'PLAYER SKIN' },{ id:'progress',label:'PROGRESS' }];
+  const tabBar = _el('div', CSS.tabBar);
   tabs.forEach(t => {
-    const btn = el('button', CSS.btn(_activeTab === t.id), t.label);
-    btn.onclick = () => { _activeTab = t.id; _renderContent(); };
-    btn.dataset.tabId = t.id;
-    tabBar.appendChild(btn);
+    const b = _el('button', CSS.tab(_activeTab===t.id), t.label);
+    b.dataset.tabId = t.id;
+    b.onclick = () => { _activeTab = t.id; _renderContent(); };
+    tabBar.appendChild(b);
   });
-  panel.appendChild(tabBar);
   panel._tabBar = tabBar;
+  panel.appendChild(tabBar);
 
-  // Body
-  const body = el('div', CSS.body);
-  panel.appendChild(body);
-
-  // Sidebar (weapon list)
-  const sidebar = el('div', CSS.sidebar);
-  sidebar.id = 'loadoutSidebar';
-  const weps = Object.keys(WDEFS);
-  weps.forEach(wName => {
-    const btn = el('div', CSS.card(wName === _activeWeapon));
+  const body = _el('div', CSS.body);
+  const sidebar = _el('div', CSS.sidebar); sidebar.id = 'loadoutSidebar';
+  Object.keys(WDEFS).forEach(wName => {
+    const btn = _el('div', CSS.wcard(wName===_activeWeapon));
     btn.dataset.wName = wName;
-    btn.innerHTML = `<span style="font-size:16px">${_wIcon(wName)}</span><span style="font-size:12px">${esc(WDEFS[wName].name)}</span>`;
+    btn.innerHTML = `<span style="font-size:15px">${_wIcon(wName)}</span><span style="font-size:11px">${_esc(WDEFS[wName].name)}</span>`;
     btn.onclick = () => { _activeWeapon = wName; _renderContent(); };
     sidebar.appendChild(btn);
   });
   body.appendChild(sidebar);
-
-  // Main content area
-  const main = el('div', CSS.main);
-  main.id = 'loadoutMain';
+  const main = _el('div', CSS.main); main.id = 'loadoutMain';
   body.appendChild(main);
-
-  panel._body    = body;
-  panel._sidebar = sidebar;
+  panel.appendChild(body);
   return panel;
 }
 
-// ── Render content ─────────────────────────────────────────────
 function _renderContent() {
-  const panel  = document.getElementById('loadoutPanel');
-  if (!panel) return;
-  panel._tabBar?.querySelectorAll('button').forEach(btn => {
-    btn.style.cssText = CSS.btn(btn.dataset.tabId === _activeTab);
-  });
-
+  const panel = document.getElementById('loadoutPanel'); if (!panel) return;
+  panel._tabBar?.querySelectorAll('button').forEach(b => { b.style.cssText = CSS.tab(b.dataset.tabId===_activeTab); });
   const sidebar = document.getElementById('loadoutSidebar');
-  if (sidebar) sidebar.style.display = (_activeTab === 'player' || _activeTab === 'progress') ? 'none' : 'block';
-
-  sidebar?.querySelectorAll('[data-w-name]').forEach(card => {
-    card.style.cssText = CSS.card(card.dataset.wName === _activeWeapon);
-  });
-
-  const main = document.getElementById('loadoutMain');
-  if (!main) return;
+  if (sidebar) sidebar.style.display = (_activeTab==='player'||_activeTab==='progress') ? 'none' : 'block';
+  sidebar?.querySelectorAll('[data-w-name]').forEach(c => { c.style.cssText = CSS.wcard(c.dataset.wName===_activeWeapon); });
+  const main = document.getElementById('loadoutMain'); if (!main) return;
   main.innerHTML = '';
-
-  if      (_activeTab === 'attachments') _renderAttachments(main);
-  else if (_activeTab === 'skins')       _renderWeaponSkins(main);
-  else if (_activeTab === 'player')      _renderPlayerSkins(main);
-  else if (_activeTab === 'progress')    _renderProgress(main);
+  if      (_activeTab==='attachments') _renderAttachments(main);
+  else if (_activeTab==='skins')       _renderWeaponSkins(main);
+  else if (_activeTab==='player')      _renderPlayerSkins(main);
+  else if (_activeTab==='progress')    _renderProgress(main);
 }
 
-// ── Helper: find unlock info for a given attachment/skin on a weapon ──────────
-function _findUnlockEntry(type, id, weapon) {
-  if (type === 'attachment') {
-    return UNLOCK_TABLE.find(u => u.type === 'attachment' && u.id === id && u.weapon === weapon);
-  }
-  if (type === 'weaponSkin') {
-    return UNLOCK_TABLE.find(u => u.type === 'weaponSkin' && u.id === id && u.weapon === weapon);
-  }
-  if (type === 'playerSkin') {
-    return UNLOCK_TABLE.find(u => u.type === 'playerSkin' && u.id === id);
-  }
-  return null;
+// ── Unlock info helper ─────────────────────────────────────────
+// Returns { isSecret, isChallenge, isLevel, prog, unlockEntry }
+function _getUnlockInfo(attId, wName, type) {
+  const u = UNLOCK_TABLE.find(e =>
+    e.type === type && e.id === attId && (wName ? e.weapon === wName : !e.weapon)
+  );
+  if (!u) return { isSecret:false, isChallenge:false, isLevel:false, prog:null, unlockEntry:null };
+  const isSecret    = !!u.secret;
+  const isChallenge = !!u.challenge;
+  const isLevel     = !!u.level && !u.challenge;
+  const prog        = isChallenge ? getChallengeProgress(u.challenge) : null;
+  return { isSecret, isChallenge, isLevel, prog, unlockEntry:u };
 }
 
-// ── Attachments tab ────────────────────────────────────────────
+// ── Lock display inside a card ─────────────────────────────────
+// Returns an HTML string for the "locked" footer of a card.
+function _lockDisplay(attId, wName, type) {
+  const { isSecret, isChallenge, isLevel, prog, unlockEntry } = _getUnlockInfo(attId, wName, type);
+  if (!unlockEntry) return `<div style="${CSS.hint}">🔒 Locked</div>`;
+  const { level } = getLevelProgress();
+
+  if (isSecret) {
+    const partiallyRevealed = prog && prog.pct >= 0.10;
+    if (!partiallyRevealed) {
+      return `<div style="${CSS.hint};color:#77aa44">🔒 ??? SECRET ACHIEVEMENT<br>Keep playing to discover this unlock...</div>`;
+    }
+    return `
+      <div style="${CSS.hint};color:#a0ff60">🔒 SECRET: ${_esc(getChallengeDescription(unlockEntry))}</div>
+      ${_progressBar(prog.pct, prog.val, prog.target, '#d8a030')}`;
+  }
+
+  if (isChallenge && prog) {
+    return `
+      <div style="${CSS.hint}">🔒 ${_esc(getChallengeDescription(unlockEntry))}</div>
+      ${_progressBar(prog.pct, prog.val, prog.target)}`;
+  }
+
+  if (isLevel) {
+    const lv = unlockEntry.level;
+    const lvPct = Math.min(1, level / lv);
+    return `
+      <div style="${CSS.hint}">🔒 Reach Level ${lv} (you are ${level})</div>
+      ${_progressBar(lvPct, level, lv, '#7788ff')}`;
+  }
+
+  return `<div style="${CSS.hint}">🔒 ${_esc(getUnlockHint(unlockEntry))}</div>`;
+}
+
+// ── Attachments ───────────────────────────────────────────────
 function _renderAttachments(main) {
-  const wName   = _activeWeapon;
-  const loadout = getLoadout(wName);
-  const slots   = WEAPON_ATTACHMENT_SLOTS[wName] ?? [];
-  const base    = WDEFS[wName];
-  const eff     = getEffectiveStats(wName, base);
+  const wName = _activeWeapon;
+  const lo    = getLoadout(wName);
+  const base  = WDEFS[wName];
+  const eff   = getEffectiveStats(wName, base);
 
-  // Stat diff header
-  const diffBox = el('div', 'display:flex;gap:24px;margin-bottom:18px;padding:12px 14px;background:#0d0d0d;border:1px solid #1e1e1e;flex-wrap:wrap');
-  diffBox.innerHTML = `
-    <div><div style="font-size:10px;color:#557733">DAMAGE</div><div style="font-size:16px;color:#d8f030;font-weight:bold">${eff.dmg ?? base.dmg}</div></div>
-    <div><div style="font-size:10px;color:#557733">SPREAD</div><div style="font-size:16px;color:#d8f030;font-weight:bold">${((eff.spread ?? base.spread ?? 0) * 100).toFixed(1)}</div></div>
-    <div><div style="font-size:10px;color:#557733">RANGE</div><div style="font-size:16px;color:#d8f030;font-weight:bold">${eff.range ?? base.range}</div></div>
-    <div><div style="font-size:10px;color:#557733">FIRE RATE</div><div style="font-size:16px;color:#d8f030;font-weight:bold">${(1 / (eff.cd ?? base.cd)).toFixed(1)}/s</div></div>
-    <div><div style="font-size:10px;color:#557733">AMMO</div><div style="font-size:16px;color:#d8f030;font-weight:bold">${base.ammo === Infinity ? '∞' : (eff.startAmmo ?? base.startAmmo)}</div></div>`;
-  main.appendChild(diffBox);
+  // Stat bar
+  const sb = _el('div','display:flex;gap:18px;margin-bottom:14px;padding:10px 12px;background:#0a0a0a;border:1px solid #1e1e1e;flex-wrap:wrap');
+  const statRows = [['DMG',eff.dmg??base.dmg],['SPREAD',((eff.spread??base.spread??0)*100).toFixed(1)],['RANGE',eff.range??base.range],['RoF',(1/(eff.cd??base.cd)).toFixed(1)+'/s'],['AMMO',base.ammo===Infinity?'∞':(eff.startAmmo??base.startAmmo)]];
+  if (base.speed != null) statRows.push(['SPD', eff.speed ?? base.speed]);
+  statRows.forEach(([l,v])=>{
+    sb.innerHTML += `<div><div style="font-size:9px;color:#557733">${l}</div><div style="font-size:15px;color:#d8f030;font-weight:bold">${v}</div></div>`;
+  });
+  main.appendChild(sb);
 
-  if (slots.length === 0) {
-    main.appendChild(el('div', 'color:#557733;font-size:13px', 'No attachment slots on this weapon.'));
-    return;
-  }
+  const slots    = WEAPON_ATTACHMENT_SLOTS[wName] ?? [];
+  const specials = WEAPON_SPECIALS[wName] ?? [];
 
-  slots.forEach(slot => {
-    const section = el('div', 'margin-bottom:20px');
-    section.appendChild(el('div', 'font-size:11px;color:#557733;letter-spacing:2px;margin-bottom:8px;border-bottom:1px solid #1e1e1e;padding-bottom:4px', slot.toUpperCase()));
+  const regularSlots = slots.filter(s => s !== 'special');
+  regularSlots.forEach(slot => {
+    const section = _el('div','margin-bottom:16px');
+    section.appendChild(_el('div','font-size:10px;color:#557733;letter-spacing:2px;margin-bottom:7px;border-bottom:1px solid #1a1a1a;padding-bottom:3px', slot.toUpperCase()));
 
-    const equipped = loadout.attachments[slot];
+    const grid = _el('div','display:grid;grid-template-columns:1fr 1fr;gap:6px');
 
-    // "None" option
-    const noneCard = el('div', CSS.card(!equipped));
-    noneCard.innerHTML = `<span>—</span><span style="font-size:12px;color:#aaa">None</span>`;
+    const equipped = lo.attachments[slot];
+    const noneCard = _el('div', CSS.card(!equipped) + ';min-height:44px');
+    noneCard.innerHTML = `<span style="font-size:16px">—</span><span style="font-size:11px;color:#777">None</span>`;
     noneCard.onclick = () => { setAttachment(wName, slot, null); applyLoadoutToScene(wName); _renderContent(); };
-    section.appendChild(noneCard);
+    grid.appendChild(noneCard);
 
-    // Attachments for this slot
-    Object.values(ATTACHMENTS).filter(a => a.slot === slot).forEach(att => {
+    Object.values(ATTACHMENTS).filter(a => a.slot===slot).forEach(att => {
+      const uInfo = _getUnlockInfo(att.id, wName, 'attachment');
       const isOwned    = isAttachmentUnlocked(wName, att.id);
+      // Hide attachments that can't be unlocked for this specific weapon
+      if (!uInfo.unlockEntry && !isOwned) return;
       const isEquipped = equipped === att.id;
 
-      const card = el('div', CSS.card(isEquipped) + (isOwned ? '' : ';opacity:0.5'));
+      // ── Secret unlock: show as ??? before 10% progress ──────
+      const { isSecret, prog: secretProg } = _getUnlockInfo(att.id, wName, 'attachment');
+      const isHidden = isSecret && (!secretProg || secretProg.pct < 0.10) && !isOwned;
 
-      // Stat mods display
-      const mods = Object.entries(att.mods).map(([k, v]) => {
-        const col = v > 0 ? '#66ff66' : v < 0 ? '#ff6666' : '#aaa';
-        const label = { damage:'DMG', spread:'SPREAD', range:'RANGE', cd:'CD', ammoMult:'AMMO' }[k] ?? k.toUpperCase();
-        const sign  = k === 'spread' || k === 'cd' ? (v > 0 ? '+' : '') : (v > 0 ? '+' : '');
-        return `<span style="color:${col};font-size:10px;margin-left:6px">${sign}${Math.round(Math.abs(v)*100)}% ${label}</span>`;
+      if (isHidden) {
+        const card = _el('div', CSS.card(false) + ';opacity:0.35');
+        card.innerHTML = `
+          <span style="font-size:18px">❓</span>
+          <div style="flex:1">
+            <div style="font-size:11px;color:#335522">??? Secret Attachment</div>
+            <div style="font-size:9px;color:#333;margin-top:2px">Keep playing to reveal...</div>
+          </div>`;
+        grid.appendChild(card);
+        return;
+      }
+
+      const card = _el('div', CSS.card(isEquipped) + (isOwned ? '' : ';opacity:0.5'));
+
+      const mods = Object.entries(att.mods).map(([k,v]) => {
+        const col = v>0 ? '#66ff66' : v<0 ? '#ff6666' : '#aaa';
+        const lbl = {damage:'DMG',spread:'SPD',range:'RNG',cd:'CD',ammoMult:'AMMO',speed:'PROJ SPD',heatMult:'HEAT'}[k]??k.toUpperCase();
+        return `<span style="color:${col};font-size:9px;margin-left:4px">${v>0?'+':''}${Math.round(Math.abs(v)*100)}%${lbl}</span>`;
       }).join('');
 
-      // Visual effect badge
-      const visualBadge = att.visual ? `<span style="font-size:9px;color:#336655;margin-left:6px;border:1px solid #224433;padding:1px 4px">3D MODEL</span>` : '';
-      // ADS zoom badge for sights
       const adsBadge = att.visual?.adsZoom
-        ? `<span style="font-size:9px;color:#335566;margin-left:4px;border:1px solid #223344;padding:1px 4px">ADS ${Math.round((1 - att.visual.adsZoom / 1.48) * 100)}% ZOOM</span>`
-        : '';
+        ? `<span style="font-size:8px;color:#336655;border:1px solid #224433;padding:1px 3px;margin-left:3px">${Math.round((1-att.visual.adsZoom/1.48)*100)}% ZOOM</span>` : '';
+      const laserBadge = att.id==='red_dot'
+        ? `<span style="font-size:8px;color:#883322;border:1px solid #552211;padding:1px 3px;margin-left:3px">LASER VISIBLE</span>` : '';
+      const secretBadge = isSecret && isOwned
+        ? `<span style="font-size:8px;color:#8833aa;border:1px solid #551188;padding:1px 3px;margin-left:3px">SECRET</span>` : '';
 
-      // Unlock criteria
-      const unlockEntry = _findUnlockEntry('attachment', att.id, wName);
-      const unlockHint  = unlockEntry ? getUnlockHint(unlockEntry) : '';
+      let footerHtml = '';
+      if (!isOwned) {
+        footerHtml = _lockDisplay(att.id, wName, 'attachment');
+      }
 
       card.innerHTML = `
-        <span style="font-size:18px">${esc(att.icon)}</span>
+        <span style="font-size:16px;flex-shrink:0">${_esc(att.icon)}</span>
         <div style="flex:1;min-width:0">
-          <div style="font-size:13px;font-weight:bold;display:flex;align-items:center;flex-wrap:wrap;gap:3px">
-            ${esc(att.name)}${visualBadge}${adsBadge}
+          <div style="font-size:11px;font-weight:bold;display:flex;align-items:center;flex-wrap:wrap;gap:2px">
+            ${_esc(att.name)}${adsBadge}${laserBadge}${secretBadge}
           </div>
-          <div style="font-size:10px;color:#aaa;margin-top:1px">${esc(att.desc)}${mods}</div>
-          ${!isOwned && unlockHint ? `<div style="${CSS.unlockHint}">🔒 ${esc(unlockHint)}</div>` : ''}
+          <div style="font-size:9px;color:#888;margin-top:1px">${_esc(att.desc)}${mods}</div>
+          ${footerHtml}
         </div>
-        <span style="${CSS.lockBadge}">${isOwned ? (isEquipped ? '✓ ON' : '') : '🔒'}</span>`;
+        <span style="${CSS.lock}">${isOwned?(isEquipped?'✓':''):'🔒'}</span>`;
 
-      if (isOwned) {
-        card.onclick = () => {
-          setAttachment(wName, slot, isEquipped ? null : att.id);
-          applyLoadoutToScene(wName);
-          _renderContent();
-        };
-      }
-      section.appendChild(card);
+      if (isOwned) card.onclick = () => { setAttachment(wName,slot,isEquipped?null:att.id); applyLoadoutToScene(wName); _renderContent(); };
+      grid.appendChild(card);
     });
-
+    section.appendChild(grid);
     main.appendChild(section);
   });
+
+  // Special slot — single column
+  if (specials.length > 0) {
+    const section = _el('div','margin-bottom:16px');
+    section.appendChild(_el('div','font-size:10px;color:#557733;letter-spacing:2px;margin-bottom:7px;border-bottom:1px solid #1a1a1a;padding-bottom:3px', 'SPECIAL'));
+    const equippedSpec = lo.attachments['special'];
+    const noneCard = _el('div', CSS.card(!equippedSpec) + ';margin-bottom:5px');
+    noneCard.innerHTML = `<span style="font-size:16px">—</span><span style="font-size:11px;color:#777">None</span>`;
+    noneCard.onclick = () => { setAttachment(wName,'special',null); applyLoadoutToScene(wName); _renderContent(); };
+    section.appendChild(noneCard);
+
+    for (const specId of specials) {
+      const att = ATTACHMENTS[specId]; if (!att) continue;
+      const isOwned    = isAttachmentUnlocked(wName, specId);
+      const isEquipped = equippedSpec === specId;
+
+      // Secret check
+      const { isSecret, prog: secretProg } = _getUnlockInfo(specId, wName, 'attachment');
+      const isHidden = isSecret && (!secretProg || secretProg.pct < 0.10) && !isOwned;
+
+      if (isHidden) {
+        const card = _el('div', CSS.card(false) + ';margin-bottom:5px;opacity:0.35');
+        card.innerHTML = `
+          <span style="font-size:20px">❓</span>
+          <div>
+            <div style="font-size:12px;color:#335522">??? Secret Special</div>
+            <div style="font-size:10px;color:#333;margin-top:2px">Keep playing to reveal...</div>
+          </div>`;
+        section.appendChild(card);
+        continue;
+      }
+
+      const card = _el('div', CSS.card(isEquipped) + ';margin-bottom:5px' + (isOwned?'':';opacity:0.5'));
+      const secretBadge = isSecret ? `<span style="font-size:8px;color:#8833aa;border:1px solid #551188;padding:1px 3px;margin-left:3px">SECRET</span>` : '';
+      const incompatWarn = att.incompatibleWith?.length
+        ? `<span style="font-size:8px;color:#886633;border:1px solid #553311;padding:1px 3px;margin-left:3px">✗ AKIMBO</span>` : '';
+
+      let footerHtml = '';
+      if (!isOwned) footerHtml = _lockDisplay(specId, wName, 'attachment');
+
+      card.innerHTML = `
+        <span style="font-size:18px;flex-shrink:0">${_esc(att.icon)}</span>
+        <div style="flex:1">
+          <div style="font-size:12px;font-weight:bold">
+            ${_esc(att.name)}
+            ${att.disablesAds?'<span style="font-size:8px;color:#886633;border:1px solid #553311;padding:1px 3px;margin-left:3px">NO ADS</span>':''}
+            ${incompatWarn}${secretBadge}
+          </div>
+          <div style="font-size:10px;color:#888;margin-top:1px">${_esc(att.desc)}</div>
+          ${footerHtml}
+        </div>
+        <span style="${CSS.lock}">${isOwned?(isEquipped?'✓':''):'🔒'}</span>`;
+      if (isOwned) card.onclick = () => { setAttachment(wName,'special',isEquipped?null:specId); applyLoadoutToScene(wName); _renderContent(); };
+      section.appendChild(card);
+    }
+    main.appendChild(section);
+  }
 }
 
-// ── Weapon skins tab ───────────────────────────────────────────
+// ── Weapon skins ──────────────────────────────────────────────
 function _renderWeaponSkins(main) {
-  const wName   = _activeWeapon;
-  const loadout = getLoadout(wName);
-
-  main.appendChild(el('div', 'font-size:11px;color:#557733;letter-spacing:2px;margin-bottom:14px',
-    `SKINS FOR: ${esc(WDEFS[wName].name)} — unlocks are per-weapon`));
-
-  const grid = el('div', 'display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px');
-
-  Object.values(WEAPON_SKINS).forEach(skin => {
+  const wName = _activeWeapon;
+  const lo    = getLoadout(wName);
+  main.appendChild(_el('div','font-size:10px;color:#557733;letter-spacing:2px;margin-bottom:12px',`SKINS FOR: ${_esc(WDEFS[wName].name)} — unlocks are per-weapon`));
+  const grid = _el('div','display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px');
+  const sortedSkins = Object.values(WEAPON_SKINS).sort((a, b) => {
+    const iA = SKIN_DIFFICULTY_ORDER.indexOf(a.id);
+    const iB = SKIN_DIFFICULTY_ORDER.indexOf(b.id);
+    return (iA === -1 ? 999 : iA) - (iB === -1 ? 999 : iB);
+  });
+  sortedSkins.forEach(skin => {
     const isOwned    = isWeaponSkinUnlocked(wName, skin.id);
-    const isEquipped = loadout.skin === skin.id;
-    const [br, bg, bb] = skin.body;
-    const [ar, ag, ab] = skin.accent;
-
-    const card = el('div', CSS.card(isEquipped) + ';flex-direction:column;gap:6px' + (isOwned ? '' : ';opacity:0.45'));
-
-    // Colour preview swatch
-    const swatch = el('div', 'display:flex;gap:4px;height:20px');
-    swatch.innerHTML = `
-      <div style="flex:2;background:rgb(${Math.round(br*255)},${Math.round(bg*255)},${Math.round(bb*255)})"></div>
-      <div style="flex:1;background:rgb(${Math.round(ar*255)},${Math.round(ag*255)},${Math.round(ab*255)})"></div>`;
-
-    card.appendChild(swatch);
-    card.appendChild(el('div', 'font-size:13px;font-weight:bold', esc(skin.name)));
-    card.appendChild(el('div', 'font-size:10px;color:#aaa', esc(skin.desc)));
-
+    const isEquipped = lo.skin === skin.id;
+    const [br,bg,bb] = skin.body; const [ar,ag,ab] = skin.accent;
+    const card = _el('div', CSS.card(isEquipped)+';flex-direction:column;gap:5px'+(isOwned?'':';opacity:0.5'));
+    const sw = _el('div','display:flex;gap:3px;height:18px');
+    sw.innerHTML=`<div style="flex:2;background:rgb(${Math.round(br*255)},${Math.round(bg*255)},${Math.round(bb*255)})"></div><div style="flex:1;background:rgb(${Math.round(ar*255)},${Math.round(ag*255)},${Math.round(ab*255)})"></div>`;
+    card.appendChild(sw);
+    card.appendChild(_el('div','font-size:12px;font-weight:bold',_esc(skin.name)));
+    card.appendChild(_el('div','font-size:9px;color:#888',_esc(skin.desc)));
     if (!isOwned) {
-      // Find unlock entry for this skin on this weapon
-      const unlockEntry = _findUnlockEntry('weaponSkin', skin.id, wName);
-      const hint = unlockEntry ? getUnlockHint(unlockEntry) : '';
-      card.appendChild(el('div', CSS.unlockHint, hint ? `🔒 ${esc(hint)}` : '🔒 Locked'));
+      const footer = _el('div', '');
+      footer.innerHTML = _lockDisplay(skin.id, wName, 'weaponSkin');
+      card.appendChild(footer);
     } else if (isEquipped) {
-      card.appendChild(el('div', 'font-size:10px;color:#d8f030', '✓ EQUIPPED'));
+      card.appendChild(_el('div','font-size:9px;color:#d8f030','✓ EQUIPPED'));
     }
-
-    if (isOwned) {
-      card.onclick = () => {
-        setWeaponSkin(wName, skin.id);
-        applyLoadoutToScene(wName);
-        _renderContent();
-      };
-    }
+    if (isOwned) card.onclick = () => { setWeaponSkin(wName,skin.id); applyLoadoutToScene(wName); _renderContent(); };
     grid.appendChild(card);
   });
   main.appendChild(grid);
 }
 
-// ── Player skins tab ───────────────────────────────────────────
+// ── Player skins ──────────────────────────────────────────────
 function _renderPlayerSkins(main) {
-  main.appendChild(el('div', 'font-size:11px;color:#557733;letter-spacing:2px;margin-bottom:14px', 'SUIT APPEARANCE — VISIBLE IN MULTIPLAYER'));
+  main.appendChild(_el('div','font-size:14px;color:#a0ff60;letter-spacing:2px;margin-bottom:16px','SUIT APPEARANCE — VISIBLE IN MULTIPLAYER'));
+  
+  const container = _el('div', 'display:flex; gap:32px; align-items:flex-start;');
+  const grid = _el('div','display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px; flex:1;');
+  
+  // 2D Character Viewer Panel
+  const viewer = _el('div', 'width:200px; height:280px; background:#050505; border:1px solid #333; display:flex; flex-direction:column; align-items:center; justify-content:center; flex-shrink:0; position:sticky; top:0;');
+  
+  const updateViewer = (skin) => {
+      const [br,bg,bb]=skin.body; const [vr,vg,vb]=skin.visor;
+      const bColor = `rgb(${br*255},${bg*255},${bb*255})`;
+      const vColor = `rgb(${vr*255},${vg*255},${vb*255})`;
+      viewer.innerHTML = `
+          <div style="font-size:16px; color:#ffffff; margin-bottom:20px; font-weight:bold; letter-spacing:2px">PREVIEW</div>
+          <div style="width:70px; height:70px; background:${bColor}; border-radius:50%; position:relative; border:2px solid #222; box-shadow: inset -6px -6px 12px rgba(0,0,0,0.6);">
+              <div style="position:absolute; top:20px; left:10px; right:10px; height:22px; background:${vColor}; border-radius:10px; box-shadow: 0 0 12px ${vColor};"></div>
+          </div>
+          <div style="width:100px; height:90px; background:${bColor}; border-radius:16px 16px 4px 4px; margin-top:8px; border:2px solid #222; box-shadow: inset -8px -8px 16px rgba(0,0,0,0.6);"></div>
+      `;
+  };
 
-  const grid = el('div', 'display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px');
+  updateViewer(PLAYER_SKINS[profile.playerSkin] || PLAYER_SKINS.default);
 
-  Object.values(PLAYER_SKINS).forEach(skin => {
+  // Sort skins linearly by Level Requirement
+  const sortedSkins = Object.values(PLAYER_SKINS).sort((a, b) => {
+    const uA = UNLOCK_TABLE.find(u => u.id === a.id && u.type === 'playerSkin');
+    const uB = UNLOCK_TABLE.find(u => u.id === b.id && u.type === 'playerSkin');
+    return (uA?.level || 999) - (uB?.level || 999);
+  });
+
+  sortedSkins.forEach(skin => {
     const isOwned    = isSkinUnlocked(skin.id);
     const isEquipped = profile.playerSkin === skin.id;
-    const [br, bg, bb] = skin.body;
-    const [vr, vg, vb] = skin.visor;
-
-    const card = el('div', CSS.card(isEquipped) + ';flex-direction:column;gap:6px' + (isOwned ? '' : ';opacity:0.45'));
-
-    const swatch = el('div', 'display:flex;gap:4px;height:24px');
-    swatch.innerHTML = `
-      <div style="flex:3;background:rgb(${Math.round(br*255)},${Math.round(bg*255)},${Math.round(bb*255)})"></div>
-      <div style="flex:1;background:rgb(${Math.round(vr*255)},${Math.round(vg*255)},${Math.round(vb*255)})"></div>`;
-
-    card.appendChild(swatch);
-    card.appendChild(el('div', 'font-size:13px;font-weight:bold', esc(skin.name)));
-
+    const [br,bg,bb]=skin.body; const [vr,vg,vb]=skin.visor;
+    
+    const card = _el('div',CSS.card(isEquipped)+';flex-direction:column;gap:8px'+(isOwned?'':';opacity:0.4'));
+    
+    card.onmouseenter = () => updateViewer(skin);
+    card.onmouseleave = () => updateViewer(PLAYER_SKINS[profile.playerSkin] || PLAYER_SKINS.default);
+    
+    const sw = _el('div','display:flex;gap:4px;height:28px;width:100%');
+    sw.innerHTML=`<div style="flex:3;background:rgb(${Math.round(br*255)},${Math.round(bg*255)},${Math.round(bb*255)})"></div><div style="flex:1;background:rgb(${Math.round(vr*255)},${Math.round(vg*255)},${Math.round(vb*255)})"></div>`;
+    card.appendChild(sw);
+    card.appendChild(_el('div','font-size:16px;font-weight:bold',_esc(skin.name)));
+    
     if (!isOwned) {
-      const unlockEntry = _findUnlockEntry('playerSkin', skin.id, null);
-      const hint = unlockEntry ? getUnlockHint(unlockEntry) : '';
-      card.appendChild(el('div', CSS.unlockHint, hint ? `🔒 ${esc(hint)}` : '🔒 Locked'));
+      const footer = _el('div', '');
+      footer.innerHTML = _lockDisplay(skin.id, null, 'playerSkin');
+      card.appendChild(footer);
     } else if (isEquipped) {
-      card.appendChild(el('div', 'font-size:10px;color:#d8f030', '✓ EQUIPPED'));
+      card.appendChild(_el('div','font-size:14px;color:#a0ff60;font-weight:bold;','✓ EQUIPPED'));
     }
-
-    if (isOwned) card.onclick = () => { setPlayerSkin(skin.id); _renderContent(); };
+    
+    if (isOwned) { card.onclick = () => { setPlayerSkin(skin.id); _renderContent(); }; }
     grid.appendChild(card);
   });
-  main.appendChild(grid);
+  
+  container.appendChild(grid);
+  container.appendChild(viewer);
+  main.appendChild(container);
 }
 
-// ── Progress tab ───────────────────────────────────────────────
+// ── Progress ──────────────────────────────────────────────────
 function _renderProgress(main) {
   const s = profile.stats;
-
-  // Overall stats
-  const statBox = el('div', 'display:flex;flex-wrap:wrap;gap:18px;margin-bottom:24px;padding:14px;background:#0d0d0d;border:1px solid #1e1e1e');
-  [
-    ['TOTAL KILLS', s.totalKills ?? 0],
-    ['PVP KILLS',   s.pvpKills   ?? 0],
-    ['MAX WAVE',    s.maxWave    ?? 0],
-    ['BOSS CLEARS', s.bossWaveClears ?? 0],
-    ['LEVEL',       profile.level],
-    ['TOTAL XP',    profile.totalXp],
-  ].forEach(([label, val]) => {
-    statBox.innerHTML += `<div><div style="font-size:10px;color:#557733;letter-spacing:2px">${esc(label)}</div>
-      <div style="font-size:22px;font-weight:bold;color:#d8f030">${val}</div></div>`;
+  const sb = _el('div','display:flex;flex-wrap:wrap;gap:24px;margin-bottom:32px;padding:20px;background:#181b26;border:2px solid #2a2e3d;border-radius:6px');
+  [['TOTAL KILLS',s.totalKills??0],['PVP KILLS',s.pvpKills??0],['MAX WAVE',s.maxWave??0],['BOSS CLEARS',s.bossWaveClears??0],['LEVEL',profile.level],['TOTAL XP',profile.totalXp]].forEach(([l,v])=>{
+    sb.innerHTML+=`<div><div style="font-size:14px;color:#00e5ff;letter-spacing:2px;font-weight:bold">${l}</div><div style="font-size:32px;font-weight:bold;color:#ffffff;margin-top:4px">${v}</div></div>`;
   });
-  main.appendChild(statBox);
+  main.appendChild(sb);
 
-  // Weapon kills breakdown
-  main.appendChild(el('div', 'font-size:11px;color:#557733;letter-spacing:2px;margin:14px 0 8px', 'KILLS BY WEAPON'));
-  const wGrid = el('div', 'display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px');
-  Object.keys(WDEFS).forEach(wName => {
-    const k = s.killsWith?.[wName] ?? 0;
-    wGrid.innerHTML += `<div style="background:#0d0d0d;border:1px solid #1e1e1e;padding:8px 14px;min-width:90px">
-      <div style="font-size:10px;color:#557733">${esc(WDEFS[wName].name)}</div>
-      <div style="font-size:18px;font-weight:bold;color:#d8f030">${k}</div>
-    </div>`;
+  main.appendChild(_el('div','font-size:10px;color:#557733;letter-spacing:2px;margin:12px 0 6px','KILLS BY WEAPON'));
+  const wg = _el('div','display:flex;flex-wrap:wrap;gap:6px;margin-bottom:18px');
+  Object.keys(WDEFS).forEach(w=>{
+    const k=s.killsWith?.[w]??0;
+    const ep=s.energyPickups?.[w]??0;
+    const bk=s.bossKillsWith?.[w]??0;
+    const epLine = ep > 0 ? `<div style="font-size:8px;color:#00ccff">${ep} ⚡ pickups</div>` : '';
+    const bkLine = bk > 0 ? `<div style="font-size:8px;color:#ff8800">${bk} 💀 boss</div>` : '';
+    wg.innerHTML+=`<div style="background:#0a0a0a;border:1px solid #1e1e1e;padding:6px 12px;min-width:80px"><div style="font-size:9px;color:#557733">${_esc(WDEFS[w].name)}</div><div style="font-size:17px;font-weight:bold;color:#d8f030">${k}</div>${epLine}${bkLine}</div>`;
   });
-  main.appendChild(wGrid);
+  main.appendChild(wg);
 
-  // Challenges — deduplicated by desc so same challenge doesn't appear N times for N weapons
-  main.appendChild(el('div', 'font-size:11px;color:#557733;letter-spacing:2px;margin:14px 0 8px', 'CHALLENGES'));
+  main.appendChild(_el('div','font-size:10px;color:#557733;letter-spacing:2px;margin:12px 0 6px','CHALLENGES'));
   const seen = new Set();
-  UNLOCK_TABLE.filter(u => u.challenge).forEach(u => {
-    const key = u.challenge.desc;
-    if (seen.has(key)) return;
-    seen.add(key);
-
+  UNLOCK_TABLE.filter(u=>u.challenge).forEach(u=>{
+    const key = getChallengeDescription(u); if(seen.has(key))return; seen.add(key);
     const prog = getChallengeProgress(u.challenge);
-    const isUnlocked = u.type === 'attachment'
-      ? isAttachmentUnlocked(u.weapon, u.id)
-      : u.type === 'weaponSkin'
-        ? isWeaponSkinUnlocked(u.weapon ?? 'PISTOL', u.id)
-        : isSkinUnlocked(u.id);
     const done = prog.pct >= 1;
-
-    const rewardLabel = u.type === 'weaponSkin'
-      ? `${u.id.replace(/_/g,' ').toUpperCase()} skin (${u.weapon ?? 'all'})`
-      : u.type === 'playerSkin'
-        ? `${u.id.replace(/_/g,' ').toUpperCase()} suit`
-        : `${u.id.replace(/_/g,' ').toUpperCase()} (${u.weapon})`;
-
-    const row = el('div', 'display:flex;align-items:center;gap:12px;margin-bottom:8px;padding:8px 12px;background:#0d0d0d;border:1px solid #1e1e1e');
-    row.innerHTML = `
+    const reward = u.type==='weaponSkin'?`${u.id.replace(/_/g,' ').toUpperCase()} skin (${u.weapon??'all'})`
+                 : u.type==='playerSkin'?`${u.id.replace(/_/g,' ').toUpperCase()} suit`
+                 : `${u.id.replace(/_/g,' ').toUpperCase()} (${u.weapon})`;
+    const isSecret = !!u.secret;
+    // Hide secret challenge description if not started
+    const descToShow = (isSecret && prog.pct < 0.10 && !done) ? '??? (secret challenge)' : getChallengeDescription(u);
+    const row = _el('div','display:flex;align-items:center;gap:10px;margin-bottom:7px;padding:7px 10px;background:#0a0a0a;border:1px solid #1e1e1e');
+    row.innerHTML=`
       <div style="flex:1">
-        <div style="font-size:12px;${done ? 'color:#557733' : 'color:#d8f030'}">${done ? '✓ ' : ''}${esc(u.challenge.desc)}</div>
-        <div style="font-size:10px;color:#557733">Reward: ${esc(rewardLabel)}</div>
+        <div style="font-size:14px;${done?'color:#557733':'color:#d8f030'}">${done?'✓ ':''} ${_esc(descToShow)}${isSecret?' <span style=\'font-size:8px;color:#8833aa\'>SECRET</span>':''}</div>
+        <div style="font-size:11px;color:#557733">Reward: ${_esc(reward)}</div>
       </div>
-      <div style="text-align:right;min-width:80px">
-        <div style="font-size:11px;color:#d8f030">${prog.val} / ${prog.target}</div>
-        <div style="width:80px;height:4px;background:#1e1e1e;margin-top:4px">
-          <div style="width:${Math.round(prog.pct*100)}%;height:100%;background:${done ? '#557733' : '#d8f030'}"></div>
+      <div style="text-align:right;min-width:70px">
+        <div style="font-size:10px;color:#d8f030">${prog.val} / ${prog.target}</div>
+        <div style="width:70px;height:3px;background:#1e1e1e;margin-top:3px">
+          <div style="width:${Math.round(prog.pct*100)}%;height:100%;background:${done?'#557733':isSecret?'#a030d0':'#d8f030'}"></div>
         </div>
       </div>`;
     main.appendChild(row);
   });
 }
 
-// ── Weapon icon helper ─────────────────────────────────────────
 function _wIcon(w) {
-  return {PISTOL:'🔫',SMG:'⚡',SHOTGUN:'💥',CHAINGUN:'🌀',RAILGUN:'⚡',PLASMA:'🔵',ROCKET:'🚀',GLAUNCHER:'💣'}[w] ?? '🔫';
+  return {PISTOL:'🔫',SMG:'⚡',SHOTGUN:'💥',CHAINGUN:'🌀',RAILGUN:'🎯',PLASMA:'🔵',ROCKET:'🚀',GLAUNCHER:'💣',ELECTRON:'⚡',ION:'🔮'}[w]??'🔫';
 }
