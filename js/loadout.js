@@ -50,7 +50,7 @@ function _progressBar(pct, val, target, col = '#d8f030') {
       <div style="flex:1;height:3px;background:#1e1e1e;border-radius:2px;overflow:hidden">
         <div style="width:${w}%;height:100%;background:${col};border-radius:2px"></div>
       </div>
-      <span style="font-size:9px;color:${col};min-width:42px;text-align:right">${val} / ${target}</span>
+      <span style="font-size:16px;color:${col};min-width:42px;text-align:right">${val} / ${target}</span>
     </div>`;
 }
 
@@ -62,15 +62,15 @@ function _buildPanel(onClose) {
   const { level, xpThisLevel, xpNeeded, pct } = getLevelProgress();
   topBar.innerHTML = `
     <div>
-      <span style="font-size:17px;font-weight:bold;letter-spacing:3px">LOADOUT</span>
-      <span style="color:#557733;font-size:10px;margin-left:10px">CUSTOMISE YOUR ARSENAL</span>
+      <span style="font-size:20px;font-weight:bold;letter-spacing:3px">LOADOUT</span>
+      <span style="color:#557733;font-size:16px;margin-left:10px">CUSTOMISE YOUR ARSENAL</span>
     </div>
     <div style="text-align:right">
-      <div style="font-size:12px;font-weight:bold">LVL ${level}</div>
+      <div style="font-size:18px;font-weight:bold">LVL ${level}</div>
       <div style="width:150px;height:4px;background:#1e1e1e;margin:3px 0;position:relative">
         <div style="position:absolute;left:0;top:0;height:100%;width:${Math.round(pct*100)}%;background:#d8f030"></div>
       </div>
-      <div style="font-size:10px;color:#557733">${xpThisLevel} / ${xpNeeded} XP</div>
+      <div style="font-size:16px;color:#557733">${xpThisLevel} / ${xpNeeded} XP</div>
     </div>`;
   const closeBtn = _el('button','background:transparent;border:1px solid #333;color:#d8f030;padding:7px 14px;cursor:pointer;font-family:inherit;font-size:12px');
   closeBtn.textContent = '✕ CLOSE';
@@ -94,7 +94,7 @@ function _buildPanel(onClose) {
   Object.keys(WDEFS).forEach(wName => {
     const btn = _el('div', CSS.wcard(wName===_activeWeapon));
     btn.dataset.wName = wName;
-    btn.innerHTML = `<span style="font-size:15px">${_wIcon(wName)}</span><span style="font-size:11px">${_esc(WDEFS[wName].name)}</span>`;
+    btn.innerHTML = `<span style="font-size:18px">${_wIcon(wName)}</span><span style="font-size:18px">${_esc(WDEFS[wName].name)}</span>`;
     btn.onclick = () => { _activeWeapon = wName; _renderContent(); };
     sidebar.appendChild(btn);
   });
@@ -176,10 +176,18 @@ function _renderAttachments(main) {
 
   // Stat bar
   const sb = _el('div','display:flex;gap:18px;margin-bottom:14px;padding:10px 12px;background:#0a0a0a;border:1px solid #1e1e1e;flex-wrap:wrap');
-  const statRows = [['DMG',eff.dmg??base.dmg],['SPREAD',((eff.spread??base.spread??0)*100).toFixed(1)],['RANGE',eff.range??base.range],['RoF',(1/(eff.cd??base.cd)).toFixed(1)+'/s'],['AMMO',base.ammo===Infinity?'∞':(eff.startAmmo??base.startAmmo)]];
+  const statRows = [
+    ['DMG',    eff.dmg ?? base.dmg],
+    ['SPREAD', ((eff.spread ?? base.spread ?? 0) * 100).toFixed(1)],
+    ['RANGE',  eff.range ?? base.range],
+    ['RoF',    (1 / (eff.cd ?? base.cd)).toFixed(1) + '/s'],
+    ['AMMO',   base.ammo === Infinity ? '∞' : (eff.startAmmo ?? base.startAmmo)],
+  ];
   if (base.speed != null) statRows.push(['SPD', eff.speed ?? base.speed]);
+  if (base.reloadTime != null) statRows.push(['RELOAD', base.reloadTime.toFixed(1) + 's']);
+  else if (base.useHeat)       statRows.push(['RELOAD', '— HEAT']);
   statRows.forEach(([l,v])=>{
-    sb.innerHTML += `<div><div style="font-size:9px;color:#557733">${l}</div><div style="font-size:15px;color:#d8f030;font-weight:bold">${v}</div></div>`;
+    sb.innerHTML += `<div><div style="font-size:14px;color:#557733">${l}</div><div style="font-size:18px;color:#d8f030;font-weight:bold">${v}</div></div>`;
   });
   main.appendChild(sb);
 
@@ -187,137 +195,89 @@ function _renderAttachments(main) {
   const specials = WEAPON_SPECIALS[wName] ?? [];
 
   const regularSlots = slots.filter(s => s !== 'special');
-  regularSlots.forEach(slot => {
-    const section = _el('div','margin-bottom:16px');
-    section.appendChild(_el('div','font-size:10px;color:#557733;letter-spacing:2px;margin-bottom:7px;border-bottom:1px solid #1a1a1a;padding-bottom:3px', slot.toUpperCase()));
+  
+  // ── Helper to render a grid of attachments (Used for both Regular & Special) ──
+  const renderAttachmentGrid = (slotName, availableAttachments, isSpecial = false) => {
+      const section = _el('div','margin-bottom:24px');
+      section.appendChild(_el('div','font-size:20px;color:#557733;letter-spacing:2px;margin-bottom:10px;border-bottom:1px solid #1a1a1a;padding-bottom:5px;font-weight:bold', slotName.toUpperCase()));
 
-    const grid = _el('div','display:grid;grid-template-columns:1fr 1fr;gap:6px');
+      const grid = _el('div','display:grid;grid-template-columns:1fr 1fr;gap:10px');
 
-    const equipped = lo.attachments[slot];
-    const noneCard = _el('div', CSS.card(!equipped) + ';min-height:44px');
-    noneCard.innerHTML = `<span style="font-size:16px">—</span><span style="font-size:11px;color:#777">None</span>`;
-    noneCard.onclick = () => { setAttachment(wName, slot, null); applyLoadoutToScene(wName); _renderContent(); };
-    grid.appendChild(noneCard);
+      const equipped = lo.attachments[slotName];
+      const noneCard = _el('div', CSS.card(!equipped) + ';min-height:54px;align-items:center');
+      noneCard.innerHTML = `<span style="font-size:24px">—</span><span style="font-size:16px;color:#777">None</span>`;
+      noneCard.onclick = () => { setAttachment(wName, slotName, null); applyLoadoutToScene(wName); _renderContent(); };
+      grid.appendChild(noneCard);
 
-    Object.values(ATTACHMENTS).filter(a => a.slot===slot).forEach(att => {
-      const uInfo = _getUnlockInfo(att.id, wName, 'attachment');
-      const isOwned    = isAttachmentUnlocked(wName, att.id);
-      // Hide attachments that can't be unlocked for this specific weapon
-      if (!uInfo.unlockEntry && !isOwned) return;
-      const isEquipped = equipped === att.id;
+      availableAttachments.forEach(attId => {
+        const att = ATTACHMENTS[attId]; if (!att) return;
+        const uInfo = _getUnlockInfo(att.id, wName, 'attachment');
+        const isOwned = isAttachmentUnlocked(wName, att.id);
+        
+        if (!uInfo.unlockEntry && !isOwned) return;
+        const isEquipped = equipped === att.id;
 
-      // ── Secret unlock: show as ??? before 10% progress ──────
-      const { isSecret, prog: secretProg } = _getUnlockInfo(att.id, wName, 'attachment');
-      const isHidden = isSecret && (!secretProg || secretProg.pct < 0.10) && !isOwned;
+        const { isSecret, prog: secretProg } = _getUnlockInfo(att.id, wName, 'attachment');
+        const isHidden = isSecret && (!secretProg || secretProg.pct < 0.10) && !isOwned;
 
-      if (isHidden) {
-        const card = _el('div', CSS.card(false) + ';opacity:0.35');
+        if (isHidden) {
+          const card = _el('div', CSS.card(false) + ';opacity:0.35');
+          card.innerHTML = `
+            <span style="font-size:28px">❓</span>
+            <div style="flex:1">
+              <div style="font-size:16px;color:#44aa33;font-weight:bold">??? Secret ${isSpecial ? 'Special' : 'Attachment'}</div>
+              <div style="font-size:13px;color:#555;margin-top:4px">Keep playing to reveal...</div>
+            </div>`;
+          grid.appendChild(card);
+          return;
+        }
+
+        const card = _el('div', CSS.card(isEquipped) + (isOwned ? '' : ';opacity:0.5'));
+
+        const mods = att.mods ? Object.entries(att.mods).map(([k,v]) => {
+          const col = v>0 ? '#66ff66' : v<0 ? '#ff6666' : '#aaa';
+          const lbl = {damage:'DMG',spread:'SPD',range:'RNG',cd:'CD',ammoMult:'AMMO',speed:'PROJ SPD',heatMult:'HEAT'}[k]??k.toUpperCase();
+          return `<span style="color:${col};font-size:12px;margin-left:6px;font-weight:bold">${v>0?'+':''}${Math.round(Math.abs(v)*100)}%${lbl}</span>`;
+        }).join('') : '';
+
+        const adsBadge = att.visual?.adsZoom ? `<span style="font-size:11px;color:#338866;border:1px solid #225544;padding:2px 4px;margin-left:5px">ZOOM x${(1/att.visual.adsZoom).toFixed(1)}</span>` : '';
+        const laserBadge = att.hasLaser ? `<span style="font-size:11px;color:#aa4433;border:1px solid #772211;padding:2px 4px;margin-left:5px">LASER</span>` : '';
+        const secretBadge = isSecret && isOwned ? `<span style="font-size:11px;color:#aa44dd;border:1px solid #662288;padding:2px 4px;margin-left:5px">SECRET</span>` : '';
+        const noAdsBadge = att.disablesAds ? `<span style="font-size:11px;color:#aa8833;border:1px solid #775511;padding:2px 4px;margin-left:5px">NO ADS</span>` : '';
+
+        let footerHtml = '';
+        if (!isOwned) footerHtml = _lockDisplay(att.id, wName, 'attachment');
+
         card.innerHTML = `
-          <span style="font-size:18px">❓</span>
-          <div style="flex:1">
-            <div style="font-size:11px;color:#335522">??? Secret Attachment</div>
-            <div style="font-size:9px;color:#333;margin-top:2px">Keep playing to reveal...</div>
-          </div>`;
-        grid.appendChild(card);
-        return;
-      }
-
-      const card = _el('div', CSS.card(isEquipped) + (isOwned ? '' : ';opacity:0.5'));
-
-      const mods = Object.entries(att.mods).map(([k,v]) => {
-        const col = v>0 ? '#66ff66' : v<0 ? '#ff6666' : '#aaa';
-        const lbl = {damage:'DMG',spread:'SPD',range:'RNG',cd:'CD',ammoMult:'AMMO',speed:'PROJ SPD',heatMult:'HEAT'}[k]??k.toUpperCase();
-        return `<span style="color:${col};font-size:9px;margin-left:4px">${v>0?'+':''}${Math.round(Math.abs(v)*100)}%${lbl}</span>`;
-      }).join('');
-
-      const adsBadge = att.visual?.adsZoom
-        ? `<span style="font-size:8px;color:#336655;border:1px solid #224433;padding:1px 3px;margin-left:3px">${Math.round((1-att.visual.adsZoom/1.48)*100)}% ZOOM</span>` : '';
-      const laserBadge = att.id==='red_dot'
-        ? `<span style="font-size:8px;color:#883322;border:1px solid #552211;padding:1px 3px;margin-left:3px">LASER VISIBLE</span>` : '';
-      const secretBadge = isSecret && isOwned
-        ? `<span style="font-size:8px;color:#8833aa;border:1px solid #551188;padding:1px 3px;margin-left:3px">SECRET</span>` : '';
-
-      let footerHtml = '';
-      if (!isOwned) {
-        footerHtml = _lockDisplay(att.id, wName, 'attachment');
-      }
-
-      card.innerHTML = `
-        <span style="font-size:16px;flex-shrink:0">${_esc(att.icon)}</span>
-        <div style="flex:1;min-width:0">
-          <div style="font-size:11px;font-weight:bold;display:flex;align-items:center;flex-wrap:wrap;gap:2px">
-            ${_esc(att.name)}${adsBadge}${laserBadge}${secretBadge}
+          <span style="font-size:28px;flex-shrink:0">${_esc(att.icon)}</span>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:18px;font-weight:bold;display:flex;align-items:center;flex-wrap:wrap;gap:4px">
+              ${_esc(att.name)}${adsBadge}${laserBadge}${secretBadge}${noAdsBadge}
+            </div>
+            <div style="font-size:14px;color:#aaa;margin-top:4px;line-height:1.3">${_esc(att.desc)}${mods}</div>
+            ${footerHtml}
           </div>
-          <div style="font-size:9px;color:#888;margin-top:1px">${_esc(att.desc)}${mods}</div>
-          ${footerHtml}
-        </div>
-        <span style="${CSS.lock}">${isOwned?(isEquipped?'✓':''):'🔒'}</span>`;
+          <span style="${CSS.lock}">${isOwned?(isEquipped?'✓':''):'🔒'}</span>`;
 
-      if (isOwned) card.onclick = () => { setAttachment(wName,slot,isEquipped?null:att.id); applyLoadoutToScene(wName); _renderContent(); };
-      grid.appendChild(card);
-    });
-    section.appendChild(grid);
-    main.appendChild(section);
+        if (isOwned) card.onclick = () => { setAttachment(wName, slotName, isEquipped ? null : att.id); applyLoadoutToScene(wName); _renderContent(); };
+        grid.appendChild(card);
+      });
+      
+      section.appendChild(grid);
+      main.appendChild(section);
+  };
+
+  // Render Regular Slots
+  regularSlots.forEach(slot => {
+      const available = Object.values(ATTACHMENTS).filter(a => a.slot === slot && !a.disabled).map(a => a.id);
+      renderAttachmentGrid(slot, available, false);
   });
 
-  // Special slot — single column
+  // Render Special Slot (Now perfectly matches regular slots!)
   if (specials.length > 0) {
-    const section = _el('div','margin-bottom:16px');
-    section.appendChild(_el('div','font-size:10px;color:#557733;letter-spacing:2px;margin-bottom:7px;border-bottom:1px solid #1a1a1a;padding-bottom:3px', 'SPECIAL'));
-    const equippedSpec = lo.attachments['special'];
-    const noneCard = _el('div', CSS.card(!equippedSpec) + ';margin-bottom:5px');
-    noneCard.innerHTML = `<span style="font-size:16px">—</span><span style="font-size:11px;color:#777">None</span>`;
-    noneCard.onclick = () => { setAttachment(wName,'special',null); applyLoadoutToScene(wName); _renderContent(); };
-    section.appendChild(noneCard);
-
-    for (const specId of specials) {
-      const att = ATTACHMENTS[specId]; if (!att) continue;
-      const isOwned    = isAttachmentUnlocked(wName, specId);
-      const isEquipped = equippedSpec === specId;
-
-      // Secret check
-      const { isSecret, prog: secretProg } = _getUnlockInfo(specId, wName, 'attachment');
-      const isHidden = isSecret && (!secretProg || secretProg.pct < 0.10) && !isOwned;
-
-      if (isHidden) {
-        const card = _el('div', CSS.card(false) + ';margin-bottom:5px;opacity:0.35');
-        card.innerHTML = `
-          <span style="font-size:20px">❓</span>
-          <div>
-            <div style="font-size:12px;color:#335522">??? Secret Special</div>
-            <div style="font-size:10px;color:#333;margin-top:2px">Keep playing to reveal...</div>
-          </div>`;
-        section.appendChild(card);
-        continue;
-      }
-
-      const card = _el('div', CSS.card(isEquipped) + ';margin-bottom:5px' + (isOwned?'':';opacity:0.5'));
-      const secretBadge = isSecret ? `<span style="font-size:8px;color:#8833aa;border:1px solid #551188;padding:1px 3px;margin-left:3px">SECRET</span>` : '';
-      const incompatWarn = att.incompatibleWith?.length
-        ? `<span style="font-size:8px;color:#886633;border:1px solid #553311;padding:1px 3px;margin-left:3px">✗ AKIMBO</span>` : '';
-
-      let footerHtml = '';
-      if (!isOwned) footerHtml = _lockDisplay(specId, wName, 'attachment');
-
-      card.innerHTML = `
-        <span style="font-size:18px;flex-shrink:0">${_esc(att.icon)}</span>
-        <div style="flex:1">
-          <div style="font-size:12px;font-weight:bold">
-            ${_esc(att.name)}
-            ${att.disablesAds?'<span style="font-size:8px;color:#886633;border:1px solid #553311;padding:1px 3px;margin-left:3px">NO ADS</span>':''}
-            ${incompatWarn}${secretBadge}
-          </div>
-          <div style="font-size:10px;color:#888;margin-top:1px">${_esc(att.desc)}</div>
-          ${footerHtml}
-        </div>
-        <span style="${CSS.lock}">${isOwned?(isEquipped?'✓':''):'🔒'}</span>`;
-      if (isOwned) card.onclick = () => { setAttachment(wName,'special',isEquipped?null:specId); applyLoadoutToScene(wName); _renderContent(); };
-      section.appendChild(card);
-    }
-    main.appendChild(section);
+      renderAttachmentGrid('special', specials, true);
   }
 }
-
 // ── Weapon skins ──────────────────────────────────────────────
 function _renderWeaponSkins(main) {
   const wName = _activeWeapon;
@@ -452,11 +412,11 @@ function _renderProgress(main) {
     const row = _el('div','display:flex;align-items:center;gap:10px;margin-bottom:7px;padding:7px 10px;background:#0a0a0a;border:1px solid #1e1e1e');
     row.innerHTML=`
       <div style="flex:1">
-        <div style="font-size:14px;${done?'color:#557733':'color:#d8f030'}">${done?'✓ ':''} ${_esc(descToShow)}${isSecret?' <span style=\'font-size:8px;color:#8833aa\'>SECRET</span>':''}</div>
-        <div style="font-size:11px;color:#557733">Reward: ${_esc(reward)}</div>
+        <div style="font-size:18px;${done?'color:#557733':'color:#d8f030'}">${done?'✓ ':''} ${_esc(descToShow)}${isSecret?' <span style=\'font-size:8px;color:#8833aa\'>SECRET</span>':''}</div>
+        <div style="font-size:14px;color:#557733">Reward: ${_esc(reward)}</div>
       </div>
       <div style="text-align:right;min-width:70px">
-        <div style="font-size:10px;color:#d8f030">${prog.val} / ${prog.target}</div>
+        <div style="font-size:14px;color:#d8f030">${prog.val} / ${prog.target}</div>
         <div style="width:70px;height:3px;background:#1e1e1e;margin-top:3px">
           <div style="width:${Math.round(prog.pct*100)}%;height:100%;background:${done?'#557733':isSecret?'#a030d0':'#d8f030'}"></div>
         </div>

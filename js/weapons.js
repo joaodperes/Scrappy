@@ -2,26 +2,24 @@
 const BABYLON = window.BABYLON;
 import { scene, camera } from './scene.js';
 import { M } from './textures.js';
-import { isScoped } from './player.js';
 import { player } from './gameState.js';
-import { hasLaserDot, isAkimbo } from './progression.js';
+import { hasLaserDot, isAkimbo, hasEnergyConverter } from './progression.js';
 
 export const WDEFS = {
-  PISTOL:   { name:'PISTOL',   dmg:20, range:75, cd:.18, hitscan:true, ammo:Infinity, aps:1, spread:.0, pellets:1, startAmmo:Infinity, falloff:0.30 },
-  SMG:      { name:'SMG',      dmg:11, range:55, cd:.09, hitscan:true, ammo:0, aps:1, spread:.035, pellets:1, startAmmo:45, falloff:0.50, magSize: 30, currentMag: 30 },
-  SHOTGUN:  { name:'SHOTGUN',  dmg:32, range:25, cd:.25, hitscan:true, ammo:0, aps:1, spread:0.12, pellets:10, startAmmo:16, falloff:0.80, magSize: 8,  currentMag: 8 },
-  CHAINGUN: { name:'CHAINGUN', dmg:14, range:30, cd:.08, hitscan:true, ammo:0, aps:1, spread:.055, pellets:1, startAmmo:80, falloff:0.70, magSize: 100, currentMag: 100 },
-  RAILGUN:  { name:'RAILGUN',         dmg:110, range:130, cd:1.8,  hitscan:true,  ammo:0,        aps:1, spread:.0,   pellets:1, startAmmo:6,        falloff:0.00, magSize: 6, currentMag: 6  },
-  ROCKET:   { name:'ROCKET LAUNCHER', dmg:95,  range:90,  cd:1.2,  hitscan:false, ammo:0,        aps:1,             pellets:1, startAmmo:6,  speed:16, splash:4.5, falloff:0.00, magSize: 8, currentMag: 8 },
-  GLAUNCHER: { 
-    name:'LAUNCHER', dmg:65, range:60, cd:0.8, hitscan:false, 
-    ammo:0, aps:1, spread:0.02, pellets:1, startAmmo:12, falloff:0,
-    projSpeed: 30, splash: 7.0 , magSize: 8, currentMag: 8 
-  },
-  // Energy weapons — use heat instead of ammo (ammo:Infinity so HUD shows ∞)
-  ELECTRON: { name:'ELECTRON', dmg:18, range:60, cd:.12, hitscan:true, ammo:Infinity, aps:1, spread:.04, pellets:1, startAmmo:Infinity, falloff:0.40, heat: 0, maxHeat: 100, coolingRate: 35, useHeat: true, heatPerShot: 0.12 },
-  ION:      { name:'ION',      dmg:85, range:90, cd:1.2, hitscan:true, ammo:Infinity, aps:1, spread:.0,  pellets:1, startAmmo:Infinity, falloff:0.10, heat: 0, maxHeat: 100, coolingRate: 20, useHeat: true, heatPerShot: 0.40 },
-  PLASMA:   { name:'PLASMA',   dmg:25, range:50, cd:.15, hitscan:false,ammo:Infinity, aps:1, spread:.02, pellets:1, startAmmo:Infinity, falloff:0.0,  heat: 0, maxHeat: 100, coolingRate: 40, useHeat: true, heatPerShot: 0.18 },
+  PISTOL:   { name:'PISTOL',   dmg:20, range:75, cd:.18, hitscan:true, ammo:Infinity, aps:1, spread:.0, pellets:1, startAmmo:Infinity, falloff:0.30, magSize: 12, currentMag: 12, reloadTime: 1.2 },
+  SMG:      { name:'SMG',      dmg:11, range:55, cd:.09, hitscan:true, ammo:0, aps:1, spread:.035, pellets:1, startAmmo:45, falloff:0.50, magSize: 30, currentMag: 30, reloadTime: 1.5 },
+  SHOTGUN:  { name:'SHOTGUN',  dmg:32, range:25, cd:.25, hitscan:true, ammo:0, aps:1, spread:0.12, pellets:10, startAmmo:16, falloff:0.80, magSize: 8,  currentMag: 8, reloadTime: 1.8 },
+  CHAINGUN: { name:'CHAINGUN', dmg:14, range:30, cd:.08, hitscan:true, ammo:0, aps:1, spread:.055, pellets:1, startAmmo:80, falloff:0.70, magSize: 100, currentMag: 100, reloadTime: 2.8 },
+  RAILGUN:  { name:'RAILGUN',  dmg:110, range:130, cd:1.8, hitscan:true, ammo:0, aps:1, spread:.0, pellets:1, startAmmo:6, falloff:0.00, magSize: 6, currentMag: 6, reloadTime: 2.4 },
+  ROCKET:   { name:'ROCKET LAUNCHER', dmg:95, range:90, cd:1.2, hitscan:false, ammo:0, aps:1, pellets:1, startAmmo:6, speed:16, splash:4.5, falloff:0.00, magSize: 8, currentMag: 8, reloadTime: 2.2 },
+  GLAUNCHER: { name:'LAUNCHER', dmg:65, range:60, cd:0.8, hitscan:false, ammo:0, aps:1, spread:0.02, pellets:1, startAmmo:12, falloff:0, projSpeed: 30, splash: 7.0, magSize: 8, currentMag: 8, reloadTime: 2.0 },
+  
+  // Energy
+  ELECTRON: { name:'ELECTRON', dmg:18, range:80, cd:.12, hitscan:true, ammo:Infinity, aps:1, spread:.04, pellets:1, startAmmo:Infinity, falloff:0.40, heat: 0, maxHeat: 100, coolRate: 35, useHeat: true, heatPerShot: 0.14 },
+  ION:      { name:'ION',      dmg:85, range:120, cd:1.2, hitscan:true, ammo:Infinity, aps:1, spread:.0,  pellets:1, startAmmo:Infinity, falloff:0.10, heat: 0, maxHeat: 100, coolRate: 20, useHeat: true, heatPerShot: 0.40 },
+  
+  // Plasma defaults to Ballistic until 'Energy Converter' is equipped
+  PLASMA:   { name:'PLASMA',   dmg:25, range:50, cd:.15, hitscan:false, ammo:0, aps:1, spread:.02, pellets:1, startAmmo:60, falloff:0.0, magSize: 30, currentMag: 30, reloadTime: 1.8, heat: 0, maxHeat: 100, coolRate: 40, heatPerShot: 0.20 },
 };
 
 export const WCOLORS = {
@@ -267,17 +265,48 @@ function _makeSightRedDot(parent, wName) {
   dot.position.set(0, ty + 0.046, mz - 0.17);
   dot.material = red; dot.parent = parent; dot.isPickable = false;
   
-  // ── FIX: Restore the physical Laser Beam ──
+  // ── FIX: True-center laser alignment ──
   const laserLength = 50;
   const laser = BABYLON.MeshBuilder.CreateCylinder('att_laser_beam', { diameter:0.004, height:laserLength, tessellation:6 }, scene);
-  // Shift it slightly below the top rail so it doesn't clip the gun body
   laser.position.set(0, ty - 0.02, mz + (laserLength / 2));
-  // Negate the weapon's natural resting tilt so it shoots true-center
-  laser.rotation.x = Math.PI/2 - (WROT[wName]?.x || 0); 
-  laser.rotation.y = -(WROT[wName]?.y || 0);                 
+  // Angle the laser slightly inward towards the crosshair, matching the weapon's offset
+  laser.rotation.x = Math.PI / 2 - (WROT[wName]?.x || 0); 
+  laser.rotation.y = -(WPOS[wName]?.x || 0) * 0.12;
   laser.material = red; laser.parent = parent; laser.isPickable = false;
 
   return [housing, glass, dot, laser];
+}
+
+function _makeSightHolo(parent, wName) {
+  const mz = MUZZLE_Z[wName] ?? 0.40;
+  const ty = TOP_Y[wName] ?? 0.09;
+  const black = _attMats.black(); const cyan = _attMats.cyanLed(); const glass = _attMats.glassBlue();
+  
+  // Base Mount
+  const base = BABYLON.MeshBuilder.CreateBox('att_holo_base', { width:0.045, height:0.015, depth:0.12 }, scene);
+  base.position.set(0, ty + 0.02, mz - 0.22);
+  base.material = black; base.parent = parent; base.isPickable = false;
+  
+  // Open Hood/Frame
+  const hood = BABYLON.MeshBuilder.CreateBox('att_holo_hood', { width:0.04, height:0.04, depth:0.06 }, scene);
+  hood.position.set(0, ty + 0.045, mz - 0.20);
+  hood.material = black; hood.parent = parent; hood.isPickable = false;
+  
+  // Inner Glass Lens
+  const lens = BABYLON.MeshBuilder.CreateBox('att_holo_lens', { width:0.035, height:0.035, depth:0.058 }, scene);
+  lens.position.set(0, ty + 0.045, mz - 0.20);
+  lens.material = glass; lens.parent = parent; lens.isPickable = false;
+  
+  // Glowing Cyan Reticle (Floats inside the glass)
+  const reticle = BABYLON.MeshBuilder.CreatePlane('att_holo_reticle', { size: 0.015 }, scene);
+  // Pull back slightly and rotate 180 degrees to face the player eye
+  reticle.position.set(0, ty + 0.045, mz - 0.205); 
+  reticle.rotation.y = Math.PI; 
+  reticle.material = cyan; 
+  reticle.parent = parent; 
+  reticle.isPickable = false;
+
+  return [base, hood, lens, reticle];
 }
 
 function _makeSightAcog(parent, wName) {
@@ -474,6 +503,7 @@ function _makeStockFolded(parent, wName) {
 const _attVisualBuilders = {
   sight: {
     red_dot:   _makeSightRedDot,
+    holo:      _makeSightHolo,
     acog:      _makeSightAcog,
     thermal:   _makeSightThermal,
   },
@@ -590,8 +620,10 @@ export function refreshSlotHUD() {
         nameEl.textContent = WDEFS[wep].name;
         const W = WDEFS[wep];
         
-        // Display Heat, Magazines, or standard ammo
-        if (W.useHeat) {
+        // Dynamically check if Plasma has Energy Converter equipped
+        const isEnergy = W.useHeat || (wep === 'PLASMA' && hasEnergyConverter());
+        
+        if (isEnergy) {
             ammoEl.textContent = 'HEAT';
         } else if (W.magSize) {
             ammoEl.textContent = W.currentMag + ' / ' + (W.ammo === Infinity ? '∞' : W.ammo);
@@ -609,8 +641,12 @@ export function setWeapon(name) {
   if (!WDEFS[name]) return;
   const prev = curWep;
   curWep = name;
+  player.wepHeat = 0; player.overheated = false; // Reset heat on weapon swap
+  import('./player.js').then(({ isScoped, setScope }) => {
+      if (isScoped && setScope) setScope(false);
+  }); // Reset scope on weapon swap
 
-  // Cancel any active reload when swapping weapons!
+  // Cancel any active reload when swapping weapons
   player.isReloading = false;
   player.reloadTimer = 0;
 
@@ -638,6 +674,7 @@ export function setWeapon(name) {
 
   wepGroup.position.copyFrom(WPOS[name]);
   wepGroup.rotation.copyFromFloats(WROT[name].x, WROT[name].y, WROT[name].z);
+  applyLoadoutToScene(name);
   refreshSlotHUD();
 }
 
@@ -676,9 +713,15 @@ export function applyLoadoutToScene(wName) {
       }
       m.material = mat;
     });
-
     // Rebuild attachment visuals
     _rebuildAttachmentVisuals(wName);
+    if (node._leftHandClone) {
+      node._leftHandClone.dispose();
+      node._leftHandClone = node.clone("left_hand_" + wName);
+      node._leftHandClone.parent = wepGroup;
+      node._leftHandClone.position.x = -WPOS[wName].x * 2;
+      node._leftHandClone.setEnabled(wName === curWep);
+    }
   });
 }
 
@@ -686,19 +729,39 @@ export function applyLoadoutToScene(wName) {
 const _NO_SWING_WEAPONS = new Set(['ELECTRON', 'ION', 'PLASMA']);
 
 export function animWeapon(dt) {
+  // Define TOP_Y here if it isn't accessible, to know how high the optic sits on the gun
+  const TOP_Y = { PISTOL:0.09, SMG:0.08, SHOTGUN:0.09, CHAINGUN:0.10, RAILGUN:0.08, PLASMA:0.10, ROCKET:0.14, GLAUNCHER:0.16, ELECTRON:0.08, ION:0.07 };
+  const ty = TOP_Y[curWep] || 0.09;
+
+  // When scoped, pull X to 0 (center), and pull Y to perfectly align the optic height to the camera (0)
   const targetX = isScoped ? 0 : WPOS[curWep].x;
-  const targetY = isScoped ? WPOS[curWep].y + 0.08 : WPOS[curWep].y + Math.sin(Date.now() * .0018) * .007;
+  const targetY = isScoped ? -(ty + 0.045) : WPOS[curWep].y + Math.sin(Date.now() * .0018) * .007;
+  
+  // The weapon naturally rests at an angle (pointing left). We must straighten it when scoped!
+  const targetRotY = isScoped ? 0 : WROT[curWep].y;
+  const targetRotZ = isScoped ? 0 : WROT[curWep].z;
+
   wepGroup.position.x += (targetX - wepGroup.position.x) * dt * 15;
   wepGroup.position.y += (targetY - wepGroup.position.y) * dt * 15;
+  
+  // Smoothly align the horizontal and tilt angles
+  wepGroup.rotation.y += (targetRotY - wepGroup.rotation.y) * dt * 15;
+  wepGroup.rotation.z += (targetRotZ - wepGroup.rotation.z) * dt * 15;
+  
+  let reloadTilt = 0;
+  if (player.isReloading && player.reloadTimer > 0) {
+      reloadTilt = Math.sin((player.reloadTimer / 1.6) * Math.PI) * -0.55; 
+  }
+
   if (swingT > 0 && !_NO_SWING_WEAPONS.has(curWep)) {
     swingT = Math.max(0, swingT - dt * 7.5);
     const k = Math.sin(swingT * Math.PI);
     wepGroup.position.z = WPOS[curWep].z - k * .09;
-    wepGroup.rotation.x = WROT[curWep].x - (k * 0.15); // <--- minus sign tilts barrel UP
+    wepGroup.rotation.x = WROT[curWep].x - (k * 0.15) + reloadTilt;
   } else {
-    if (_NO_SWING_WEAPONS.has(curWep)) swingT = 0; // drain instantly for energy weapons
+    if (_NO_SWING_WEAPONS.has(curWep)) swingT = 0; 
     wepGroup.position.z = WPOS[curWep].z;
-    wepGroup.rotation.x = WROT[curWep].x;
+    wepGroup.rotation.x = WROT[curWep].x + reloadTilt;
   }
 }
 

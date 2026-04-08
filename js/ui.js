@@ -1,6 +1,7 @@
 // ui.js – HUD updates, hit marker, leaderboard name modal
 import { player } from './gameState.js';
 import { WDEFS, inventory, curWep, refreshSlotHUD } from './weapons.js';
+import { hasDualTrigger, hasEnergyConverter } from './progression.js';
 
 export function updateHUD() {
   const hp  = document.getElementById('hpBar');
@@ -45,18 +46,24 @@ export function updateHUD() {
   const fill = document.getElementById('heatBarFill');
   const rTxt = document.getElementById('reloadText');
 
-  if (W && W.useHeat) {
+  const isEnergy = W && (W.useHeat || (curWep === 'PLASMA' && hasEnergyConverter()));
+
+  if (isEnergy) {
     heatContainer.style.display = 'block';
-    fill.style.width      = ((player.wepHeat || 0) * 100) + '%';
-    fill.style.background = player.overheated ? '#ff3333' : (curWep === 'ION' ? '#cc00ff' : '#00ffff');
+    
+    // FIX: Read heat directly from the weapon definition!
+    fill.style.width      = ((W.heat || 0) * 100) + '%';
+    fill.style.background = W.isOverheated ? '#ff3333' : (curWep === 'ION' ? '#cc00ff' : '#00ffff');
+    
     if (rTxt) {
-      rTxt.style.display = player.overheated ? 'block' : 'none';
-      if (player.overheated) rTxt.textContent = 'OVERHEATED!';
+      rTxt.style.display = W.isOverheated ? 'block' : 'none';
+      if (W.isOverheated) rTxt.textContent = 'OVERHEATED!';
     }
   } else if (player.isReloading) {
     heatContainer.style.display = 'block';
-    // Calculate progress: Max timer is 1.6s
-    const progress = Math.max(0, Math.min(100, (1 - (player.reloadTimer / 1.6)) * 100));
+    // Use the dynamically saved max timer
+    const maxTime = player.maxReloadTimer || 1.6;
+    const progress = Math.max(0, Math.min(100, (1 - (player.reloadTimer / maxTime)) * 100));
     if (fill) { fill.style.width = progress + '%'; fill.style.background = '#888888'; }
     if (rTxt) { rTxt.style.display = 'block'; rTxt.textContent = 'RELOADING...'; }
   } else {
@@ -66,8 +73,8 @@ export function updateHUD() {
   // Add a hint near the ammo/heat counter
   let modeHint = document.getElementById('plasmaModeHint');
 
-  if (curWep === 'PLASMA') {
-    // Create the element if it's missing
+  // FIX: Only show the toggle if they ACTUALLY have the attachment equipped
+  if (curWep === 'PLASMA' && hasDualTrigger()) {
     if (!modeHint) {
         modeHint = document.createElement('div');
         modeHint.id = 'plasmaModeHint';
@@ -75,8 +82,7 @@ export function updateHUD() {
         document.body.appendChild(modeHint);
     }
     modeHint.style.display = 'block';
-    // Use player.plasmaAltMode (ensure this is initialized in gameState.js or player.js)
-    modeHint.innerText = `[V] MODE: ${player.plasmaAltMode ? 'BURST' : 'AUTO'}`;
+    modeHint.innerText = `[V] MODE: ${player.plasmaAltMode ? 'SNIPER' : 'BURST'}`;
   } else if (modeHint) {
       modeHint.style.display = 'none';
   }

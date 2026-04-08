@@ -365,7 +365,7 @@ const WALKABLE_SPAWNS = [
 
   // TIER 5: The Summit (y = 24)
   // Moved to South platform (z = -16) to keep the North safe room strictly for players
-  [ 0, 24, -16], [-4, 24, -16], [ 4, 24, -16],
+  //[ 0, 24, -16], [-4, 24, -16], [ 4, 24, -16],
 ];
 const MIN_SPAWN_DIST = 16;
 
@@ -597,6 +597,13 @@ export function updateEnemies(dt) {
             _eDir.normalize();
             e.group.position.addInPlace(_eDir.scale(e.speed * dt));
         }
+        // ── Drone hover hum ────────────────────────────────────────
+        if (!e._hoverTimer) e._hoverTimer = Math.random() * 0.4; // stagger startup
+        e._hoverTimer -= dt;
+        if (e._hoverTimer <= 0) {
+            e._hoverTimer = 0.22; // ~4–5 Hz pulse, matches rotor feel
+            if (dist < 20) sfx.hover(Math.max(0, 1 - dist / 20));
+        }
     // ... [Inside updateEnemies(dt), replacing the GROUND BOTS section] ...
 
     } else {
@@ -724,6 +731,17 @@ export function updateEnemies(dt) {
                             e.group.position.x = clampedPos.x;
                             e.group.position.z = clampedPos.z;
                             e._floorY = clampedPos.y;
+
+                            // ── Footstep sound ─────────────────────────────────────
+                            // Interval scales with speed: fast scouts step rapidly,
+                            // slow heavies plod. Capped so it never fires too fast.
+                            if (!e._stepTimer) e._stepTimer = 0;
+                            e._stepTimer -= dt;
+                            if (e._stepTimer <= 0) {
+                                e._stepTimer = Math.max(0.20, 0.65 / e.speed);
+                                const sDist = BABYLON.Vector3.Distance(camera.position, e.group.position);
+                                if (sDist < 22) sfx.step(Math.max(0, 1 - sDist / 22), e.type);
+                            }
                         }
                     }
                 } else {
@@ -745,6 +763,9 @@ export function updateEnemies(dt) {
             if (e._hopY <= 0) {
                 e._hopY = 0;
                 e._yVel = 0;
+                // Landing thud — slightly louder/lower than a walking step
+                const lDist = BABYLON.Vector3.Distance(camera.position, e.group.position);
+                if (lDist < 20) sfx.step(Math.max(0, (1 - lDist / 20) * 0.9), e.type);
             }
         }
     }
@@ -794,6 +815,10 @@ export function updateEnemies(dt) {
         } 
         else {
             fireEnemyShot(e, dir, e.dmg, e.projV, e.projT);
+            const sDist = BABYLON.Vector3.Distance(camera.position, e.group.position);
+            if (sDist < 25) { // Only play if relatively close
+                setTimeout(() => sfx.plasma(), 10); // Use your existing plasma/shoot sound
+            }
         }
       }
     }

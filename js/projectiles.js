@@ -33,7 +33,7 @@ export function fireRocket() {
   projs.push({ g, light, dir: fwd.clone(), speed: WDEFS.ROCKET.speed, life: 6, dmg: WDEFS.ROCKET.dmg, splash: WDEFS.ROCKET.splash, owner:'player', type:'rocket' });
 }
 
-export function firePlasma() {
+export function firePlasma(modDmg) {
   const fwd = new BABYLON.Vector3();
   camera.getForwardRay(1).direction.normalizeToRef(fwd);
   const pos = camera.position.clone().add(fwd.scale(.6));
@@ -42,7 +42,10 @@ export function firePlasma() {
   mesh.position.copyFrom(pos); mesh.material = M.plasmaMat; mesh.isPickable = false;
   const light = new BABYLON.PointLight('pLight', pos.clone(), scene);
   light.diffuse = new BABYLON.Color3(.27, .53, 1); light.intensity = 2.0; light.range = 7;
-  projs.push({ g:null, mesh, light, dir: fwd.clone(), speed: WDEFS.PLASMA.speed, life: 4, dmg: WDEFS.PLASMA.dmg, splash:0, owner:'player', type:'player_plasma' });
+  
+  // Use modDmg if provided, otherwise fallback to WDEFS
+  const dmg = modDmg || WDEFS.PLASMA.dmg;
+  projs.push({ g:null, mesh, light, dir: fwd.clone(), speed: WDEFS.PLASMA.speed || 40, life: 4, dmg: dmg, splash:0, owner:'player', type:'player_plasma' });
 }
 
 // ── Enemy shots ───────────────────────────────────────────────

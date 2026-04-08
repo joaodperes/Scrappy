@@ -88,7 +88,16 @@ function startGame(startWave = 0) {
   player.hp = 100; player.armor = 0; player.score = 0;
   player.yVel = 0; player.onGround = true; player.buffs = {};
 
-  for (const [k, w] of Object.entries(WDEFS)) w.ammo = (k === 'PISTOL') ? Infinity : 0;
+  for (const [k, w] of Object.entries(WDEFS)) {
+      w.ammo = (k === 'PISTOL') ? Infinity : 0;
+      if (w.useHeat) {
+          w.heat = 0;
+          w.isOverheated = false;
+      }
+      if (w.magSize) {
+          w.currentMag = w.magSize;
+      }
+  }
   inventory[2] = 'PISTOL'; inventory[1] = null; inventory[0] = null;
   setActiveSlot(2);
 
@@ -155,7 +164,16 @@ function openFfaLobby() {
       player.yVel = 0; player.onGround = true; player.buffs = {};
 
       // Reset weapons to defaults
-      for (const [k, w] of Object.entries(WDEFS)) w.ammo = (k === 'PISTOL') ? Infinity : 0;
+      for (const [k, w] of Object.entries(WDEFS)) {
+        w.ammo = (k === 'PISTOL') ? Infinity : 0;
+        if (w.useHeat) {
+            w.heat = 0;
+            w.isOverheated = false;
+        }
+        if (w.magSize) {
+            w.currentMag = w.magSize;
+        }
+      }
       inventory[2] = 'PISTOL'; inventory[1] = null; inventory[0] = null;
       setActiveSlot(2);
 
