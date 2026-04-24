@@ -4,7 +4,7 @@ import {
   ATTACHMENTS, WEAPON_SKINS, PLAYER_SKINS, WEAPON_ATTACHMENT_SLOTS, WEAPON_SPECIALS,
   UNLOCK_TABLE, getLevelProgress, getChallengeProgress, getEffectiveStats,
   isAttachmentUnlocked, isWeaponSkinUnlocked, isSkinUnlocked, getUnlockHint, getChallengeDescription,
-  SKIN_DIFFICULTY_ORDER,
+  SKIN_DIFFICULTY_ORDER, getWeaponLevelProgress,
 } from './progression.js';
 import { WDEFS, applyLoadoutToScene } from './weapons.js';
 
@@ -119,6 +119,30 @@ function _renderContent() {
   else if (_activeTab==='progress')    _renderProgress(main);
 }
 
+function _renderWeaponLevelBanner(main, wName) {
+  const { level, xpThisLevel, xpNeeded, pct, isMax } = getWeaponLevelProgress(wName);
+  const pctW = Math.round(pct * 100);
+  const bar = _el('div', 'display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#0d0f18;border:1px solid #2a2e3d;margin-bottom:14px;gap:16px');
+  bar.innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px;flex-shrink:0">
+      <div style="font-size:11px;color:#557733;letter-spacing:2px">WEAPON LVL</div>
+      <div style="font-size:26px;font-weight:bold;color:${isMax?'#d8a030':'#d8f030'}">${level}</div>
+      ${isMax ? '<div style="font-size:11px;color:#d8a030;letter-spacing:1px;padding:2px 6px;border:1px solid #a07020">PRESTIGE</div>' : ''}
+    </div>
+    <div style="flex:1">
+      <div style="display:flex;align-items:center;gap:6px">
+        <div style="flex:1;height:5px;background:#1a1a2a;border-radius:3px;overflow:hidden">
+          <div style="width:${pctW}%;height:100%;background:${isMax?'#d8a030':'#d8f030'};border-radius:3px;transition:width .3s"></div>
+        </div>
+        <span style="font-size:13px;color:#d8f030;min-width:80px;text-align:right">
+          ${isMax ? 'MAX' : `${xpThisLevel} / ${xpNeeded} XP`}
+        </span>
+      </div>
+      ${isMax ? '' : `<div style="font-size:11px;color:#445533;margin-top:2px">Next level in ${xpNeeded - xpThisLevel} XP</div>`}
+    </div>`;
+  main.appendChild(bar);
+}
+
 // ── Unlock info helper ─────────────────────────────────────────
 // Returns { isSecret, isChallenge, isLevel, prog, unlockEntry }
 function _getUnlockInfo(attId, wName, type) {
@@ -170,6 +194,7 @@ function _lockDisplay(attId, wName, type) {
 // ── Attachments ───────────────────────────────────────────────
 function _renderAttachments(main) {
   const wName = _activeWeapon;
+  _renderWeaponLevelBanner(main, wName);
   const lo    = getLoadout(wName);
   const base  = WDEFS[wName];
   const eff   = getEffectiveStats(wName, base);
@@ -289,6 +314,7 @@ function _renderWeaponSkins(main) {
     const iB = SKIN_DIFFICULTY_ORDER.indexOf(b.id);
     return (iA === -1 ? 999 : iA) - (iB === -1 ? 999 : iB);
   });
+  _renderWeaponLevelBanner(main, wName);
   sortedSkins.forEach(skin => {
     const isOwned    = isWeaponSkinUnlocked(wName, skin.id);
     const isEquipped = lo.skin === skin.id;

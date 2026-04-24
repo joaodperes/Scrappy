@@ -3,11 +3,12 @@ const BABYLON = window.BABYLON;
 import { scene, camera } from './scene.js';
 import { M } from './textures.js';
 import { player } from './gameState.js';
-import { hasLaserDot, isAkimbo, hasEnergyConverter } from './progression.js';
+import { hasLaserDot, isAkimbo, hasEnergyConverter, getEffectiveStats, getLoadout, getAdsLerpSpeed  } from './progression.js';
+import { isScoped } from './player.js'
 
 export const WDEFS = {
   PISTOL:   { name:'PISTOL',   dmg:20, range:75, cd:.18, hitscan:true, ammo:Infinity, aps:1, spread:.0, pellets:1, startAmmo:Infinity, falloff:0.30, magSize: 12, currentMag: 12, reloadTime: 1.2 },
-  SMG:      { name:'SMG',      dmg:11, range:55, cd:.09, hitscan:true, ammo:0, aps:1, spread:.035, pellets:1, startAmmo:45, falloff:0.50, magSize: 30, currentMag: 30, reloadTime: 1.5 },
+  SMG:      { name:'SMG',      dmg:11, range:40, cd:.09, hitscan:true, ammo:0, aps:1, spread:.035, pellets:1, startAmmo:45, falloff:0.50, magSize: 30, currentMag: 30, reloadTime: 1.5 },
   SHOTGUN:  { name:'SHOTGUN',  dmg:32, range:25, cd:.25, hitscan:true, ammo:0, aps:1, spread:0.12, pellets:10, startAmmo:16, falloff:0.80, magSize: 8,  currentMag: 8, reloadTime: 1.8 },
   CHAINGUN: { name:'CHAINGUN', dmg:14, range:30, cd:.08, hitscan:true, ammo:0, aps:1, spread:.055, pellets:1, startAmmo:80, falloff:0.70, magSize: 100, currentMag: 100, reloadTime: 2.8 },
   RAILGUN:  { name:'RAILGUN',  dmg:110, range:130, cd:1.8, hitscan:true, ammo:0, aps:1, spread:.0, pellets:1, startAmmo:6, falloff:0.00, magSize: 6, currentMag: 6, reloadTime: 2.4 },
@@ -15,11 +16,11 @@ export const WDEFS = {
   GLAUNCHER: { name:'LAUNCHER', dmg:65, range:60, cd:0.8, hitscan:false, ammo:0, aps:1, spread:0.02, pellets:1, startAmmo:12, falloff:0, projSpeed: 30, splash: 7.0, magSize: 8, currentMag: 8, reloadTime: 2.0 },
   
   // Energy
-  ELECTRON: { name:'ELECTRON', dmg:18, range:80, cd:.12, hitscan:true, ammo:Infinity, aps:1, spread:.04, pellets:1, startAmmo:Infinity, falloff:0.40, heat: 0, maxHeat: 100, coolRate: 35, useHeat: true, heatPerShot: 0.14 },
+  ELECTRON: { name:'ELECTRON', dmg:30, range:60, cd:.12, hitscan:true, ammo:Infinity, aps:1, spread:.0, pellets:1, startAmmo:Infinity, falloff:0.40, heat: 0, maxHeat: 100, coolRate: 35, useHeat: true, heatPerShot: 0.09 },
   ION:      { name:'ION',      dmg:85, range:120, cd:1.2, hitscan:true, ammo:Infinity, aps:1, spread:.0,  pellets:1, startAmmo:Infinity, falloff:0.10, heat: 0, maxHeat: 100, coolRate: 20, useHeat: true, heatPerShot: 0.40 },
   
   // Plasma defaults to Ballistic until 'Energy Converter' is equipped
-  PLASMA:   { name:'PLASMA',   dmg:25, range:50, cd:.15, hitscan:false, ammo:0, aps:1, spread:.02, pellets:1, startAmmo:60, falloff:0.0, magSize: 30, currentMag: 30, reloadTime: 1.8, heat: 0, maxHeat: 100, coolRate: 40, heatPerShot: 0.20 },
+  PLASMA:   { name:'PLASMA',   dmg:25, range:60, cd:.15, hitscan:false, ammo:0, aps:1, spread:.02, pellets:1, startAmmo:60, falloff:0.0, magSize: 30, currentMag: 30, reloadTime: 1.8, heat: 0, maxHeat: 100, coolRate: 40, heatPerShot: 0.20 },
 };
 
 export const WCOLORS = {
@@ -53,6 +54,27 @@ export function setWepCooldown(v) { wepCooldown = v; }
 export function setSwingT(v)      { swingT = v; }
 export function setActiveSlotVar(v){ activeSlot = v; }
 export function setCurWepVar(v)   { curWep = v; }
+
+const _darkMatterMats = new Set();
+let _dmObserverRegistered = false;
+
+function _ensureDarkMatterAnimation() {
+  if (_dmObserverRegistered) return;
+  _dmObserverRegistered = true;
+  scene.onBeforeRenderObservable.add(() => {
+    if (_darkMatterMats.size === 0) return;
+    const t = Date.now() * 0.001;
+    const pulse  = Math.sin(t * 1.4) * 0.5 + 0.5;   // 0–1, slow breathe
+    const swirl  = Math.sin(t * 0.7 + 1.2) * 0.5 + 0.5; // offset phase
+    for (const mat of _darkMatterMats) {
+      mat.emissiveColor.r = 0.18 * swirl;
+      mat.emissiveColor.g = 0.0;
+      mat.emissiveColor.b = 0.40 * pulse + 0.18;
+      mat.specularColor.r = 0.5 * pulse;
+      mat.specularColor.b = 1.0;
+    }
+  });
+}
 
 // ── Weapon models ─────────────────────────────────────────────
 export const wepGroup = new BABYLON.TransformNode('wepGroup', scene);
@@ -114,7 +136,9 @@ function _buildChaingun(p) {
   }
   _cyl(p,'hous',.2,.52,M.grey,0,.02, .12,Math.PI/2);
   _box(p,'grip',.08,.18,.12,M.gunBrown,0,-.12,-.14);
-  _box(p,'ammo',.14,.1,.16,M.black,0,.08,-.18);
+  
+  //  Side-mounted ammo box. X changed to 0.12 so it hangs off the right side.
+  _box(p,'ammo',.12,.14,.16,M.black, 0.12, -0.05, -0.10);
 }
 function _buildRailgun(p) {
   _box(p,'body',.08,.1,.85,M.gunMetal,0,.02, .22);
@@ -221,13 +245,13 @@ const _attachmentMeshes = {};
 
 // Shared materials for attachment visuals
 const _attMats = {
-  black:     () => { const m = new BABYLON.StandardMaterial('attBlack', scene); m.diffuseColor = new BABYLON.Color3(0.06,0.06,0.06); m.specularColor = new BABYLON.Color3(0.1,0.1,0.1); return m; },
-  steel:     () => { const m = new BABYLON.StandardMaterial('attSteel', scene); m.diffuseColor = new BABYLON.Color3(0.30,0.32,0.34); m.specularColor = new BABYLON.Color3(0.4,0.4,0.4); return m; },
-  tan:       () => { const m = new BABYLON.StandardMaterial('attTan',   scene); m.diffuseColor = new BABYLON.Color3(0.50,0.38,0.22); return m; },
-  green:     () => { const m = new BABYLON.StandardMaterial('attGreen', scene); m.diffuseColor = new BABYLON.Color3(0.10,0.48,0.12); return m; },
-  redLed:    () => { const m = new BABYLON.StandardMaterial('attRed',   scene); m.emissiveColor = new BABYLON.Color3(0.9,0.1,0.1); m.disableLighting = true; return m; },
-  cyanLed:   () => { const m = new BABYLON.StandardMaterial('attCyan',  scene); m.emissiveColor = new BABYLON.Color3(0.1,0.9,0.9); m.disableLighting = true; return m; },
-  glassBlue: () => { const m = new BABYLON.StandardMaterial('attGlass', scene); m.diffuseColor = new BABYLON.Color3(0.3,0.6,0.9); m.alpha = 0.55; m.emissiveColor = new BABYLON.Color3(0.05,0.2,0.4); return m; },
+  black:     () => { const m = new BABYLON.StandardMaterial('attBlack', scene); m.diffuseColor = new BABYLON.Color3(0.06,0.06,0.06); m.specularColor = new BABYLON.Color3(0.1,0.1,0.1); m.backFaceCulling = false; return m; },
+  steel:     () => { const m = new BABYLON.StandardMaterial('attSteel', scene); m.diffuseColor = new BABYLON.Color3(0.30,0.32,0.34); m.specularColor = new BABYLON.Color3(0.4,0.4,0.4); m.backFaceCulling = false; return m; },
+  tan:       () => { const m = new BABYLON.StandardMaterial('attTan',   scene); m.diffuseColor = new BABYLON.Color3(0.50,0.38,0.22); m.backFaceCulling = false; return m; },
+  green:     () => { const m = new BABYLON.StandardMaterial('attGreen', scene); m.diffuseColor = new BABYLON.Color3(0.10,0.48,0.12); m.backFaceCulling = false; return m; },
+  redLed:    () => { const m = new BABYLON.StandardMaterial('attRed',   scene); m.emissiveColor = new BABYLON.Color3(0.9,0.1,0.1); m.disableLighting = true; m.backFaceCulling = false; return m; },
+  cyanLed:   () => { const m = new BABYLON.StandardMaterial('attCyan',  scene); m.emissiveColor = new BABYLON.Color3(0.1,0.9,0.9); m.disableLighting = true; m.backFaceCulling = false; return m; },
+  glassBlue: () => { const m = new BABYLON.StandardMaterial('attGlass', scene); m.diffuseColor = new BABYLON.Color3(0.3,0.6,0.9); m.alpha = 0.1; m.emissiveColor = new BABYLON.Color3(0.05,0.2,0.4); m.backFaceCulling = false; return m; },
 };
 
 // Muzzle offset per weapon (where the barrel tip is, in model-local Z)
@@ -278,39 +302,61 @@ function _makeSightRedDot(parent, wName) {
 }
 
 function _makeSightHolo(parent, wName) {
-  const mz = MUZZLE_Z[wName] ?? 0.40;
-  const ty = TOP_Y[wName] ?? 0.09;
-  const black = _attMats.black(); const cyan = _attMats.cyanLed(); const glass = _attMats.glassBlue();
+  const mz = (MUZZLE_Z[wName] ?? 0.40) - 0.22; 
+  const ty = TOP_Y[wName] ?? 0.08;
+  const black = _attMats.black();
+  const cyan = _attMats.cyanLed();
   
-  // Base Mount
-  const base = BABYLON.MeshBuilder.CreateBox('att_holo_base', { width:0.045, height:0.015, depth:0.12 }, scene);
-  base.position.set(0, ty + 0.02, mz - 0.22);
-  base.material = black; base.parent = parent; base.isPickable = false;
-  
-  // Open Hood/Frame
-  const hood = BABYLON.MeshBuilder.CreateBox('att_holo_hood', { width:0.04, height:0.04, depth:0.06 }, scene);
-  hood.position.set(0, ty + 0.045, mz - 0.20);
-  hood.material = black; hood.parent = parent; hood.isPickable = false;
-  
-  // Inner Glass Lens
-  const lens = BABYLON.MeshBuilder.CreateBox('att_holo_lens', { width:0.035, height:0.035, depth:0.058 }, scene);
-  lens.position.set(0, ty + 0.045, mz - 0.20);
-  lens.material = glass; lens.parent = parent; lens.isPickable = false;
-  
-  // Glowing Cyan Reticle (Floats inside the glass)
-  const reticle = BABYLON.MeshBuilder.CreatePlane('att_holo_reticle', { size: 0.015 }, scene);
-  // Pull back slightly and rotate 180 degrees to face the player eye
-  reticle.position.set(0, ty + 0.045, mz - 0.205); 
-  reticle.rotation.y = Math.PI; 
-  reticle.material = cyan; 
-  reticle.parent = parent; 
-  reticle.isPickable = false;
+  // 1. Frame
+  const frame = BABYLON.MeshBuilder.CreateBox('att_holo_frame', { width:0.06, height:0.05, depth:0.01 }, scene);
+  frame.position.set(0, ty + 0.04, mz);
+  frame.material = black;
+  frame.parent = parent;
+  frame.isPickable = false;
 
-  return [base, hood, lens, reticle];
+  // 2. The Glass Lens
+  const lens = BABYLON.MeshBuilder.CreatePlane('att_holo_lens', { size: 0.038 }, scene);
+  lens.position.set(0, ty + 0.04, mz + 0.005);
+  lens.rotation.y = Math.PI; // Face the camera
+  lens.parent = parent;
+  lens.isPickable = false;
+  
+  const gMat = new BABYLON.StandardMaterial('holoGlass', scene);
+  // Drop alpha to 0.02 so it's virtually invisible but still catches a tiny tint
+  gMat.alpha = 0.02; 
+  gMat.diffuseColor = new BABYLON.Color3(0, 1, 1);
+  gMat.emissiveColor = new BABYLON.Color3(0, 0.1, 0.2);
+  gMat.disableDepthWrite = true; 
+  gMat.backFaceCulling = false;
+  lens.material = gMat;
+  
+  // 3. Reticle (Center Dot)
+  const dot = BABYLON.MeshBuilder.CreatePlane('att_holo_dot', { size: 0.003 }, scene);
+  dot.position.set(0, ty + 0.04, mz + 0.004);
+  dot.rotation.y = Math.PI;
+  dot.material = cyan;
+  dot.parent = parent;
+  dot.isPickable = false;
+
+  // 4. Reticle (Outer Holographic Ring)
+  const ring = BABYLON.MeshBuilder.CreateTorus('att_holo_ring', { diameter: 0.016, thickness: 0.001, tessellation: 24 }, scene);
+  ring.position.set(0, ty + 0.04, mz + 0.004);
+  ring.rotation.x = Math.PI / 2; // Face the camera
+  ring.material = cyan;
+  ring.parent = parent;
+  ring.isPickable = false;
+
+  // FIX: Rendering Groups force the glass to draw after the gun, 
+  // and the reticle to draw cleanly over the glass.
+  lens.renderingGroupId = 1;
+  dot.renderingGroupId = 2;
+  ring.renderingGroupId = 2;
+
+  return [frame, lens, dot, ring];
 }
 
 function _makeSightAcog(parent, wName) {
-  const mz = MUZZLE_Z[wName] ?? 0.40;
+  const mz = (MUZZLE_Z[wName] ?? 0.40) - 0.20; 
   const ty = TOP_Y[wName] ?? 0.09;
   const black = _attMats.black(); const steel = _attMats.steel(); const glass = _attMats.glassBlue();
   // Main body
@@ -619,13 +665,17 @@ export function refreshSlotHUD() {
     if (wep) {
         nameEl.textContent = WDEFS[wep].name;
         const W = WDEFS[wep];
+        const EW = getEffectiveStats(wep, W);
         
-        // Dynamically check if Plasma has Energy Converter equipped
+        // Hard override for .50 cal
+        if (getLoadout(wep).attachments?.magazine === 'mag_50_cal') EW.magSize = 6;
+        
         const isEnergy = W.useHeat || (wep === 'PLASMA' && hasEnergyConverter());
         
         if (isEnergy) {
             ammoEl.textContent = 'HEAT';
-        } else if (W.magSize) {
+        } else if (EW.magSize) {
+            if (W.currentMag > EW.magSize) W.currentMag = EW.magSize; // clamp if over filled
             ammoEl.textContent = W.currentMag + ' / ' + (W.ammo === Infinity ? '∞' : W.ammo);
         } else {
             ammoEl.textContent = (W.ammo === Infinity) ? '∞' : W.ammo + ' RDS';
@@ -638,42 +688,28 @@ export function refreshSlotHUD() {
 }
 
 export function setWeapon(name) {
+  if (window.leftWepGroup) {
+    window.leftWepGroup.dispose();
+    window.leftWepGroup = null;
+  }
   if (!WDEFS[name]) return;
-  const prev = curWep;
   curWep = name;
-  player.wepHeat = 0; player.overheated = false; // Reset heat on weapon swap
+  player.wepHeat = 0; player.overheated = false; 
   import('./player.js').then(({ isScoped, setScope }) => {
       if (isScoped && setScope) setScope(false);
-  }); // Reset scope on weapon swap
+  }); 
 
-  // Cancel any active reload when swapping weapons
   player.isReloading = false;
   player.reloadTimer = 0;
 
   for (const [k, node] of Object.entries(wepModels)) {
-      if (k === name) {
-          node.setEnabled(true);
-          
-          // AKIMBO FIX: Check if we should dual wield
-          if (isAkimbo(name)) {
-              if (!node._leftHandClone) {
-                  node._leftHandClone = node.clone("left_hand_" + name);
-                  node._leftHandClone.parent = wepGroup;
-                  // Position it symmetrically on the left
-                  node._leftHandClone.position.x = -WPOS[name].x * 2; 
-              }
-              node._leftHandClone.setEnabled(true);
-          } else if (node._leftHandClone) {
-              node._leftHandClone.setEnabled(false);
-          }
-      } else {
-          node.setEnabled(false);
-          if (node._leftHandClone) node._leftHandClone.setEnabled(false);
-      }
+      node.setEnabled(k === name);
   }
 
   wepGroup.position.copyFrom(WPOS[name]);
   wepGroup.rotation.copyFromFloats(WROT[name].x, WROT[name].y, WROT[name].z);
+  
+  // This call now handles building/destroying the left hand (Akimbo)
   applyLoadoutToScene(name);
   refreshSlotHUD();
 }
@@ -696,18 +732,52 @@ export function applyLoadoutToScene(wName) {
     const [ar, ag, ab] = skin.accent;
     const [gr, gg, gb] = skin.grip;
 
-    node.getChildMeshes().forEach(m => {
+    const meshes = node.getChildMeshes();
+    meshes.forEach((m, meshIdx) => {
       const n = m.name.toLowerCase();
-      // Don't recolour attachment geometry (they have 'att_' prefix)
       if (n.startsWith('att_')) return;
+      if (n.includes('led') || n.includes('glow') || n.includes('lens') || n.includes('grn')) return;
+
       const mat = new BABYLON.StandardMaterial('skin_' + m.name + '_' + wName, scene);
       mat.disableLighting = false;
+
+      // ── Dark Matter — animated cosmic material ─────────────────
+      if (skin.id === 'dark_matter') {
+        mat.diffuseColor  = new BABYLON.Color3(0.04, 0.01, 0.12);
+        mat.emissiveColor = new BABYLON.Color3(0.0,  0.0,  0.30);
+        mat.specularColor = new BABYLON.Color3(0.5,  0.1,  1.0);
+        mat.specularPower = 96;
+        _darkMatterMats.add(mat);
+        mat.onDisposeObservable.add(() => _darkMatterMats.delete(mat));
+        _ensureDarkMatterAnimation();
+        m.material = mat;
+        return;
+      }
+
+      // ── Bengal — alternating stripe using body/accent by mesh index ──
+      const [br, bg, bb] = skin.body;
+      const [ar, ag, ab] = skin.accent;
+      const [gr, gg, gb] = skin.grip;
+
+      if (skin.id === 'bengal') {
+        const isGrip = n.includes('grip') || n.includes('stck') || n.includes('fore');
+        if (isGrip) {
+          mat.diffuseColor = new BABYLON.Color3(gr, gg, gb);
+        } else {
+          // Stripe: alternate body (orange) and accent (black) by mesh index
+          mat.diffuseColor = (meshIdx % 2 === 0)
+            ? new BABYLON.Color3(br, bg, bb)
+            : new BABYLON.Color3(ar, ag, ab);
+        }
+        m.material = mat;
+        return;
+      }
+
+      // ── All other skins — standard colour assignment ────────────
       if (n.includes('grip') || n.includes('stck') || n.includes('fore')) {
         mat.diffuseColor = new BABYLON.Color3(gr, gg, gb);
       } else if (n.includes('bbl') || n.includes('barrel') || n.includes('tube') || n.includes('hous')) {
         mat.diffuseColor = new BABYLON.Color3(ar, ag, ab);
-      } else if (n.includes('led') || n.includes('glow') || n.includes('lens') || n.includes('grn')) {
-        return;
       } else {
         mat.diffuseColor = new BABYLON.Color3(br, bg, bb);
       }
@@ -715,12 +785,21 @@ export function applyLoadoutToScene(wName) {
     });
     // Rebuild attachment visuals
     _rebuildAttachmentVisuals(wName);
-    if (node._leftHandClone) {
-      node._leftHandClone.dispose();
-      node._leftHandClone = node.clone("left_hand_" + wName);
-      node._leftHandClone.parent = wepGroup;
-      node._leftHandClone.position.x = -WPOS[wName].x * 2;
-      node._leftHandClone.setEnabled(wName === curWep);
+    
+    // --- AKIMBO INSTANT TOGGLE FIX ---
+    // 1. Wipe any existing left hand
+    if (window.leftWepGroup) {
+      window.leftWepGroup.dispose();
+      window.leftWepGroup = null;
+    }
+    
+    // 2. Rebuild it only if Akimbo is equipped on the active weapon
+    if (wName === curWep && isAkimbo(wName)) {
+      window.leftWepGroup = node.clone("leftWepGroup");
+      window.leftWepGroup.parent = wepGroup;
+      window.leftWepGroup.position.x = -WPOS[wName].x * 2; // Mirror across the vertical plane
+      window.leftWepGroup.rotation.y = -WROT[wName].y; // Mirrors angle inward
+      window.leftWepGroup.scaling.x = -1; // Perfect mirror
     }
   });
 }
@@ -741,13 +820,12 @@ export function animWeapon(dt) {
   const targetRotY = isScoped ? 0 : WROT[curWep].y;
   const targetRotZ = isScoped ? 0 : WROT[curWep].z;
 
-  wepGroup.position.x += (targetX - wepGroup.position.x) * dt * 15;
-  wepGroup.position.y += (targetY - wepGroup.position.y) * dt * 15;
-  
-  // Smoothly align the horizontal and tilt angles
-  wepGroup.rotation.y += (targetRotY - wepGroup.rotation.y) * dt * 15;
-  wepGroup.rotation.z += (targetRotZ - wepGroup.rotation.z) * dt * 15;
-  
+  const lerpSpeed = getAdsLerpSpeed(curWep);
+  wepGroup.position.x += (targetX    - wepGroup.position.x) * dt * lerpSpeed;
+  wepGroup.position.y += (targetY    - wepGroup.position.y) * dt * lerpSpeed;
+  wepGroup.rotation.y += (targetRotY - wepGroup.rotation.y) * dt * lerpSpeed;
+  wepGroup.rotation.z += (targetRotZ - wepGroup.rotation.z) * dt * lerpSpeed;
+    
   let reloadTilt = 0;
   if (player.isReloading && player.reloadTimer > 0) {
       reloadTilt = Math.sin((player.reloadTimer / 1.6) * Math.PI) * -0.55; 

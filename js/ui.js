@@ -39,7 +39,9 @@ export function updateHUD() {
       'color:#fff;font-size:18px;font-weight:bold;display:none;',
       'text-shadow:0 0 6px #000;letter-spacing:2px">RELOADING...</div>',
     ].join('');
-    document.body.appendChild(heatContainer);
+    const hud = document.getElementById('hud');
+    if (hud) hud.appendChild(heatContainer);
+    else document.body.appendChild(heatContainer); // fallback
   }
 
   const W    = WDEFS[curWep];

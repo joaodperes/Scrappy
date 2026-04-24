@@ -13,6 +13,40 @@ export const XP_GRANTS = {
   waveComplete:40,bossWave:120,matchWin:80,
 };
 
+// XP granted to the weapon used, based on enemy killed
+export const WEAPON_XP_GRANTS = {
+  scout:15, heavy:30, sniper:18, drone:14, shotgun:16, rocket:20,
+  pistol:9, grenadier:17, giantbot:150, pvp:35,
+  electron_bot:16, ion_sniper:22,
+};
+
+// Cumulative XP required for each level (index = level - 1)
+const WEAPON_LEVEL_THRESHOLDS = [0, 250, 600, 1200, 2200, 3800, 6000, 9000, 13000, 18000];
+
+export function getWeaponLevel(wName) {
+  const xp = profile.stats.weaponXp?.[wName] || 0;
+  let level = 1;
+  for (let i = 1; i < WEAPON_LEVEL_THRESHOLDS.length; i++) {
+    if (xp >= WEAPON_LEVEL_THRESHOLDS[i]) level = i + 1; else break;
+  }
+  return level;
+}
+
+export function getWeaponLevelProgress(wName) {
+  const xp    = profile.stats.weaponXp?.[wName] || 0;
+  const level = getWeaponLevel(wName);
+  const isMax = level >= WEAPON_LEVEL_THRESHOLDS.length;
+  const cur   = WEAPON_LEVEL_THRESHOLDS[level - 1] || 0;
+  const next  = WEAPON_LEVEL_THRESHOLDS[level]     || cur;
+  return { level, xp, xpThisLevel: xp - cur, xpNeeded: next - cur,
+           pct: isMax ? 1 : (xp - cur) / (next - cur), isMax };
+}
+
+const _recentKillTimes = {}; // { PISTOL: [t1, t2, ...], ... }
+let _damageFlushTimer = null;
+let _lastAnyKillTime = 0;
+let _currentCombo    = 0;
+
 // ── Attachment definitions ─────────────────────────────────────
 export const ATTACHMENTS = {
   // Sights
@@ -98,6 +132,12 @@ export const ATTACHMENTS = {
     icon:'↕️', mods:{spread:-0.15},
     visual:{type:'grip',style:'vertical'},
   },
+  tactical_grip: {
+    id:'tactical_grip', name:'Tactical Grip', slot:'grip',
+    desc:'+25% ADS speed, −15% spread. Snappy and precise.',
+    icon:'🤜', mods:{ spread:-0.15, adsSpeedMult:1.25 },
+    visual:{type:'grip',style:'tactical'},
+  },
   // Stocks
   heavy_stock: {
     id:'heavy_stock', name:'Heavy Stock', slot:'stock',
@@ -140,7 +180,7 @@ export const ATTACHMENTS = {
   },
   energy_coil: {
     id:'energy_coil', name:'Energy Coil', slot:'special',
-    desc:'Headshot kills instantly vent 40% heat. Body shots still generate full heat.',
+    desc:'Headshot kills instantly vent 40% heat.',
     icon:'🌀', mods:{},
     visual:{type:'special',style:'energy_coil'},
   },
@@ -150,15 +190,21 @@ export const ATTACHMENTS = {
     icon:'⏱️', mods:{heatMult:-0.70},
     visual:{type:'special',style:'slow_trigger'},
   },
+  freefall_coil: {
+    id:'freefall_coil', name:'Freefall Coil', slot:'special',
+    desc:'While airborne, each shot vents 35% extra heat.',
+    icon:'🪂', mods:{ heatMult:-0.35 }, // used contextually — only applies when !player.onGround
+    visual:{type:'special',style:'energy_coil'},
+  },
   mag_50_cal: {
     id:'mag_50_cal', name:'.50 Caliber', slot:'magazine', weapon:'PISTOL',
-    desc:'Reduces magazine to 6 and lowers fire rate, but massively increases damage per shot.',
+    desc:'Reduces magazine size by 6 and lowers fire rate, but massively increases damage per shot.',
     icon:'💢',
-    mods:{ magSize:-8, cdMult:1.4, dmgMult:2.2 },
+    mods:{ magSize:-6, cdMult:1.4, dmgMult:2.2 },
     visual:{type:'magazine',style:'heavy',magScale:0.85},
   },
   quick_swap_mag: {
-    id:'quick_swap_mag', name:'Quick Swap', slot:'magazine', weapon:'PISTOL',
+    id:'quick_swap_mag', name:'Quick Swap', slot:'magazine',
     desc:'Speed-loaded mag. Improves reload speed by 10%.',
     icon:'⚡',
     mods:{ reloadMult:0.90 },
@@ -172,12 +218,24 @@ export const ATTACHMENTS = {
     mods:{ magSize:10, cdMult:0.65, dmgMult:0.6 },
     visual:{type:'magazine',style:'extended',magScale:1.40},
   },
+  quick_trigger: {
+    id:'quick_trigger', name:'Quick Trigger', slot:'special',
+    desc:'+12% fire rate. Hair-trigger modification.',
+    icon:'⚡', mods:{ cd:-0.12 },
+    visual:{type:'special',style:'quick_trigger'},
+  },
   // ── Chaingun ──────────────────────────────────────────────────
   spinning_module: {
     id:'spinning_module', name:'Spinning Module', slot:'special',
     desc:'Converts to minigun mode: 1-second spin-up before firing, no magazine limit (fires until empty), rate of fire increases the longer it fires.',
     icon:'🌪️', mods:{},
     visual:{type:'special',style:'spinning_module'},
+  },
+  carbon_fiber: {
+    id:'carbon_fiber', name:'Carbon Fiber', slot:'special',
+    desc:'+18% movement speed, but spread increases by 35%.',
+    icon:'🪶', mods:{ speedMult:1.18, spread:+0.35 },
+    visual:{type:'special',style:'carbon_fiber'},
   },
   // ── Plasma Rifle ──────────────────────────────────────────────
   energy_converter: {
@@ -223,42 +281,51 @@ export const ATTACHMENTS = {
 };
 
 export const WEAPON_ATTACHMENT_SLOTS = {
-  PISTOL:    ['sight','barrel','magazine','special'],
-  SMG:       ['sight','barrel','magazine','grip','stock'],
+  PISTOL:    ['sight','barrel','magazine','grip','stock','special'],
+  SMG:       ['sight','barrel','magazine','grip','stock','special'],
   SHOTGUN:   ['sight','barrel','magazine','grip','stock','special'],
-  CHAINGUN:  ['sight','barrel','magazine','grip','special'],
-  RAILGUN:   ['sight','barrel','special'],
-  PLASMA:    ['sight','barrel','magazine','special'],
-  ROCKET:    ['sight','barrel','special'],
-  GLAUNCHER: ['sight','barrel','special'],
-  ELECTRON:  ['sight','barrel','grip','special'],
-  ION:       ['sight','barrel','special'],
+  CHAINGUN:  ['sight','barrel','magazine','grip','stock','special'],
+  RAILGUN:   ['sight','barrel','magazine','stock','special'],
+  PLASMA:    ['sight','barrel','magazine','grip','stock','special'],
+  ROCKET:    ['sight','barrel','magazine','stock','special'],
+  GLAUNCHER: ['sight','barrel','magazine','stock','special'],
+  ELECTRON:  ['sight','barrel','grip','stock','special'],
+  ION:       ['sight','barrel','grip','stock','special'],
 };
 
 export const WEAPON_SPECIALS = {
-  PISTOL:['akimbo'], SHOTGUN:['akimbo','auto_fire'],
-  CHAINGUN:['spinning_module'],
-  RAILGUN:['power_cell','efficiency_module'], GLAUNCHER:['cluster_rounds','seasoned_vet_glauncher'],
-  PLASMA:['dual_trigger'],
-  ROCKET:['seasoned_vet_rocket'],
-  ELECTRON:['slow_trigger'],
-  ION:['power_cell','energy_coil'],
+  PISTOL:    ['akimbo'],
+  SMG:       ['quick_trigger'],
+  SHOTGUN:   ['akimbo','auto_fire'],
+  CHAINGUN:  ['spinning_module', 'carbon_fiber'],
+  RAILGUN:   ['power_cell','efficiency_module'],
+  PLASMA:    ['dual_trigger'],
+  ROCKET:    ['seasoned_vet_rocket'],
+  GLAUNCHER: ['cluster_rounds','seasoned_vet_glauncher'],
+  ELECTRON:  ['slow_trigger','freefall_coil'],
+  ION:       ['power_cell','energy_coil'],
 };
 
 // ── Skins ─────────────────────────────────────────────────────
 export const WEAPON_SKINS = {
-  default:    {id:'default',   name:'Factory',  desc:'Standard issue.',          body:[0.45,0.45,0.45],accent:[0.25,0.25,0.25],grip:[0.30,0.20,0.10]},
-  midnight:   {id:'midnight',  name:'Midnight', desc:'All-black tactical.',      body:[0.05,0.05,0.05],accent:[0.10,0.10,0.10],grip:[0.05,0.05,0.05]},
-  desert:     {id:'desert',    name:'Desert',   desc:'Sand and tan camo.',       body:[0.70,0.60,0.35],accent:[0.55,0.44,0.22],grip:[0.42,0.30,0.14]},
-  arctic:     {id:'arctic',    name:'Arctic',   desc:'Snow-pattern white.',      body:[0.90,0.92,0.95],accent:[0.75,0.80,0.85],grip:[0.60,0.65,0.70]},
-  hazard:     {id:'hazard',    name:'Hazard',   desc:'Safety orange and black.', body:[0.90,0.30,0.02],accent:[0.10,0.10,0.10],grip:[0.06,0.06,0.06]},
-  plasma_glow:{id:'plasma_glow',name:'Plasma', desc:'Cyan energy accents.',     body:[0.10,0.15,0.25],accent:[0.05,0.80,0.90],grip:[0.05,0.10,0.15]},
-  gold:       {id:'gold',      name:'Gold',     desc:'Prestige finish.',         body:[0.80,0.65,0.10],accent:[0.90,0.75,0.20],grip:[0.50,0.35,0.05]},
-  crimson:    {id:'crimson',   name:'Crimson',  desc:'Blood red.',               body:[0.55,0.05,0.05],accent:[0.35,0.02,0.02],grip:[0.18,0.04,0.04]},
+  default:    {id:'default',    name:'Factory',    desc:'Standard issue.',           body:[0.45,0.45,0.45], accent:[0.25,0.25,0.25], grip:[0.30,0.20,0.10]},
+  midnight:   {id:'midnight',   name:'Midnight',   desc:'All-black tactical.',       body:[0.05,0.05,0.05], accent:[0.10,0.10,0.10], grip:[0.05,0.05,0.05]},
+  desert:     {id:'desert',     name:'Desert',     desc:'Sand and tan camo.',        body:[0.70,0.60,0.35], accent:[0.55,0.44,0.22], grip:[0.42,0.30,0.14]},
+  arctic:     {id:'arctic',     name:'Arctic',     desc:'Snow-pattern white.',       body:[0.75,0.78,0.82], accent:[0.50,0.55,0.60], grip:[0.35,0.40,0.45]},
+  hazard:     {id:'hazard',     name:'Hazard',     desc:'Safety orange and black.',  body:[0.90,0.30,0.02], accent:[0.10,0.10,0.10], grip:[0.06,0.06,0.06]},
+  jungle:     {id:'jungle',     name:'Jungle',     desc:'Dark ops foliage.',         body:[0.10,0.22,0.06], accent:[0.16,0.32,0.09], grip:[0.07,0.14,0.04]},
+  plasma_glow:{id:'plasma_glow',name:'Plasma',     desc:'Cyan energy accents.',      body:[0.10,0.15,0.25], accent:[0.05,0.80,0.90], grip:[0.05,0.10,0.15]},
+  toxic:      {id:'toxic',      name:'Toxic',      desc:'Radioactive slime finish.', body:[0.18,0.78,0.04], accent:[0.38,0.96,0.14], grip:[0.09,0.48,0.02]},
+  gold:       {id:'gold',       name:'Gold',       desc:'Prestige finish.',          body:[0.83,0.70,0.25], accent:[0.96,0.88,0.52], grip:[0.55,0.40,0.15]},
+  crimson:    {id:'crimson',    name:'Crimson',    desc:'Blood red.',                body:[0.22,0.01,0.01], accent:[0.12,0.01,0.01], grip:[0.08,0.01,0.01]},
+  bengal:     {id:'bengal',     name:'Bengal',     desc:'Predator stripe pattern.',  body:[0.78,0.35,0.04], accent:[0.06,0.06,0.06], grip:[0.52,0.22,0.03]},
+  dark_matter:{id:'dark_matter',name:'Dark Matter',desc:'Cosmic singularity.',       body:[0.04,0.01,0.12], accent:[0.50,0.05,0.90], grip:[0.06,0.02,0.14]},
 };
 
-// Ordered from easiest to hardest unlock — used by loadout UI to sort skin cards
-export const SKIN_DIFFICULTY_ORDER = ['default','Standard','midnight','desert','crimson','arctic','hazard','plasma_glow','gold'];
+export const SKIN_DIFFICULTY_ORDER = [
+  'default','midnight','desert','crimson','arctic','hazard',
+  'jungle','plasma_glow','toxic','gold','bengal','dark_matter'
+];
 
 export const PLAYER_SKINS = {
   default:{id:'default',name:'Standard',body:[0.30,0.35,0.40],visor:[0.20,0.80,0.90]},
@@ -317,6 +384,12 @@ export const UNLOCK_TABLE = [
     challenge:{ desc:'Kill {target} enemies with the Pistol while airborne', track:'killsWhileJumping:PISTOL', target:30 } },
   { id:'akimbo',          weapon:'PISTOL', type:'attachment', secret:true,
     challenge:{ desc:'Kill {target} enemies with the Pistol',  track:'killsWith:PISTOL', target:75 } },
+  { id:'compensator',   weapon:'PISTOL', type:'attachment', challenge:{ track:'killsOfCombo:scout_PISTOL',     target:25  } }, // scouts are fast — reward spread control
+  { id:'angled_grip',   weapon:'PISTOL', type:'attachment', challenge:{ track:'killsWhileJumping:PISTOL',      target:20  } },
+  { id:'vertical_grip', weapon:'PISTOL', type:'attachment', challenge:{ track:'multiKillsWith:PISTOL',         target:10  } }, // grip = fast follow-up shots
+  { id:'tactical_grip', weapon:'PISTOL', type:'attachment', challenge:{ track:'killsFullyEquipped:PISTOL',     target:30  } },
+  { id:'folded_stock',  weapon:'PISTOL', type:'attachment', challenge:{ track:'killsBareWeapon:PISTOL',        target:40  } }, // earn the stock by going without it
+  { id:'heavy_stock',   weapon:'PISTOL', type:'attachment', challenge:{ track:'killsOfCombo:heavy_PISTOL',     target:15  } },
 
   // ── SMG ───────────────────────────────────────────────────────
   { id:'holo_sight',  weapon:'SMG', type:'attachment',
@@ -339,6 +412,14 @@ export const UNLOCK_TABLE = [
     challenge:{ desc:'Kill {target} enemies with the SMG',                        track:'killsWith:SMG',          target:130 } },
   { id:'suppressor',   weapon:'SMG', type:'attachment',
     challenge:{ desc:'Kill {target} Snipers with the SMG',                         track:'killsOfType:sniper',    target:25  } },
+  { id:'suppressor',    weapon:'SMG', type:'attachment', challenge:{ track:'killsBareWeapon:SMG',              target:40  } },
+  { id:'extended_barrel',weapon:'SMG',type:'attachment', challenge:{ track:'killsWhileJumping:SMG',            target:30  } },
+  { id:'heavy_barrel',  weapon:'SMG', type:'attachment', challenge:{ track:'killsOfCombo:heavy_SMG',           target:20  } },
+  { id:'quick_swap_mag',weapon:'SMG', type:'attachment', challenge:{ track:'damageDealt:SMG',                  target:15000} },
+  { id:'heavy_stock',   weapon:'SMG', type:'attachment', challenge:{ track:'killsOfCombo:scout_SMG',           target:50  } },
+  { id:'vertical_grip', weapon:'SMG', type:'attachment', challenge:{ track:'killsWhileScoped:SMG',             target:30  } },
+  { id:'tactical_grip', weapon:'SMG', type:'attachment', challenge:{ track:'killsFullyEquipped:SMG',           target:40  } },
+  { id:'quick_trigger', weapon:'SMG', type:'attachment', challenge:{ track:'multiKillsWith:SMG',               target:20  } },
 
   // ── SHOTGUN ──────────────────────────────────────────────────
   { id:'holo_sight',     weapon:'SHOTGUN', type:'attachment',
@@ -359,6 +440,14 @@ export const UNLOCK_TABLE = [
     challenge:{ desc:'Kill {target} enemies with the Shotgun',                  track:'killsWith:SHOTGUN',   target:60  } },
   { id:'auto_fire',     weapon:'SHOTGUN', type:'attachment', secret:true,
     challenge:{ desc:'Kill {target} Heavy robots with the Shotgun',             track:'killsOfType:heavy',   target:30  } },
+  { id:'suppressor',    weapon:'SHOTGUN', type:'attachment', challenge:{ track:'killsFullyEquipped:SHOTGUN',   target:30  } },
+  { id:'extended_barrel',weapon:'SHOTGUN',type:'attachment', challenge:{ track:'damageDealt:SHOTGUN',          target:20000} },
+  { id:'heavy_barrel',  weapon:'SHOTGUN', type:'attachment', challenge:{ track:'killsOfType:heavy',            target:25  } },
+  { id:'quick_swap_mag',weapon:'SHOTGUN', type:'attachment', challenge:{ track:'killsOfCombo:shotgun_SHOTGUN', target:15  } }, // mirror-match
+  { id:'drum_mag',      weapon:'SHOTGUN', type:'attachment', challenge:{ track:'damageDealt:SHOTGUN',          target:45000} },
+  { id:'folded_stock',  weapon:'SHOTGUN', type:'attachment', challenge:{ track:'multiKillsWith:SHOTGUN',       target:25  } },
+  { id:'angled_grip',   weapon:'SHOTGUN', type:'attachment', challenge:{ track:'killsWhileJumping:SHOTGUN',    target:20  } },
+  { id:'tactical_grip', weapon:'SHOTGUN', type:'attachment', challenge:{ track:'killsBareWeapon:SHOTGUN',      target:50  } },
 
   // ── CHAINGUN ─────────────────────────────────────────────────
   { id:'holo_sight',     weapon:'CHAINGUN', type:'attachment',
@@ -377,6 +466,14 @@ export const UNLOCK_TABLE = [
     challenge:{ desc:'Kill {target} enemies with the Chaingun',                track:'killsWith:CHAINGUN',  target:150 } },
   { id:'spinning_module', weapon:'CHAINGUN', type:'attachment', secret:true,
     challenge:{ desc:'Kill {target} enemies while airborne with the Chaingun',  track:'killsWhileJumping:CHAINGUN', target:80 } },
+{ id:'suppressor',    weapon:'CHAINGUN', type:'attachment', challenge:{ track:'killsOfType:scout',           target:80  } }, // suppress scouts
+  { id:'extended_barrel',weapon:'CHAINGUN',type:'attachment', challenge:{ track:'damageDealt:CHAINGUN',        target:30000} },
+  { id:'quick_swap_mag',weapon:'CHAINGUN', type:'attachment', challenge:{ track:'killsOfCombo:drone_CHAINGUN', target:50  } },
+  { id:'extended_mag',  weapon:'CHAINGUN', type:'attachment', challenge:{ track:'damageDealt:CHAINGUN',        target:65000} },
+  { id:'heavy_stock',   weapon:'CHAINGUN', type:'attachment', challenge:{ track:'killsFullyEquipped:CHAINGUN', target:50  } },
+  { id:'folded_stock',  weapon:'CHAINGUN', type:'attachment', challenge:{ track:'multiKillsWith:CHAINGUN',     target:30  } },
+  { id:'angled_grip',   weapon:'CHAINGUN', type:'attachment', challenge:{ track:'killsWhileJumping:CHAINGUN',  target:40  } },
+  { id:'carbon_fiber',  weapon:'CHAINGUN', type:'attachment', secret:true, challenge:{ track:'multiKillsWith:CHAINGUN', target:30 } },
 
   // ── RAILGUN ──────────────────────────────────────────────────
   { id:'holo_sight',       weapon:'RAILGUN', type:'attachment',
@@ -391,6 +488,13 @@ export const UNLOCK_TABLE = [
     challenge:{ desc:'Kill {target} Snipers with the Railgun',                  track:'killsOfType:sniper',  target:25  } },
   { id:'efficiency_module', weapon:'RAILGUN', type:'attachment', secret:true,
     challenge:{ desc:'Pick up {target} Railgun drops',                          track:'energyPickups:RAILGUN', target:20 } },
+  { id:'suppressor',    weapon:'RAILGUN', type:'attachment', challenge:{ track:'killsOfCombo:sniper_RAILGUN',  target:20  } }, // sniper v sniper
+  { id:'extended_barrel',weapon:'RAILGUN',type:'attachment', challenge:{ track:'killsWhileScoped:RAILGUN',     target:20  } },
+  { id:'compensator',   weapon:'RAILGUN', type:'attachment', challenge:{ track:'killsOfCombo:heavy_RAILGUN',   target:12  } },
+  { id:'heavy_barrel',  weapon:'RAILGUN', type:'attachment', challenge:{ track:'killsOfCombo:drone_RAILGUN',   target:15  } },
+  { id:'quick_swap_mag',weapon:'RAILGUN', type:'attachment', challenge:{ track:'damageDealt:RAILGUN',          target:18000} },
+  { id:'heavy_stock',   weapon:'RAILGUN', type:'attachment', challenge:{ track:'killsBareWeapon:RAILGUN',      target:15  } },
+  { id:'folded_stock',  weapon:'RAILGUN', type:'attachment', challenge:{ track:'multiKillsWith:RAILGUN',       target:8   } }, // tight for a sniper — high bar
 
   // ── PLASMA ───────────────────────────────────────────────────
   { id:'holo_sight',         weapon:'PLASMA', type:'attachment',
@@ -407,6 +511,17 @@ export const UNLOCK_TABLE = [
     challenge:{ desc:'Pick up {target} Plasma Rifle drops',                      track:'energyPickups:PLASMA',       target:15  } },
   { id:'dual_trigger',       weapon:'PLASMA', type:'attachment', secret:true,
     challenge:{ desc:'Kill {target} enemies with the Plasma Rifle',              track:'killsWith:PLASMA',           target:60  } },
+  { id:'suppressor',    weapon:'PLASMA', type:'attachment', challenge:{ track:'killsWhileScoped:PLASMA',       target:20  } },
+  { id:'extended_barrel',weapon:'PLASMA',type:'attachment', challenge:{ track:'damageDealt:PLASMA',            target:25000} },
+  { id:'compensator',   weapon:'PLASMA', type:'attachment', challenge:{ track:'killsOfCombo:drone_PLASMA',     target:20  } },
+  { id:'heavy_barrel',  weapon:'PLASMA', type:'attachment', challenge:{ track:'killsOfCombo:heavy_PLASMA',     target:20  } },
+  { id:'quick_swap_mag',weapon:'PLASMA', type:'attachment', challenge:{ track:'multiKillsWith:PLASMA',         target:20  } },
+  { id:'extended_mag',  weapon:'PLASMA', type:'attachment', challenge:{ track:'killsOfType:electron_bot',      target:25  } },
+  { id:'drum_mag',      weapon:'PLASMA', type:'attachment', challenge:{ track:'damageDealt:PLASMA',            target:65000} },
+  { id:'heavy_stock',   weapon:'PLASMA', type:'attachment', challenge:{ track:'killsFullyEquipped:PLASMA',     target:40  } },
+  { id:'folded_stock',  weapon:'PLASMA', type:'attachment', challenge:{ track:'killsBareWeapon:PLASMA',        target:30  } },
+  { id:'angled_grip',   weapon:'PLASMA', type:'attachment', challenge:{ track:'killsWhileJumping:PLASMA',      target:20  } },
+  { id:'vertical_grip', weapon:'PLASMA', type:'attachment', challenge:{ track:'killsOfCombo:scout_PLASMA',     target:40  } },
 
   // ── ROCKET ────────────────────────────────────────────────────
   { id:'holo_sight',   weapon:'ROCKET', type:'attachment',
@@ -421,6 +536,12 @@ export const UNLOCK_TABLE = [
     challenge:{ desc:'Kill {target} enemies with the Rocket Launcher',                    track:'killsWith:ROCKET',          target:20  } },
   { id:'seasoned_vet_rocket', weapon:'ROCKET', type:'attachment', secret:true,
     challenge:{ desc:'Kill {target} bosses with the Rocket Launcher',                     track:'killedBossWith:ROCKET',     target:1   } },
+  { id:'suppressor',    weapon:'ROCKET', type:'attachment', challenge:{ track:'killedBossWith:ROCKET',         target:2   } }, // suppress the big guns
+  { id:'extended_barrel',weapon:'ROCKET',type:'attachment', challenge:{ track:'killsWhileJumping:ROCKET',      target:10  } }, // rocket jump kills
+  { id:'quick_swap_mag',weapon:'ROCKET', type:'attachment', challenge:{ track:'killsOfCombo:heavy_ROCKET',     target:8   } },
+  { id:'extended_mag',  weapon:'ROCKET', type:'attachment', challenge:{ track:'damageDealt:ROCKET',            target:22000} },
+  { id:'heavy_stock',   weapon:'ROCKET', type:'attachment', challenge:{ track:'multiKillsWith:ROCKET',         target:15  } },
+  { id:'folded_stock',  weapon:'ROCKET', type:'attachment', challenge:{ track:'killsOfCombo:scout_ROCKET',     target:20  } }, // rockets vs fast targets
 
   // ── GLAUNCHER ─────────────────────────────────────────────────
   { id:'holo_sight',   weapon:'GLAUNCHER', type:'attachment',
@@ -435,6 +556,14 @@ export const UNLOCK_TABLE = [
     challenge:{ desc:'Kill {target} enemies with the Grenade Launcher',              track:'killsWith:GLAUNCHER',               target:40  } },
   { id:'seasoned_vet_glauncher', weapon:'GLAUNCHER', type:'attachment', secret:true,
     challenge:{ desc:'Kill {target} bosses with the Grenade Launcher',               track:'killedBossWith:GLAUNCHER',          target:1   } },
+  { id:'suppressor',    weapon:'GLAUNCHER', type:'attachment', challenge:{ track:'killsOfCombo:grenadier_GLAUNCHER', target:15 } },
+  { id:'extended_barrel',weapon:'GLAUNCHER',type:'attachment', challenge:{ track:'killsOfType:grenadier',      target:15  } },
+  { id:'heavy_barrel',  weapon:'GLAUNCHER', type:'attachment', challenge:{ track:'multiKillsWith:GLAUNCHER',   target:15  } },
+  { id:'quick_swap_mag',weapon:'GLAUNCHER', type:'attachment', challenge:{ track:'killsWhileJumping:GLAUNCHER',target:20  } },
+  { id:'extended_mag',  weapon:'GLAUNCHER', type:'attachment', challenge:{ track:'damageDealt:GLAUNCHER',      target:18000} },
+  { id:'heavy_stock',   weapon:'GLAUNCHER', type:'attachment', challenge:{ track:'maxKillCombo',               target:8   } }, // reward big wave clearing
+  { id:'folded_stock',  weapon:'GLAUNCHER', type:'attachment', challenge:{ track:'killsOfCombo:rocket_GLAUNCHER', target:12} },
+
 
   // ── ELECTRON ──────────────────────────────────────────────────
   { id:'holo_sight',       weapon:'ELECTRON', type:'attachment',
@@ -448,21 +577,38 @@ export const UNLOCK_TABLE = [
   { id:'heavy_barrel',     weapon:'ELECTRON', type:'attachment',
     challenge:{ desc:'Kill {target} Scouts with the Electron',                       track:'killsOfCombo:scout_ELECTRON', target:25  } },
   { id:'extended_barrel',  weapon:'ELECTRON', type:'attachment',
-    challenge:{ desc:'Kill {target} enemies with the Electron while airborne',       track:'killsWhileJumping:ELECTRON',  target:50  } },
+    challenge:{ desc:'Kill {target} bosses with the Electron',                        track:'killedBossWith:ELECTRON',  target:2  } },
+  { id:'slow_trigger',    weapon:'ELECTRON', type:'attachment', secret:true,
+    challenge:{ desc:'Kill {target} enemies with the Electron while airborne', track:'killsWhileJumping:ELECTRON', target:20 } },
+  { id:'freefall_coil', weapon:'ELECTRON', type:'attachment', secret:true,
+    challenge:{ desc:'Kill {target} enemies while airborne with the Electron', track:'killsWhileJumping:ELECTRON', target:40 } },
+  { id:'heavy_stock',   weapon:'ELECTRON', type:'attachment', challenge:{ track:'killsOfCombo:electron_bot_ELECTRON', target:20 } }, // mirror-match
+  { id:'folded_stock',  weapon:'ELECTRON', type:'attachment', challenge:{ track:'killsWhileJumping:ELECTRON',  target:35  } },
+  { id:'angled_grip',   weapon:'ELECTRON', type:'attachment', challenge:{ track:'multiKillsWith:ELECTRON',     target:20  } },
+  { id:'vertical_grip', weapon:'ELECTRON', type:'attachment', challenge:{ track:'killsWhileScoped:ELECTRON',   target:25  } },
+  { id:'freefall_coil', weapon:'ELECTRON', type:'attachment', secret:true, challenge:{ track:'killsWhileJumping:ELECTRON', target:40 } },
+
 
   // ── ION ───────────────────────────────────────────────────────
   { id:'holo_sight',       weapon:'ION', type:'attachment',
     challenge:{ desc:'Kill {target} enemies with the Ion Sniper',                    track:'killsWith:ION',              target:5   } },
   { id:'acog',             weapon:'ION', type:'attachment',
     challenge:{ desc:'Kill {target} enemies with the Ion Sniper',                    track:'killsWith:ION',              target:15  } },
-  { id:'extended_barrel',  weapon:'ION', type:'attachment',
+    { id:'thermal',        weapon:'ION', type:'attachment',
+    challenge:{ desc:'Kill {target} enemies with the Ion Sniper while scoped',       track:'killsWhileScoped:ION',        target:30  } },
+    { id:'extended_barrel',  weapon:'ION', type:'attachment',
     challenge:{ desc:'Kill {target} enemies with the Ion Sniper',                    track:'killsWith:ION',              target:30  } },
   { id:'energy_coil',      weapon:'ION', type:'attachment', secret:true,
-    challenge:{ desc:'Kill {target} enemies with the Ion Sniper while scoped',       track:'killsWhileScoped:ION',       target:30  } },
+    challenge:{ desc:'Kill {target} enemies with the Ion Sniper while airborne',       track:'killsWhileJumping:ION',       target:30  } },
+  { id:'suppressor',    weapon:'ION', type:'attachment', challenge:{ track:'killsOfCombo:sniper_ION',          target:8   } },
+  { id:'heavy_barrel',  weapon:'ION', type:'attachment', challenge:{ track:'killsOfCombo:heavy_ION',           target:10  } },
+  { id:'compensator',   weapon:'ION', type:'attachment', challenge:{ track:'killsWhileScoped:ION',             target:25  } },
+  //{ id:'quick_swap_mag',weapon:'ION', type:'attachment', challenge:{ track:'damageDealt:ION',                  target:15000} },
+  { id:'heavy_stock',   weapon:'ION', type:'attachment', challenge:{ track:'killedBossWith:ION',               target:2   } },
+  { id:'folded_stock',  weapon:'ION', type:'attachment', challenge:{ track:'multiKillsWith:ION',               target:5   } },
+  { id:'angled_grip',   weapon:'ION', type:'attachment', challenge:{ track:'killsWhileJumping:ION',            target:15  } },
+  { id:'vertical_grip', weapon:'ION', type:'attachment', challenge:{ track:'killsOfCombo:drone_ION',           target:20  } },
 
-  // ── ELECTRON extra (Slow Trigger) ────────────────────────────
-  { id:'slow_trigger',    weapon:'ELECTRON', type:'attachment', secret:true,
-    challenge:{ desc:'Kill {target} enemies with the Electron while airborne', track:'killsWhileJumping:ELECTRON', target:20 } },
 
   // ════════════════════════════════════════════════════════════════
   //  WEAPON SKINS — 7 tiers, all weapon-kill based, no level gates
@@ -517,6 +663,54 @@ export const UNLOCK_TABLE = [
   { id:'arctic', weapon:'GLAUNCHER', type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the Grenade Launcher', track:'killsWith:GLAUNCHER', target:130 } },
   { id:'arctic', weapon:'ELECTRON',  type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the Electron',         track:'killsWith:ELECTRON',  target:140 } },
   { id:'arctic', weapon:'ION',       type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the Ion Sniper',        track:'killsWith:ION',       target:80  } },
+
+   // ── JUNGLE (tier 4 — sustained damage) ───────────────────────
+  { id:'jungle', weapon:'PISTOL',    type:'weaponSkin', challenge:{ track:'damageDealt:PISTOL',    target:20000 } },
+  { id:'jungle', weapon:'SMG',       type:'weaponSkin', challenge:{ track:'damageDealt:SMG',       target:35000 } },
+  { id:'jungle', weapon:'SHOTGUN',   type:'weaponSkin', challenge:{ track:'damageDealt:SHOTGUN',   target:28000 } },
+  { id:'jungle', weapon:'CHAINGUN',  type:'weaponSkin', challenge:{ track:'damageDealt:CHAINGUN',  target:48000 } },
+  { id:'jungle', weapon:'RAILGUN',   type:'weaponSkin', challenge:{ track:'damageDealt:RAILGUN',   target:22000 } },
+  { id:'jungle', weapon:'PLASMA',    type:'weaponSkin', challenge:{ track:'damageDealt:PLASMA',    target:32000 } },
+  { id:'jungle', weapon:'ROCKET',    type:'weaponSkin', challenge:{ track:'damageDealt:ROCKET',    target:26000 } },
+  { id:'jungle', weapon:'GLAUNCHER', type:'weaponSkin', challenge:{ track:'damageDealt:GLAUNCHER', target:22000 } },
+  { id:'jungle', weapon:'ELECTRON',  type:'weaponSkin', challenge:{ track:'damageDealt:ELECTRON',  target:38000 } },
+  { id:'jungle', weapon:'ION',       type:'weaponSkin', challenge:{ track:'damageDealt:ION',       target:24000 } },
+
+  // ── TOXIC (tier 5 — multi-kills) ──────────────────────────────
+  { id:'toxic', weapon:'PISTOL',    type:'weaponSkin', challenge:{ track:'multiKillsWith:PISTOL',    target:25  } },
+  { id:'toxic', weapon:'SMG',       type:'weaponSkin', challenge:{ track:'multiKillsWith:SMG',       target:50  } },
+  { id:'toxic', weapon:'SHOTGUN',   type:'weaponSkin', challenge:{ track:'multiKillsWith:SHOTGUN',   target:60  } },
+  { id:'toxic', weapon:'CHAINGUN',  type:'weaponSkin', challenge:{ track:'multiKillsWith:CHAINGUN',  target:80  } },
+  { id:'toxic', weapon:'RAILGUN',   type:'weaponSkin', challenge:{ track:'multiKillsWith:RAILGUN',   target:15  } },
+  { id:'toxic', weapon:'PLASMA',    type:'weaponSkin', challenge:{ track:'multiKillsWith:PLASMA',    target:40  } },
+  { id:'toxic', weapon:'ROCKET',    type:'weaponSkin', challenge:{ track:'multiKillsWith:ROCKET',    target:35  } },
+  { id:'toxic', weapon:'GLAUNCHER', type:'weaponSkin', challenge:{ track:'multiKillsWith:GLAUNCHER', target:35  } },
+  { id:'toxic', weapon:'ELECTRON',  type:'weaponSkin', challenge:{ track:'multiKillsWith:ELECTRON',  target:45  } },
+  { id:'toxic', weapon:'ION',       type:'weaponSkin', challenge:{ track:'multiKillsWith:ION',       target:12  } },
+
+  // ── BENGAL (prestige — weapon level 10) ──────────────────────
+  { id:'bengal', weapon:'PISTOL',    type:'weaponSkin', challenge:{ track:'weaponLevel:PISTOL',    target:10 } },
+  { id:'bengal', weapon:'SMG',       type:'weaponSkin', challenge:{ track:'weaponLevel:SMG',       target:10 } },
+  { id:'bengal', weapon:'SHOTGUN',   type:'weaponSkin', challenge:{ track:'weaponLevel:SHOTGUN',   target:10 } },
+  { id:'bengal', weapon:'CHAINGUN',  type:'weaponSkin', challenge:{ track:'weaponLevel:CHAINGUN',  target:10 } },
+  { id:'bengal', weapon:'RAILGUN',   type:'weaponSkin', challenge:{ track:'weaponLevel:RAILGUN',   target:10 } },
+  { id:'bengal', weapon:'PLASMA',    type:'weaponSkin', challenge:{ track:'weaponLevel:PLASMA',    target:10 } },
+  { id:'bengal', weapon:'ROCKET',    type:'weaponSkin', challenge:{ track:'weaponLevel:ROCKET',    target:10 } },
+  { id:'bengal', weapon:'GLAUNCHER', type:'weaponSkin', challenge:{ track:'weaponLevel:GLAUNCHER', target:10 } },
+  { id:'bengal', weapon:'ELECTRON',  type:'weaponSkin', challenge:{ track:'weaponLevel:ELECTRON',  target:10 } },
+  { id:'bengal', weapon:'ION',       type:'weaponSkin', challenge:{ track:'weaponLevel:ION',       target:10 } },
+
+  // ── DARK MATTER (complete all weapon challenges) ──────────────
+  { id:'dark_matter', weapon:'PISTOL',    type:'weaponSkin', challenge:{ track:'allChallengesComplete:PISTOL',    target:1 } },
+  { id:'dark_matter', weapon:'SMG',       type:'weaponSkin', challenge:{ track:'allChallengesComplete:SMG',       target:1 } },
+  { id:'dark_matter', weapon:'SHOTGUN',   type:'weaponSkin', challenge:{ track:'allChallengesComplete:SHOTGUN',   target:1 } },
+  { id:'dark_matter', weapon:'CHAINGUN',  type:'weaponSkin', challenge:{ track:'allChallengesComplete:CHAINGUN',  target:1 } },
+  { id:'dark_matter', weapon:'RAILGUN',   type:'weaponSkin', challenge:{ track:'allChallengesComplete:RAILGUN',   target:1 } },
+  { id:'dark_matter', weapon:'PLASMA',    type:'weaponSkin', challenge:{ track:'allChallengesComplete:PLASMA',    target:1 } },
+  { id:'dark_matter', weapon:'ROCKET',    type:'weaponSkin', challenge:{ track:'allChallengesComplete:ROCKET',    target:1 } },
+  { id:'dark_matter', weapon:'GLAUNCHER', type:'weaponSkin', challenge:{ track:'allChallengesComplete:GLAUNCHER', target:1 } },
+  { id:'dark_matter', weapon:'ELECTRON',  type:'weaponSkin', challenge:{ track:'allChallengesComplete:ELECTRON',  target:1 } },
+  { id:'dark_matter', weapon:'ION',       type:'weaponSkin', challenge:{ track:'allChallengesComplete:ION',       target:1 } },
 
   // ── HAZARD (tier 5 — enemy-type challenges) ───────────────────
   { id:'hazard', weapon:'PISTOL', type:'weaponSkin', challenge:{ desc:'Kill {target} Scouts with the Pistol', track:'killsOfCombo:scout_PISTOL', target:50 } },
@@ -590,29 +784,41 @@ export let profile = _defaultProfile();
 // ── Firebase cross-session persistence ────────────────────────
 let _fbReady = false;
 
-export async function initFirebaseAuth() {
+export function initFirebaseAuth() {
   if (typeof firebase === 'undefined') return;
-  try {
-    const provider = new firebase.auth.GoogleAuthProvider();
-    const cred = await firebase.auth().signInWithPopup(provider); 
-    const uid  = cred.user.uid;
-    _fbReady   = true;
-
-    const cloudProfile = await _loadFromFirestore(uid);
-    if (cloudProfile && cloudProfile.totalXp >= profile.totalXp) {
-      profile = _deepMerge(_defaultProfile(), cloudProfile);
-      profile.firebaseUid = uid;
-      _saveToLocalStorage();
-      console.log('[progression] Cross-session profile restored from cloud');
+  
+  // Listen for auth state changes instead of forcing a popup immediately
+  firebase.auth().onAuthStateChanged(async (user) => {
+    if (user) {
+      // User is already logged in from a previous session!
+      _fbReady = true;
+      const uid = user.uid;
+      const cloudProfile = await _loadFromFirestore(uid);
+      
+      if (cloudProfile && cloudProfile.totalXp >= profile.totalXp) {
+        profile = _deepMerge(_defaultProfile(), cloudProfile);
+        profile.firebaseUid = uid;
+        _saveToLocalStorage();
+        console.log('[progression] Cross-session profile restored from cloud');
+      } else {
+        profile.firebaseUid = uid;
+        await _saveToFirestore();
+      }
     } else {
-      profile.firebaseUid = uid;
-      await _saveToFirestore();
+      // No user is logged in. 
+      // Instead of forcing a popup, we sign them in anonymously behind the scenes
+      // so their progression still saves to the cloud without interrupting gameplay.
+      try {
+        const cred = await firebase.auth().signInAnonymously();
+        profile.firebaseUid = cred.user.uid;
+        _fbReady = true;
+        await _saveToFirestore();
+      } catch (e) {
+        console.warn('[progression] Anonymous auth failed:', e.message);
+      }
     }
-  } catch (e) {
-    console.warn('[progression] Firebase auth unavailable, offline mode:', e.message);
-  }
+  });
 }
-
 async function _loadFromFirestore(uid) {
   try {
     const doc = await firebase.firestore().collection('player_profiles').doc(uid).get();
@@ -699,33 +905,61 @@ export function awardXp(amount) {
 }
 
 // ── Stats ─────────────────────────────────────────────────────
-export function recordKill(botType, weaponKey, { isJumping = false, isScoped = false } = {}) {
-  const s=profile.stats; s.totalKills++;
-  if (botType==='pvp') s.pvpKills++;
+export function recordKill(botType, weaponKey, { isJumping = false, isScoped = false, xpMult = 1 } = {}) {
+  const s = profile.stats; s.totalKills++;
+  if (botType === 'pvp') s.pvpKills++;
   else { s.killsOfType[botType]=(s.killsOfType[botType]||0)+1; if(botType==='giantbot')s.bossWaveClears=(s.bossWaveClears||0)+1; }
+
+  // ── Combo tracking (any kill, any weapon) ──────────────────────
+  const now = Date.now();
+  _currentCombo = (now - _lastAnyKillTime < 5000) ? _currentCombo + 1 : 1;
+  _lastAnyKillTime = now;
+  if (_currentCombo > (s.maxKillCombo || 0)) s.maxKillCombo = _currentCombo;
+
   if (weaponKey) {
     s.killsWith[weaponKey]=(s.killsWith[weaponKey]||0)+1;
-    // Track Bot + Weapon combo
     const comboKey = botType + '_' + weaponKey;
     if (!s.killsOfCombo) s.killsOfCombo = {};
-    s.killsOfCombo[comboKey] = (s.killsOfCombo[comboKey]||0)+1;
-    if (isJumping) {
-      if (!s.killsWhileJumping) s.killsWhileJumping = {};
-      s.killsWhileJumping[weaponKey]=(s.killsWhileJumping[weaponKey]||0)+1;
+    s.killsOfCombo[comboKey]=(s.killsOfCombo[comboKey]||0)+1;
+    if (isJumping) { if(!s.killsWhileJumping)s.killsWhileJumping={}; s.killsWhileJumping[weaponKey]=(s.killsWhileJumping[weaponKey]||0)+1; }
+    if (isScoped)  { if(!s.killsWhileScoped) s.killsWhileScoped={};  s.killsWhileScoped[weaponKey] =(s.killsWhileScoped[weaponKey] ||0)+1; }
+    if (botType==='giantbot') { if(!s.bossKillsWith)s.bossKillsWith={}; s.bossKillsWith[weaponKey]=(s.bossKillsWith[weaponKey]||0)+1; }
+
+    // ── Multi-kill (within 3s window) ─────────────────────────────
+    if (!_recentKillTimes[weaponKey]) _recentKillTimes[weaponKey] = [];
+    _recentKillTimes[weaponKey] = _recentKillTimes[weaponKey].filter(t => now - t < 3000);
+    if (_recentKillTimes[weaponKey].length >= 1) {
+      if (!s.multiKillsWith) s.multiKillsWith = {};
+      s.multiKillsWith[weaponKey]=(s.multiKillsWith[weaponKey]||0)+1;
     }
-    if (isScoped) {
-      if (!s.killsWhileScoped) s.killsWhileScoped = {};
-      s.killsWhileScoped[weaponKey]=(s.killsWhileScoped[weaponKey]||0)+1;
+    _recentKillTimes[weaponKey].push(now);
+
+    // ── Fully-equipped / bare-weapon kills ────────────────────────
+    const lo    = getLoadout(weaponKey);
+    const slots = WEAPON_ATTACHMENT_SLOTS[weaponKey] || [];
+    if (slots.length > 0 && slots.every(slot => !!lo.attachments?.[slot])) {
+      if (!s.killsFullyEquipped) s.killsFullyEquipped = {};
+      s.killsFullyEquipped[weaponKey]=(s.killsFullyEquipped[weaponKey]||0)+1;
     }
-    // Track boss kills per weapon for 'seasoned vet' attachments
-    if (botType==='giantbot') {
-      if (!s.bossKillsWith) s.bossKillsWith = {};
-      s.bossKillsWith[weaponKey]=(s.bossKillsWith[weaponKey]||0)+1;
+    if (!lo.attachments || Object.values(lo.attachments).every(v => !v)) {
+      if (!s.killsBareWeapon) s.killsBareWeapon = {};
+      s.killsBareWeapon[weaponKey]=(s.killsBareWeapon[weaponKey]||0)+1;
+    }
+    const prevWepLevel = getWeaponLevel(weaponKey);
+    
+    const wxp = ((WEAPON_XP_GRANTS[botType] || 8) * xpMult);
+    s.weaponXp[weaponKey] = (s.weaponXp[weaponKey] || 0) + wxp;
+    
+    const newWepLevel = getWeaponLevel(weaponKey);
+    if (newWepLevel > prevWepLevel) {
+        _showWeaponLevelUpToast(weaponKey, newWepLevel);
     }
   }
+
   const n=_checkChallenges(); if(n.length)_showUnlockToasts(n);
-  checkProgressMilestones(); // ← milestone notifications
+  checkProgressMilestones();
   saveProfile(); return n;
+
 }
 
 // Track energy weapon pickups (for energy-weapon-specific unlock challenges)
@@ -738,6 +972,22 @@ export function recordEnergyPickup(weaponKey) {
   saveProfile(); return n;
 }
 
+// Track damage dealt per weapon (for damageDealt: challenges)
+// Debounced — damage fires every frame so we batch the expensive work.
+export function recordDamage(weaponKey, amount) {
+  if (!weaponKey || !amount || amount <= 0) return;
+  const s = profile.stats;
+  if (!s.damageDealt) s.damageDealt = {};
+  s.damageDealt[weaponKey] = (s.damageDealt[weaponKey] || 0) + amount;
+  // Batch challenge checks — no need to run them on every bullet
+  clearTimeout(_damageFlushTimer);
+  _damageFlushTimer = setTimeout(() => {
+    const n = _checkChallenges(); if (n.length) _showUnlockToasts(n);
+    checkProgressMilestones();
+    saveProfile();
+  }, 2000);
+}
+
 export function recordWaveComplete(waveNum, isBoss) {
   if (typeof waveNum!=='number'||isNaN(waveNum)) return;
   profile.stats.maxWave=Math.max(profile.stats.maxWave||0, waveNum);
@@ -745,6 +995,15 @@ export function recordWaveComplete(waveNum, isBoss) {
   const n=_checkChallenges(); if(n.length)_showUnlockToasts(n);
   checkProgressMilestones();
   saveProfile();
+}
+
+function _allWeaponChallengesComplete(wName) {
+  const requiredSkins = Object.keys(WEAPON_SKINS).filter(id => id !== 'dark_matter' && id !== 'default');
+  if (!requiredSkins.every(id => profile.unlockedWeaponSkins[wName]?.includes(id))) return false;
+  const requiredAtts = [...new Set(
+    UNLOCK_TABLE.filter(u => u.type === 'attachment' && u.weapon === wName).map(u => u.id)
+  )];
+  return requiredAtts.every(id => profile.unlockedAttachments[wName]?.includes(id));
 }
 
 function _checkChallenges() {
@@ -788,7 +1047,14 @@ function _checkChallenges() {
       const trackWep=track.split(':')[1];
       val=(s.bossKillsWith||{})[trackWep]||0;
     }
-      if(val>=target){
+    else if(track.startsWith('multiKillsWith:'))      val=(s.multiKillsWith||{})[track.split(':')[1]]||0;
+    else if(track.startsWith('damageDealt:')) val=Math.floor((s.damageDealt||{})[track.split(':')[1]]||0);
+    else if(track.startsWith('killsFullyEquipped:'))   val=(s.killsFullyEquipped||{})[track.split(':')[1]]||0;
+    else if(track.startsWith('killsBareWeapon:'))      val=(s.killsBareWeapon||{})[track.split(':')[1]]||0;
+    else if(track==='maxKillCombo')                    val=s.maxKillCombo||0;
+    else if(track.startsWith('weaponLevel:'))          val=getWeaponLevel(track.split(':')[1]);
+    else if(track.startsWith('allChallengesComplete:'))val=_allWeaponChallengesComplete(track.split(':')[1])?1:0;
+    if(val>=target){
       if(u.type==='attachment')profile.unlockedAttachments[u.weapon].push(u.id);
       else if(u.type==='weaponSkin'){if(!profile.unlockedWeaponSkins[u.weapon])profile.unlockedWeaponSkins[u.weapon]=[];profile.unlockedWeaponSkins[u.weapon].push(u.id);}
       else profile.unlocked.push(u.id);
@@ -832,8 +1098,49 @@ export function getChallengeDescription(uOrCh){
     const wlabel = _WNAME?.[wep]??wep;
     return `Kill ${target} ${bot} with the ${wlabel}`;
   }
+  if(track.startsWith('killsWhileJumping:')){
+    const wep=track.split(':')[1]; const wlabel=_WNAME?.[wep]??wep;
+    return `Kill ${target} enemies with the ${wlabel} while airborne`;
+  }
+  if(track.startsWith('killsWhileScoped:')){
+    const wep=track.split(':')[1]; const wlabel=_WNAME?.[wep]??wep;
+    return `Kill ${target} enemies with the ${wlabel} while scoped`;
+  }
+  if(track.startsWith('energyPickups:')){
+    const wep=track.split(':')[1]; const wlabel=_WNAME?.[wep]??wep;
+    return `Pick up energy from defeated enemies ${target} times with the ${wlabel}`;
+  }
+  if(track.startsWith('killedBossWith:')){
+    const wep=track.split(':')[1]; const wlabel=_WNAME?.[wep]??wep;
+    return `Kill ${target} bosses with the ${wlabel}`;
+  }
   if(track==='pvpKills') return `Defeat ${target} players in FFA`;
   if(track==='bossWaveClears') return `Defeat ${target} bosses`;
+  if(track.startsWith('multiKillsWith:')){
+  const wlabel=_WNAME?.[track.split(':')[1]]??track.split(':')[1];
+  return `Get ${target} multi-kills with the ${wlabel}`;
+}
+if(track.startsWith('damageDealt:')){
+  const wlabel=_WNAME?.[track.split(':')[1]]??track.split(':')[1];
+  return `Deal ${Number(target).toLocaleString()} damage with the ${wlabel}`;
+}
+if(track.startsWith('killsFullyEquipped:')){
+  const wlabel=_WNAME?.[track.split(':')[1]]??track.split(':')[1];
+  return `Kill ${target} enemies with a fully-equipped ${wlabel}`;
+}
+if(track.startsWith('killsBareWeapon:')){
+  const wlabel=_WNAME?.[track.split(':')[1]]??track.split(':')[1];
+  return `Kill ${target} enemies with an unmodified ${wlabel}`;
+}
+if(track==='maxKillCombo') return `Reach a ${target}-kill combo`;
+if(track.startsWith('weaponLevel:')){
+  const wlabel=_WNAME?.[track.split(':')[1]]??track.split(':')[1];
+  return `Reach ${wlabel} Prestige (Level 10)`;
+}
+if(track.startsWith('allChallengesComplete:')){
+  const wlabel=_WNAME?.[track.split(':')[1]]??track.split(':')[1];
+  return `Complete all ${wlabel} challenges`;
+}
   return `${target} ${track}`;
 }
 
@@ -897,6 +1204,15 @@ export function isAttachmentUnlocked(wName,attachId){return!!(profile.unlockedAt
 export function isWeaponSkinUnlocked(wName,skinId){return skinId==='default'||!!(profile.unlockedWeaponSkins?.[wName]?.includes(skinId));}
 export function isSkinUnlocked(skinId){return skinId==='default'||profile.unlocked.includes(skinId);}
 export function setPlayerSkin(skinId){if(!isSkinUnlocked(skinId))return false;profile.playerSkin=skinId;saveProfile();return true;}
+export function getSpeedMult(wName) {
+  const lo = getLoadout(wName);
+  let mult = 1.0;
+  for (const id of Object.values(lo.attachments || {})) {
+    const att = ATTACHMENTS[id];
+    if (att?.mods?.speedMult) mult *= att.mods.speedMult;
+  }
+  return mult;
+}
 
 export function getEffectiveStats(wName, baseDefs) {
   const lo = getLoadout(wName); 
@@ -913,12 +1229,20 @@ export function getEffectiveStats(wName, baseDefs) {
       else if (mod === 'range') out.range = Math.round(baseDefs.range * (1 + delta));
       else if (mod === 'cd') out.cd = Math.max(0.02, baseDefs.cd * (1 + delta));
       else if (mod === 'speed') out.speed = Math.round((baseDefs.speed || 0) * (1 + delta));
-      // NEW: Handle Pistol magazine conversion properties
+      else if (mod === 'adsSpeedMult') out.adsSpeedMult = (out.adsSpeedMult || 1.0) * delta;
+      // Dynamic Magazine and Multiplier Handling
       else if (mod === 'magSize') out.magSize = Math.max(1, (baseDefs.magSize || 0) + delta);
       else if (mod === 'cdMult') out.cd = Math.max(0.02, baseDefs.cd * delta);
       else if (mod === 'dmgMult') out.dmg = Math.round(baseDefs.dmg * delta);
-      else if (mod === 'reloadMult') out.reloadTime = Math.max(0.1, (baseDefs.reloadTime || 1.6) * delta);
+      else if (mod === 'reloadMult') out.reloadTime = Math.max(0.1, (baseDefs.reloadTime || 1.6) * delta);     
+      else if (mod === 'spreadAdd') out.spread = (out.spread || baseDefs.spread || 0) + delta;
     }
+  }
+  // ION SNIPER RAMP-UP LOGIC
+  if (wName === 'ION') {
+    const currentHeat = baseDefs.heat || 0;
+    const rampFactor = 1 + currentHeat; // 0 heat = 1x dmg, 1.0 heat = 2x dmg
+    out.dmg = Math.round(out.dmg * rampFactor);
   }
   return out;
 }
@@ -945,6 +1269,23 @@ export function hasSeasonedVet(wName){
   if(wName==='GLAUNCHER')return getLoadout('GLAUNCHER').attachments?.special==='seasoned_vet_glauncher';
   return false;
 }
+export function hasFreefallCoil(){ return getLoadout('ELECTRON').attachments?.special==='freefall_coil'; }
+export function hasSuppressor(wName) {
+  return getLoadout(wName).attachments?.barrel === 'suppressor';
+}
+export function hasQuickTrigger() {
+  return getLoadout('SMG').attachments?.special === 'quick_trigger';
+}
+
+export function getAdsLerpSpeed(wName) {
+  const lo = getLoadout(wName);
+  let mult = 1.0;
+  for (const id of Object.values(lo.attachments || {})) {
+    const att = ATTACHMENTS[id];
+    if (att?.mods?.adsSpeedMult) mult *= att.mods.adsSpeedMult;
+  }
+  return 15 * mult; // 15 is the base lerp speed used in animWeapon
+}
 
 export function getLevelProgress(){
   const lv=profile.level;const x=profile.totalXp-totalXpForLevel(lv);const n=xpForLevel(lv);
@@ -962,6 +1303,13 @@ export function getChallengeProgress(ch){
   else if(track.startsWith('killsOfCombo:'))val=(s.killsOfCombo||{})[track.split(':')[1]]||0;
   else if(track.startsWith('energyPickups:'))val=(s.energyPickups||{})[track.split(':')[1]]||0;
   else if(track.startsWith('killedBossWith:'))val=(s.bossKillsWith||{})[track.split(':')[1]]||0;
+  else if(track.startsWith('multiKillsWith:'))      val=(s.multiKillsWith||{})[track.split(':')[1]]||0;
+  else if(track.startsWith('damageDealt:')) val=Math.floor((s.damageDealt||{})[track.split(':')[1]]||0);
+  else if(track.startsWith('killsFullyEquipped:'))   val=(s.killsFullyEquipped||{})[track.split(':')[1]]||0;
+  else if(track.startsWith('killsBareWeapon:'))      val=(s.killsBareWeapon||{})[track.split(':')[1]]||0;
+  else if(track==='maxKillCombo')                    val=s.maxKillCombo||0;
+  else if(track.startsWith('weaponLevel:'))          val=getWeaponLevel(track.split(':')[1]);
+  else if(track.startsWith('allChallengesComplete:'))val=_allWeaponChallengesComplete(track.split(':')[1])?1:0;
   return{val,target,pct:Math.min(1,val/target)};
 }
 export function getUnlockHint(u){
@@ -1044,4 +1392,11 @@ function _showUnlockToasts(unlocks){
     const css = 'position:fixed;bottom:90px;right:20px;background:rgba(0,0,0,.85);border:1px solid rgba(216,240,48,.4);padding:10px 18px;z-index:1100;font-family:"Courier New",monospace;font-size:15px;color:#d8f030;animation:_fadeToast 2.0s forwards';
     _enqueueToast(html, 2100, css);
   });
+}
+
+function _showWeaponLevelUpToast(wName, newLv) {
+  const wlabel = wName.replace(/_/g, ' ').toUpperCase();
+  const html = `<div style="font-size:14px;color:#d8a030;letter-spacing:3px">WEAPON LEVEL UP</div><div style="font-size:32px;font-weight:bold;color:#d8f030;margin:2px 0">${wlabel} LVL ${newLv}</div>`;
+  const css = 'position:fixed;top:30%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,.85);border:1px solid rgba(216,160,48,.5);padding:15px 30px;z-index:1100;text-align:center;font-family:"Courier New",monospace;pointer-events:none;animation:_fadeToast 2.5s forwards';
+  _enqueueToast(html, 2500, css);
 }

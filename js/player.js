@@ -8,7 +8,12 @@ import { WDEFS, inventory, activeSlot, curWep, wepCooldown, swingT, AUTO_WEAPONS
 import { hitscan, fireRocket, firePlasma, fireGrenade } from './projectiles.js';
 import { _meshToEnemy } from './enemies.js';
 // Static imports eradicate the Promise crashes in the shoot/input loop!
-import { getEffectiveStats, isAkimbo, isAutoFire, hasPowerCell, hasClusterRounds, hasLaserDot, hasSlowTrigger, hasDualTrigger, hasEnergyConverter, getLoadout, getAdsFov, getScopeShape } from './progression.js';
+import {
+  getEffectiveStats, isAkimbo, isAutoFire, hasPowerCell, hasClusterRounds,
+  hasLaserDot, hasSlowTrigger, hasDualTrigger, hasEnergyConverter,
+  hasFreefallCoil, hasSuppressor, getSpeedMult,      
+  getLoadout, getAdsFov, getScopeShape
+} from './progression.js';
 
 export const PH = 1.72, PR = .44;
 const SPD_WALK   = 13;
@@ -100,16 +105,30 @@ export function shoot() {
     let heatMult = 1.0;
     if (curWep === 'ELECTRON' && hasSlowTrigger()) {
       if (_burstShotsLeft === 0) _burstShotsLeft = 3; 
-      heatMult = 0.34; // 1 heat cost divided by 3 bullets
+      heatMult = 0.34; 
     } else if (curWep === 'PLASMA' && hasDualTrigger() && !player.plasmaAltMode) {
       if (_burstShotsLeft === 0) _burstShotsLeft = 3;
       heatMult = 0.34;
+    } else if (curWep === 'ELECTRON' && hasFreefallCoil() && !player.onGround) {
+      heatMult *= 0.65; // 35% heat reduction while airborne. 
+      // Two things to note here:
+      // First, it's a *= multiplier so it stacks correctly with haste — if both are active, heat is 0.65 × 0.5 = 0.325 of base, not a flat override
+      // Second, slow_trigger sets heatMult = 0.34 before this runs, so a player with both attachments equipped would get 0.34 × 0.65 = 0.22 of base heat while airborne
+    }
+    // --- Haste Powerup reduces heat generation by 50% ---
+    if (player.buffs['haste'] > 0) {
+        heatMult *= 0.5;
     }
 
     const cost = (player.plasmaAltMode && curWep === 'PLASMA') ? (W.heatPerShot * 3) : (W.heatPerShot * heatMult);
-    W.heat = Math.min(1.0, (W.heat || 0) + cost);
-    _heatDelayTimer = 0.5;
-    markHudDirty();
+    
+    // --- Only bypass heat if the actual BUFF is active ---
+    const hasInfiniteAmmoBuff = player.buffs['infinite_ammo'] > 0;
+    if (!hasInfiniteAmmoBuff) {
+        W.heat = Math.min(1.0, (W.heat || 0) + cost);
+        _heatDelayTimer = 0.5;
+        markHudDirty();
+    }
     
     if (W.heat >= 1.0) { 
       W.heat = 1.0;
@@ -165,46 +184,57 @@ export function shoot() {
   if (curWep === 'PLASMA' && player.plasmaAltMode) modDmg *= 3.0;
 
   switch (curWep) {
-    case 'PISTOL':  
-      // FIX: Synchronous mag check restores Pistol sounds
-      sfx.pistol(getLoadout('PISTOL').attachments?.magazine ?? null);
+    case 'PISTOL':
+      if (!hasSuppressor('PISTOL')) sfx.pistol(getLoadout('PISTOL').attachments?.magazine ?? null);
       hitscan(_meshToEnemy, spread, modDmg, range, falloff);
       if (akimbo) hitscan(_meshToEnemy, spread * 1.15, modDmg * 0.85, range, falloff);
       break;
-    case 'SMG':      sfx.smg();      hitscan(_meshToEnemy, spread, modDmg, range, falloff); break;
-    case 'CHAINGUN': sfx.chaingun(); hitscan(_meshToEnemy, spread, modDmg, range, falloff); break;
-    case 'RAILGUN':  sfx.railgun();  hitscan(_meshToEnemy, spread, 9999, range, 0.00); break;
-    case 'ION':      
-      // FIX: ION Damage scales based on how much it was allowed to heat up!
-      const ionChargeBonus = 1.0 + ((W.heat || 0) * 1.5); // Up to +150% damage
-      sfx.railgun();  
-      hitscan(_meshToEnemy, spread, modDmg * ionChargeBonus, range, 0.00); 
+    case 'SMG':
+      if (!hasSuppressor('SMG')) sfx.smg();
+      hitscan(_meshToEnemy, spread, modDmg, range, falloff);
       break;
-    case 'PLASMA':   
-      sfx.plasma();   
-      if (player.plasmaAltMode) {
-          hitscan(_meshToEnemy, spread, modDmg, range, 0); 
-      } else {
-          firePlasma(modDmg); 
-      }
+    case 'CHAINGUN':
+      if (!hasSuppressor('CHAINGUN')) sfx.chaingun();
+      hitscan(_meshToEnemy, spread, modDmg, range, falloff);
       break;
-    case 'ELECTRON': sfx.plasma();   hitscan(_meshToEnemy, spread, modDmg, range, falloff); break;
-    case 'ROCKET':   sfx.rocket();   fireRocket(); break;
-    case 'SHOTGUN': 
-      sfx.shotgun(); setTimeout(() => sfx.shotgun(), 20); pitch -= 0.06;
+    case 'RAILGUN':
+      if (!hasSuppressor('RAILGUN')) sfx.railgun();
+      hitscan(_meshToEnemy, spread, 9999, range, 0.00);
+      break;
+    case 'ION':
+      const ionChargeBonus = 1.0 + ((W.heat || 0) * 1.5);
+      if (!hasSuppressor('ION')) sfx.railgun();
+      hitscan(_meshToEnemy, spread, modDmg * ionChargeBonus, range, 0.00);
+      break;
+    case 'ELECTRON':
+      if (!hasSuppressor('ELECTRON')) sfx.plasma();
+      hitscan(_meshToEnemy, spread, modDmg, range, falloff);
+      break;
+    case 'PLASMA':
+      if (!hasSuppressor('PLASMA')) sfx.plasma();
+      if (player.plasmaAltMode) { hitscan(_meshToEnemy, spread, modDmg, range, 0); }
+      else { firePlasma(modDmg); }
+      break;
+    case 'ROCKET':
+      if (!hasSuppressor('ROCKET')) sfx.rocket();
+      fireRocket();
+      break;
+    case 'SHOTGUN':
+      if (!hasSuppressor('SHOTGUN')) { sfx.shotgun(); setTimeout(() => sfx.shotgun(), 20); }
+      pitch -= 0.06;
       const pellets = EW.pellets ?? W.pellets;
       for (let i = 0; i < pellets; i++) hitscan(_meshToEnemy, spread, modDmg, range, falloff);
       if (akimbo) for (let i = 0; i < pellets; i++) hitscan(_meshToEnemy, spread * 1.2, modDmg * 0.8, range, falloff);
       break;
-    case 'GLAUNCHER': 
+    case 'GLAUNCHER':
+      if (!hasSuppressor('GLAUNCHER')) sfx.shotgun();
       const fwd = new BABYLON.Vector3();
       camera.getForwardRay(1).direction.normalizeToRef(fwd);
       fwd.y += 0.05; fwd.normalize();
       const origin = camera.position.clone().add(fwd.scale(0.8));
       fireGrenade('player', origin, fwd, WDEFS.GLAUNCHER.projSpeed, modDmg, WDEFS.GLAUNCHER.splash, hasClusterRounds());
-      sfx.shotgun();
       break;
-  }
+  } 
 
   // ── Burst Decrements ──
   if (curWep === 'ELECTRON' && hasSlowTrigger() && _burstShotsLeft > 0) {
@@ -272,6 +302,16 @@ export function resetPlayer(x, y, z) {
   _jumpBufTimer   = 0;
   _coyoteTimer    = 0;
   player.buffs = {}; 
+
+  player.isReloading = false;
+  player.reloadTimer = 0;
+  
+  for (const wName in WDEFS) {
+      WDEFS[wName].heat = 0;
+      WDEFS[wName].isOverheated = false;
+  }
+  
+  markHudDirty();
 }
 
 export function updatePlayer(dt, gameRunning, paused) {
@@ -303,13 +343,24 @@ export function updatePlayer(dt, gameRunning, paused) {
   // Actually subtract heat delay timer!
   if (_heatDelayTimer > 0) _heatDelayTimer -= dt;
 
+  // ION Sniper Ramp-Up: Generate heat while scoped
+  if (curWep === 'ION' && isScoped) {
+      if (!player.buffs['infinite_ammo']) {
+          const W = WDEFS['ION'];
+          // Haste also slows down passive scope heating
+          const hasteMult = player.buffs['haste'] > 0 ? 0.5 : 1.0; 
+          W.heat = Math.min(1.0, (W.heat || 0) + (dt * 0.20 * hasteMult));
+          _heatDelayTimer = 0.5; 
+          markHudDirty();
+      }
+  }
+
   // ── Background Weapon Heat & Scope Heating Loop ──
     for (const wName in WDEFS) {
         const wDef = WDEFS[wName];
-        // ... [Keep scope heating logic] ...
 
         if (_heatDelayTimer <= 0 && wDef.heat > 0) {
-            // FIX: coolRate is a whole number percentage (e.g. 35). Divide by 100 so it cools over ~3 seconds.
+            //  coolRate is a whole number percentage (e.g. 35). Divide by 100 so it cools over ~3 seconds.
             wDef.heat -= ((wDef.coolRate || 25) / 100) * dt; 
             if (wDef.heat <= 0) { 
                 wDef.heat = 0; 
@@ -336,22 +387,10 @@ export function updatePlayer(dt, gameRunning, paused) {
         }
     }
 
-    if (player.isReloading) {
-      player.reloadTimer -= dt;
-      markHudDirty();
-      if (player.reloadTimer <= 0) {
-          player.isReloading = false;
-          const needed = W.magSize - W.currentMag;
-          const available = player.buffs['infinite_ammo'] ? needed : Math.min(needed, W.ammo);
-          W.currentMag += available;
-          if (!player.buffs['infinite_ammo']) W.ammo -= available;
-          sfx.pickup(); 
-          refreshSlotHUD();
-      }
-  }
-
   const sprint = keys['ShiftLeft'] || keys['ShiftRight'];
-  const spd    = sprint ? SPD_SPRINT : SPD_WALK;
+  const speedMult   = getSpeedMult(curWep);
+  const spd   = (sprint ? SPD_SPRINT : SPD_WALK) * speedMult;
+  // use moveSpeed instead of the raw constant in the movement vector
   const fwd    = getCameraForward();
   const right  = getCameraRight();
   _move.setAll(0);
@@ -362,11 +401,12 @@ export function updatePlayer(dt, gameRunning, paused) {
   const mLen2 = _move.lengthSquared();
   if (mLen2 > 0) _move.scaleInPlace(spd / Math.sqrt(mLen2));
 
-  // FIX: Don't allow full auto for Plasma Sniper
+  // Don't allow full auto for Plasma Sniper
   const isPlasmaSniper = curWep === 'PLASMA' && player.plasmaAltMode;
-  const isAuto = AUTO_WEAPONS.has(curWep) && !isPlasmaSniper;
+  const isAuto = (AUTO_WEAPONS.has(curWep) || isAutoFire(curWep)) && !isPlasmaSniper;
   
-  if (mouseHeld && (isAuto || isAkimbo(curWep) || isAutoFire(curWep))) shoot();
+  // Akimbo no longer forces full-auto trigger mapping
+  if (mouseHeld && isAuto) shoot();
 
   const canJump    = player.onGround || (_coyoteTimer > 0);
   const jumpWanted = keys['Space'] || (_jumpBufTimer > 0);

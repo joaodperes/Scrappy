@@ -8,6 +8,7 @@ import { spawnSparks } from './particles.js';
 import { fireEnemyShot } from './projectiles.js';
 import { sfx } from './audio.js';
 import { jumpPads } from './level.js';
+import { recordDamage } from './progression.js';
 
 // ── Mesh→enemy lookup ─────────────────────────────────────────
 export const _meshToEnemy = new Map();
@@ -322,8 +323,8 @@ export function buildRobot(type) {
     shotgun: { hp:80,  maxHp:80,  spd:6.0, dmg:18, range:18, rate:1.1, pt:'shotgun', pv:18, score:140, mOY:1.0 },
     rocket:  { hp:120, maxHp:120, spd:2.0, dmg:40, range:28, rate:2.2, pt:'rocket',  pv:14, score:200, mOY:1.1 },
     giantbot:  { hp: 1500, maxHp: 1500, spd: 1.8, dmg: 45, range: 40, rate: 1.5, pt: 'rocket', pv: 20, score: 5000, mOY: 2.5, railgunImmune: true },
-    electron_bot: { hp: 120, maxHp: 120, spd: 6.5, dmg: 15, range: 90, rate: 0.3, pt: 'electron', pv: 48, score: 160, mOY: 1.0 },
-    ion_sniper:   { hp: 85,  maxHp: 85,  spd: 4.5, dmg: 45, range: 140, rate: 2.0, pt: 'ion', pv: 120, score: 200, mOY: 1.0 },
+    electron_bot: { hp: 60, maxHp: 60, spd: 3.5, dmg: 15, range: 40, rate: 0.3, pt: 'electron', pv: 48, score: 160, mOY: 1.0 },
+    ion_sniper:   { hp: 45,  maxHp: 45,  spd: 3.0, dmg: 45, range: 50, rate: 2.0, pt: 'ion', pv: 120, score: 200, mOY: 1.0 },
     grenadier: { hp:45, maxHp:45, spd:3.2, dmg:65, range:40, rate:2.5, pt:'grenade', pv:22, score:160, mOY:1.0 },
   }[type] || {};
 
@@ -419,9 +420,12 @@ export function hitRobot(e, dmg, isHeadshot = false) {
   if (BOSS_TYPES.has(e.type) && dmg > e.maxHp * 0.20) {
     dmg = Math.round(e.maxHp * 0.20);
   }
-  e.hp -= dmg;
+  const actualDmg = Math.min(dmg, e.hp); // clamp so overkill doesn't inflate totals
+  recordDamage(curWep, actualDmg);
+  e.hp -= actualDmg;
   if (cb.showHitMarker) cb.showHitMarker();
   sfx.hit();
+ 
   if (e.hp <= 0) destroyRobot(e, isHeadshot);
 }
 
@@ -466,18 +470,21 @@ export function destroyRobot(e, isHeadshot = false) {
 
   // ── 2. APPLY DOUBLE SCORE BUFF ──────────────────────────────
   let pointsToAward = e.score;
-  if (player.buffs && player.buffs['double_score'] > 0) {
-      pointsToAward *= 2; 
-  }
+  const _doubleXp = (player.buffs?.double_score || 0) > 0; // ← capture NOW, before async
+  if (_doubleXp) pointsToAward *= 2;
   player.score += pointsToAward;
 
   // ── 3. PROGRESSION: XP + kill tracking ──────────────────────
   import('./progression.js').then(({ awardXp, recordKill, XP_GRANTS, hasEnergyCoil }) => {
     const xpKey = 'kill' + e.type.charAt(0).toUpperCase() + e.type.slice(1);
-    const xp = XP_GRANTS[xpKey] ?? XP_GRANTS.killScout;
-    awardXp(xp, 'Kill: ' + e.type);
-    // Use pre-captured weapon key — no nested import, no race condition.
-    recordKill(e.type, _killedWithWeapon, { isJumping: _killedWhileAir, isScoped: _killedWhileScoped });
+    const xp    = XP_GRANTS[xpKey] ?? XP_GRANTS.killScout;
+    const xpMult = _doubleXp ? 2 : 1;           // ← same flag, safe in closure
+    awardXp(xp * xpMult);
+    recordKill(e.type, _killedWithWeapon, {
+      isJumping: _killedWhileAir,
+      isScoped:  _killedWhileScoped,
+      xpMult,                                    // ← passed through for weapon XP
+    });
 
     // ── Energy Coil: headshot kills on ION vent 40% heat ──────
     if (isHeadshot && _killedWithWeapon === 'ION' && hasEnergyCoil()) {
