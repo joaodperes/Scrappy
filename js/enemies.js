@@ -2,7 +2,7 @@
 const BABYLON = window.BABYLON;
 import { scene, camera, navPlugin } from './scene.js';
 import { M, robotTex } from './textures.js';
-import { makeScaledWeaponModel, ROBOT_DROPS, curWep } from './weapons.js';
+import { makeScaledWeaponModel, ROBOT_DROPS, curWep, WDEFS  } from './weapons.js';
 import { enemies, player, cb } from './gameState.js';
 import { spawnSparks } from './particles.js';
 import { fireEnemyShot } from './projectiles.js';
@@ -265,6 +265,8 @@ export function buildRobot(type) {
     if (type === 'grenadier') { bW=.60; bH=1.20; bD=.42; aL=.70; aW=.13; lW=.18; lH=.65; fL=.28; fH=.13; hW=.38; hH=.34; hD=.30; }
     if (type === 'electron_bot') { bW=.50; bH=1.15; bD=.35; aL=.70; aW=.12; lW=.15; lH=.68; fL=.25; fH=.12; hW=.35; hH=.32; hD=.28; }
     if (type === 'ion_sniper')   { bW=.60; bH=1.1; bD=.40; aL=.64; aW=.12; lW=.18; lH=.55; fL=.28; fH=.13; hW=.38; hH=.30; hD=.28; }
+    if (type === 'ninja') { bW=.45; bH=1.0; bD=.30; aL=.60; aW=.10; lW=.12; lH=.60; fL=.20; fH=.10; hW=.30; hH=.25; hD=.25; }
+    if (type === 'armored') { bW=.80; bH=1.3; bD=.50; aL=.80; aW=.18; lW=.24; lH=.60; fL=.35; fH=.15; hW=.45; hH=.35; hD=.35; }
     const bY = bH / 2 + .28;
     const hY = bY + bH/2 + hH*.42;
     if (type === 'giantbot') {
@@ -282,7 +284,54 @@ export function buildRobot(type) {
       for (let i = -1; i <= 1; i += 2) {
           addCyl('horn' + i, 0.15, 0.9, M.ledRed, i * 0.4, hY + hH/2 + 0.3, -0.1, -Math.PI/5);
       }
-    }
+    } else if (type === 'ninja') {
+        // Glowing Katana on the right arm
+        addBox('katana_blade', 0.02, 1.2, 0.08, M.ledCyan, bW/2+aW+0.05, bY+bH*.3, 0.4);
+        addBox('katana_hilt', 0.04, 0.3, 0.10, M.black, bW/2+aW+0.05, bY+bH*.1, 0.1);
+    } else if (type === 'armored') {
+      // Main body
+      addBox('body', bW, bH, bD, bmat, 0, bY, 0);
+      addBox('hd', hW, hH, hD, bmat, 0, hY, 0);
+      addBox('vis', hW*.78, .14, hW*.18, led, 0, hY, hW*.38);
+      
+      // Semi-transparent directional shield in front
+      const shieldGeom = BABYLON.MeshBuilder.CreateBox('shieldVis', {
+          width: 0.12, height: 1.6, depth: 0.9
+      }, scene);
+      shieldGeom.position.set(-bW*0.25, bY, bD*0.25);
+      
+      const shieldMat = new BABYLON.StandardMaterial('shieldArmor_' + Math.random(), scene);
+      shieldMat.diffuseColor = new BABYLON.Color3(0.1, 0.3, 0.6);
+      shieldMat.emissiveColor = new BABYLON.Color3(0.15, 0.5, 0.9);
+      shieldMat.alpha = 0.4;
+      shieldMat.specularColor = new BABYLON.Color3(0.6, 0.7, 0.9);
+      shieldMat.specularPower = 96;
+      shieldMat.backFaceCulling = false;
+      shieldGeom.material = shieldMat;
+      shieldGeom.parent = g;
+      shieldGeom.isPickable = true;
+      shieldGeom.metadata = { enemy: true, shield: true };
+      
+      // Store shield reference on the enemy object
+      const shieldRef = shieldGeom;
+      
+      // Add a subtle glow ring around the shield edge
+      const ringGeom = BABYLON.MeshBuilder.CreateTorus('shieldEdge', {
+          diameter: 1.0, thickness: 0.05, tessellation: 16
+      }, scene);
+      ringGeom.position.copyFrom(shieldGeom.position);
+      ringGeom.position.x -= 0.06;
+      ringGeom.material = M.ledCyan;
+      ringGeom.parent = g;
+      ringGeom.isPickable = false;
+      
+      // Pulse animation for the shield
+      shieldRef._pulseAnim = true;
+      
+      // Pistol on the right arm
+      const wm = makeScaledWeaponModel('PISTOL', 0.6); wm.parent = g;
+      wm.position.set(bW/2+aW/2, bY+bH*.18-.02, .42);
+  }
     
     addBox('body', bW, bH, bD, bmat, 0, bY, 0);
     addBox('pan', bW*.55, bH*.38, .06, bmat, 0, bY, bW*.28);
@@ -326,6 +375,8 @@ export function buildRobot(type) {
     electron_bot: { hp: 60, maxHp: 60, spd: 3.5, dmg: 15, range: 40, rate: 0.3, pt: 'electron', pv: 48, score: 160, mOY: 1.0 },
     ion_sniper:   { hp: 45,  maxHp: 45,  spd: 3.0, dmg: 45, range: 50, rate: 2.0, pt: 'ion', pv: 120, score: 200, mOY: 1.0 },
     grenadier: { hp:45, maxHp:45, spd:3.2, dmg:65, range:40, rate:2.5, pt:'grenade', pv:22, score:160, mOY:1.0 },
+    ninja:     { hp:40, maxHp:40, spd:10, dmg:45, range:3.0, rate:0.8, pt:'melee', pv:0, score:150, mOY:1.0 },
+    armored:   { hp:180, maxHp:180, spd:2.8, dmg:15, range:25, rate:0.8, pt:'heavy', pv:45, score:220, mOY:1.0 },
   }[type] || {};
 
   return {
@@ -368,7 +419,7 @@ const WALKABLE_SPAWNS = [
   // Moved to South platform (z = -16) to keep the North safe room strictly for players
   //[ 0, 24, -16], [-4, 24, -16], [ 4, 24, -16],
 ];
-const MIN_SPAWN_DIST = 16;
+const MIN_SPAWN_DIST = 48;
 
 export function spawnBot(type, _x, _spawnY_IGNORED, _z, scale = 1.0) {
   // Completely ignore spawnY so bots scatter across all vertical levels!
@@ -405,6 +456,17 @@ export function spawnBot(type, _x, _spawnY_IGNORED, _z, scale = 1.0) {
     px = snapped.x;
     py = snapped.y;
     pz = snapped.z;
+    
+    // Push the bot away from walls at spawn
+    const dirs = [new BABYLON.Vector3(1,0,0), new BABYLON.Vector3(-1,0,0), new BABYLON.Vector3(0,0,1), new BABYLON.Vector3(0,0,-1)];
+    for (const d of dirs) {
+        const r = new BABYLON.Ray(new BABYLON.Vector3(px, py + 0.5, pz), d, 0.6);
+        const h = scene.pickWithRay(r, m => m.checkCollisions && !m.metadata?.enemy && m.isEnabled());
+        if (h?.hit) {
+            px -= d.x * (0.6 - h.distance);
+            pz -= d.z * (0.6 - h.distance);
+        }
+    }
   }
 
   e.group.position.set(px, py + (e.flyH > 0 ? e.flyH : 0), pz);
@@ -414,22 +476,51 @@ export function spawnBot(type, _x, _spawnY_IGNORED, _z, scale = 1.0) {
   rebuildMeshMap();
 }
 
-export function hitRobot(e, dmg, isHeadshot = false) {
+export function hitRobot(e, dmg, isHeadshot = false, isExplosive = false) {
   if (!e.alive) return;
   // Railgun fires 9999 – cap it for boss-tier enemies so they need multiple shots - currently capped at 20% HP
   if (BOSS_TYPES.has(e.type) && dmg > e.maxHp * 0.20) {
     dmg = Math.round(e.maxHp * 0.20);
   }
-  const actualDmg = Math.min(dmg, e.hp); // clamp so overkill doesn't inflate totals
+  let actualDmg = Math.min(dmg, e.hp); // clamp so overkill doesn't inflate totals
+
+  if (e.type === 'armored') {
+    const W = WDEFS[curWep];
+    const isEnergy = W.useHeat || (curWep === 'PLASMA' && W.ammo === Infinity) || curWep === 'RAILGUN';
+    
+    // Check if player is behind the shield (shooting from the side/back)
+    const toPlayer = camera.position.subtract(e.group.position);
+    const botForward = new BABYLON.Vector3(0, 0, 1);
+    botForward.rotateByQuaternionToRef(e.group.rotationQuaternion || BABYLON.Quaternion.Identity(), botForward);
+    const dotProduct = BABYLON.Vector3.Dot(toPlayer.normalize(), botForward);
+    
+    if (dotProduct > 0 && !isEnergy) {
+        // Player is in front of shield and not using energy weapon - 60% damage reduction
+        actualDmg = Math.round(actualDmg * 0.40);
+        
+        // Visual feedback - flash shield
+        const shieldMesh = e.group.getChildMeshes().find(m => m.name.includes('shieldVis'));
+        if (shieldMesh?.material) {
+            shieldMesh.material.alpha = 0.8;
+            setTimeout(() => { 
+                if (shieldMesh?.material) shieldMesh.material.alpha = 0.4; 
+            }, 150);
+        }
+    } else if (isEnergy) {
+        // Energy weapons bypass the shield completely - full damage
+        // No reduction applied
+    }
+}
+
   recordDamage(curWep, actualDmg);
   e.hp -= actualDmg;
   if (cb.showHitMarker) cb.showHitMarker();
   sfx.hit();
  
-  if (e.hp <= 0) destroyRobot(e, isHeadshot);
+  if (e.hp <= 0) destroyRobot(e, isHeadshot, isExplosive);
 }
 
-export function destroyRobot(e, isHeadshot = false) {
+export function destroyRobot(e, isHeadshot = false, isExplosive = false) {
   e.alive = false;
   if (e._arrowNode) { e._arrowNode.getChildMeshes().forEach(m => m.dispose()); e._arrowNode.dispose(); }
 
@@ -484,6 +575,8 @@ export function destroyRobot(e, isHeadshot = false) {
       isJumping: _killedWhileAir,
       isScoped:  _killedWhileScoped,
       xpMult,                                    // ← passed through for weapon XP
+      isHeadshot: isHeadshot,
+      isExplosiveKill: isExplosive,
     });
 
     // ── Energy Coil: headshot kills on ION vent 40% heat ──────
@@ -503,7 +596,7 @@ export function destroyRobot(e, isHeadshot = false) {
       feed._t = setTimeout(() => feed.textContent = '', 2200); 
   }
 
-  import('./pickups.js').then(({ spawnPickup, spawnWeaponDrop, spawnPowerup }) => {
+  import('./pickups.js').then(({ spawnPickup, spawnWeaponDrop, spawnPowerup, spawnTypedPickup }) => {
    // --- EPIC BOSS LOOT EXPLOSION ---
     if (e.type === 'giantbot') {
       spawnPowerup(pos.add(new BABYLON.Vector3( 1.5, 0, 0)), 'quad_damage');
@@ -511,6 +604,10 @@ export function destroyRobot(e, isHeadshot = false) {
       spawnPickup(pos.add(new BABYLON.Vector3(0, 0,  1.5)));
       spawnPickup(pos.add(new BABYLON.Vector3(0, 0, -1.5)));
       spawnWeaponDrop(pos, 'ROCKET');
+    } else if (e.type === 'ninja') {
+      // --- NINJA FIXED DROPS ---
+      spawnTypedPickup(pos.add(new BABYLON.Vector3( 0.6, 0, 0)), 'ammo');
+      spawnTypedPickup(pos.add(new BABYLON.Vector3(-0.6, 0, 0)), 'armor');
     } else {
       // --- NORMAL BOT LOOT ---
       // 5% chance to drop a rare Powerup
@@ -578,32 +675,116 @@ export function updateEnemies(dt) {
 
     // --- 1. BOSS SPECIAL ABILITIES ---
     if (e.type === 'giantbot') {
-        // Initialise summon timer on first tick so it doesn't fire immediately
-        if (e.summonTimer === undefined) e.summonTimer = 30.0;
-        e.summonTimer -= dt;
+      // Cooldown timers
+      if (e.summonTimer === undefined) e.summonTimer = 30.0;
+      if (e.summonRandomTimer === undefined) e.summonRandomTimer = 0;
+      if (e._thresholdsTriggered === undefined) {
+          e._thresholdsTriggered = { '0.75': false, '0.5': false, '0.25': false };
+      }
 
-        // Only summon when: cooldown elapsed AND the arena isn't already packed
-        // AND the boss has taken some damage (< 75 % HP) — gate prevents
-        // the boss spamming minions before the player even engages it.
-        const hpPct = e.hp / e.maxHp;
-        if (e.summonTimer <= 0 && enemies.length < 22 && hpPct < 0.75) {
-            e.summonTimer = 45.0;  // 45-second cooldown between summons
-            spawnBot('drone', e.group.position.x + 3, e.group.position.y + 5, e.group.position.z, 1.0);
-            spawnBot('drone', e.group.position.x - 3, e.group.position.y + 5, e.group.position.z, 1.0);
-            _roundEnemies += 2;  // keep round kill counter accurate
-        }
+      // Reduce timers
+      e.summonTimer -= dt;
+      e.summonRandomTimer -= dt;
+
+      // --- Threshold‑based summon (once per threshold) ---
+      const hpPct = e.hp / e.maxHp;
+      const thresholds = [0.75, 0.5, 0.25];
+      for (const t of thresholds) {
+          const key = t.toString();
+          if (hpPct <= t && !e._thresholdsTriggered[key] && enemies.length < 22) {
+              e._thresholdsTriggered[key] = true;
+              // Spawn 2 drones instantly
+              spawnBot('drone', e.group.position.x + 3, e.group.position.y, e.group.position.z, 1.0);
+              spawnBot('drone', e.group.position.x - 3, e.group.position.y, e.group.position.z, 1.0);
+              _roundEnemies += 2;
+          }
+      }
+
+      // --- Random summon (every 30s cooldown, only if HP < 75%) ---
+      if (e.summonRandomTimer <= 0 && hpPct < 0.75 && enemies.length < 22) {
+          e.summonRandomTimer = 30.0;
+          spawnBot('drone', e.group.position.x + 3, e.group.position.y, e.group.position.z, 1.0);
+          spawnBot('drone', e.group.position.x - 3, e.group.position.y, e.group.position.z, 1.0);
+          _roundEnemies += 2;
+      }
+      // --- STOMP ---
+      if (e._stompTimer === undefined) e._stompTimer = 15.0;
+      e._stompTimer -= dt;
+      const distToPlayer = BABYLON.Vector3.Distance(e.group.position, camera.position);
+      if (e._stompTimer <= 0 && distToPlayer < 12) {
+          e._stompTimer = 15.0;
+          // Small vertical hop (just animation)
+          e._yVel = 6.0;          // temporary jump
+          e._hopY = 0.05;
+          // Explosion at boss feet
+          import('./projectiles.js').then(({ boom }) => {
+              boom(e.group.position.clone(), 5.0, 35, true);   // damage bots (if any) & player
+          });
+      }
+
+      // --- CHARGE ---
+      if (e._chargeTimer === undefined) e._chargeTimer = 25.0;
+      if (e._chargeActive === undefined) e._chargeActive = false;
+      e._chargeTimer -= dt;
+      if (e._chargeTimer <= 0 && !e._chargeActive) {
+          e._chargeTimer = 25.0;
+          e._chargeActive = true;
+          e._chargeDuration = 2.0;
+          // Temporarily increase speed
+          e.speed = e.speed * 2.5;
+      }
+      if (e._chargeActive) {
+          e._chargeDuration -= dt;
+          if (e._chargeDuration <= 0) {
+              e._chargeActive = false;
+              e.speed = e.speed / 2.5;   // reset speed
+          }
+      }
     }
 
     // --- 2. MOVEMENT LOGIC ---
-    if (e.type === 'drone') {
-        const targetY = camera.position.y + 0.5;
-        e._floorY += (targetY - e._floorY) * dt * 2.0;
-        if (dist > 6.0 || !hasLOS) {
-            _eDir.copyFrom(_ePP).subtractInPlace(e.group.position);
-            _eDir.y = 0; 
-            _eDir.normalize();
-            e.group.position.addInPlace(_eDir.scale(e.speed * dt));
-        }
+      if (e.type === 'drone') {
+          const targetY = camera.position.y + 0.5;
+          e._floorY += (targetY - e._floorY) * dt * 2.0;
+          if (dist > 6.0 || !hasLOS) {
+              _eDir.copyFrom(_ePP).subtractInPlace(e.group.position);
+              _eDir.y = 0; 
+              _eDir.normalize();
+              // Separation from other drones
+              for (const o of enemies) {
+                  if (o === e || !o.alive || o.type !== 'drone') continue;
+                  const sep = e.group.position.subtract(o.group.position);
+                  const len = sep.length();
+                  if (len > 0.01 && len < 2.5) {
+                      sep.normalize().scaleInPlace(0.6);
+                      _eDir.addInPlace(sep);
+                  }
+              }
+              _eDir.normalize();
+
+              // Simple wall avoidance
+              const moveDist = e.speed * dt;
+              const ray = new BABYLON.Ray(e.group.position, _eDir, moveDist + 0.5);
+              const wallHit = scene.pickWithRay(ray, m => m.checkCollisions && !m.metadata?.enemy && m.isEnabled());
+              if (wallHit?.hit) {
+                const n = wallHit.getNormal();
+                const steer = BABYLON.Vector3.Cross(n, BABYLON.Axis.Y).normalize();
+                _eDir.copyFrom(steer);    // copy the values instead of reassigning
+                // Also push slightly away from wall
+                _eDir.addInPlace(n.scale(0.5));
+                _eDir.normalize();
+              }
+              e.group.position.addInPlace(_eDir.scale(e.speed * dt));
+              // After moving, snap back to NavMesh if we went through a wall
+              /* const dronePos = e.group.position.clone();
+              dronePos.y = e._floorY + 0.5;
+              const safePos = navPlugin.getClosestPoint(dronePos);
+              if (safePos && BABYLON.Vector3.Distance(dronePos, safePos) > 0.5) {
+                  // We're too far from the navmesh — probably inside a wall
+                  e.group.position.x = safePos.x;
+                  e.group.position.z = safePos.z;
+              } */
+          }
         // ── Drone hover hum ────────────────────────────────────────
         if (!e._hoverTimer) e._hoverTimer = Math.random() * 0.4; // stagger startup
         e._hoverTimer -= dt;
@@ -611,7 +792,6 @@ export function updateEnemies(dt) {
             e._hoverTimer = 0.22; // ~4–5 Hz pulse, matches rotor feel
             if (dist < 20) sfx.hover(Math.max(0, 1 - dist / 20));
         }
-    // ... [Inside updateEnemies(dt), replacing the GROUND BOTS section] ...
 
     } else {
         // GROUND BOTS: NavMesh Pathfinding & Smart Ranges
@@ -628,7 +808,12 @@ export function updateEnemies(dt) {
             Math.pow(e.group.position.z - _ePP.z, 2)
         );
 
-        const shouldMove = _angryMode || !hasLOS || (dist2D > targetDist + 1.0 || dist2D < targetDist - 2.0);
+        // Calculate vertical difference to detect if bot is on wrong floor
+        const verticalDiff = Math.abs(e.group.position.y - _ePP.y);
+        const onWrongFloor = verticalDiff > 4.0; // More than 4 units of height difference
+
+        // Always move if: angry mode, no LOS, wrong floor, or outside preferred range
+        const shouldMove = _angryMode || !hasLOS || onWrongFloor || (dist2D > targetDist + 1.0 || dist2D < targetDist - 2.0);
 
         if (shouldMove) {
             const botFeet   = new BABYLON.Vector3(e.group.position.x, e._floorY + 0.5, e.group.position.z);
@@ -657,13 +842,24 @@ export function updateEnemies(dt) {
                 const stepUp = nextWaypoint.y - e._floorY;
                 if (stepUp > 0.25 && stepUp < 3.5) {
                     // Proportional jump velocity: just enough to clear the step
-                    e._yVel  = Math.sqrt(2 * 35.0 * stepUp) * 1.1;
-                    e._hopY  = 0.01; // seed mid-air branch
+                    e._yVel  = Math.sqrt(2 * 35.0 * stepUp) * 1.2;
+                    e._hopY  = 0.05; // seed mid-air branch
                 }
             }
 
             _eDir.y = 0;
             if (_eDir.length() > 0.001) _eDir.normalize();
+
+            // --- NINJA DODGE MECHANIC ---
+            // 2% chance per frame to violently strafe sideways when close
+            if (e.type === 'ninja' && dist < 18 && e._hopY <= 0 && Math.random() < 0.02) {
+                e._yVel = 7.0; // Short hop
+                e._hopY = 0.05;
+                // Generate a perpendicular strafe vector
+                const strafeDir = BABYLON.Vector3.Cross(BABYLON.Axis.Y, _eDir).normalize();
+                if (Math.random() > 0.5) strafeDir.scaleInPlace(-1);
+                _eDir.addInPlace(strafeDir.scale(3.0)).normalize();
+            }
 
             // ── Jump pad detection ─────────────────────────────────────────
             // Check whether the bot is close enough to a jump pad and trigger it.
@@ -698,7 +894,7 @@ export function updateEnemies(dt) {
 
             // MID-AIR MOVEMENT (The Hop / Fall)
             if (e._hopY > 0) {
-                const wallCheck = new BABYLON.Ray(new BABYLON.Vector3(e.group.position.x, e._floorY + e._hopY + 0.5, e.group.position.z), _eDir, speed + 0.5);
+                const wallCheck = new BABYLON.Ray(new BABYLON.Vector3(e.group.position.x, e._floorY + e._hopY + 1.2, e.group.position.z), _eDir, speed + 0.5);
                 const wHit = scene.pickWithRay(wallCheck, m => m.checkCollisions && !m.metadata?.enemy && m.isEnabled());
                 if (!wHit?.hit) {
                     e.group.position.x += _eDir.x * speed;
@@ -719,13 +915,27 @@ export function updateEnemies(dt) {
             // GROUND MOVEMENT
             else {
                 const intendedPos = e.group.position.add(_eDir.scale(speed));
-                // Lifted from +0.5 to +1.2 so the ray clears the stair steps
                 const clampedPos = navPlugin.getClosestPoint(new BABYLON.Vector3(intendedPos.x, e._floorY + 1.2, intendedPos.z));
                 
                 if (clampedPos) {
-                    // NEW FIX: Determine if there's a huge drop-off. If so, cleanly convert to a fall!
+                    // Prevent clipping by raycasting the intended path using the bot's radius
+                    const moveDir = clampedPos.subtract(e.group.position);
+                    moveDir.y = 0;
+                    const moveDist = moveDir.length();
+                    
+                    if (moveDist > 0.001) {
+                        moveDir.normalize();
+                        const wallRay = new BABYLON.Ray(new BABYLON.Vector3(e.group.position.x, e._floorY + 1.2, e.group.position.z), moveDir, moveDist + 0.55);
+                        const wallHit = scene.pickWithRay(wallRay, m => m.checkCollisions && !m.metadata?.enemy && m.isEnabled());
+                        if (wallHit?.hit) {
+                            // Hit a wall? Stop slightly before it
+                            const safeDist = Math.max(0, wallHit.distance - 0.56);
+                            clampedPos.copyFrom(e.group.position).addInPlace(moveDir.scale(safeDist));
+                        }
+                    }
+
                     if (e._floorY - clampedPos.y > 1.0) {
-                        e._hopY = e._floorY - clampedPos.y; 
+                        e._hopY = e._floorY - clampedPos.y;
                         e._floorY = clampedPos.y;
                         e._yVel = 0; // Initiate fall
                         e.group.position.x = clampedPos.x;
@@ -819,12 +1029,16 @@ export function updateEnemies(dt) {
                 const dirH = playerEye.subtract(rightHand).normalize();
                 fireEnemyShot(e, dirH, bossDmg, bossSpd, pt, rightHand);
             }
-        } 
-        else {
-            fireEnemyShot(e, dir, e.dmg, e.projV, e.projT);
-            const sDist = BABYLON.Vector3.Distance(camera.position, e.group.position);
-            if (sDist < 25) { // Only play if relatively close
-                setTimeout(() => sfx.plasma(), 10); // Use your existing plasma/shoot sound
+        } else {
+            // --- MELEE VS RANGED ---
+            if (e.projT === 'melee') {
+                cb.hurtPlayer && cb.hurtPlayer(e.dmg);
+                sfx.hit(); // *Shing!*
+            } else {
+                fireEnemyShot(e, dir, e.dmg, e.projV, e.projT);
+                const sDist = BABYLON.Vector3.Distance(camera.position, e.group.position); 
+                // Only play if relatively close
+                if (sDist < 25) setTimeout(() => sfx.plasma(), 10); 
             }
         }
       }

@@ -356,6 +356,8 @@ function showDevWaveSelector() {
     }
   }
 
+  
+
   // Inject mode label + loadout button into pause overlay
   const pauseOverlay = document.getElementById('pauseOverlay');
   if (pauseOverlay) {
@@ -422,6 +424,10 @@ document.getElementById('pvpEndPlayAgain')?.addEventListener('click', () => {
 document.getElementById('pvpBackBtn')?.addEventListener('click', () => {
   document.getElementById('pvpLobby').style.display = 'none';
   document.getElementById('menuScreen').className   = 'screen visible';
+});
+document.getElementById('resumeBtn')?.addEventListener('mousedown', (e) => {
+  e.stopPropagation(); // Prevents the click from getting confused with the background
+  if (typeof togglePause === 'function') togglePause();
 });
 document.getElementById('pauseOverlay')?.addEventListener('click', e => {
   if (e.target === e.currentTarget && paused) togglePause();

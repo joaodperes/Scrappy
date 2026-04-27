@@ -32,18 +32,19 @@ const _INTRO_WAVE = {
   scout:     1,
   drone:     3,
   heavy:     5,
+  ninja:     6,    // <--- NEW: Fast melee threat
   sniper:    7,
   electron_bot: 8,
-  ion_sniper: 9,
-  pistol:    11,   // must be > 10 (first boss wave)
+  armored:   9,    // <--- NEW: Armored threat before the boss
+  ion_sniper: 10,
+  pistol:    11,   
   shotgun:   12,
   rocket:    13,
   grenadier: 14,
 };
 
-// All non-boss types in the order they become available
-const _BOT_POOL = ['scout', 'drone', 'heavy', 'sniper', 'pistol', 'shotgun', 'rocket', 'grenadier', 'electron_bot', 'ion_sniper'];
-
+// Add them to the open pool for wave 15+
+const _BOT_POOL = ['scout', 'drone', 'heavy', 'ninja', 'sniper', 'electron_bot', 'armored', 'ion_sniper', 'pistol', 'shotgun', 'rocket', 'grenadier'];
 function _isBossWave(idx) {
   // idx is 0-based; wave number = idx + 1.
   // Boss on waves 10, 20, 30 … → idx 9, 19, 29 …
@@ -71,22 +72,21 @@ export function getWaveComposition(idx) {
   const available = _BOT_POOL.filter(t => _INTRO_WAVE[t] <= waveNum);
 
   if (waveNum <= 14) {
-    // Hand-tuned ramp while types are being introduced one-by-one
     const fixed = {
       1:  [{ type:'scout', count:2 }],
       2:  [{ type:'scout', count:3 }],
       3:  [{ type:'scout', count:3 }, { type:'drone', count:1 }],
       4:  [{ type:'scout', count:4 }, { type:'drone', count:2 }],
       5:  [{ type:'scout', count:4 }, { type:'drone', count:1 }, { type:'heavy', count:1 }],
-      6:  [{ type:'scout', count:4 }, { type:'drone', count:2 }, { type:'heavy', count:2 }],
-      7:  [{ type:'scout', count:4 }, { type:'drone', count:2 }, { type:'heavy', count:2 }, { type:'sniper', count:1 }],
-      8:  [{ type:'scout', count:4 }, { type:'drone', count:2 }, { type:'heavy', count:2 }, { type:'sniper', count:2 }, { type:'electron_bot', count:1 }],
-      9:  [{ type:'scout', count:4 }, { type:'drone', count:2 }, { type:'heavy', count:2 }, { type:'sniper', count:2 }, { type:'electron_bot', count:2 }, { type:'ion_sniper', count:1 }],
-      // wave 10 = boss (handled above)
-      11: [{ type:'scout', count:4 }, { type:'drone', count:2 }, { type:'heavy', count:2 }, { type:'sniper', count:2 }, { type:'pistol', count:1 }],
-      12: [{ type:'scout', count:4 }, { type:'drone', count:2 }, { type:'heavy', count:2 }, { type:'sniper', count:2 }, { type:'pistol', count:2 }, { type:'shotgun', count:1 }],
-      13: [{ type:'scout', count:4 }, { type:'drone', count:2 }, { type:'heavy', count:2 }, { type:'sniper', count:2 }, { type:'pistol', count:2 }, { type:'shotgun', count:2 }, { type:'rocket', count:1 }],
-      14: [{ type:'scout', count:4 }, { type:'drone', count:2 }, { type:'heavy', count:2 }, { type:'sniper', count:2 }, { type:'pistol', count:2 }, { type:'shotgun', count:2 }, { type:'rocket', count:1 }, { type:'grenadier', count:1 }],
+      6:  [{ type:'scout', count:4 }, { type:'drone', count:2 }, { type:'heavy', count:1 }, { type:'ninja', count:2 }], // Ninjas introduced
+      7:  [{ type:'scout', count:4 }, { type:'drone', count:2 }, { type:'heavy', count:2 }, { type:'ninja', count:2 }, { type:'sniper', count:1 }],
+      8:  [{ type:'scout', count:3 }, { type:'drone', count:2 }, { type:'heavy', count:2 }, { type:'ninja', count:2 }, { type:'sniper', count:2 }, { type:'electron_bot', count:1 }],
+      9:  [{ type:'scout', count:3 }, { type:'drone', count:2 }, { type:'heavy', count:2 }, { type:'ninja', count:2 }, { type:'sniper', count:2 }, { type:'electron_bot', count:1 }, { type:'armored', count:1 }], // Armored introduced
+      // wave 10 = boss
+      11: [{ type:'scout', count:3 }, { type:'drone', count:2 }, { type:'heavy', count:2 }, { type:'ninja', count:2 }, { type:'sniper', count:2 }, { type:'armored', count:1 }, { type:'pistol', count:1 }],
+      12: [{ type:'scout', count:3 }, { type:'drone', count:2 }, { type:'heavy', count:2 }, { type:'ninja', count:2 }, { type:'sniper', count:2 }, { type:'armored', count:2 }, { type:'pistol', count:2 }, { type:'shotgun', count:1 }],
+      13: [{ type:'scout', count:3 }, { type:'drone', count:2 }, { type:'heavy', count:2 }, { type:'ninja', count:2 }, { type:'sniper', count:2 }, { type:'armored', count:2 }, { type:'pistol', count:2 }, { type:'shotgun', count:2 }, { type:'rocket', count:1 }],
+      14: [{ type:'scout', count:3 }, { type:'drone', count:2 }, { type:'heavy', count:2 }, { type:'ninja', count:3 }, { type:'sniper', count:2 }, { type:'armored', count:2 }, { type:'pistol', count:2 }, { type:'shotgun', count:2 }, { type:'rocket', count:1 }, { type:'grenadier', count:1 }],
     };
     if (fixed[waveNum]) return fixed[waveNum];
   }

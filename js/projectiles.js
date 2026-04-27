@@ -72,6 +72,7 @@ export function fireEnemyShot(e, dir, dmg, speed, type, customStartPos = null) {
 // ── Explosion ─────────────────────────────────────────────────
 export function boom(pos, splashR, baseDmg, hurtBots) {
   sfx.explosion();
+  import('./progression.js').then(({ recordBarrelDestroyed }) => recordBarrelDestroyed());
   const flash = BABYLON.MeshBuilder.CreateSphere('flash', { diameter: splashR*.7*2, segments:10 }, scene);
   flash.position.copyFrom(pos);
   const fmat = new BABYLON.StandardMaterial('flashMat', scene);
@@ -96,7 +97,7 @@ export function boom(pos, splashR, baseDmg, hurtBots) {
     for (const e of enemies) {
       if (!e.alive) continue;
       const d = BABYLON.Vector3.Distance(e.group.position, pos);
-      if (d < splashR) cb.hitRobot && cb.hitRobot(e, baseDmg * (1 - d/splashR));
+      if (d < splashR) cb.hitRobot && cb.hitRobot(e, baseDmg * (1 - d/splashR),false, true); // isHeadshot, isExplosive
     }
   }
   const dp = BABYLON.Vector3.Distance(camera.position, pos);
@@ -203,6 +204,10 @@ export function updateProjs(dt) {
     // ── GRENADE: fully self-contained physics — skip shared movement code ──
     if (p.type === 'grenade') {
       p.fuse -= dt;
+      
+      if (!p.vel) {
+            p.vel = p.dir.scale(p.speed || 30);
+        }
 
       // Apply gravity to velocity — tuned for a satisfying lobbed arc
       p.vel.y -= 9.8 * dt;
@@ -352,10 +357,24 @@ export function updateProjs(dt) {
           }
         }
       } else if (p.owner === 'enemy') {
-        if (BABYLON.Vector3.Distance(obj.position, camera.position) < .95) {
-          cb.hurtPlayer && cb.hurtPlayer(p.dmg);
-          spawnSparks(obj.position.clone(), 0xff3300, 5);
-          hit = true;
+        // Check barrel hits for enemy projectiles
+        let hitBarrel = false;
+        for (const b of explosiveBarrels) {
+            if (!b.alive) continue;
+            if (BABYLON.Vector3.Distance(obj.position, b.pos) < 0.7) {
+                b.alive = false;
+                for (const m of b.meshes) { m.setEnabled(false); m.checkCollisions = false; }
+                boom(b.pos.clone(), 3.5, 70, true);
+                hitBarrel = true;
+                break;
+            }
+        }
+        if (hitBarrel) {
+            hit = true;
+        } else if (BABYLON.Vector3.Distance(obj.position, camera.position) < .95) {
+            cb.hurtPlayer && cb.hurtPlayer(p.dmg);
+            spawnSparks(obj.position.clone(), 0xff3300, 5);
+            hit = true;
         }
       }
     }

@@ -387,7 +387,8 @@ export function updateWeaponDrops(dt) {
     // ── Auto-pickup if weapon already owned ─────────────────────
     if (dist < 1.35 && inventory.includes(p.wName)) {
       const W = WDEFS[p.wName];
-      if (ENERGY_WEAPONS.has(p.wName)) {
+      const isEnergyWeapon = W.useHeat || (p.wName === 'PLASMA' && W.ammo === Infinity);
+      if (isEnergyWeapon) {
         // Energy weapon: instantly vent / reset heat instead of refunding ammo
         if (cb.resetWeaponHeat) cb.resetWeaponHeat(p.wName);
         // Also track the pickup for unlock challenges
@@ -452,24 +453,44 @@ export function tryPickupWeapon(gameRunning, paused) {
 
   const existingSlot = inventory.findIndex(w => w === wName);
   if (existingSlot !== -1) {
-    if (ENERGY_WEAPONS.has(wName)) {
+    const isEnergyWeapon = W.useHeat || (wName === 'PLASMA' && W.ammo === Infinity);
+    if (isEnergyWeapon) {
       // Energy weapon: instant heat cooldown instead of ammo
       if (cb.resetWeaponHeat) cb.resetWeaponHeat(wName);
       import('./progression.js').then(({ recordEnergyPickup }) => recordEnergyPickup(wName));
-      showToast("ENERGY OVERCHARGE!", "#33aaff");
+      //showToast("ENERGY OVERCHARGE!", "#33aaff");
     } else if (wName === 'RAILGUN') {
       import('./progression.js').then(({ hasEfficiencyModule }) => {
         const bonus = hasEfficiencyModule() ? 1 : 0;
         W.ammo = Math.min((W.ammo || 0) + W.startAmmo + bonus, (W.max || 999));
         refreshSlotHUD();
       });
+      import('./progression.js').then(({ recordRailgunPickup }) => recordRailgunPickup());
     } else {
-      W.ammo += W.startAmmo;
-      if (W.max) W.ammo = Math.min(W.ammo, W.max);
+      W.ammo = W.startAmmo;
+      // Initialize magazine from effective stats (includes attachment bonuses)
+      const EW = getEffectiveStats(wName, W);
+      if (EW.magSize) {
+          W.currentMag = EW.magSize;
+      }
     }
+    
+    // Track first-time energy weapon pickups...
     refreshSlotHUD();
   } else {
     W.ammo = W.startAmmo;
+    // Initialize magazine from effective stats (applies attachment bonuses)
+    import('./progression.js').then(({ getEffectiveStats }) => {
+        const EW = getEffectiveStats(wName, W);
+        if (EW.magSize) {
+            W.currentMag = EW.magSize;
+        }
+        if (EW.startAmmo !== W.startAmmo) {
+            W.ammo = EW.startAmmo;
+        }
+        refreshSlotHUD();
+    });
+    
     // Track first-time energy weapon pickups too
     if (ENERGY_WEAPONS.has(wName)) {
       import('./progression.js').then(({ recordEnergyPickup }) => recordEnergyPickup(wName));

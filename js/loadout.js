@@ -4,7 +4,7 @@ import {
   ATTACHMENTS, WEAPON_SKINS, PLAYER_SKINS, WEAPON_ATTACHMENT_SLOTS, WEAPON_SPECIALS,
   UNLOCK_TABLE, getLevelProgress, getChallengeProgress, getEffectiveStats,
   isAttachmentUnlocked, isWeaponSkinUnlocked, isSkinUnlocked, getUnlockHint, getChallengeDescription,
-  SKIN_DIFFICULTY_ORDER, getWeaponLevelProgress,
+  SKIN_DIFFICULTY_ORDER, getWeaponLevelProgress, saveProfile,
 } from './progression.js';
 import { WDEFS, applyLoadoutToScene } from './weapons.js';
 
@@ -74,7 +74,7 @@ function _buildPanel(onClose) {
     </div>`;
   const closeBtn = _el('button','background:transparent;border:1px solid #333;color:#d8f030;padding:7px 14px;cursor:pointer;font-family:inherit;font-size:12px');
   closeBtn.textContent = '✕ CLOSE';
-  closeBtn.onclick = () => { hideLoadout(); onClose?.(); };
+  closeBtn.onclick = () => { saveProfile();hideLoadout(); onClose?.(); };
   topBar.appendChild(closeBtn);
   panel.appendChild(topBar);
 
@@ -260,9 +260,9 @@ function _renderAttachments(main) {
         const card = _el('div', CSS.card(isEquipped) + (isOwned ? '' : ';opacity:0.5'));
 
         const mods = att.mods ? Object.entries(att.mods).map(([k,v]) => {
-          const col = v>0 ? '#66ff66' : v<0 ? '#ff6666' : '#aaa';
-          const lbl = {damage:'DMG',spread:'SPD',range:'RNG',cd:'CD',ammoMult:'AMMO',speed:'PROJ SPD',heatMult:'HEAT'}[k]??k.toUpperCase();
-          return `<span style="color:${col};font-size:12px;margin-left:6px;font-weight:bold">${v>0?'+':''}${Math.round(Math.abs(v)*100)}%${lbl}</span>`;
+            const col = v>0 ? '#66ff66' : v<0 ? '#ff6666' : '#aaa';
+            const lbl = {damage:'DMG',spread:'SPD',range:'RNG',cd:'CD',ammoMult:'AMMO',speed:'PROJ SPD',heatMult:'HEAT',recoilMult:'RECOIL'}[k]??k.toUpperCase();
+            return `<span style="color:${col};font-size:12px;font-weight:bold;margin-right:8px;display:inline-block;background:rgba(0,0,0,0.3);padding:2px 6px;border-radius:3px">${v>0?'+':''}${Math.round(Math.abs(v)*100)}% ${lbl}</span>`;
         }).join('') : '';
 
         const adsBadge = att.visual?.adsZoom ? `<span style="font-size:11px;color:#338866;border:1px solid #225544;padding:2px 4px;margin-left:5px">ZOOM x${(1/att.visual.adsZoom).toFixed(1)}</span>` : '';
@@ -307,7 +307,7 @@ function _renderAttachments(main) {
 function _renderWeaponSkins(main) {
   const wName = _activeWeapon;
   const lo    = getLoadout(wName);
-  main.appendChild(_el('div','font-size:10px;color:#557733;letter-spacing:2px;margin-bottom:12px',`SKINS FOR: ${_esc(WDEFS[wName].name)} — unlocks are per-weapon`));
+  main.appendChild(_el('div','font-size:10px;color:#557733;letter-spacing:2px;margin-bottom:12px',`SKINS FOR: ${_esc(WDEFS[wName].name)}`));
   const grid = _el('div','display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px');
   const sortedSkins = Object.values(WEAPON_SKINS).sort((a, b) => {
     const iA = SKIN_DIFFICULTY_ORDER.indexOf(a.id);

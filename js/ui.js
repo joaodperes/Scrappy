@@ -1,7 +1,7 @@
 // ui.js – HUD updates, hit marker, leaderboard name modal
 import { player } from './gameState.js';
 import { WDEFS, inventory, curWep, refreshSlotHUD } from './weapons.js';
-import { hasDualTrigger, hasEnergyConverter } from './progression.js';
+import { hasDualTrigger, hasEnergyConverter, getEffectiveStats } from './progression.js';
 
 export function updateHUD() {
   const hp  = document.getElementById('hpBar');
@@ -53,7 +53,7 @@ export function updateHUD() {
   if (isEnergy) {
     heatContainer.style.display = 'block';
     
-    // FIX: Read heat directly from the weapon definition!
+    // Read heat directly from the weapon definition!
     fill.style.width      = ((W.heat || 0) * 100) + '%';
     fill.style.background = W.isOverheated ? '#ff3333' : (curWep === 'ION' ? '#cc00ff' : '#00ffff');
     
@@ -75,7 +75,7 @@ export function updateHUD() {
   // Add a hint near the ammo/heat counter
   let modeHint = document.getElementById('plasmaModeHint');
 
-  // FIX: Only show the toggle if they ACTUALLY have the attachment equipped
+  // Only show the toggle if they ACTUALLY have the attachment equipped
   if (curWep === 'PLASMA' && hasDualTrigger()) {
     if (!modeHint) {
         modeHint = document.createElement('div');
@@ -88,6 +88,27 @@ export function updateHUD() {
   } else if (modeHint) {
       modeHint.style.display = 'none';
   }
+
+  // Dynamic crosshair based on current weapon spread
+  const crosshair = document.getElementById('crosshair');
+  if (crosshair) {
+    // Calculate effective spread
+      const W = WDEFS[curWep];
+      const EW = getEffectiveStats(curWep, W);
+      let baseSpread = (EW.spread || 0) * 100; // Convert to percentage-like value
+      
+      // Scale: 0 spread = 4px crosshair, 15 spread = 20px crosshair
+      const crossSize = 4 + (baseSpread * 1.2);
+      crosshair.style.width = crossSize + 'px';
+      crosshair.style.height = crossSize + 'px';
+      
+      // For Chaingun, make it really obvious
+      if (curWep === 'CHAINGUN') {
+          crosshair.style.boxShadow = `0 0 ${crossSize/2}px rgba(255,255,200,0.5)`;
+      } else {
+          crosshair.style.boxShadow = '0 0 0 1px rgba(0,0,0,.5),0 0 5px rgba(255,255,180,.4)';
+      } 
+    }
 
   refreshSlotHUD();
 }

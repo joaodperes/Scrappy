@@ -2,7 +2,7 @@
 const BABYLON = window.BABYLON;
 import { scene, camera } from './scene.js';
 import { jumpPads } from './level.js';
-import { player, cb } from './gameState.js';
+import { player, cb, enemies } from './gameState.js';
 import { sfx } from './audio.js';
 import { WDEFS, inventory, activeSlot, curWep, wepCooldown, swingT, AUTO_WEAPONS, setWepCooldown, setSwingT, setActiveSlot, refreshSlotHUD, setWeaponVisibility } from './weapons.js';
 import { hitscan, fireRocket, firePlasma, fireGrenade } from './projectiles.js';
@@ -156,17 +156,23 @@ export function shoot() {
   }
 
   if (!isEnergy) {
+      const hasInfinite = player.buffs['infinite_ammo'] > 0;
       if (EW.magSize) {
-          const cost = (player.plasmaAltMode && curWep === 'PLASMA') ? 3 : 1;
-          W.currentMag -= cost;
-      } else if (!hasInfiniteAmmo) {
+          if (!hasInfinite) {
+              const cost = (player.plasmaAltMode && curWep === 'PLASMA') ? 3 : 1;
+              W.currentMag -= cost;
+          }
+      } else if (!hasInfinite) {
           W.ammo -= W.aps;
       }
   }
 
   const cdMult = player.buffs['haste'] > 0 ? 0.5 : 1.0;
+  
   if (curWep === 'PLASMA' && player.plasmaAltMode) {
-      setWepCooldown(1.2 * cdMult);
+      setWepCooldown(1.2 * cdMult); // Slow sniper reload
+  } else if (curWep === 'PLASMA' && hasDualTrigger() && !player.plasmaAltMode) {
+      setWepCooldown(0.08 * cdMult); // Very fast intra-burst fire rate!
   } else {
       setWepCooldown(W.cd * cdMult);
   }
@@ -182,37 +188,107 @@ export function shoot() {
   const akimbo  = isAkimbo(curWep);
 
   if (curWep === 'PLASMA' && player.plasmaAltMode) modDmg *= 3.0;
+  // ── Recoil & Spread System ──────────────────────────────────
+  // Energy weapons have zero recoil (they're beam/energy based)
+  const energyNoRecoil = isEnergy;
+
+  // Calculate sustained fire timers for SMG and Chaingun
+  const now = performance.now() / 1000; // seconds
+  if (!player._sustainedFire) player._sustainedFire = 0;
+  if (!player._lastFireTime) player._lastFireTime = now;
+
+  const dtSustained = now - player._lastFireTime;
+  player._lastFireTime = now;
+
+  if (mouseHeld) {
+      player._sustainedFire += dtSustained;
+  } else {
+      player._sustainedFire = Math.max(0, player._sustainedFire - dtSustained * 3); // decay when not firing
+  }
+
+  // Reset sustained fire when switching weapons
+  if (player._lastWep !== curWep) {
+      player._sustainedFire = 0;
+      player._lastWep = curWep;
+  }
+
+  let recoilMult = (EW.recoilMult || 1.0);
+  let spreadMult = 1.0;
+
+  // Pistol .50 cal: massive recoil increase
+  if (curWep === 'PISTOL' && getLoadout('PISTOL').attachments?.magazine === 'mag_50_cal') {
+      recoilMult *= 2.5;
+  }
+
+  // Shotgun: heavy recoil
+  if (curWep === 'SHOTGUN') {
+      recoilMult = (recoilMult || 1.0) * 3.5; // Base heavy recoil, reducible by attachments
+  }
+
+  // SMG: increasing spread and recoil with sustained fire (ramps over 3 seconds)
+  if (curWep === 'SMG') {
+      const sustainedRatio = Math.min(1.0, player._sustainedFire / 3.0);
+      spreadMult = 1.0 + sustainedRatio * 2.0; // Up to 3x spread after 3s
+      recoilMult *= (sustainedRatio * 1.1); // Up to 1.5x recoil
+  }
+
+  // Chaingun: massive spread increase from spinning module or sustained fire
+  if (curWep === 'CHAINGUN') {
+      const sustainedRatio = Math.min(1.0, player._sustainedFire / 4.0);
+      spreadMult = 1.0 + sustainedRatio * 3.0; // Up to 4x spread after 4s
+      // Very little recoil - the weight stabilizes it
+      recoilMult *= 0.15;
+  }
+
+  // Apply recoil to pitch (vertical kick)
+  if (!energyNoRecoil) {
+      pitch -= 0.025 * recoilMult;
+      
+      // Add slight random horizontal recoil for non-energy weapons
+      yaw += (Math.random() - 0.5) * 0.008 * recoilMult;
+  }
 
   switch (curWep) {
     case 'PISTOL':
       if (!hasSuppressor('PISTOL')) sfx.pistol(getLoadout('PISTOL').attachments?.magazine ?? null);
-      hitscan(_meshToEnemy, spread, modDmg, range, falloff);
-      if (akimbo) hitscan(_meshToEnemy, spread * 1.15, modDmg * 0.85, range, falloff);
+      const pistolSpread = (getLoadout('PISTOL').attachments?.magazine === 'mag_50_cal' ? 0.02 : EW.spread);
+      hitscan(_meshToEnemy, pistolSpread, modDmg, range, falloff);
+      if (akimbo) hitscan(_meshToEnemy, pistolSpread * 1.15, modDmg * 0.85, range, falloff);
       break;
     case 'SMG':
       if (!hasSuppressor('SMG')) sfx.smg();
-      hitscan(_meshToEnemy, spread, modDmg, range, falloff);
+      hitscan(_meshToEnemy, spread * spreadMult, modDmg, range, falloff);
       break;
     case 'CHAINGUN':
       if (!hasSuppressor('CHAINGUN')) sfx.chaingun();
-      hitscan(_meshToEnemy, spread, modDmg, range, falloff);
+      hitscan(_meshToEnemy, spread * spreadMult, modDmg, range, falloff);
       break;
     case 'RAILGUN':
       if (!hasSuppressor('RAILGUN')) sfx.railgun();
-      hitscan(_meshToEnemy, spread, 9999, range, 0.00);
+      hitscan(_meshToEnemy, spread * spreadMult, 9999, range, 0.00);
       break;
     case 'ION':
       const ionChargeBonus = 1.0 + ((W.heat || 0) * 1.5);
       if (!hasSuppressor('ION')) sfx.railgun();
-      hitscan(_meshToEnemy, spread, modDmg * ionChargeBonus, range, 0.00);
+      const ionResult = hitscan(_meshToEnemy, spread * spreadMult, modDmg * ionChargeBonus, range, 0.00);
+      
+      // Explosive Bullets: create splash damage on hit
+      if (getLoadout('ION').attachments?.special === 'explosive_bullets') {
+          if (ionResult?.hit && ionResult?.target) {
+              import('./projectiles.js').then(({ boom }) => {
+                  boom(ionResult.target.group.position.clone(), 2.5, 15, true);
+                  spawnSparks(ionResult.target.group.position.clone(), 0x4488ff, 10);
+              });
+          }
+      }
       break;
     case 'ELECTRON':
       if (!hasSuppressor('ELECTRON')) sfx.plasma();
-      hitscan(_meshToEnemy, spread, modDmg, range, falloff);
+      hitscan(_meshToEnemy, spread * spreadMult, modDmg, range, falloff);
       break;
     case 'PLASMA':
       if (!hasSuppressor('PLASMA')) sfx.plasma();
-      if (player.plasmaAltMode) { hitscan(_meshToEnemy, spread, modDmg, range, 0); }
+      if (player.plasmaAltMode) { hitscan(_meshToEnemy, spread * spreadMult, modDmg, range, 0); }
       else { firePlasma(modDmg); }
       break;
     case 'ROCKET':
@@ -223,8 +299,8 @@ export function shoot() {
       if (!hasSuppressor('SHOTGUN')) { sfx.shotgun(); setTimeout(() => sfx.shotgun(), 20); }
       pitch -= 0.06;
       const pellets = EW.pellets ?? W.pellets;
-      for (let i = 0; i < pellets; i++) hitscan(_meshToEnemy, spread, modDmg, range, falloff);
-      if (akimbo) for (let i = 0; i < pellets; i++) hitscan(_meshToEnemy, spread * 1.2, modDmg * 0.8, range, falloff);
+      for (let i = 0; i < pellets; i++) hitscan(_meshToEnemy, spread * spreadMult, modDmg, range, falloff);
+      if (akimbo) for (let i = 0; i < pellets; i++) hitscan(_meshToEnemy, spread * spreadMult * 1.2, modDmg * 0.8, range, falloff);
       break;
     case 'GLAUNCHER':
       if (!hasSuppressor('GLAUNCHER')) sfx.shotgun();
@@ -401,9 +477,13 @@ export function updatePlayer(dt, gameRunning, paused) {
   const mLen2 = _move.lengthSquared();
   if (mLen2 > 0) _move.scaleInPlace(spd / Math.sqrt(mLen2));
 
-  // Don't allow full auto for Plasma Sniper
+  // Don't allow full auto for Plasma Sniper, but DO allow it for Burst!
   const isPlasmaSniper = curWep === 'PLASMA' && player.plasmaAltMode;
-  const isAuto = (AUTO_WEAPONS.has(curWep) || isAutoFire(curWep)) && !isPlasmaSniper;
+  const isPlasmaBurst  = curWep === 'PLASMA' && hasDualTrigger() && !player.plasmaAltMode;
+  
+  const isAuto = (AUTO_WEAPONS.has(curWep) || isAutoFire(curWep) || isPlasmaBurst) && !isPlasmaSniper;
+  
+  if (mouseHeld && isAuto) shoot();
   
   // Akimbo no longer forces full-auto trigger mapping
   if (mouseHeld && isAuto) shoot();
@@ -490,15 +570,16 @@ export function updatePlayer(dt, gameRunning, paused) {
   if (vigEl) vigEl.style.opacity = player.hp < 40 ? (1 - player.hp / 40) * .82 : 0;
   if (_hudDirty) { cb.markHudDirty?.(); _hudDirty = false; }
   if (_thermalActive && _thermalHl) {
-    import('./gameState.js').then(({ enemies }) => {
-        enemies.forEach(e => {
-            if (e.alive && e.group) {
-                e.group.getChildMeshes().forEach(m => {
-                    if (!_thermalHl.hasMesh(m)) _thermalHl.addMesh(m, new BABYLON.Color3(1, 0.8, 0.1));
-                });
-            }
-        });
-    });
+      enemies.forEach(e => {
+          if (e.alive && e.group) {
+              e.group.getChildMeshes().forEach(m => {
+                  if (!_thermalHl.hasMesh(m)) _thermalHl.addMesh(m, new BABYLON.Color3(1, 0.8, 0.1));
+              });
+          }
+      });
+  } else if (_thermalHl) {
+      // Instantly scrub meshes clean if the player swaps weapons or drops ADS
+      _thermalHl.removeAllMeshes();
   }
 }
 
@@ -538,7 +619,7 @@ export function updatePlayer(dt, gameRunning, paused) {
     ctx.beginPath(); ctx.arc(W/2, H/2, R*0.65, 0, Math.PI*2); ctx.stroke();
   }
 
-  // FIX: Visual UI Overlay for Holo sight
+  // isual UI Overlay for Holo sight
   function _drawHoloScope() {
       let el = document.getElementById('_holoScope');
       if (!el) {

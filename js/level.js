@@ -426,7 +426,7 @@ export function buildLevel() {
       walkableSlopeAngle: 60,  // Increased so they can climb the invisible stair ramps
       walkableHeight: 2.5, 
       walkableClimb: 0.6,      // Increased so they don't get stuck on floor seams
-      walkableRadius: 2.5,     // Increased to keep their bodies strictly OUT of walls
+      walkableRadius: 0.6,     // Increased to keep their bodies strictly OUT of walls
       maxEdgeLen: 12.,
       maxSimplificationError: 1.3,
       minRegionArea: 4,
