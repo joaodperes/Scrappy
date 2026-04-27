@@ -249,6 +249,57 @@ export function shoot() {
   }
 
   switch (curWep) {
+    case 'FLAMETHROWER':
+      if (!hasSuppressor('FLAMETHROWER')) sfx.chaingun(); // reuse chaingun sound for now
+      const flameResult = hitscan(_meshToEnemy, spread * spreadMult, modDmg, range, falloff);
+      // Apply DOT burn effect
+      if (flameResult?.hit && flameResult?.target) {
+          const dotTarget = flameResult.target;
+          if (!dotTarget._dots) dotTarget._dots = [];
+          dotTarget._dots.push({ 
+              dmg: W.dotDamage || 4, 
+              remaining: W.dotDuration || 3 
+          });
+          // Visual feedback - fire sparks
+          spawnSparks(dotTarget.group.position, 0xff4400, 3);
+      }
+      break;
+    case 'TESLA':
+      if (!hasSuppressor('TESLA')) sfx.plasma(); // reuse plasma sound
+      const teslaResult = hitscan(_meshToEnemy, spread * spreadMult, modDmg, range, falloff);
+      // Chain lightning to nearby enemies
+      if (teslaResult?.hit && teslaResult?.target) {
+          const chainCount = getLoadout('TESLA').attachments?.barrel === 'amplifier_coil' ? 5 : 3;
+          const hitEnemy = teslaResult.target;
+          let lastPos = hitEnemy.group.position.clone();
+          const chained = new Set([hitEnemy]);
+          
+          for (let i = 0; i < chainCount; i++) {
+              let closest = null, closestDist = W.chainRange || 8;
+              for (const e of enemies) {
+                  if (!e.alive || chained.has(e)) continue;
+                  const d = BABYLON.Vector3.Distance(lastPos, e.group.position);
+                  if (d < closestDist) { closestDist = d; closest = e; }
+              }
+              if (closest) {
+                  chained.add(closest);
+                  cb.hitRobot(closest, Math.round(modDmg * (1 - i/chainCount)));
+                  spawnSparks(closest.group.position, 0x8844ff, 5);
+                  lastPos = closest.group.position;
+              }
+          }
+      }
+      break;
+    case 'CROSSBOW':
+      if (!hasSuppressor('CROSSBOW')) sfx.railgun(); // reuse railgun sound
+      const boltResult = hitscan(_meshToEnemy, spread * spreadMult, modDmg, range, falloff);
+      // Explosive tips check
+      if (boltResult?.hit && getLoadout('CROSSBOW').attachments?.special === 'explosive_tips') {
+          import('./projectiles.js').then(({ boom }) => {
+              boom(boltResult.target.group.position.clone(), 3.5, 25, true);
+          });
+      }
+      break;
     case 'PISTOL':
       if (!hasSuppressor('PISTOL')) sfx.pistol(getLoadout('PISTOL').attachments?.magazine ?? null);
       const pistolSpread = (getLoadout('PISTOL').attachments?.magazine === 'mag_50_cal' ? 0.02 : EW.spread);

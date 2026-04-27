@@ -400,6 +400,23 @@ export function updateWeaponDrops(dt) {
           W.ammo = Math.min((W.ammo || 0) + W.startAmmo + bonus, (W.max || 999));
           refreshSlotHUD();
         });
+      // In updateWeaponDrops(), auto-pickup section, add after existing code:
+      } else if (p.wName === 'PISTOL') {
+          // If player has Endless Magazine equipped, convert to generic ammo
+          import('./progression.js').then(({ getLoadout }) => {
+              if (getLoadout('PISTOL').attachments?.special === 'endless_magazine') {
+                  // Give ammo to other weapons instead
+                  for (const wName of Object.keys(WDEFS)) {
+                      const W = WDEFS[wName];
+                      if (W.ammo !== Infinity && wName !== 'PISTOL') {
+                          W.ammo = Math.min((W.ammo || 0) + 8, (W.max || 999));
+                      }
+                  }
+              } else {
+                  W.ammo += W.startAmmo;
+              }
+              refreshSlotHUD();
+          });
       } else {
         W.ammo += W.startAmmo;
         if (W.max) W.ammo = Math.min(W.ammo, W.max);
@@ -451,6 +468,17 @@ export function tryPickupWeapon(gameRunning, paused) {
   const wName = nearest.wName;
   const W     = WDEFS[wName];
 
+  // When first picking up pistol, initialize ammo correctly
+  if (wName === 'PISTOL') {
+    import('./progression.js').then(({ getLoadout }) => {
+        if (getLoadout('PISTOL').attachments?.special === 'endless_magazine') {
+            W.ammo = Infinity;
+        } else {
+            W.ammo = W.startAmmo || 24;
+        }
+    });
+  }
+
   const existingSlot = inventory.findIndex(w => w === wName);
   if (existingSlot !== -1) {
     const isEnergyWeapon = W.useHeat || (wName === 'PLASMA' && W.ammo === Infinity);
@@ -475,7 +503,7 @@ export function tryPickupWeapon(gameRunning, paused) {
       }
     }
     
-    // Track first-time energy weapon pickups...
+    // Track first-time energy weapon pickups
     refreshSlotHUD();
   } else {
     W.ammo = W.startAmmo;

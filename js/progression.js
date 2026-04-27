@@ -159,6 +159,13 @@ export const ATTACHMENTS = {
     visual:{type:'stock',style:'recoil_pad'},
   },
   // Specials — weapon-unique
+  endless_magazine: {
+    id:'endless_magazine', name:'Endless Magazine', slot:'special', weapon:'PISTOL',
+    desc:'Infinite reserve ammo. Never scavenge for pistol rounds again.',
+    icon:'∞', mods:{ammoType:'infinite'},
+    visual:{type:'special',style:'endless_mag'},
+    starterGear:true,
+  },
   akimbo: {
     id:'akimbo', name:'Akimbo', slot:'special',
     desc:'Dual-wield! Doubles fire rate & ammo. Disables ADS.',
@@ -231,6 +238,51 @@ export const ATTACHMENTS = {
     visual:{type:'special',style:'explosive_bullets'},
     secret:true,
   },
+  emp_rounds: {
+    id:'emp_rounds', name:'EMP Rounds', slot:'special',
+    desc:'15% chance to stun robots for 1 second. Energy weapons only.',
+    icon:'⚡', mods:{empChance:0.15},
+    visual:{type:'special',style:'emp_rounds'},
+  },
+  // ── Flamethrower ──────────────────────────────────────────────────
+  napalm_tank: {
+    id:'napalm_tank', name:'Napalm Tank', slot:'magazine',
+    desc:'+40% ammo capacity. Burn longer.',
+    icon:'🔥', mods:{ammoMult:+0.40},
+    visual:{type:'magazine',style:'extended',magScale:1.3},
+  },
+  wide_nozzle: {
+    id:'wide_nozzle', name:'Wide Nozzle', slot:'barrel',
+    desc:'+40% spread, +30% range. Wider flame cone.',
+    icon:'📐', mods:{spread:+0.40,range:+0.30},
+    visual:{type:'barrel',style:'heavy'},
+  },
+  // ── Tesla Cannon ──────────────────────────────────────────────────
+  amplifier_coil: {
+    id:'amplifier_coil', name:'Amplifier Coil', slot:'barrel',
+    desc:'+2 chain targets. Lightning jumps further.',
+    icon:'🔗', mods:{chainTargets:+2},
+    visual:{type:'barrel',style:'extended'},
+  },
+  capacitor_bank: {
+    id:'capacitor_bank', name:'Capacitor Bank', slot:'magazine',
+    desc:'+50% magazine size. Longer bursts before reload.',
+    icon:'🔋', mods:{ammoMult:+0.50},
+    visual:{type:'magazine',style:'drum',magScale:1.5},
+  },
+  // ── Crossbow ──────────────────────────────────────────────────
+  explosive_tips: {
+    id:'explosive_tips', name:'Explosive Tips', slot:'special',
+    desc:'Bolts explode on impact. +splash damage.',
+    icon:'💥', mods:{splash:3.0},
+    visual:{type:'special',style:'explosive_tips'},
+  },
+  quick_loader: {
+    id:'quick_loader', name:'Quick Loader', slot:'magazine',
+    desc:'Reload 30% faster.',
+    icon:'⚡', mods:{reloadMult:0.70},
+    visual:{type:'magazine',style:'quick',magScale:0.8},
+  },
   // ── Chaingun ──────────────────────────────────────────────────
   spinning_module: {
     id:'spinning_module', name:'Spinning Module', slot:'special',
@@ -298,19 +350,25 @@ export const WEAPON_ATTACHMENT_SLOTS = {
   GLAUNCHER: ['sight','barrel','magazine','stock','special'],
   ELECTRON:  ['sight','barrel','grip','stock','special'],
   ION:       ['sight','barrel','grip','stock','special'],
+  FLAMETHROWER: ['sight','barrel','magazine','special'],
+  TESLA:        ['sight','barrel','magazine','special'],
+  CROSSBOW:     ['sight','barrel','magazine','special'],
 };
 
 export const WEAPON_SPECIALS = {
-  PISTOL:    ['akimbo', 'quick_trigger'],
-  SMG:       ['akimbo','quick_trigger'],
+  PISTOL:    ['endless_magazine','akimbo','quick_trigger'],
+  SMG:       ['quick_trigger','akimbo'],
   SHOTGUN:   ['akimbo','auto_fire'],
   CHAINGUN:  ['spinning_module', 'carbon_fiber'],
   RAILGUN:   ['power_cell','efficiency_module'],
-  PLASMA:    ['dual_trigger'],
+  PLASMA:    ['dual_trigger','emp_rounds'],
   ROCKET:    ['seasoned_vet_rocket'],
   GLAUNCHER: ['cluster_rounds','seasoned_vet_glauncher'],
-  ELECTRON:  ['slow_trigger','freefall_coil'],
-  ION:       ['power_cell','energy_coil', 'explosive_bullets'],
+  ELECTRON:  ['slow_trigger','freefall_coil','emp_rounds'],
+  ION:       ['power_cell','energy_coil','explosive_bullets','emp_rounds'],
+  FLAMETHROWER: ['wide_nozzle'],
+  TESLA:     ['amplifier_coil'],
+  CROSSBOW:  ['explosive_tips'],
 };
 
 // ── Skins ─────────────────────────────────────────────────────
@@ -597,7 +655,8 @@ export const UNLOCK_TABLE = [
   { id:'angled_grip',   weapon:'ELECTRON', type:'attachment', challenge:{ track:'multiKillsWith:ELECTRON',     target:20  } },
   { id:'vertical_grip', weapon:'ELECTRON', type:'attachment', challenge:{ track:'killsWhileScoped:ELECTRON',   target:25  } },
   { id:'freefall_coil', weapon:'ELECTRON', type:'attachment', secret:true, challenge:{ track:'killsWhileJumping:ELECTRON', target:40 } },
-
+  { id:'emp_rounds', weapon:'ELECTRON', type:'attachment', secret:true,
+    challenge:{ desc:'Stun {target} enemies with EMP rounds', track:'empStuns', target:50 } },
 
   // ── ION ───────────────────────────────────────────────────────
   { id:'holo_sight',       weapon:'ION', type:'attachment',
@@ -622,6 +681,8 @@ export const UNLOCK_TABLE = [
     challenge:{ desc:'Destroy {target} explosive barrels', track:'barrelDestroys', target:30 } },
   { id:'power_cell',      weapon:'ION', type:'attachment', secret:true,
     challenge:{ desc:'Kill {target} Snipers with the Ion Sniper.', track:'damageDealt:ION',                   target:15000} },
+  { id:'emp_rounds', weapon:'ION', type:'attachment', secret:true,
+    challenge:{ desc:'Kill {target} Heavy robots with the Ion Sniper', track:'killsOfCombo:heavy_ELECTRON', target:15 } },
 
   // ════════════════════════════════════════════════════════════════
   //  WEAPON SKINS — 7 tiers, all weapon-kill based, no level gates
@@ -779,9 +840,10 @@ const _defaultProfile = () => ({
   name:'ANON', totalXp:0, level:1,
   unlocked:['default'],
   unlockedWeaponSkins:{PISTOL:[],SMG:[],SHOTGUN:[],CHAINGUN:[],RAILGUN:[],PLASMA:[],ROCKET:[],GLAUNCHER:[],ELECTRON:[],ION:[]},
-  unlockedAttachments:{PISTOL:['holo_sight'],SMG:[],SHOTGUN:[],CHAINGUN:[],RAILGUN:[],PLASMA:[],ROCKET:[],GLAUNCHER:[],ELECTRON:[],ION:[]},
+  unlockedAttachments:{PISTOL:['endless_magazine'],SMG:[],SHOTGUN:[],CHAINGUN:[],RAILGUN:[],PLASMA:[],ROCKET:[],GLAUNCHER:[],ELECTRON:[],ION:[]},
   loadouts:{
-    PISTOL:{skin:'default',attachments:{}},SMG:{skin:'default',attachments:{}},
+    PISTOL:{skin:'default',attachments:{special:'endless_magazine'}},
+    SMG:{skin:'default',attachments:{}},
     SHOTGUN:{skin:'default',attachments:{}},CHAINGUN:{skin:'default',attachments:{}},
     RAILGUN:{skin:'default',attachments:{}},PLASMA:{skin:'default',attachments:{}},
     ROCKET:{skin:'default',attachments:{}},GLAUNCHER:{skin:'default',attachments:{}},
@@ -982,6 +1044,14 @@ export function recordKill(botType, weaponKey, { isJumping = false, isScoped = f
 
 }
 
+export function recordEmpStun() {
+  const s = profile.stats;
+  s.empStuns = (s.empStuns || 0) + 1;
+  const n = _checkChallenges(); if (n.length) _showUnlockToasts(n);
+  checkProgressMilestones();
+  saveProfile();
+}
+
 // Track energy weapon pickups (for energy-weapon-specific unlock challenges)
 export function recordEnergyPickup(weaponKey) {
   const s = profile.stats;
@@ -1095,6 +1165,7 @@ function _checkChallenges() {
     else if(track.startsWith('weaponLevel:'))          val=getWeaponLevel(track.split(':')[1]);
     else if(track.startsWith('allChallengesComplete:'))val=_allWeaponChallengesComplete(track.split(':')[1])?1:0;
     else if(track === 'barrelDestroys') val = s.barrelDestroys || 0;
+    else if(track === 'empStuns') val = s.empStuns || 0;
     if(val>=target){
       if(u.type==='attachment')profile.unlockedAttachments[u.weapon].push(u.id);
       else if(u.type==='weaponSkin'){if(!profile.unlockedWeaponSkins[u.weapon])profile.unlockedWeaponSkins[u.weapon]=[];profile.unlockedWeaponSkins[u.weapon].push(u.id);}
@@ -1368,6 +1439,7 @@ export function getChallengeProgress(ch){
   else if(track.startsWith('weaponLevel:'))          val=getWeaponLevel(track.split(':')[1]);
   else if(track.startsWith('allChallengesComplete:'))val=_allWeaponChallengesComplete(track.split(':')[1])?1:0;
   else if(track === 'barrelDestroys') val = s.barrelDestroys || 0;
+  else if(track === 'empStuns') val = s.empStuns || 0;
   return{val,target,pct:Math.min(1,val/target)};
 }
 export function getUnlockHint(u){

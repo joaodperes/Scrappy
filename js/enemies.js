@@ -377,6 +377,10 @@ export function buildRobot(type) {
     grenadier: { hp:45, maxHp:45, spd:3.2, dmg:65, range:40, rate:2.5, pt:'grenade', pv:22, score:160, mOY:1.0 },
     ninja:     { hp:40, maxHp:40, spd:10, dmg:45, range:3.0, rate:0.8, pt:'melee', pv:0, score:150, mOY:1.0 },
     armored:   { hp:180, maxHp:180, spd:2.8, dmg:15, range:25, rate:0.8, pt:'heavy', pv:45, score:220, mOY:1.0 },
+    medic_bot:   { hp:35, maxHp:35, spd:3.5, dmg:5,  range:20, rate:1.2, pt:'plasma', pv:20, score:130, mOY:1.0, mapExclusive:'jungle' },
+    shield_bot:  { hp:150, maxHp:150, spd:2.0, dmg:12, range:25, rate:0.8, pt:'heavy', pv:45, score:200, mOY:1.0, mapExclusive:'jungle' },
+    teleport_bot:{ hp:25, maxHp:25, spd:7.0, dmg:18, range:8, rate:0.4, pt:'melee', pv:0, score:160, mOY:1.0, mapExclusive:'jungle' },
+    swarm_host:  { hp:300, maxHp:300, spd:0, dmg:0, range:0, rate:0, pt:'none', pv:0, score:300, mOY:1.5, mapExclusive:'jungle' },
   }[type] || {};
 
   return {
@@ -516,6 +520,15 @@ export function hitRobot(e, dmg, isHeadshot = false, isExplosive = false) {
   e.hp -= actualDmg;
   if (cb.showHitMarker) cb.showHitMarker();
   sfx.hit();
+  // EMP rounds check
+  import('./progression.js').then(({ getLoadout }) => {
+      if (getLoadout(curWep).attachments?.special === 'emp_rounds' && Math.random() < 0.15 && e.alive) {
+          e._empStunned = 1.0;
+          spawnSparks(e.group.position, 0x4488ff, 8);
+          import('./progression.js').then(({ recordEmpStun }) => recordEmpStun());
+          sfx.plasma(); // reuse plasma sound for EMP
+      }
+  });
  
   if (e.hp <= 0) destroyRobot(e, isHeadshot, isExplosive);
 }
@@ -645,6 +658,124 @@ export function updateEnemies(dt) {
 
   for (const e of enemies) {
     if (!e.alive) continue;
+    // Process DOT effects (Flamethrower burns) and show burning visual
+    if (e._dots && e._dots.length > 0) {
+        for (let i = e._dots.length - 1; i >= 0; i--) {
+            const dot = e._dots[i];
+            e.hp -= dot.dmg * dt;
+            dot.remaining -= dt;
+            if (dot.remaining <= 0) {
+                e._dots.splice(i, 1);
+            }
+        }
+        
+        // Create/update burning visual effect
+        if (!e._burnMeshes) {
+            e._burnMeshes = [];
+            e._burnTimer = 0;
+            
+            // Create 3-5 small flame sprites around the enemy
+            const flameCount = 5;
+            const mat = new BABYLON.StandardMaterial('burnMat_' + e.group.name, scene);
+            mat.diffuseTexture = M.fireTex;           // ← new texture
+            mat.emissiveTexture = M.fireTex;          // ← glows in dark
+            mat.emissiveColor = new BABYLON.Color3(0.5, 0.2, 0);
+            mat.disableLighting = true;
+            mat.alpha = 0.85;
+            mat.useAlphaFromDiffuseTexture = true;    // ← handles transparency
+            mat.backFaceCulling = false;
+            
+            for (let i = 0; i < flameCount; i++) {
+                const flame = BABYLON.MeshBuilder.CreatePlane('burnFlame_' + i, {
+                    width: 0.3 + Math.random() * 0.3,
+                    height: 0.5 + Math.random() * 0.4
+                }, scene);
+                flame.material = mat;
+                flame.parent = e.group;
+                flame.billboardMode = BABYLON.Mesh.BILLBOARDMODE_ALL;
+                flame.isPickable = false;
+                
+                // Random position around the enemy
+                const angle = (i / flameCount) * Math.PI * 2 + Math.random();
+                const radius = 0.5 + Math.random() * 0.5;
+                flame.position.x = Math.cos(angle) * radius;
+                flame.position.y = 0.5 + Math.random() * 0.8;
+                flame.position.z = Math.sin(angle) * radius;
+                
+                // Store animation data
+                flame._burnData = {
+                    baseX: flame.position.x,
+                    baseY: flame.position.y,
+                    baseZ: flame.position.z,
+                    speed: 2 + Math.random() * 4,
+                    offset: Math.random() * Math.PI * 2,
+                    scaleSpeed: 3 + Math.random() * 4
+                };
+                
+                e._burnMeshes.push(flame);
+            }
+            
+            // Also add an orange point light for glow
+            e._burnLight = new BABYLON.PointLight('burnLight_' + e.group.name, e.group.position.clone(), scene);
+            e._burnLight.diffuse = new BABYLON.Color3(1, 0.5, 0.1);
+            e._burnLight.intensity = 0.5;
+            e._burnLight.range = 3;
+        }
+        
+        // Animate the burn effect
+        e._burnTimer += dt;
+        
+        if (e._burnMeshes) {
+            for (const flame of e._burnMeshes) {
+                if (!flame || flame.isDisposed()) continue;
+                const bd = flame._burnData;
+                
+                // Flicker scale
+                const flicker = 0.7 + Math.sin(e._burnTimer * bd.scaleSpeed + bd.offset) * 0.3;
+                flame.scaling.set(flicker, flicker * (1 + Math.random() * 0.3), 1);
+                
+                // Bob up and down
+                flame.position.y = bd.baseY + Math.sin(e._burnTimer * bd.speed + bd.offset) * 0.3;
+                
+                // Slight horizontal drift
+                flame.position.x = bd.baseX + Math.cos(e._burnTimer * bd.speed * 0.7) * 0.2;
+                
+                // Rotate for variety
+                flame.rotation.z += dt * (1 + Math.random());
+            }
+            
+            // Pulse the light
+            if (e._burnLight) {
+                e._burnLight.intensity = 0.3 + Math.sin(e._burnTimer * 8) * 0.3;
+                e._burnLight.position.copyFrom(e.group.position);
+            }
+        }
+        
+        if (e.hp <= 0) {
+            destroyRobot(e, false);
+            continue;
+        }
+    } else {
+        // Clean up burn visual when DOT expires
+        if (e._burnMeshes) {
+            for (const flame of e._burnMeshes) {
+                if (flame && !flame.isDisposed()) flame.dispose();
+            }
+            e._burnMeshes = null;
+            if (e._burnLight) {
+                e._burnLight.dispose();
+                e._burnLight = null;
+            }
+        }
+    }
+    // Apply EMP stun
+    if (e._empStunned > 0) {
+        e._empStunned -= dt;
+        e.group.position.y = e._floorY + e._hopY + bob + (e._yAnimOffset || 0);
+        _eLookAt.set(_ePP.x, e.group.position.y, _ePP.z);
+        e.group.lookAt(_eLookAt);
+        continue; // Skip movement and attack
+    }
     e.animT += dt;
 
     // Initialize physical properties
@@ -672,6 +803,44 @@ export function updateEnemies(dt) {
     // 1. If I don't have Line of Sight (LOS), I MUST move toward the player (up stairs).
     // 2. If I have LOS, I only move if I'm outside my preferred 2D range.
     const hasLOS = _hasLOS(_eMuzzle, playerEye);
+
+    // Medic bot: heal nearby allies
+    if (e.type === 'medic_bot') {
+        for (const ally of enemies) {
+            if (ally === e || !ally.alive) continue;
+            const dist = BABYLON.Vector3.Distance(e.group.position, ally.group.position);
+            if (dist < 8 && ally.hp < ally.maxHp) {
+                ally.hp = Math.min(ally.maxHp, ally.hp + 5 * dt);
+            }
+        }
+    }
+
+    // Teleport bot: random blink
+    if (e.type === 'teleport_bot') {
+        if (!e._teleportTimer) e._teleportTimer = 3.0;
+        e._teleportTimer -= dt;
+        if (e._teleportTimer <= 0) {
+            e._teleportTimer = 2.0 + Math.random() * 4.0;
+            // Blink to random position near player
+            const angle = Math.random() * Math.PI * 2;
+            const dist = 5 + Math.random() * 10;
+            e.group.position.x = _ePP.x + Math.cos(angle) * dist;
+            e.group.position.z = _ePP.z + Math.sin(angle) * dist;
+            e._floorY = e.group.position.y; // reset floor
+        }
+    }
+
+    // Swarm host: spawn tiny drones
+    if (e.type === 'swarm_host') {
+        if (!e._spawnTimer) e._spawnTimer = 5.0;
+        e._spawnTimer -= dt;
+        if (e._spawnTimer <= 0 && enemies.length < 25) {
+            e._spawnTimer = 5.0;
+            const offset = new BABYLON.Vector3(Math.random()*4-2, 0, Math.random()*4-2);
+            spawnBot('drone', e.group.position.x + offset.x, e.group.position.y, e.group.position.z + offset.z, 0.5);
+            _roundEnemies++;
+        }
+    }
 
     // --- 1. BOSS SPECIAL ABILITIES ---
     if (e.type === 'giantbot') {

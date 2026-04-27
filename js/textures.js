@@ -212,37 +212,61 @@ function _drawWDropRing(ctx) {
   }
 }
 
-  export const rwCache1 = lqMat('rwCache1', 'met_brn_block.png', 3, 2);
-  export const rwCache2 = lqMat('rwCache2', 'met_grn_flat.png',  3, 2);
+// Simple fire texture (canvas-generated)
+function _drawFire(ctx, size) {
+    // Orange-yellow gradient
+    const grad = ctx.createRadialGradient(size/2, size/2, 0, size/2, size/2, size/2);
+    grad.addColorStop(0, 'rgba(255,255,100,1)');
+    grad.addColorStop(0.3, 'rgba(255,180,20,0.9)');
+    grad.addColorStop(0.6, 'rgba(255,80,0,0.6)');
+    grad.addColorStop(1, 'rgba(255,0,0,0)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, size, size);
+    
+    // Add some random bright spots
+    for (let i = 0; i < 5; i++) {
+        const x = size/2 + (Math.random() - 0.5) * size * 0.4;
+        const y = size/2 + (Math.random() - 0.5) * size * 0.6;
+        const r = 2 + Math.random() * 4;
+        ctx.fillStyle = 'rgba(255,255,200,0.8)';
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI*2);
+        ctx.fill();
+    }
+}
 
-  export const M = {
-    rustWall:   lqMat('rustWall',   'met_brn_block.png', 3, 2),
-    rustWall2:  lqMat('rustWall2',  'met_grn_flat.png',  3, 2),
-    dirt:       lqMat('dirt',       'med_bigdirt.png',  14, 14),
-    concrete:   lqMat('concrete',   'conc1_1.png',       4, 4),
-    ceiling:    lqMat('ceiling',    'met_brn_flat.png',  4, 4),
-    bridge:     lqMat('bridge',     'met_brn_grate.png', 4, 4),
-    scrap:      lqMat('scrap',      'darkrock.png',      4, 4),
-    barrel:     pickupTex('barrel',      _drawBarrel),
-    barrelHoop: pickupTex('barrelHoop',  _drawBarrelHoop),
-    barrelBand: colMat('barrelBand', 0xffcc00),
-    jumpPad:    pickupTex('jumpPad',     _drawJumpPad),
-    wdropRing:  pickupTex('wdropRing',   _drawWDropRing),
-    yellow:     colMat('yellow',     0xcebb00),
-    black:      colMat('black',      0x111111),
-    grey:       colMat('grey',       0x555555),
-    gunMetal:   colMat('gunMetal',   0x2a2a2a),
-    gunBrown:   colMat('gunBrown',   0x2a1508),
-    ledGreen:   colMat('ledGreen',   0x44ff44, 0x44ff44),
-    ledRed:     colMat('ledRed',     0xff3300, 0xff3300),
-    ledBlue:    colMat('ledBlue',    0x3399ff, 0x3399ff),
-    ledCyan:    colMat('ledCyan',    0x00ffcc, 0x00ffcc),
-    healthMat:  pickupTex('health', _drawHealth),
-    armorMat:   pickupTex('armor',  _drawArmor),
-    ammoMat:    pickupTex('ammo',   _drawAmmo),
-    rocketMat:  colMat('rocketMat',  0xbb3300),
-    rocketNose: colMat('rocketNose', 0x774400),
-    orange:     colMat('orange',     0xff8800, 0xff8800),
-    plasmaMat:  colMat('plasmaMat',  0x4488ff, 0x4488ff),
-    carpet:     lqMat('carpet',     'gravel1.png',       10, 10),
-  };
+export const rwCache1 = lqMat('rwCache1', 'met_brn_block.png', 3, 2);
+export const rwCache2 = lqMat('rwCache2', 'met_grn_flat.png',  3, 2);
+
+export const M = {
+  rustWall:   lqMat('rustWall',   'met_brn_block.png', 3, 2),
+  rustWall2:  lqMat('rustWall2',  'met_grn_flat.png',  3, 2),
+  dirt:       lqMat('dirt',       'med_bigdirt.png',  14, 14),
+  concrete:   lqMat('concrete',   'conc1_1.png',       4, 4),
+  ceiling:    lqMat('ceiling',    'met_brn_flat.png',  4, 4),
+  bridge:     lqMat('bridge',     'met_brn_grate.png', 4, 4),
+  scrap:      lqMat('scrap',      'darkrock.png',      4, 4),
+  barrel:     pickupTex('barrel',      _drawBarrel),
+  barrelHoop: pickupTex('barrelHoop',  _drawBarrelHoop),
+  barrelBand: colMat('barrelBand', 0xffcc00),
+  jumpPad:    pickupTex('jumpPad',     _drawJumpPad),
+  wdropRing:  pickupTex('wdropRing',   _drawWDropRing),
+  yellow:     colMat('yellow',     0xcebb00),
+  black:      colMat('black',      0x111111),
+  grey:       colMat('grey',       0x555555),
+  gunMetal:   colMat('gunMetal',   0x2a2a2a),
+  gunBrown:   colMat('gunBrown',   0x2a1508),
+  ledGreen:   colMat('ledGreen',   0x44ff44, 0x44ff44),
+  ledRed:     colMat('ledRed',     0xff3300, 0xff3300),
+  ledBlue:    colMat('ledBlue',    0x3399ff, 0x3399ff),
+  ledCyan:    colMat('ledCyan',    0x00ffcc, 0x00ffcc),
+  healthMat:  pickupTex('health', _drawHealth),
+  armorMat:   pickupTex('armor',  _drawArmor),
+  ammoMat:    pickupTex('ammo',   _drawAmmo),
+  rocketMat:  colMat('rocketMat',  0xbb3300),
+  rocketNose: colMat('rocketNose', 0x774400),
+  orange:     colMat('orange',     0xff8800, 0xff8800),
+  plasmaMat:  colMat('plasmaMat',  0x4488ff, 0x4488ff),
+  carpet:     lqMat('carpet',     'gravel1.png',       10, 10),
+  fireTex: pickupTex('fire', (ctx) => _drawFire(ctx, 64)),
+};

@@ -7,7 +7,7 @@ import { hasLaserDot, isAkimbo, hasEnergyConverter, getEffectiveStats, getLoadou
 import { isScoped } from './player.js'
 
 export const WDEFS = {
-  PISTOL:   { name:'PISTOL',   dmg:20, range:75, cd:.18, hitscan:true, ammo:Infinity, aps:1, spread:.0, pellets:1, startAmmo:Infinity, falloff:0.30, magSize: 12, currentMag: 12, reloadTime: 1.2 },
+  PISTOL:   { name:'PISTOL', dmg:20, range:75, cd:.18, hitscan:true, ammo:24, aps:1, spread:.0, pellets:1, startAmmo:24, falloff:0.30, magSize:12, currentMag:12, reloadTime:1.2 },
   SMG:      { name:'SMG',      dmg:11, range:40, cd:.09, hitscan:true, ammo:0, aps:1, spread:.035, pellets:1, startAmmo:45, falloff:0.50, magSize: 30, currentMag: 30, reloadTime: 1.5 },
   SHOTGUN:  { name:'SHOTGUN',  dmg:32, range:25, cd:.25, hitscan:true, ammo:0, aps:1, spread:0.12, pellets:10, startAmmo:16, falloff:0.80, magSize: 8,  currentMag: 8, reloadTime: 1.8 },
   CHAINGUN: { name:'CHAINGUN', dmg:14, range:30, cd:.08, hitscan:true, ammo:0, aps:1, spread:.055, pellets:1, startAmmo:150, falloff:0.70, magSize: 100, currentMag: 100, reloadTime: 2.8 },
@@ -21,12 +21,17 @@ export const WDEFS = {
   
   // Plasma defaults to Ballistic until 'Energy Converter' is equipped
   PLASMA:   { name:'PLASMA',   dmg:25, range:60, cd:.15, hitscan:false, ammo:0, aps:1, spread:.02, pellets:1, startAmmo:60, falloff:0.0, magSize: 30, currentMag: 30, reloadTime: 1.8, heat: 0, maxHeat: 100, coolRate: 40, heatPerShot: 0.20 },
+  // ── Jungle Map Weapons  ──────
+  FLAMETHROWER: { name:'FLAMETHROWER', dmg:8, range:12, cd:.05, hitscan:true, ammo:80, aps:1, spread:.15, pellets:1, startAmmo:80, falloff:0.90, magSize:80, currentMag:80, reloadTime:3.0, mapExclusive:'jungle', useHeat:true, heatPerShot:0.02, maxHeat:100, coolRate:45, dotDamage:4, dotDuration:3 },
+  TESLA:      { name:'TESLA CANNON', dmg:35, range:40, cd:.8, hitscan:true, ammo:18, aps:1, spread:.02, pellets:1, startAmmo:18, falloff:0.30, magSize:6, currentMag:6, reloadTime:2.0, mapExclusive:'jungle', chainTargets:3, chainRange:8 },
+  CROSSBOW:   { name:'CROSSBOW', dmg:70, range:80, cd:1.5, hitscan:true, ammo:12, aps:1, spread:.0, pellets:1, startAmmo:12, falloff:0.10, magSize:1, currentMag:1, reloadTime:1.8, mapExclusive:'jungle', retrievable:true, projSpeed:60 },
 };
 
 export const WCOLORS = {
   PISTOL:0x999999, SMG:0xff8800, SHOTGUN:0x885533,
   CHAINGUN:0xff3300, RAILGUN:0x00ffcc, PLASMA:0x4488ff, ROCKET:0xcc3300,
   GLAUNCHER:0x44cc44, ELECTRON:0x00ccff, ION:0xaa44ff,
+  FLAMETHROWER:0xff4400, TESLA:0x8844ff, CROSSBOW:0x88aa44,
 };
 
 export const ROBOT_DROPS = {
@@ -34,15 +39,21 @@ export const ROBOT_DROPS = {
   heavy:     'CHAINGUN',
   sniper:    'RAILGUN',
   drone:     'PLASMA',
-  pistol:    ['ROCKET', 'SHOTGUN', 'RAILGUN'][Math.floor(Math.random() * 3)],
+  pistol:    'PISTOL',//['ROCKET', 'SHOTGUN', 'RAILGUN'][Math.floor(Math.random() * 3)],
   shotgun:   'SHOTGUN',
   rocket:    'ROCKET',
   grenadier: 'GLAUNCHER',
   electron_bot: 'ELECTRON',
   ion_sniper:   'ION',
+  armored: 'PISTOL',
+  // NINJA
+  medic_bot: 'FLAMETHROWER',
+  shield_bot: 'TESLA',
+  teleport_bot: 'CROSSBOW',
+  swarm_host: 'PLASMA',
 };
 
-export const AUTO_WEAPONS = new Set(['SMG', 'CHAINGUN', 'ELECTRON', 'PLASMA']);
+export const AUTO_WEAPONS = new Set(['SMG', 'CHAINGUN', 'ELECTRON', 'PLASMA', 'FLAMETHROWER']);
 
 export const inventory = [null, null, 'PISTOL']; 
 export let activeSlot = 2;
@@ -180,11 +191,33 @@ function _buildIon(p) {
   _box(p,'stck', .05, .10, .28, M.gunBrown, 0,   .02, -.20, -.08);
 }
 
+function _buildFlamethrower(p) {
+    _cyl(p,'tank', .18, .55, M.ledRed, 0, -.05, .05, Math.PI/2);
+    _cyl(p,'nozzle', .08, .35, M.gunMetal, 0, .02, .34, Math.PI/2);
+    _cyl(p,'pilot', .02, .08, M.ledOrange, 0, .02, .48, Math.PI/2);
+    _box(p,'grip', .07, .18, .10, M.gunBrown, 0, -.10, -.08, .2);
+}
+function _buildTesla(p) {
+    _box(p,'body', .08, .12, .55, M.gunMetal, 0, .02, .12);
+    _cyl(p,'coil', .14, .44, M.ledCyan, 0, .02, .32, Math.PI/2);
+    for (let i=0;i<3;i++) _torus(p,'ring'+i, .16, .018, M.plasmaMat, 0, .02, .18+i*.12);
+    _box(p,'grip', .07, .20, .11, M.gunBrown, 0, -.10, -.08, .16);
+}
+function _buildCrossbow(p) {
+    _box(p,'body', .06, .09, .55, M.gunBrown, 0, .02, .08);
+    _box(p,'limb', .28, .04, .06, M.gunMetal, 0, .06, .18);
+    _cyl(p,'bolt', .018, .20, M.grey, 0, .05, .30, Math.PI/2);
+    _box(p,'grip', .06, .16, .09, M.gunBrown, 0, -.08, -.08, .18);
+}
+
 const _modelBuilders = {
   PISTOL: _buildPistol, SMG: _buildSmg, SHOTGUN: _buildShotgun,
   CHAINGUN: _buildChaingun, RAILGUN: _buildRailgun,
   PLASMA: _buildPlasma, ROCKET: _buildRocket, GLAUNCHER: _buildGlauncher,
   ELECTRON: _buildElectron, ION: _buildIon,
+  FLAMETHROWER: _buildFlamethrower,
+  TESLA: _buildTesla,
+  CROSSBOW: _buildCrossbow,
 };
 
 export function makeScaledWeaponModel(wName, sc) {
@@ -266,12 +299,13 @@ const MUZZLE_Z = {
   GLAUNCHER: 0.65,
   ELECTRON:  0.74,
   ION:       1.12,
+  FLAMETHROWER: 0.52, TESLA: 0.68, CROSSBOW: 0.48,
 };
 
 // Rail/top position per weapon (Y axis)
-const TOP_Y = { PISTOL:0.09, SMG:0.065, SHOTGUN:0.075, CHAINGUN:0.12, RAILGUN:0.07, PLASMA:0.08, ROCKET:0.12, GLAUNCHER:0.145, ELECTRON:0.07, ION:0.065 };
+const TOP_Y = { PISTOL:0.09, SMG:0.065, SHOTGUN:0.075, CHAINGUN:0.12, RAILGUN:0.07, PLASMA:0.08, ROCKET:0.12, GLAUNCHER:0.145, ELECTRON:0.07, ION:0.065, FLAMETHROWER: 0.10, TESLA: 0.10, CROSSBOW: 0.065 };
 // Dedicated Sight Rail coordinate per weapon (Z axis)
-const SIGHT_Z = { PISTOL:0.15, SMG:0.10, SHOTGUN:0.14, CHAINGUN:-0.05, RAILGUN:0.22, PLASMA:0.14, ROCKET:0.10, GLAUNCHER:0.08, ELECTRON:0.12, ION:0.18 };
+const SIGHT_Z = { PISTOL:0.15, SMG:0.10, SHOTGUN:0.14, CHAINGUN:-0.05, RAILGUN:0.22, PLASMA:0.14, ROCKET:0.10, GLAUNCHER:0.08, ELECTRON:0.12, ION:0.18,FLAMETHROWER: 0.12, TESLA: 0.14, CROSSBOW: 0.10, };
 const GRIP_Z = { PISTOL:-0.05, SMG:-0.02, SHOTGUN:0.18, CHAINGUN:-0.08, RAILGUN:-0.05, PLASMA:-0.02, ROCKET:-0.10, GLAUNCHER:0.10, ELECTRON:-0.04, ION:-0.06 };
 // Fine-tune the crosshair height for every individual weapon here!
 const ADS_Y_ADJUST = {
@@ -655,6 +689,9 @@ const WPOS = {
   GLAUNCHER: new BABYLON.Vector3(.30,-.34, .62),
   ELECTRON:  new BABYLON.Vector3(.34,-.34, .62),
   ION:       new BABYLON.Vector3(.34,-.35, .70),
+  FLAMETHROWER: new BABYLON.Vector3(.30,-.34, .62),
+  TESLA: new BABYLON.Vector3(.34,-.35, .66),
+  CROSSBOW: new BABYLON.Vector3(.34,-.34, .62),
 };
 const WROT = {
   PISTOL:    new BABYLON.Vector3(.06,-.08,0),
@@ -667,6 +704,9 @@ const WROT = {
   GLAUNCHER: new BABYLON.Vector3(.05,-.11,0),
   ELECTRON:  new BABYLON.Vector3(.04,-.09,0),
   ION:       new BABYLON.Vector3(.04,-.10,0),
+  FLAMETHROWER: new BABYLON.Vector3(.05,-.11,0),
+  TESLA: new BABYLON.Vector3(.04,-.10,0),
+  CROSSBOW: new BABYLON.Vector3(.05,-.09,0),
 };
 
 export function refreshSlotHUD() {
