@@ -20,6 +20,22 @@ export const TIER_4 = 18;
 export const TIER_5 = 24;
 export const TIER_6 = TIER_5 + 12;
 
+export const NAVMESH_PARAMS = {
+      cs: 0.2,            
+      ch: 0.2,            
+      walkableSlopeAngle: 60,  // Increased so they can climb the invisible stair ramps
+      walkableHeight: 2.5, 
+      walkableClimb: 0.6,      // Increased so they don't get stuck on floor seams
+      walkableRadius: 0.6,     // Increased to keep their bodies strictly OUT of walls
+      maxEdgeLen: 12.,
+      maxSimplificationError: 1.3,
+      minRegionArea: 4,
+      mergeRegionArea: 20,
+      maxVertsPerPoly: 6,
+      detailSampleDist: 6,
+      detailSampleMaxError: 1,
+  };
+
 function _liftFloatingY(y) {
   return y > 0.05 ? y + FLOAT_LIFT_Y : y;
 }
@@ -419,25 +435,10 @@ export function buildLevel() {
   // Escape Jump Pad inside the secret room (Blasts player South out the window)
   makeJumpPad(0, TIER_5, 28, 22, Math.PI);
 
-  // BAKE THE NAVMESH
-  const navmeshParameters = {
-      cs: 0.2,            
-      ch: 0.2,            
-      walkableSlopeAngle: 60,  // Increased so they can climb the invisible stair ramps
-      walkableHeight: 2.5, 
-      walkableClimb: 0.6,      // Increased so they don't get stuck on floor seams
-      walkableRadius: 0.6,     // Increased to keep their bodies strictly OUT of walls
-      maxEdgeLen: 12.,
-      maxSimplificationError: 1.3,
-      minRegionArea: 4,
-      mergeRegionArea: 20,
-      maxVertsPerPoly: 6,
-      detailSampleDist: 6,
-      detailSampleMaxError: 1,
-  };
+
   // FORCE update absolute geometry for Recast
   walkableMeshes.forEach(mesh => mesh.computeWorldMatrix(true));
-  navPlugin.createNavMesh(walkableMeshes, navmeshParameters);
+  navPlugin.createNavMesh(walkableMeshes, NAVMESH_PARAMS );
   
   // Optional: Visualise the NavMesh for debugging (Very helpful!)
 /*   const navmeshdebug = navPlugin.createDebugNavMesh(scene);

@@ -3,7 +3,7 @@
 <head>
 <link rel="icon" href="data:,">
 <meta charset="UTF-8">
-<title>SCRAPPY - Scrapyard FPS</title>
+<title>SCRAPPY - FPS</title>
 <script src="https://cdn.babylonjs.com/recast.js"></script>
 <script src="/js/babylon.max.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -115,6 +115,8 @@
     function enableGame(displayName) {
        startBtn.style.display = 'inline-block';
        pvpBtn.style.display = 'inline-block';
+       document.getElementById('mapSelectSection').style.display = 'flex';
+      document.getElementById('leaderboardSection').style.display = 'block';
        
        // Pre-fill and lock the PvP Lobby input
        const pvpNameField = document.getElementById('pvpName');
@@ -248,17 +250,23 @@ body { background:#000; overflow:hidden; font-family:'Arial',sans-serif; }
 
 <div id="menuScreen" class="screen visible">
   <h1>&#9881; SCRAPPY &#9881;</h1>
-  <div class="sub">Scrapyard Survival Shooter</div>
+  <div class="sub">Survival Shooter</div>
   <div id="loadMsg" style="color:#7a9940;font-size:13px;letter-spacing:3px;margin-bottom:10px;display:none">&#9654; LOADING LIBREQUAKE TEXTURES&hellip;</div>
   
   <button class="btn" id="loginBtn" style="background:linear-gradient(to bottom,#1a3a50,#081a2a);border-color:#3377aa;color:#aaccff;">&#128273; LOGIN WITH GOOGLE</button>
-  
+  <div id="mapSelectSection" style="margin:12px 0;display:none;align-items:center;gap:10px;">
+    <span style="color:#88aa44;font-size:13px;letter-spacing:2px;">MAP:</span>
+    <select id="mapDropdown" style="background:#0d1a05;color:#d8f030;border:1px solid #557733;padding:6px 12px;font-family:'Courier New',monospace;font-size:14px;cursor:pointer;letter-spacing:1px;">
+      <option value="scrapyard">🏭 SCRAPYARD</option>
+      <option value="jungle">🌴 TEMPLE RUINS</option>
+    </select>
+  </div>
   <button class="btn" id="startBtn" style="display:none;">&#9654; SOLO RUN</button>
   <button class="btn" id="pvpBtn" style="display:none;background:linear-gradient(to bottom,#2a1a50,#10082a);border-color:#5533aa;color:#c8aaff;">&#9876; PvP TDM</button>  <div class="controls-hint">
     <b>WASD</b> Move &nbsp;|&nbsp; <b>Mouse</b> Aim &nbsp;|&nbsp; <b>LMB</b> Shoot (hold auto)<br>
     <b>Shift</b> Sprint &nbsp;|&nbsp; <b>Space</b> Jump &nbsp;|&nbsp; <b>1/2/3</b> Weapon &nbsp;|&nbsp; <b>Q</b> Quick-swap &nbsp;|&nbsp; <b>F</b> Pick up &nbsp;|&nbsp; <b>ESC</b> Pause
   </div>
-  <div id="leaderboardSection">
+  <div id="leaderboardSection" style="display:none">
     <h3>&#127942; Top Scores</h3>
     <ul id="leaderboardList"><li style="color:#557733">LOADING&#8230;</li></ul>
   </div>

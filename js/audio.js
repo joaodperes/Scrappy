@@ -56,9 +56,13 @@ export const sfx = {
   plasma:    () => { tone({ f:1800, t:'sine', d:.11, v:.13, f2:600 }); tone({ f:2100, t:'square', d:.05, v:.1 }); },
   wPickup:   () => [330,440,550,660,880].forEach((f,i) => setTimeout(() => tone({ f, t:'sine', d:.1, v:.13 }), i*40)),
   powerup:   () => {
-    [220,330,440,660,880,1320].forEach((f,i) => setTimeout(() => tone({ f, t:'sine', d:.18, v:.18 }), i*55));
-    tone({ f:80, t:'sawtooth', d:.55, v:.12 });
-  },
+      [220,330,440,660,880,1320].forEach((f,i) => setTimeout(() => tone({ f, t:'sine', d:.18, v:.18 }), i*55));
+      tone({ f:80, t:'sawtooth', d:.55, v:.12 });
+    },
+  lavaDamage: () => {
+    tone({ f: 85, t: 'sawtooth', d: 0.4, v: 0.22 });
+    tone({ f: 40, t: 'square',   d: 0.5, v: 0.18 });
+    },
   // vol 0–1, type = bot type string
   step: (vol = 0.5, type = 'scout') => {
     switch (type) {

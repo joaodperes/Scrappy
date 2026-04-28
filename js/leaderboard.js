@@ -4,7 +4,7 @@ function _db() {
   return typeof firebase !== 'undefined' ? firebase.firestore() : null;
 }
 
-export async function submitScore(name, score, wave, mode = 'solo') {
+export async function submitScore(name, score, wave, mode = 'solo', map = 'scrapyard') {
   const db = _db();
   if (!db) { console.warn('[leaderboard] Firebase not loaded'); return; }
 
@@ -16,15 +16,16 @@ export async function submitScore(name, score, wave, mode = 'solo') {
   }
 
   await db.collection('scores').add({
-    name, score, wave, mode,
+    name, score, wave, mode, map, 
     date: firebase.firestore.FieldValue.serverTimestamp(),
   }).catch(e => console.error('[leaderboard] Submit failed:', e));
 }
 
-export async function fetchTopScores(mode = 'solo', count = 10) {
+export async function fetchTopScores(mode = 'solo', map = 'scrapyard', count = 10) {
   const db = _db(); if (!db) return [];
   const snap = await db.collection('scores')
     .where('mode', '==', mode)
+    .where('map', '==', map)
     .orderBy('score', 'desc')
     .limit(count)
     .get()
@@ -37,7 +38,8 @@ export async function renderLeaderboard() {
   const el = document.getElementById('leaderboardList');
   if (!el) return;
   el.innerHTML = '<li style="color:#557733">LOADING…</li>';
-  const rows = await fetchTopScores();
+  const selectedMap = document.getElementById('mapDropdown')?.value || 'scrapyard';
+  const rows = await fetchTopScores('solo', selectedMap);
   if (!rows.length) { el.innerHTML = '<li style="color:#557733">NO SCORES YET</li>'; return; }
   el.innerHTML = rows.map((r, i) =>
     `<li>

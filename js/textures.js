@@ -235,6 +235,15 @@ function _drawFire(ctx, size) {
     }
 }
 
+export const fireTex = (() => {
+  const c = document.createElement('canvas'); c.width=64; c.height=64;
+  _drawFire(c.getContext('2d'), 64);
+  const dt = new BABYLON.DynamicTexture('fireTex', {width:64, height:64}, scene, false);
+  dt.getContext().drawImage(c, 0, 0);
+  dt.update();
+  return dt;
+})();
+
 export const rwCache1 = lqMat('rwCache1', 'met_brn_block.png', 3, 2);
 export const rwCache2 = lqMat('rwCache2', 'met_grn_flat.png',  3, 2);
 

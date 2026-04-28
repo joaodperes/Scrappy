@@ -24,7 +24,7 @@ export const WDEFS = {
   // ── Jungle Map Weapons  ──────
   FLAMETHROWER: { name:'FLAMETHROWER', dmg:8, range:12, cd:.05, hitscan:true, ammo:80, aps:1, spread:.15, pellets:1, startAmmo:80, falloff:0.90, magSize:80, currentMag:80, reloadTime:3.0, mapExclusive:'jungle', useHeat:true, heatPerShot:0.02, maxHeat:100, coolRate:45, dotDamage:4, dotDuration:3 },
   TESLA:      { name:'TESLA CANNON', dmg:35, range:40, cd:.8, hitscan:true, ammo:18, aps:1, spread:.02, pellets:1, startAmmo:18, falloff:0.30, magSize:6, currentMag:6, reloadTime:2.0, mapExclusive:'jungle', chainTargets:3, chainRange:8 },
-  CROSSBOW:   { name:'CROSSBOW', dmg:70, range:80, cd:1.5, hitscan:true, ammo:12, aps:1, spread:.0, pellets:1, startAmmo:12, falloff:0.10, magSize:1, currentMag:1, reloadTime:1.8, mapExclusive:'jungle', retrievable:true, projSpeed:60 },
+  CROSSBOW:   { name:'CROSSBOW', dmg:70, range:80, cd:1.5, hitscan:true, ammo:12, aps:1, spread:.0, pellets:1, startAmmo:12, falloff:0.10, magSize:1, currentMag:1, reloadTime:0.9, mapExclusive:'jungle', retrievable:true, projSpeed:60 },
 };
 
 export const WCOLORS = {

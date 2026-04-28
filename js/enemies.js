@@ -1,7 +1,7 @@
 // enemies.js – robot AI, spawning, hit/destroy, round timer, angry mode
 const BABYLON = window.BABYLON;
 import { scene, camera, navPlugin } from './scene.js';
-import { M, robotTex } from './textures.js';
+import { M, robotTex, fireTex } from './textures.js';
 import { makeScaledWeaponModel, ROBOT_DROPS, curWep, WDEFS  } from './weapons.js';
 import { enemies, player, cb } from './gameState.js';
 import { spawnSparks } from './particles.js';
@@ -635,6 +635,8 @@ export function destroyRobot(e, isHeadshot = false, isExplosive = false) {
       }
       const dropWep = ROBOT_DROPS[e.type];
       if (dropWep) spawnWeaponDrop(pos, dropWep);
+      if (curWep === 'CROSSBOW') {
+        spawnWeaponDrop(pos, 'CROSSBOW');};
     }
   });
   cb.markHudDirty?.();
@@ -677,12 +679,12 @@ export function updateEnemies(dt) {
             // Create 3-5 small flame sprites around the enemy
             const flameCount = 5;
             const mat = new BABYLON.StandardMaterial('burnMat_' + e.group.name, scene);
-            mat.diffuseTexture = M.fireTex;           // ← new texture
-            mat.emissiveTexture = M.fireTex;          // ← glows in dark
+            mat.diffuseTexture = fireTex;          // use the texture directly, not a material
+            mat.emissiveTexture = fireTex;
             mat.emissiveColor = new BABYLON.Color3(0.5, 0.2, 0);
             mat.disableLighting = true;
             mat.alpha = 0.85;
-            mat.useAlphaFromDiffuseTexture = true;    // ← handles transparency
+            mat.useAlphaFromDiffuseTexture = true;
             mat.backFaceCulling = false;
             
             for (let i = 0; i < flameCount; i++) {
@@ -777,6 +779,20 @@ export function updateEnemies(dt) {
         continue; // Skip movement and attack
     }
     e.animT += dt;
+
+    // check inside updateEnemies:
+    if (window._hazardZones) {
+        for (const haz of window._hazardZones) {
+            const ex = e.group.position.x, ez = e.group.position.z;
+            const halfW = haz.metadata?.halfWidth ?? 0.5;
+            const halfD = haz.metadata?.halfDepth ?? 0.5;
+            const hx = haz.position.x, hz = haz.position.z;
+            if (ex > hx - halfW && ex < hx + halfW && ez > hz - halfD && ez < hz + halfD) {
+                e.hp -= (haz.metadata?.dps || 15) * dt;
+                if (e.hp <= 0) { destroyRobot(e, false); continue; }
+            }
+        }
+    }
 
     // Initialize physical properties
     if (e._floorY === undefined) e._floorY = e.group.position.y - (e.flyH > 0 ? e.flyH : 0);

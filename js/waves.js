@@ -2,6 +2,29 @@
 import { enemies } from './gameState.js';
 import { spawnBot } from './enemies.js';
 import { sfx } from './audio.js';
+import { getCurrentMap } from './mapManager.js';
+
+const _SCENARIOS = {
+  scrapyard: {
+    introWave: {
+      scout:1, drone:3, heavy:5, sniper:7, electron_bot:8,
+      ion_sniper:9, pistol:11, shotgun:12, rocket:13, grenadier:14,
+    },
+    botPool: ['scout','drone','heavy','sniper','pistol','shotgun','rocket','grenadier','electron_bot','ion_sniper'],
+  },
+  jungle: {
+    introWave: {
+      scout:1, drone:3, heavy:5, swarm_host:6, medic_bot:7,
+      shield_bot:8, teleport_bot:9, shotgun:10, rocket:11, sniper:12,
+    },
+    botPool: ['scout','drone','heavy','sniper','shotgun','rocket','medic_bot','shield_bot','teleport_bot','swarm_host'],
+  },
+};
+
+function _currentScenario() {
+  const map = getCurrentMap();
+  return _SCENARIOS[map] || _SCENARIOS.scrapyard;
+}
 
 export let curWave = 0, waveOn = false, waveDly = 1.8;
 export function setCurWave(v)  { curWave  = v; }
@@ -59,7 +82,7 @@ export function getWaveComposition(idx) {
     // Scale minion count by boss number (1× on wave 10, 2× on wave 20, …)
     const bossNum = Math.floor(waveNum / 10);
     // Minions: only types already introduced by the PREVIOUS wave
-    const availableMinions = _BOT_POOL.filter(t => _INTRO_WAVE[t] < waveNum);
+    const availableMinions = _currentScenario().botPool.filter(t => _currentScenario().introWave[t] < waveNum);
     const comp = [{ type: 'giantbot', count: 1 }];
     for (const t of availableMinions) {
       comp.push({ type: t, count: bossNum });
@@ -69,7 +92,7 @@ export function getWaveComposition(idx) {
 
   // ── INTRODUCTION PHASE (waves 1–12 hand-tuned) ───────────────
   // All types introduced by this wave
-  const available = _BOT_POOL.filter(t => _INTRO_WAVE[t] <= waveNum);
+  const available = _currentScenario().botPool.filter(t => _currentScenario().introWave[t] <= waveNum);
 
   if (waveNum <= 14) {
     const fixed = {
@@ -101,7 +124,7 @@ export function getWaveComposition(idx) {
   let remaining = budget;
 
   // Shuffle the pool so every wave feels different
-  const shuffled = _BOT_POOL.slice().sort(() => Math.random() - 0.5);
+  const shuffled = _currentScenario().botPool.slice().sort(() => Math.random() - 0.5);
 
   for (const t of shuffled) {
     if (remaining <= 0) break;

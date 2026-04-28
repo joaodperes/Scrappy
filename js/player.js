@@ -5,8 +5,10 @@ import { jumpPads } from './level.js';
 import { player, cb, enemies } from './gameState.js';
 import { sfx } from './audio.js';
 import { WDEFS, inventory, activeSlot, curWep, wepCooldown, swingT, AUTO_WEAPONS, setWepCooldown, setSwingT, setActiveSlot, refreshSlotHUD, setWeaponVisibility } from './weapons.js';
-import { hitscan, fireRocket, firePlasma, fireGrenade } from './projectiles.js';
+import { hitscan, fireRocket, firePlasma, fireGrenade, fireFlame, spawnLightningArc } from './projectiles.js';
 import { _meshToEnemy } from './enemies.js';
+import { spawnSparks } from './particles.js';
+
 // Static imports eradicate the Promise crashes in the shoot/input loop!
 import {
   getEffectiveStats, isAkimbo, isAutoFire, hasPowerCell, hasClusterRounds,
@@ -73,7 +75,9 @@ export function setPitch(v)    { pitch = v; }
 export function setLocked(v)   { locked = v; }
 export function markHudDirty() { _hudDirty = true; }
 
-export function hurtPlayer(rawDmg) {
+let _lavaHitTimer = 0;
+const LAVA_HIT_INTERVAL = 0.6;
+export function hurtPlayer(rawDmg, { isLava = false } = {}) {
   if (!cb.isGameRunning?.()) return;
   let d = rawDmg;
   if (player.armor > 0) {
@@ -82,11 +86,40 @@ export function hurtPlayer(rawDmg) {
     d -= absorb;
   }
   if (d > 0) player.hp = Math.max(0, player.hp - d);
-  sfx.playerHit();
+  if (isLava) {
+    if (_lavaHitTimer <= 0) {
+        sfx.lavaDamage();   // deeper sound defined in audio.js
+        _lavaHitTimer = LAVA_HIT_INTERVAL;
+    }
+  } else {
+    sfx.playerHit();
+  }
   const fl = document.getElementById('damageFlash');
   if (fl) { fl.classList.add('flash'); setTimeout(() => fl.classList.remove('flash'), 170); }
   markHudDirty();
   if (player.hp <= 0) cb.endGame?.();
+}
+
+function _drawBolt(from, to) {
+    const dir = to.subtract(from);
+    const len = dir.length();
+    if (len < 0.01) return;
+    dir.normalize();
+    const mid = from.add(dir.scale(len * 0.5));
+    const bolt = BABYLON.MeshBuilder.CreateCylinder('bolt_' + Math.random(),
+        { diameter: 0.05, height: len, tessellation: 3 }, scene);
+    bolt.position = mid;
+    const quat = new BABYLON.Quaternion();
+    BABYLON.Quaternion.FromUnitVectorsToRef(BABYLON.Axis.Y, dir, quat);
+    bolt.rotationQuaternion = quat;
+
+    const mat = new BABYLON.StandardMaterial('boltMat_' + Math.random(), scene);
+    mat.emissiveColor = new BABYLON.Color3(0.4, 0.7, 1);
+    mat.disableLighting = true;
+    bolt.material = mat;
+    bolt.isPickable = false;
+
+    setTimeout(() => bolt.dispose(), 400);
 }
 
 export function shoot() {
@@ -250,29 +283,44 @@ export function shoot() {
 
   switch (curWep) {
     case 'FLAMETHROWER':
-      if (!hasSuppressor('FLAMETHROWER')) sfx.chaingun(); // reuse chaingun sound for now
-      const flameResult = hitscan(_meshToEnemy, spread * spreadMult, modDmg, range, falloff);
-      // Apply DOT burn effect
-      if (flameResult?.hit && flameResult?.target) {
-          const dotTarget = flameResult.target;
-          if (!dotTarget._dots) dotTarget._dots = [];
-          dotTarget._dots.push({ 
-              dmg: W.dotDamage || 4, 
-              remaining: W.dotDuration || 3 
-          });
-          // Visual feedback - fire sparks
-          spawnSparks(dotTarget.group.position, 0xff4400, 3);
+      if (!hasSuppressor('FLAMETHROWER')) sfx.chaingun();
+      const fwd2 = new BABYLON.Vector3();
+      camera.getForwardRay(1).direction.normalizeToRef(fwd2);
+      const origin2 = camera.position.clone().add(fwd2.scale(0.8));
+      const flameCount = 8;
+      for (let i = 0; i < flameCount; i++) {
+          const spreadDir = fwd2.clone();
+          spreadDir.x += (Math.random() - 0.5) * 0.35;
+          spreadDir.y += (Math.random() - 0.5) * 0.25;
+          spreadDir.z += (Math.random() - 0.5) * 0.35;
+          spreadDir.normalize();
+          fireFlame(origin2, spreadDir, modDmg * 0.7);
       }
       break;
     case 'TESLA':
-      if (!hasSuppressor('TESLA')) sfx.plasma(); // reuse plasma sound
-      const teslaResult = hitscan(_meshToEnemy, spread * spreadMult, modDmg, range, falloff);
+      if (!hasSuppressor('TESLA')) sfx.plasma();
+      
+      const teslaResult = hitscan(_meshToEnemy, spread * spreadMult, modDmg, range, falloff,
+                                  new BABYLON.Color3(0.2, 0.9, 1.0), // cyan flash
+                                  0x88ccff,   // light blue hit spark
+                                  0x334466);  // dark blue miss spark
+      
       // Chain lightning to nearby enemies
       if (teslaResult?.hit && teslaResult?.target) {
           const chainCount = getLoadout('TESLA').attachments?.barrel === 'amplifier_coil' ? 5 : 3;
-          const hitEnemy = teslaResult.target;
-          let lastPos = hitEnemy.group.position.clone();
-          const chained = new Set([hitEnemy]);
+          const firstEnemy = teslaResult.target;
+          let lastPos = firstEnemy.group.position.clone();
+          const chained = new Set([firstEnemy]);
+          
+          // Draw bolt from player to first enemy
+          const playerPos = camera.position.clone();
+          playerPos.y += 0.5; // Chest height
+          const firstEnemyPos = lastPos.clone();
+          firstEnemyPos.y += 1.0;
+          spawnLightningArc(playerPos, firstEnemyPos);
+          
+          let delay = 120; // Start with slight delay for visual clarity
+          const chainInterval = 100;
           
           for (let i = 0; i < chainCount; i++) {
               let closest = null, closestDist = W.chainRange || 8;
@@ -282,10 +330,21 @@ export function shoot() {
                   if (d < closestDist) { closestDist = d; closest = e; }
               }
               if (closest) {
-                  chained.add(closest);
-                  cb.hitRobot(closest, Math.round(modDmg * (1 - i/chainCount)));
-                  spawnSparks(closest.group.position, 0x8844ff, 5);
-                  lastPos = closest.group.position;
+                  const capturedEnemy = closest;
+                  const sourcePos = lastPos.clone();
+                  sourcePos.y += 1.0; // Chest height
+                  const targetPos = capturedEnemy.group.position.clone();
+                  targetPos.y += 1.0;
+                  
+                  setTimeout(() => {
+                      if (!capturedEnemy.alive) return;
+                      cb.hitRobot(capturedEnemy, Math.round(modDmg * (1 - (i+1) / chainCount)));
+                      spawnSparks(capturedEnemy.group.position, 0x88ccff, 8);
+                      spawnLightningArc(sourcePos, targetPos); // Use your new function!
+                  }, delay);
+                  delay += chainInterval;
+                  lastPos = capturedEnemy.group.position.clone();
+                  chained.add(capturedEnemy);
               }
           }
       }
@@ -469,6 +528,8 @@ export function updatePlayer(dt, gameRunning, paused) {
 
   // Actually subtract heat delay timer!
   if (_heatDelayTimer > 0) _heatDelayTimer -= dt;
+  // Subctract from the lava hit timer
+  if (_lavaHitTimer > 0) _lavaHitTimer -= dt;
 
   // ION Sniper Ramp-Up: Generate heat while scoped
   if (curWep === 'ION' && isScoped) {

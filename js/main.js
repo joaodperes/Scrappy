@@ -1,23 +1,24 @@
 // main.js  entry point, game loop, solo/pvp/loadout/dev-mode orchestration
-import { scene, camera, engine } from './scene.js';
-import { texturesReady, setOnTexturesReady } from './textures.js';
+import { scene, camera, engine, navPlugin } from './scene.js';
+import { texturesReady, setOnTexturesReady, M } from './textures.js';
 import { ensureAudio } from './audio.js';
 import { buildLevel, resetBarrels, updateBarrels } from './level.js';
 import { setupLighting } from './lighting.js';
-import { setWeapon, inventory, WDEFS, setActiveSlot, animWeapon, initAttachmentVisuals } from './weapons.js';
-import { enemies, projs, pickups, weaponDrops, _sparkPool, particles, player } from './gameState.js';
+import { setWeapon, inventory, WDEFS, setActiveSlot, animWeapon,
+         initAttachmentVisuals, wepModels, wepGroup, curWep } from './weapons.js';
+import { enemies, projs, pickups, weaponDrops, _sparkPool, particles, player, cb } from './gameState.js';
 import { rebuildMeshMap, hitRobot, updateEnemies } from './enemies.js';
-import { updateProjs } from './projectiles.js';
+import { updateProjs  } from './projectiles.js';
 import { updateParticles } from './particles.js';
 import { updatePickups, updateWeaponDrops, tryPickupWeapon, initSecretKits, initWeaponSpawns } from './pickups.js';
 import { updateWaves, setCurWave, setWaveOn, setWaveDly, curWave, launchWave, getWaveComposition } from './waves.js';
-import { updatePlayer, setupInput, hurtPlayer, PH, resetPlayer } from './player.js';
+import { updatePlayer, setupInput, hurtPlayer, PH, resetPlayer, keys } from './player.js';
 import { updateHUD, tickHitMarker, wireDeathSubmit, showHitMarker, hideFfaHUD } from './ui.js';
 import { submitScore, renderLeaderboard } from './leaderboard.js';
-import { startFfa, updateFfa, isFfaActive, isFfaInPreLobby, showFfaLobby } from './pvp.js';
-import { cb } from './gameState.js';
+import { startFfa, updateFfa, isFfaActive, isFfaInPreLobby, showFfaLobby } from './pvp.js';;
 import { loadProfile } from './progression.js';
 import { showLoadout } from './loadout.js';
+import { getCurrentMap, setCurrentMap, markLevelBuilt, isLevelBuilt, MAPS } from './mapManager.js';
 
 let gameRunning = false;
 let paused      = false;
@@ -107,17 +108,67 @@ function startGame(startWave = 0) {
 
   _clearEntities();
   resetBarrels();
-  rebuildMeshMap();
-  resetPlayer(-19, PH, -12);
+  
+  // ── Rebuild level for selected map ─────────────────────────
+  const currentMap = getCurrentMap();
 
-  _hideAllScreens();
-  document.getElementById('hud').style.display = 'block';
-  setWeapon('PISTOL'); updateHUD();
-  gameRunning = true; paused = false;
-  initSecretKits();
-  initWeaponSpawns();
-  document.getElementById('c').requestPointerLock();
+  // Clear ALL existing meshes from previous level
+  // But save weapon model meshes first
+  const weaponMeshes = new Set();
+  for (const [k, node] of Object.entries(wepModels)) {
+    node.getChildMeshes().forEach(m => weaponMeshes.add(m));
+  }
+
+  // Dispose all scene nodes that aren't permanently needed
+  scene.meshes.slice().forEach(m => {
+      // ---  Add `|| weaponMeshes.has(m)` to protect the gun geometry! ---
+      if (m.name === '_playerBody' || m.name.startsWith('wep_') || m.name.startsWith('wm_') || weaponMeshes.has(m)) return;
+      m.dispose();
+  });
+  // Clear lights
+  scene.lights.forEach(l => { if (!l.name.startsWith('hemi') && !l.name.startsWith('fill')) l.dispose(); });
+  // Reset global level arrays
+  if (window._hazardZones) window._hazardZones.length = 0;
+  if (window._movingPlatforms) window._movingPlatforms.length = 0;
+  if (window._powerSwitches) window._powerSwitches.length = 0;
+  // Reset navmesh
+  navPlugin.createNavMesh([], { /* empty */ }); // clear old navmesh
+
+  if (currentMap === 'jungle') {
+    import('./levelJungle.js').then(mod => {
+      mod.buildJungleLevel();
+      window._hazardZones = mod.hazardZones;
+      window._movingPlatforms = mod.movingPlatforms;
+      window._powerSwitches = mod.powerSwitches;
+      finishStart();
+    });
+  } else {
+    buildLevel();
+    window._hazardZones = []; // No hazards in scrapyard
+    window._movingPlatforms = [];
+    window._powerSwitches = [];
+    finishStart();
+  }
+  
+  function finishStart() {
+    rebuildMeshMap();
+    resetPlayer(-19, PH, -12);
+    _hideAllScreens();
+    document.getElementById('hud').style.display = 'block';
+    setWeapon('PISTOL');
+    // After resetting player
+    wepGroup.setEnabled(true);
+    const model = wepModels[curWep];
+    if (model) model.setEnabled(true);
+    updateHUD();
+    gameRunning = true;
+    paused = false;
+    initSecretKits();
+    initWeaponSpawns();
+    document.getElementById('c').requestPointerLock();
+  }
 }
+
 
 function endGame() {
   gameRunning = false;
@@ -236,97 +287,6 @@ function openLoadout(returnToGame = false) {
   });
 }
 
-// ── Dev mode: wave selector ────────────────────────────────────
-function showDevWaveSelector() {
-  document.getElementById('devWavePanel')?.remove();
-
-  const FONT = '"Courier New",monospace';
-  const panel = document.createElement('div');
-  panel.id = 'devWavePanel';
-  panel.style.cssText = `position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:1200;overflow-y:auto;display:flex;flex-direction:column;align-items:center;padding:24px 16px 48px;font-family:${FONT};color:#d8f030`;
-
-  const h = document.createElement('div');
-  h.style.cssText = 'font-size:16px;letter-spacing:4px;margin-bottom:4px;text-shadow:0 0 8px #d8f030';
-  h.textContent = '⚙ DEV MODE — WAVE SELECTOR';
-  panel.appendChild(h);
-
-  const sub = document.createElement('div');
-  sub.style.cssText = 'font-size:11px;color:#557733;margin-bottom:18px;letter-spacing:1px';
-  sub.textContent = 'Click a wave to start there · Boss waves marked ⚠';
-  panel.appendChild(sub);
-
-  // Wave grid 1-20
-  const grid = document.createElement('div');
-  grid.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;max-width:680px;width:100%';
-
-  for (let w = 1; w <= 20; w++) {
-    const idx  = w - 1;
-    const comp = getWaveComposition(idx);
-    const isBoss = comp.some(c => c.type === 'giantbot');
-
-    const btn = document.createElement('button');
-    btn.style.cssText = [
-      `background:${isBoss ? '#220000' : '#0d0d0d'}`,
-      `border:1px solid ${isBoss ? '#882200' : '#2a2a2a'}`,
-      `color:${isBoss ? '#ff6644' : '#d8f030'}`,
-      'padding:8px 6px;cursor:pointer;text-align:left',
-      `font-family:${FONT};font-size:11px`,
-    ].join(';');
-
-    const total = comp.reduce((s, c) => s + c.count, 0);
-    const lines = comp.map(c => `${c.count}× ${c.type}`).join('\n');
-    btn.innerHTML = `<div style="font-size:15px;font-weight:bold;margin-bottom:4px">${isBoss ? '⚠ ' : ''}Wave ${w}</div>
-      <div style="font-size:9px;color:#557733;white-space:pre-line">${lines}</div>
-      <div style="font-size:9px;color:#aaa;margin-top:4px">${total} bots total</div>`;
-
-    btn.onclick = () => { panel.remove(); startGame(idx); };
-    grid.appendChild(btn);
-  }
-  panel.appendChild(grid);
-
-  // Custom wave input
-  const cr = document.createElement('div');
-  cr.style.cssText = 'display:flex;gap:10px;align-items:center;margin-top:18px';
-  cr.innerHTML = `<span style="font-size:12px;color:#aaa">Custom wave #</span>`;
-  const ci = document.createElement('input');
-  ci.type = 'number'; ci.min = 1; ci.max = 999; ci.value = 21;
-  ci.style.cssText = `width:70px;background:#111;border:1px solid #444;color:#d8f030;padding:5px 7px;font-family:${FONT};font-size:13px`;
-  const cgo = document.createElement('button');
-  cgo.textContent = 'START';
-  cgo.style.cssText = `background:#1a2800;border:1px solid #557733;color:#d8f030;padding:6px 16px;cursor:pointer;font-family:${FONT};font-size:12px`;
-  cgo.onclick = () => { panel.remove(); startGame(Math.max(0, parseInt(ci.value) - 1) || 0); };
-  cr.appendChild(ci); cr.appendChild(cgo);
-  panel.appendChild(cr);
-
-  // Spawn individual bot
-  const spawnSect = document.createElement('div');
-  spawnSect.style.cssText = 'margin-top:20px;width:100%;max-width:680px';
-  spawnSect.innerHTML = `<div style="font-size:11px;color:#557733;letter-spacing:2px;margin-bottom:8px;border-bottom:1px solid #222;padding-bottom:4px">SPAWN SINGLE BOT (for mechanic testing)</div>`;
-
-  const botRow = document.createElement('div');
-  botRow.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px';
-  ['scout','heavy','sniper','drone','shotgun','rocket','grenadier','giantbot','pistol'].forEach(type => {
-    const b = document.createElement('button');
-    b.textContent = type;
-    b.style.cssText = `background:#0d0d0d;border:1px solid #333;color:#d8f030;padding:6px 12px;cursor:pointer;font-family:${FONT};font-size:11px`;
-    b.onclick = () => {
-      panel.remove();
-      if (!gameRunning) startGame(0);
-      setTimeout(() => import('./enemies.js').then(({ spawnBot }) => spawnBot(type, 0, 0, 8, 1.0)), 150);
-    };
-    botRow.appendChild(b);
-  });
-  spawnSect.appendChild(botRow);
-  panel.appendChild(spawnSect);
-
-  const closeBtn = document.createElement('button');
-  closeBtn.textContent = '✕ CLOSE';
-  closeBtn.style.cssText = `margin-top:20px;background:transparent;border:1px solid #333;color:#557733;padding:7px 22px;cursor:pointer;font-family:${FONT};font-size:12px`;
-  closeBtn.onclick = () => panel.remove();
-  panel.appendChild(closeBtn);
-
-  document.body.appendChild(panel);
-}
 
 // ── Inject UI elements missing from existing HTML ─────────────
 (function _injectUIElements() {
@@ -387,7 +347,7 @@ function showDevWaveSelector() {
 })();
 
 // ── Score submission ───────────────────────────────────────────
-wireDeathSubmit((name, score) => submitScore(name, score, curWave, 'solo'));
+wireDeathSubmit((name, score) => submitScore(name, score, curWave, 'solo', getCurrentMap()));
 
 // ── Texture gate ───────────────────────────────────────────────
 const _gatedBtns = ['startBtn','pvpBtn','loadoutBtn','respawnBtn','victoryBtn'];
@@ -413,7 +373,6 @@ document.getElementById('respawnBtn')?.addEventListener('click', () => {
   renderLeaderboard();
 });
 document.getElementById('loadoutBtn')  ?.addEventListener('click', () => openLoadout(false));
-document.getElementById('devBtn')      ?.addEventListener('click', showDevWaveSelector);
 document.getElementById('pvpBtn')      ?.addEventListener('click', openFfaLobby);
 
 document.getElementById('pvpEndPlayAgain')?.addEventListener('click', () => {
@@ -432,9 +391,27 @@ document.getElementById('resumeBtn')?.addEventListener('mousedown', (e) => {
 document.getElementById('pauseOverlay')?.addEventListener('click', e => {
   if (e.target === e.currentTarget && paused) togglePause();
 });
+// ── Map selector change handler ──────────────────────────────
+document.getElementById('mapDropdown')?.addEventListener('change', (e) => {
+  setCurrentMap(e.target.value);
+  renderLeaderboard();
+  const mapInfo = MAPS[e.target.value];
+  // Update level description if you have one
+  const descEl = document.getElementById('mapDesc');
+  if (descEl) descEl.textContent = mapInfo?.desc || '';
+  const mapDropdown = document.getElementById('mapDropdown');
+  const jungleOption = mapDropdown?.querySelector('option[value="jungle"]');
+  if (jungleOption && typeof isMapUnlocked === 'function') {
+    if (!isMapUnlocked('jungle')) {
+      jungleOption.disabled = true;
+      jungleOption.textContent += ' (Level 5+)';
+    } else {
+      jungleOption.disabled = false;
+    }
+  }
+});
 
 // ── Init ───────────────────────────────────────────────────────
-buildLevel();
 setupLighting();
 renderLeaderboard();
 initAttachmentVisuals();   // build attachment visual geometry for all weapons
@@ -475,6 +452,101 @@ engine.runRenderLoop(() => {
     updateParticles(dt);
     animWeapon(dt);
     tickHitMarker(dt);
+  }
+  // Update moving platforms
+  if (window._movingPlatforms && window._movingPlatforms.length > 0) {
+      for (const plat of window._movingPlatforms) {
+          if (!plat._moveData) continue;
+          const md = plat._moveData;
+          
+          // Wait at endpoints
+          if (md.waitTimer > 0) {
+              md.waitTimer -= dt;
+              continue;
+          }
+          
+          md.t += dt * md.speed * md.dir;
+          if (md.t > 1) { md.t = 1; md.dir = -1; md.waitTimer = md.waitTime; }
+          if (md.t < 0) { md.t = 0; md.dir = 1; md.waitTimer = md.waitTime; }
+          
+          const t = md.t;
+          plat.position.x = md.start.x + (md.end.x - md.start.x) * t;
+          plat.position.y = md.start.y + (md.end.y - md.start.y) * t;
+          plat.position.z = md.start.z + (md.end.z - md.start.z) * t;
+      }
+  }
+
+ // Check hazard zones (lava damage)
+  if (window._hazardZones && window._hazardZones.length > 0) {
+    for (const haz of window._hazardZones) {
+      const px = camera.position.x;
+      const pz = camera.position.z;
+      const hx = haz.position.x;
+      const hz = haz.position.z;
+      const hw = haz.metadata.halfWidth;
+      const hd = haz.metadata.halfDepth;
+      if (px > hx - hw && px < hx + hw && pz > hz - hd && pz < hz + hd) {
+        hurtPlayer((haz.metadata?.dps || 15) * dt, { isLava: true });
+      }
+    }
+  }
+
+  // Show power switch hint
+  let switchHintEl = document.getElementById('switchHint');
+  if (typeof window._powerSwitches !== 'undefined') {
+    let nearSwitch = false;
+    for (const sw of window._powerSwitches) {
+      const dist = BABYLON.Vector3.Distance(camera.position, sw.position);
+      if (dist < 3) {
+        nearSwitch = true;
+        if (!switchHintEl) {
+          switchHintEl = document.createElement('div');
+          switchHintEl.id = 'switchHint';
+          switchHintEl.style.cssText = [
+            'position:fixed;bottom:110px;left:50%;transform:translateX(-50%)',
+            'color:#00ff88;font-family:monospace;font-size:16px',
+            'font-weight:bold;text-shadow:0 0 8px #00ff88',
+            'pointer-events:none;opacity:0;transition:opacity .2s',
+          ].join(';');
+          document.body.appendChild(switchHintEl);
+        }
+        switchHintEl.textContent = '[F] ACTIVATE SWITCH';
+        switchHintEl.style.opacity = '1';
+        break;
+      }
+    }
+    if (!nearSwitch && switchHintEl) {
+      switchHintEl.style.opacity = '0';
+    }
+  }
+
+  // Check power switch interaction
+  if (window._powerSwitches && window._powerSwitches.length > 0 && keys['KeyF']) {
+    for (const sw of window._powerSwitches) {
+      const dist = BABYLON.Vector3.Distance(camera.position, sw.position);
+      if (dist < 3 && sw.metadata?.interactive && !sw.metadata._cooldown) {
+        sw.metadata.activated = !sw.metadata.activated;
+        sw.metadata._cooldown = true;
+        setTimeout(() => { sw.metadata._cooldown = false; }, 500);
+        
+        // Toggle platforms
+        const platforms = sw.metadata.targetPlatforms || [];
+        for (const plat of platforms) {
+          plat.setEnabled(sw.metadata.activated);
+          plat._moveData.paused = !sw.metadata.activated;
+        }
+        
+        // Visual feedback
+        sw.metadata.ring.material = sw.metadata.activated ? M.ledRed : M.ledGreen;
+        sw.material.emissiveColor = sw.metadata.activated 
+          ? new BABYLON.Color3(0.8, 0, 0.2) 
+          : new BABYLON.Color3(0, 0.8, 0.2);
+        
+        import('./particles.js').then(({ spawnSparks }) => {
+          spawnSparks(sw.position, sw.metadata.activated ? 0x00ff88 : 0xff4400, 12);
+        });
+      }
+    }
   }
   scene.render();
 });

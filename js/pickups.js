@@ -6,6 +6,7 @@ import { pickups, weaponDrops, player, cb } from './gameState.js';
 import { WDEFS, WCOLORS, inventory, activeSlot, makeScaledWeaponModel, setWeapon, refreshSlotHUD, setActiveSlot } from './weapons.js';
 import { sfx } from './audio.js';
 import { TIER_1, TIER_2, TIER_3, TIER_4, TIER_5 } from './level.js';
+import { getCurrentMap } from './mapManager.js';
 
 // Energy weapons refill heat rather than ammo when picked up.
 // The Railgun is also treated as energy (has heat/charge mechanic in some codepaths)
@@ -17,44 +18,53 @@ const SECRET_KIT_RESPAWN_SEC = 300;
 
 // ── Secret health / armor kits in the T5 north room ──────────────────────────
 export function initSecretKits() {
+  const map = getCurrentMap();
+  if (map === 'jungle') {
+    const KIT_Y = 5.77 + 1.0; // on tier 2 platform
+    const S_KITS = [
+      { tag: 'secret_health', type: 'secret_health', pos: new BABYLON.Vector3(-25, KIT_Y, 30) },
+      { tag: 'secret_armor',  type: 'secret_armor',  pos: new BABYLON.Vector3( 25, KIT_Y, 30) },
+    ];
+  } else if (map === 'scrapyard') {
   // Floor surface of any floating slab = surfY + 0.22 (see _liftFloatingY in level.js).
   // T5 north-room floor slab has surfY = TIER_5, so its surface is at TIER_5 + 0.22.
   // Place kit centres 1.0 unit above that surface so they bob clearly in the open.
-  const KIT_Y = TIER_5 + 0.22 + 1.0; // = 25.22
+    const KIT_Y = TIER_5 + 0.22 + 1.0; // = 25.22
 
-  const S_KITS = [
-    { tag: 'secret_health', type: 'secret_health', pos: new BABYLON.Vector3(-3, KIT_Y, 22) },
-    { tag: 'secret_armor',  type: 'secret_armor',  pos: new BABYLON.Vector3( 3, KIT_Y, 22) },
-  ];
+    const S_KITS = [
+      { tag: 'secret_health', type: 'secret_health', pos: new BABYLON.Vector3(-3, KIT_Y, 22) },
+      { tag: 'secret_armor',  type: 'secret_armor',  pos: new BABYLON.Vector3( 3, KIT_Y, 22) },
+    ];
 
-  S_KITS.forEach(kit => {
-    const mesh = BABYLON.MeshBuilder.CreateBox('kit_' + kit.type, { size: 1.2 }, scene);
-    const mat = new BABYLON.StandardMaterial('kitMat_' + kit.type, scene);
+    S_KITS.forEach(kit => {
+      const mesh = BABYLON.MeshBuilder.CreateBox('kit_' + kit.type, { size: 1.2 }, scene);
+      const mat = new BABYLON.StandardMaterial('kitMat_' + kit.type, scene);
 
-    mat.diffuseColor  = kit.type === 'secret_health' ? new BABYLON.Color3(1, 0.13, 0.2) : new BABYLON.Color3(0.13, 0.27, 0.93);
-    mat.emissiveColor = mat.diffuseColor;
-    mat.disableLighting = true;
+      mat.diffuseColor  = kit.type === 'secret_health' ? new BABYLON.Color3(1, 0.13, 0.2) : new BABYLON.Color3(0.13, 0.27, 0.93);
+      mat.emissiveColor = mat.diffuseColor;
+      mat.disableLighting = true;
 
-    const texName = kit.type === 'secret_health' ? 'health' : 'armor';
-    mat.diffuseTexture = new BABYLON.Texture(`assets/textures/lq/${texName}.png`, scene);
-    mesh.material = mat;
-    mesh.position.copyFrom(kit.pos);
-    mesh.setEnabled(true);
+      const texName = kit.type === 'secret_health' ? 'health' : 'armor';
+      mat.diffuseTexture = new BABYLON.Texture(`assets/textures/lq/${texName}.png`, scene);
+      mesh.material = mat;
+      mesh.position.copyFrom(kit.pos);
+      mesh.setEnabled(true);
 
-    const ring = BABYLON.MeshBuilder.CreateTorus('kitRing', { diameter: 2.0, thickness: 0.1, tessellation: 24 }, scene);
-    ring.position.set(kit.pos.x, kit.pos.y - 0.5, kit.pos.z);
-    ring.material = kit.type === 'secret_health' ? M.ledBlue : M.ledGreen;
-    ring.isPickable = false;
+      const ring = BABYLON.MeshBuilder.CreateTorus('kitRing', { diameter: 2.0, thickness: 0.1, tessellation: 24 }, scene);
+      ring.position.set(kit.pos.x, kit.pos.y - 0.5, kit.pos.z);
+      ring.material = kit.type === 'secret_health' ? M.ledBlue : M.ledGreen;
+      ring.isPickable = false;
 
-    pickups.push({
-      mesh, ring,
-      type: kit.type,
-      baseY: mesh.position.y,
-      respawnTimer: 0,
-      expires: false,
-      bob: Math.random() * 5,
+      pickups.push({
+        mesh, ring,
+        type: kit.type,
+        baseY: mesh.position.y,
+        respawnTimer: 0,
+        expires: false,
+        bob: Math.random() * 5,
+      });
     });
-  });
+  } else {} // future additions
 }
 
 // ── Static weapon spawns spread across all tiers ──────────────────────────────
@@ -92,6 +102,7 @@ export function initSecretKits() {
 //                    Top face ≈ y=36.18 — only reachable via rocket-jump / jump-pad stacking
 
 export function initWeaponSpawns() {
+  const map = getCurrentMap();
   const respawnMs = SECRET_KIT_RESPAWN_SEC * 1000;
 
   // Surface Y formula: TIER_N + 0.22 (slab lift) + 0.55 (pickup hover) = TIER_N + 0.77
@@ -103,7 +114,15 @@ export function initWeaponSpawns() {
   const T5 = TIER_5 + 0.77;
   const CEIL_TOP = TIER_5 + 12.18; // top face of solid ceiling slab
 
-  const WEAPON_SPAWNS = [
+  const WEAPON_SPAWNS = map === 'jungle' ? [
+    // Jungle-specific spawns
+    { wName: 'FLAMETHROWER', x: -25, y: T1, z: 20 },
+    { wName: 'TESLA',        x:  25, y: T1, z: -20 },
+    { wName: 'CROSSBOW',     x:   0, y: T2, z: -30 },
+    { wName: 'SHOTGUN',      x: -20, y: T1, z: -20 },
+    { wName: 'CHAINGUN',     x:  20, y: T1, z: 20 },
+    { wName: 'ROCKET',       x:   0, y: T4, z: 0 },
+  ] : [
     // SMG no longer spawn
     // ── T1: Shotguns flanking the central I-wall (x=0, z=0) ─────
     { wName: 'SHOTGUN',   x:  -5,  y: T1, z:   0 },

@@ -452,5 +452,5 @@ function _renderProgress(main) {
 }
 
 function _wIcon(w) {
-  return {PISTOL:'🔫',SMG:'⚡',SHOTGUN:'💥',CHAINGUN:'🌀',RAILGUN:'🎯',PLASMA:'🔵',ROCKET:'🚀',GLAUNCHER:'💣',ELECTRON:'⚡',ION:'🔮'}[w]??'🔫';
+  return {PISTOL:'🔫',SMG:'⚡',SHOTGUN:'💥',CHAINGUN:'🌀',RAILGUN:'🎯',PLASMA:'🔵',ROCKET:'🚀',GLAUNCHER:'💣',ELECTRON:'⚡',ION:'🔮',FLAMETHROWER:'🔥',TESLA:'⚡',CROSSBOW:'🏹'}[w]??'🔫';
 }

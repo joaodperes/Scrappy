@@ -8,8 +8,9 @@ export function levelFromTotalXp(xp) { let lv=1; while(xp>=totalXpForLevel(lv+1)
 
 export const XP_GRANTS = {
   killScout:15,killHeavy:30,killSniper:25,killDrone:20,killShotgun:22,killRocket:28,
-  killPistol:12,killGrenadier:24,killGiantbot:200,killPvpPlayer:50,
-  killElectron_bot:22, killIon_sniper:30,
+  killPistol:12,killGrenadier:24, killElectron_bot:22, killIon_sniper:30,
+  killGiantbot:200,killPvpPlayer:50,
+  killMedic_bot:18, killShield_bot:25, killTeleport_bot:20, killSwarm_host:35,
   waveComplete:40,bossWave:120,matchWin:80,
 };
 
@@ -18,6 +19,7 @@ export const WEAPON_XP_GRANTS = {
   scout:15, heavy:30, sniper:18, drone:14, shotgun:16, rocket:20,
   pistol:9, grenadier:17, giantbot:150, pvp:35,
   electron_bot:16, ion_sniper:22,
+  medic_bot:14, shield_bot:20, teleport_bot:16, swarm_host:28,
 };
 
 // Cumulative XP required for each level (index = level - 1)
@@ -259,7 +261,7 @@ export const ATTACHMENTS = {
   },
   // ── Tesla Cannon ──────────────────────────────────────────────────
   amplifier_coil: {
-    id:'amplifier_coil', name:'Amplifier Coil', slot:'barrel',
+    id:'amplifier_coil', name:'Amplifier Coil', slot:'special',
     desc:'+2 chain targets. Lightning jumps further.',
     icon:'🔗', mods:{chainTargets:+2},
     visual:{type:'barrel',style:'extended'},
@@ -350,7 +352,7 @@ export const WEAPON_ATTACHMENT_SLOTS = {
   GLAUNCHER: ['sight','barrel','magazine','stock','special'],
   ELECTRON:  ['sight','barrel','grip','stock','special'],
   ION:       ['sight','barrel','grip','stock','special'],
-  FLAMETHROWER: ['sight','barrel','magazine','special'],
+  FLAMETHROWER: ['sight','barrel','magazine'],
   TESLA:        ['sight','barrel','magazine','special'],
   CROSSBOW:     ['sight','barrel','magazine','special'],
 };
@@ -366,7 +368,7 @@ export const WEAPON_SPECIALS = {
   GLAUNCHER: ['cluster_rounds','seasoned_vet_glauncher'],
   ELECTRON:  ['slow_trigger','freefall_coil','emp_rounds'],
   ION:       ['power_cell','energy_coil','explosive_bullets','emp_rounds'],
-  FLAMETHROWER: ['wide_nozzle'],
+  FLAMETHROWER: [],
   TESLA:     ['amplifier_coil'],
   CROSSBOW:  ['explosive_tips'],
 };
@@ -684,6 +686,44 @@ export const UNLOCK_TABLE = [
   { id:'emp_rounds', weapon:'ION', type:'attachment', secret:true,
     challenge:{ desc:'Kill {target} Heavy robots with the Ion Sniper', track:'killsOfCombo:heavy_ELECTRON', target:15 } },
 
+  // ── JUNGLE WEAPONS ATTACHMENTS ───────────────────────────────
+  { id:'napalm_tank', weapon:'FLAMETHROWER', type:'attachment',
+    challenge:{ desc:'Kill {target} Swarm Hosts with the Flamethrower', track:'killsOfCombo:swarm_host_FLAMETHROWER', target:10 } },
+  { id:'wide_nozzle', weapon:'FLAMETHROWER', type:'attachment',
+    challenge:{ desc:'Kill {target} enemies with the Flamethrower', track:'killsWith:FLAMETHROWER', target:50 } },
+  { id:'holo_sight',     weapon:'FLAMETHROWER', type:'attachment',
+    challenge:{ desc:'Kill {target} enemies while airborne with the Flamethrower', track:'killsWhileJumping:FLAMETHROWER', target:15 } },
+  { id:'acog',           weapon:'FLAMETHROWER', type:'attachment',
+    challenge:{ desc:'Kill {target} Shield Bots with the Flamethrower', track:'killsOfCombo:shield_bot_FLAMETHROWER', target:15 } },
+  { id:'thermal',        weapon:'FLAMETHROWER', type:'attachment',
+    challenge:{ desc:'Kill {target} Medic Bots with the Flamethrower', track:'killsOfCombo:medic_bot_FLAMETHROWER', target:10 } },
+
+  { id:'amplifier_coil', weapon:'TESLA', type:'attachment',
+    challenge:{ desc:'Kill {target} Medic Bots with the Tesla Cannon', track:'killsOfCombo:medic_bot_TESLA', target:15 } },
+  { id:'capacitor_bank', weapon:'TESLA', type:'attachment',
+    challenge:{ desc:'Kill {target} Shield Bots with the Tesla Cannon', track:'killsOfCombo:shield_bot_TESLA', target:10 } },
+  { id:'holo_sight',     weapon:'TESLA', type:'attachment',
+    challenge:{ desc:'Kill {target} enemies while airborne with the Tesla Cannon', track:'killsWhileJumping:TESLA', target:15 } },
+  { id:'acog',           weapon:'TESLA', type:'attachment',
+    challenge:{ desc:'Kill {target} Swarm Hosts with the Tesla Cannon', track:'killsOfCombo:swarm_host_TESLA', target:15 } },
+  { id:'thermal',        weapon:'TESLA', type:'attachment',
+    challenge:{ desc:'Kill {target} Teleport Bots with the Tesla Cannon', track:'killsOfCombo:teleport_bot_TESLA', target:10 } },
+  { id:'auto_fire',     weapon:'TESLA', type:'attachment', secret:true,
+    challenge:{ desc:'Kill {target} Heavy robots with the Tesla Cannon',             track:'killsOfType:heavy',   target:30  } },
+
+  { id:'explosive_tips', weapon:'CROSSBOW', type:'attachment',
+    challenge:{ desc:'Kill {target} Teleport Bots with the Crossbow', track:'killsOfCombo:teleport_bot_CROSSBOW', target:10 } },
+  { id:'quick_loader', weapon:'CROSSBOW', type:'attachment',
+    challenge:{ desc:'Kill {target} enemies with the Crossbow', track:'killsWith:CROSSBOW', target:50 } },
+  { id:'holo_sight',     weapon:'CROSSBOW', type:'attachment',
+    challenge:{ desc:'Kill {target} enemies while airborne with the Crossbow', track:'killsWhileJumping:CROSSBOW', target:15 } },
+  { id:'acog',           weapon:'CROSSBOW', type:'attachment',
+    challenge:{ desc:'Kill {target} Ninjas with the Crossbow', track:'killsOfCombo:ninja_CROSSBOW', target:15 } },
+  { id:'thermal',        weapon:'CROSSBOW', type:'attachment',
+    challenge:{ desc:'Kill {target} Heavy robots with the Crossbow', track:'killsOfCombo:heavy_CROSSBOW', target:10 } },
+  { id:'extended_barrel',weapon:'CROSSBOW',type:'attachment', challenge:{ track:'killsOfType:shield_bot',      target:15  } },
+  { id:'heavy_barrel',  weapon:'CROSSBOW', type:'attachment', challenge:{ track:'multiKillsWith:CROSSBOW',   target:15  } },
+
   // ════════════════════════════════════════════════════════════════
   //  WEAPON SKINS — 7 tiers, all weapon-kill based, no level gates
   //  PISTOL · SMG · SHOTGUN · CHAINGUN · RAILGUN · PLASMA
@@ -762,30 +802,6 @@ export const UNLOCK_TABLE = [
   { id:'toxic', weapon:'ELECTRON',  type:'weaponSkin', challenge:{ track:'multiKillsWith:ELECTRON',  target:45  } },
   { id:'toxic', weapon:'ION',       type:'weaponSkin', challenge:{ track:'multiKillsWith:ION',       target:12  } },
 
-  // ── BENGAL (prestige — weapon level 10) ──────────────────────
-  { id:'bengal', weapon:'PISTOL',    type:'weaponSkin', challenge:{ track:'weaponLevel:PISTOL',    target:10 } },
-  { id:'bengal', weapon:'SMG',       type:'weaponSkin', challenge:{ track:'weaponLevel:SMG',       target:10 } },
-  { id:'bengal', weapon:'SHOTGUN',   type:'weaponSkin', challenge:{ track:'weaponLevel:SHOTGUN',   target:10 } },
-  { id:'bengal', weapon:'CHAINGUN',  type:'weaponSkin', challenge:{ track:'weaponLevel:CHAINGUN',  target:10 } },
-  { id:'bengal', weapon:'RAILGUN',   type:'weaponSkin', challenge:{ track:'weaponLevel:RAILGUN',   target:10 } },
-  { id:'bengal', weapon:'PLASMA',    type:'weaponSkin', challenge:{ track:'weaponLevel:PLASMA',    target:10 } },
-  { id:'bengal', weapon:'ROCKET',    type:'weaponSkin', challenge:{ track:'weaponLevel:ROCKET',    target:10 } },
-  { id:'bengal', weapon:'GLAUNCHER', type:'weaponSkin', challenge:{ track:'weaponLevel:GLAUNCHER', target:10 } },
-  { id:'bengal', weapon:'ELECTRON',  type:'weaponSkin', challenge:{ track:'weaponLevel:ELECTRON',  target:10 } },
-  { id:'bengal', weapon:'ION',       type:'weaponSkin', challenge:{ track:'weaponLevel:ION',       target:10 } },
-
-  // ── DARK MATTER (complete all weapon challenges) ──────────────
-  { id:'dark_matter', weapon:'PISTOL',    type:'weaponSkin', challenge:{ track:'allChallengesComplete:PISTOL',    target:1 } },
-  { id:'dark_matter', weapon:'SMG',       type:'weaponSkin', challenge:{ track:'allChallengesComplete:SMG',       target:1 } },
-  { id:'dark_matter', weapon:'SHOTGUN',   type:'weaponSkin', challenge:{ track:'allChallengesComplete:SHOTGUN',   target:1 } },
-  { id:'dark_matter', weapon:'CHAINGUN',  type:'weaponSkin', challenge:{ track:'allChallengesComplete:CHAINGUN',  target:1 } },
-  { id:'dark_matter', weapon:'RAILGUN',   type:'weaponSkin', challenge:{ track:'allChallengesComplete:RAILGUN',   target:1 } },
-  { id:'dark_matter', weapon:'PLASMA',    type:'weaponSkin', challenge:{ track:'allChallengesComplete:PLASMA',    target:1 } },
-  { id:'dark_matter', weapon:'ROCKET',    type:'weaponSkin', challenge:{ track:'allChallengesComplete:ROCKET',    target:1 } },
-  { id:'dark_matter', weapon:'GLAUNCHER', type:'weaponSkin', challenge:{ track:'allChallengesComplete:GLAUNCHER', target:1 } },
-  { id:'dark_matter', weapon:'ELECTRON',  type:'weaponSkin', challenge:{ track:'allChallengesComplete:ELECTRON',  target:1 } },
-  { id:'dark_matter', weapon:'ION',       type:'weaponSkin', challenge:{ track:'allChallengesComplete:ION',       target:1 } },
-
   // ── HAZARD (tier 5 — enemy-type challenges) ───────────────────
   { id:'hazard', weapon:'PISTOL', type:'weaponSkin', challenge:{ desc:'Kill {target} Scouts with the Pistol', track:'killsOfCombo:scout_PISTOL', target:50 } },
   { id:'hazard', weapon:'SMG',       type:'weaponSkin', challenge:{ desc:'Kill {target} Drones with the SMG',              track:'killsOfCombo:drone_SMG',        target:30  } },
@@ -821,6 +837,69 @@ export const UNLOCK_TABLE = [
   { id:'gold', weapon:'GLAUNCHER', type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the Grenade Launcher', track:'killsWith:GLAUNCHER', target:2000 } },
   { id:'gold', weapon:'ELECTRON',  type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the Electron',         track:'killsWith:ELECTRON',  target:2000 } },
   { id:'gold', weapon:'ION',       type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the Ion Sniper',       track:'killsWith:ION',       target:1500 } },
+  
+  // ── BENGAL (prestige — weapon level 10) ──────────────────────
+  { id:'bengal', weapon:'PISTOL',    type:'weaponSkin', challenge:{ track:'weaponLevel:PISTOL',    target:10 } },
+  { id:'bengal', weapon:'SMG',       type:'weaponSkin', challenge:{ track:'weaponLevel:SMG',       target:10 } },
+  { id:'bengal', weapon:'SHOTGUN',   type:'weaponSkin', challenge:{ track:'weaponLevel:SHOTGUN',   target:10 } },
+  { id:'bengal', weapon:'CHAINGUN',  type:'weaponSkin', challenge:{ track:'weaponLevel:CHAINGUN',  target:10 } },
+  { id:'bengal', weapon:'RAILGUN',   type:'weaponSkin', challenge:{ track:'weaponLevel:RAILGUN',   target:10 } },
+  { id:'bengal', weapon:'PLASMA',    type:'weaponSkin', challenge:{ track:'weaponLevel:PLASMA',    target:10 } },
+  { id:'bengal', weapon:'ROCKET',    type:'weaponSkin', challenge:{ track:'weaponLevel:ROCKET',    target:10 } },
+  { id:'bengal', weapon:'GLAUNCHER', type:'weaponSkin', challenge:{ track:'weaponLevel:GLAUNCHER', target:10 } },
+  { id:'bengal', weapon:'ELECTRON',  type:'weaponSkin', challenge:{ track:'weaponLevel:ELECTRON',  target:10 } },
+  { id:'bengal', weapon:'ION',       type:'weaponSkin', challenge:{ track:'weaponLevel:ION',       target:10 } },
+
+  // ── DARK MATTER (complete all weapon challenges) ──────────────
+  { id:'dark_matter', weapon:'PISTOL',    type:'weaponSkin', challenge:{ track:'allChallengesComplete:PISTOL',    target:1 } },
+  { id:'dark_matter', weapon:'SMG',       type:'weaponSkin', challenge:{ track:'allChallengesComplete:SMG',       target:1 } },
+  { id:'dark_matter', weapon:'SHOTGUN',   type:'weaponSkin', challenge:{ track:'allChallengesComplete:SHOTGUN',   target:1 } },
+  { id:'dark_matter', weapon:'CHAINGUN',  type:'weaponSkin', challenge:{ track:'allChallengesComplete:CHAINGUN',  target:1 } },
+  { id:'dark_matter', weapon:'RAILGUN',   type:'weaponSkin', challenge:{ track:'allChallengesComplete:RAILGUN',   target:1 } },
+  { id:'dark_matter', weapon:'PLASMA',    type:'weaponSkin', challenge:{ track:'allChallengesComplete:PLASMA',    target:1 } },
+  { id:'dark_matter', weapon:'ROCKET',    type:'weaponSkin', challenge:{ track:'allChallengesComplete:ROCKET',    target:1 } },
+  { id:'dark_matter', weapon:'GLAUNCHER', type:'weaponSkin', challenge:{ track:'allChallengesComplete:GLAUNCHER', target:1 } },
+  { id:'dark_matter', weapon:'ELECTRON',  type:'weaponSkin', challenge:{ track:'allChallengesComplete:ELECTRON',  target:1 } },
+  { id:'dark_matter', weapon:'ION',       type:'weaponSkin', challenge:{ track:'allChallengesComplete:ION',       target:1 } },
+
+  // ── FLAMETHROWER SKINS ────────────────────────────────────────
+  { id:'midnight', weapon:'FLAMETHROWER', type:'weaponSkin', challenge:{ track:'killsWith:FLAMETHROWER', target:20 } },
+  { id:'desert',   weapon:'FLAMETHROWER', type:'weaponSkin', challenge:{ track:'killsWith:FLAMETHROWER', target:50 } },
+  { id:'crimson',  weapon:'FLAMETHROWER', type:'weaponSkin', challenge:{ track:'killsWith:FLAMETHROWER', target:80 } },
+  { id:'arctic',   weapon:'FLAMETHROWER', type:'weaponSkin', challenge:{ track:'killsWith:FLAMETHROWER', target:140 } },
+  { id:'hazard',   weapon:'FLAMETHROWER', type:'weaponSkin', challenge:{ track:'killsOfCombo:heavy_FLAMETHROWER', target:15 } },
+  { id:'plasma_glow', weapon:'FLAMETHROWER', type:'weaponSkin', challenge:{ track:'killsWith:FLAMETHROWER', target:200 } },
+  { id:'gold',     weapon:'FLAMETHROWER', type:'weaponSkin', challenge:{ track:'killsWith:FLAMETHROWER', target:800 } },
+  { id:'jungle',   weapon:'FLAMETHROWER', type:'weaponSkin', challenge:{ track:'damageDealt:FLAMETHROWER', target:30000 } },
+  { id:'toxic',    weapon:'FLAMETHROWER', type:'weaponSkin', challenge:{ track:'multiKillsWith:FLAMETHROWER', target:30 } },
+  { id:'bengal',   weapon:'FLAMETHROWER', type:'weaponSkin', challenge:{ track:'weaponLevel:FLAMETHROWER', target:10 } },
+  { id:'dark_matter', weapon:'FLAMETHROWER', type:'weaponSkin', challenge:{ track:'allChallengesComplete:FLAMETHROWER', target:1 } },
+
+  // ── Tesla SKINS ────────────────────────────────────────
+  { id:'midnight', weapon:'TESLA', type:'weaponSkin', challenge:{ track:'killsWith:TESLA', target:20 } },
+  { id:'desert',   weapon:'TESLA', type:'weaponSkin', challenge:{ track:'killsWith:TESLA', target:50 } },
+  { id:'crimson',  weapon:'TESLA', type:'weaponSkin', challenge:{ track:'killsWith:TESLA', target:80 } },
+  { id:'arctic',   weapon:'TESLA', type:'weaponSkin', challenge:{ track:'killsWith:TESLA', target:140 } },
+  { id:'hazard',   weapon:'TESLA', type:'weaponSkin', challenge:{ track:'killsOfCombo:heavy_TESLA', target:15 } },
+  { id:'plasma_glow', weapon:'TESLA', type:'weaponSkin', challenge:{ track:'killsWith:TESLA', target:200 } },
+  { id:'gold',     weapon:'TESLA', type:'weaponSkin', challenge:{ track:'killsWith:TESLA', target:800 } },
+  { id:'jungle',   weapon:'TESLA', type:'weaponSkin', challenge:{ track:'damageDealt:TESLA', target:30000 } },
+  { id:'toxic',    weapon:'TESLA', type:'weaponSkin', challenge:{ track:'multiKillsWith:TESLA', target:30 } },
+  { id:'bengal',   weapon:'TESLA', type:'weaponSkin', challenge:{ track:'weaponLevel:TESLA', target:10 } },
+  { id:'dark_matter', weapon:'TESLA', type:'weaponSkin', challenge:{ track:'allChallengesComplete:TESLA', target:1 } },
+
+  // ── Crossbow SKINS ────────────────────────────────────────
+  { id:'midnight', weapon:'CROSSBOW', type:'weaponSkin', challenge:{ track:'killsWith:CROSSBOW', target:20 } },
+  { id:'desert',   weapon:'CROSSBOW', type:'weaponSkin', challenge:{ track:'killsWith:CROSSBOW', target:50 } },
+  { id:'crimson',  weapon:'CROSSBOW', type:'weaponSkin', challenge:{ track:'killsWith:CROSSBOW', target:80 } },
+  { id:'arctic',   weapon:'CROSSBOW', type:'weaponSkin', challenge:{ track:'killsWith:CROSSBOW', target:140 } },
+  { id:'hazard',   weapon:'CROSSBOW', type:'weaponSkin', challenge:{ track:'killsOfCombo:heavy_CROSSBOW', target:15 } },
+  { id:'plasma_glow', weapon:'CROSSBOW', type:'weaponSkin', challenge:{ track:'killsWith:CROSSBOW', target:200 } },
+  { id:'gold',     weapon:'CROSSBOW', type:'weaponSkin', challenge:{ track:'killsWith:CROSSBOW', target:800 } },
+  { id:'jungle',   weapon:'CROSSBOW', type:'weaponSkin', challenge:{ track:'damageDealt:CROSSBOW', target:30000 } },
+  { id:'toxic',    weapon:'CROSSBOW', type:'weaponSkin', challenge:{ track:'multiKillsWith:CROSSBOW', target:30 } },
+  { id:'bengal',   weapon:'CROSSBOW', type:'weaponSkin', challenge:{ track:'weaponLevel:CROSSBOW', target:10 } },
+  { id:'dark_matter', weapon:'CROSSBOW', type:'weaponSkin', challenge:{ track:'allChallengesComplete:CROSSBOW', target:1 } },
 
   // ════════════════════════════════════════════════════════════════
   //  PLAYER SKINS — kept separate, not weapon-related
@@ -839,8 +918,8 @@ const STORAGE_KEY = 'botarena_profile';
 const _defaultProfile = () => ({
   name:'ANON', totalXp:0, level:1,
   unlocked:['default'],
-  unlockedWeaponSkins:{PISTOL:[],SMG:[],SHOTGUN:[],CHAINGUN:[],RAILGUN:[],PLASMA:[],ROCKET:[],GLAUNCHER:[],ELECTRON:[],ION:[]},
-  unlockedAttachments:{PISTOL:['endless_magazine'],SMG:[],SHOTGUN:[],CHAINGUN:[],RAILGUN:[],PLASMA:[],ROCKET:[],GLAUNCHER:[],ELECTRON:[],ION:[]},
+  unlockedWeaponSkins:{PISTOL:[],SMG:[],SHOTGUN:[],CHAINGUN:[],RAILGUN:[],PLASMA:[],ROCKET:[],GLAUNCHER:[],ELECTRON:[],ION:[], FLAMETHROWER:[], TESLA:[], CROSSBOW:[]},
+  unlockedAttachments:{PISTOL:['endless_magazine'],SMG:[],SHOTGUN:[],CHAINGUN:[],RAILGUN:[],PLASMA:[],ROCKET:[],GLAUNCHER:[],ELECTRON:[],ION:[], FLAMETHROWER:[], TESLA:[], CROSSBOW:[]},
   loadouts:{
     PISTOL:{skin:'default',attachments:{special:'endless_magazine'}},
     SMG:{skin:'default',attachments:{}},
@@ -848,6 +927,7 @@ const _defaultProfile = () => ({
     RAILGUN:{skin:'default',attachments:{}},PLASMA:{skin:'default',attachments:{}},
     ROCKET:{skin:'default',attachments:{}},GLAUNCHER:{skin:'default',attachments:{}},
     ELECTRON:{skin:'default',attachments:{}},ION:{skin:'default',attachments:{}},
+    FLAMETHROWER:{skin:'default',attachments:{}},TESLA:{skin:'default',attachments:{}},CROSSBOW:{skin:'default',attachments:{}},
   },
   playerSkin:'default',
   firebaseUid:null,

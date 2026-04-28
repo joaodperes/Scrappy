@@ -1,13 +1,14 @@
 // projectiles.js – rockets, plasma balls, enemy shots, collision  (Babylon.js port)
 const BABYLON = window.BABYLON;
 import { scene, camera } from './scene.js';
-import { M } from './textures.js';
+import { M, fireTex } from './textures.js';
 import { explosiveBarrels, isBarrelMesh, detonateBarrelByMesh } from './level.js';
 import { WDEFS } from './weapons.js';
 import { projs, enemies, cb } from './gameState.js';
 import { spawnSparks } from './particles.js';
 import { sfx } from './audio.js';
 import { applyExplosionImpulse } from './player.js';
+import { getCurrentMap } from './mapManager.js';
 
 // ── Player projectiles ────────────────────────────────────────
 export function fireRocket() {
@@ -70,7 +71,7 @@ export function fireEnemyShot(e, dir, dmg, speed, type, customStartPos = null) {
 }
 
 // ── Explosion ─────────────────────────────────────────────────
-export function boom(pos, splashR, baseDmg, hurtBots) {
+export async function boom(pos, splashR, baseDmg, hurtBots) {
   sfx.explosion();
   import('./progression.js').then(({ recordBarrelDestroyed }) => recordBarrelDestroyed());
   const flash = BABYLON.MeshBuilder.CreateSphere('flash', { diameter: splashR*.7*2, segments:10 }, scene);
@@ -93,6 +94,26 @@ export function boom(pos, splashR, baseDmg, hurtBots) {
       }, 100);
     }
   }
+  // Destructible walls – scan all meshes for metadata.destructible
+  for (const mesh of scene.meshes) {
+      if (!mesh.metadata?.destructible || !mesh.isEnabled()) continue;
+      const wDist = BABYLON.Vector3.Distance(pos, mesh.getAbsolutePosition());
+      if (wDist < splashR) {
+        const dmgToWall = baseDmg * (1 - wDist / splashR);
+        mesh.metadata.hp -= dmgToWall;
+        spawnSparks(mesh.getAbsolutePosition(), 0xaaaaaa, 3);
+        if (mesh.metadata.hp <= 0) {
+            mesh.dispose();
+            const map = getCurrentMap();  // import getCurrentMap from mapManager
+            const levelModule = map === 'jungle'
+                ? await import('./levelJungle.js')
+                : await import('./level.js');
+            const idx = levelModule.walkableMeshes.indexOf(mesh);
+            if (idx !== -1) levelModule.walkableMeshes.splice(idx, 1);
+            navPlugin.createNavMesh(levelModule.walkableMeshes, levelModule.NAVMESH_PARAMS);
+        }
+      }
+  }
   if (hurtBots) {
     for (const e of enemies) {
       if (!e.alive) continue;
@@ -109,13 +130,16 @@ export function boom(pos, splashR, baseDmg, hurtBots) {
 // ── Hitscan ────────────────────────────────────────────────────
 const _rcDir = new BABYLON.Vector3();
 
-export function hitscan(meshToEnemy, spread = 0, dmg = 20, range = 90, falloff = 0.5) {
+export function hitscan(meshToEnemy, spread = 0, dmg = 20, range = 90, falloff = 0.5,
+                        flashColor = new BABYLON.Color3(1, 0.9, 0.4),
+                        hitSparkColor = 0xffcc44,
+                        missSparkColor = 0x886655) {
   camera.getForwardRay(1).direction.normalizeToRef(_rcDir);
   // Muzzle flash: bright sphere 0.5m in front
   const flashPos = camera.position.clone().addInPlace(_rcDir.scale(0.5));
   const flash = BABYLON.MeshBuilder.CreateSphere('mflash', { diameter: 0.09, segments: 4 }, scene);
-  flash.position.copyFrom(flashPos);
   const fmat = new BABYLON.StandardMaterial('mflashM', scene);
+  fmat.emissiveColor = flashColor;
   fmat.emissiveColor = new BABYLON.Color3(1, 0.9, 0.4); fmat.disableLighting = true;
   flash.material = fmat; flash.isPickable = false;
   setTimeout(() => flash.dispose(), 55);
@@ -141,8 +165,25 @@ export function hitscan(meshToEnemy, spread = 0, dmg = 20, range = 90, falloff =
     }
   }
 
+  // destructible wall check
+  const dWallHit = scene.pickWithRay(ray, m => m.metadata?.destructible && m.isEnabled());
+  if (dWallHit?.hit) {
+      const wall = dWallHit.pickedMesh;
+      wall.metadata.hp -= dmg;
+      spawnSparks(dWallHit.pickedPoint, 0xcccccc, 3);
+      if (wall.metadata.hp <= 0) {
+          // Remove from scene and from walkableMeshes (if needed)
+          wall.dispose();
+          const idx = walkableMeshes.indexOf(wall);
+          if (idx !== -1) walkableMeshes.splice(idx, 1);
+          // Rebuild navmesh (heavy operation; better to batch, but okay for now)
+          navPlugin.createNavMesh(walkableMeshes, NAVMESH_PARAMS);
+      }
+      return { hit: true, destructible: true };
+  }
+
   if (hits.length > 0) {
-    spawnSparks(hits[0].pickedPoint, 0xffcc44, 5);
+    spawnSparks(hits[0].pickedPoint, hitSparkColor, 5);
     const pickedMesh = hits[0].pickedMesh;
     const e = meshToEnemy.get(pickedMesh);
     
@@ -189,7 +230,7 @@ export function hitscan(meshToEnemy, spread = 0, dmg = 20, range = 90, falloff =
     }
   }
   const miss = camera.position.clone().add(_rcDir.scale(Math.min(range, 40)));
-  spawnSparks(miss, 0x886655, 2);
+  spawnSparks(miss, missSparkColor, 2);
   return { hit: false };
 }
 
@@ -299,7 +340,34 @@ export function updateProjs(dt) {
         projs.splice(i, 1);
       }
       continue; // Skip all shared movement / hit code below
-    }
+    } else if (p.type === 'flame') {
+        p.life -= dt;
+        p.mesh.position.addInPlace(p.dir.scale(p.speed * dt));
+        // check enemy hit
+        let hitEnemy = false;
+        for (const e of enemies) {
+          if (!e.alive) continue;
+          const bodyCy = e.group.position.y + (e.flyH > 0 ? 0.5 : 1.0);
+          const ep = new BABYLON.Vector3(e.group.position.x, bodyCy, e.group.position.z);
+          if (BABYLON.Vector3.Distance(p.mesh.position, ep) < 0.8) {
+              cb.hitRobot?.(e, p.dmg);
+              // apply DOT
+              if (!e._flameDotted) {
+                  e._flameDotted = true;
+                  if (!e._dots) e._dots = [];
+                  e._dots.push({ dmg: 4, remaining: 3 });
+                  setTimeout(() => { if (e) e._flameDotted = false; }, 500);
+              }
+              hitEnemy = true;
+              break;
+            }
+          }
+          if (hitEnemy || p.life <= 0) {
+              p.mesh.dispose();
+              projs.splice(i, 1);
+              continue;
+          }
+      }
 
     // ── All other projectiles: shared linear movement ─────────────
     const step = p.dir.scale(p.speed * dt);
@@ -413,4 +481,77 @@ export function fireGrenade(owner, origin, dir, speed, dmg, splash, isCluster = 
     isCluster,
     _hasSplit: false,   // cluster only splits once
   });
+}
+
+export function fireFlame(origin, dir, dmg) {
+    const speed = 10 + Math.random() * 5;
+    const life = 0.18 + Math.random() * 0.12;
+    const mesh = BABYLON.MeshBuilder.CreatePlane('flame', { width: 0.5, height: 0.7 }, scene);
+    mesh.billboardMode = BABYLON.Mesh.BILLBOARDMODE_ALL;
+    const mat = new BABYLON.StandardMaterial('flameMat', scene);
+    mat.diffuseTexture = fireTex;
+    mat.emissiveTexture = fireTex;
+    mat.emissiveColor = BABYLON.Color3.Black();//new BABYLON.Color3(0.5, 0.2, 0);
+    mat.alpha = 1.0;
+    mat.useAlphaFromDiffuseTexture = true;
+    mat.disableLighting = true;
+    mesh.material = mat;
+    mesh.position = origin.add(dir.scale(0.4));
+    mesh.isPickable = false;
+
+    projs.push({
+        type: 'flame', mesh, dir: dir.clone(), speed, life, dmg,
+        owner: 'player', splash: 0, // no splash
+        light: null
+    });
+}
+
+// Generates a jagged, glowing 3D lightning arc between two points
+export function spawnLightningArc(startPos, endPos) {
+    const points = [];
+    const segments = 6 + Math.floor(Math.random() * 5); // 6 to 10 jagged joints
+    points.push(startPos);
+
+    const direction = endPos.subtract(startPos);
+    const length = direction.length();
+    direction.normalize();
+
+    // Create jagged points along the path
+    for (let i = 1; i < segments; i++) {
+        const fraction = i / segments;
+        const basePt = startPos.add(direction.scale(length * fraction));
+        
+        // Jitter peaks in the middle of the arc and pinches at the start/end
+        const arcFactor = Math.sin(fraction * Math.PI); 
+        
+        const randomJitter = new BABYLON.Vector3(
+            (Math.random() - 0.5) * 1.8,
+            (Math.random() - 0.5) * 1.8,
+            (Math.random() - 0.5) * 1.8
+        ).scale(arcFactor);
+
+        points.push(basePt.add(randomJitter));
+    }
+    points.push(endPos);
+
+    // Create the tube (volume makes it visible and glow)
+    const arcMesh = BABYLON.MeshBuilder.CreateTube('teslaArc', {
+        path: points,
+        radius: 0.06,           // Thick enough to see, thin enough to look like electricity
+        tessellation: 3,        // Triangle tubes are computationally cheap
+        updatable: false
+    }, scene);
+
+    // Make it glow cyan/blue
+    const mat = new BABYLON.StandardMaterial('teslaMat', scene);
+    mat.emissiveColor = new BABYLON.Color3(0.1, 0.8, 1.0); 
+    mat.disableLighting = true; // Don't let shadows dull the lightning
+    mat.alpha = 0.9;
+    arcMesh.material = mat;
+
+    // Lightning is fast! Destroy it after 75-125 milliseconds
+    setTimeout(() => {
+        arcMesh.dispose();
+        mat.dispose();
+    }, 75 + Math.random() * 50);
 }
