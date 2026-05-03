@@ -8,6 +8,8 @@ import { updateFfaHUD, showRoomConfigBanner, hideFfaHUD } from './ui.js';
 import { hurtPlayer } from './player.js';
 import { spawnBot, updateEnemies } from './enemies.js';
 import { enemies } from './gameState.js';
+import { profile } from './progression.js';
+
 
 // ── FFA state ─────────────────────────────────────────────────
 let ffaActive     = false;
@@ -88,6 +90,9 @@ function makeRemotePlayerMesh(id, name) {
   tag.billboardMode = BABYLON.Mesh.BILLBOARDMODE_ALL;
   return g;
 }
+
+// When building the lobby name input:
+if (nameInput && profile.displayName) nameInput.value = profile.displayName;
 
 function _makeNameTag(name, col3) {
   const W = 256, H = 64;

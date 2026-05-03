@@ -7,24 +7,27 @@ import { hasLaserDot, isAkimbo, hasEnergyConverter, getEffectiveStats, getLoadou
 import { isScoped } from './player.js'
 
 export const WDEFS = {
-  PISTOL:   { name:'PISTOL', dmg:20, range:75, cd:.18, hitscan:true, ammo:24, aps:1, spread:.0, pellets:1, startAmmo:24, falloff:0.30, magSize:12, currentMag:12, reloadTime:1.2 },
-  SMG:      { name:'SMG',      dmg:11, range:40, cd:.09, hitscan:true, ammo:0, aps:1, spread:.035, pellets:1, startAmmo:45, falloff:0.50, magSize: 30, currentMag: 30, reloadTime: 1.5 },
-  SHOTGUN:  { name:'SHOTGUN',  dmg:32, range:25, cd:.25, hitscan:true, ammo:0, aps:1, spread:0.12, pellets:10, startAmmo:16, falloff:0.80, magSize: 8,  currentMag: 8, reloadTime: 1.8 },
+  PISTOL:   { name:'PISTOL', dmg:20, range:60, cd:.18, hitscan:true, ammo:24, aps:1, spread:.0, pellets:1, startAmmo:24, falloff:0.30, magSize:12, currentMag:12, reloadTime:1.2, headshotMult: 1.5 },
+  SMG:      { name:'SMG',      dmg:11, range:40, cd:.09, hitscan:true, ammo:0, aps:1, spread:.025, pellets:1, startAmmo:45, falloff:0.65, magSize: 30, currentMag: 30, reloadTime: 1.5 },
+  SHOTGUN:  { name:'SHOTGUN',  dmg:32, range:25, cd:.22, hitscan:true, ammo:0, aps:1, spread:0.10, pellets:10, startAmmo:16, falloff:0.80, magSize: 8,  currentMag: 8, reloadTime: 1.8 },
   CHAINGUN: { name:'CHAINGUN', dmg:14, range:30, cd:.08, hitscan:true, ammo:0, aps:1, spread:.055, pellets:1, startAmmo:150, falloff:0.70, magSize: 100, currentMag: 100, reloadTime: 2.8 },
-  RAILGUN:  { name:'RAILGUN',  dmg:110, range:130, cd:1.8, hitscan:true, ammo:0, aps:1, spread:.0, pellets:1, startAmmo:6, falloff:0.00, magSize: 6, currentMag: 6, reloadTime: 2.4 },
-  ROCKET:   { name:'ROCKET LAUNCHER', dmg:95, range:90, cd:1.2, hitscan:false, ammo:0, aps:1, pellets:1, startAmmo:6, speed:16, splash:4.5, falloff:0.00, magSize: 8, currentMag: 8, reloadTime: 2.2 },
-  GLAUNCHER: { name:'LAUNCHER', dmg:65, range:60, cd:0.8, hitscan:false, ammo:0, aps:1, spread:0.02, pellets:1, startAmmo:12, falloff:0, projSpeed: 30, splash: 7.0, magSize: 8, currentMag: 8, reloadTime: 2.0 },
+  RAILGUN:  { name:'RAILGUN',  dmg:110, range:130, cd:1.8, hitscan:true, ammo:0, aps:1, spread:.0, pellets:1, startAmmo:6, falloff:0.00, magSize: 6, currentMag: 6, reloadTime: 2.4, pvpDmgMult:0.75 },
+  ROCKET:   { name:'ROCKET LAUNCHER', dmg:95, range:80, cd:1.2, hitscan:false, ammo:0, aps:1, pellets:1, startAmmo:6, speed:16, splash:4.5, falloff:0.00, magSize: 8, currentMag: 8, reloadTime: 2.2, headshotMult: 1.0, pvpDmgMult:0.80 },
+  GLAUNCHER: { name:'LAUNCHER', dmg:95, range:60, cd:0.8, hitscan:false, ammo:0, aps:1, spread:0.02, pellets:1, startAmmo:12, falloff:0, projSpeed: 30, splash: 7.0, magSize: 8, currentMag: 8, reloadTime: 2.0, headshotMult: 1.0 },
   
   // Energy
-  ELECTRON: { name:'ELECTRON', dmg:30, range:60, cd:.12, hitscan:true, ammo:Infinity, aps:1, spread:.0, pellets:1, startAmmo:Infinity, falloff:0.40, heat: 0, maxHeat: 100, coolRate: 35, useHeat: true, heatPerShot: 0.09 },
-  ION:      { name:'ION',      dmg:85, range:120, cd:1.2, hitscan:true, ammo:Infinity, aps:1, spread:.0,  pellets:1, startAmmo:Infinity, falloff:0.10, heat: 0, maxHeat: 100, coolRate: 20, useHeat: true, heatPerShot: 0.40 },
+  ELECTRON: { name:'ELECTRON', dmg:25, range:60, cd:.12, hitscan:true, ammo:Infinity, aps:1, spread:.0, pellets:1, startAmmo:Infinity, falloff:0.40, heat: 0, maxHeat: 100, coolRate: 35, useHeat: true, heatPerShot: 0.09, headshotMult: 2.0 },
+  ION:      { name:'ION',      dmg:85, range:120, cd:1.2, hitscan:true, ammo:Infinity, aps:1, spread:.0,  pellets:1, startAmmo:Infinity, falloff:0.10, heat: 0, maxHeat: 100, coolRate: 20, useHeat: true, heatPerShot: 0.40, pvpDmgMult:0.60 },
   
   // Plasma defaults to Ballistic until 'Energy Converter' is equipped
-  PLASMA:   { name:'PLASMA',   dmg:25, range:60, cd:.15, hitscan:false, ammo:0, aps:1, spread:.02, pellets:1, startAmmo:60, falloff:0.0, magSize: 30, currentMag: 30, reloadTime: 1.8, heat: 0, maxHeat: 100, coolRate: 40, heatPerShot: 0.20 },
+  PLASMA:   { name:'PLASMA',   dmg:20, range:60, cd:.15, hitscan:false, ammo:0, aps:1, spread:.02, pellets:1, startAmmo:60, falloff:0.0, magSize: 30, currentMag: 30, reloadTime: 1.8, heat: 0, maxHeat: 100, coolRate: 40, heatPerShot: 0.20, headshotMult: 1.5 },
   // ── Jungle Map Weapons  ──────
-  FLAMETHROWER: { name:'FLAMETHROWER', dmg:8, range:12, cd:.05, hitscan:true, ammo:80, aps:1, spread:.15, pellets:1, startAmmo:80, falloff:0.90, magSize:80, currentMag:80, reloadTime:3.0, mapExclusive:'jungle', useHeat:true, heatPerShot:0.02, maxHeat:100, coolRate:45, dotDamage:4, dotDuration:3 },
-  TESLA:      { name:'TESLA CANNON', dmg:35, range:40, cd:.8, hitscan:true, ammo:18, aps:1, spread:.02, pellets:1, startAmmo:18, falloff:0.30, magSize:6, currentMag:6, reloadTime:2.0, mapExclusive:'jungle', chainTargets:3, chainRange:8 },
-  CROSSBOW:   { name:'CROSSBOW', dmg:70, range:80, cd:1.5, hitscan:true, ammo:12, aps:1, spread:.0, pellets:1, startAmmo:12, falloff:0.10, magSize:1, currentMag:1, reloadTime:0.9, mapExclusive:'jungle', retrievable:true, projSpeed:60 },
+  // FLAMETHROWER: energy weapon — heatPerShot lowered for ~3.8s spray window; reloadTime removed (heat system only)
+  FLAMETHROWER: { name:'FLAMETHROWER', dmg:8, range:15, cd:.05, hitscan:true, ammo:Infinity, aps:1, spread:.15, pellets:1, startAmmo:Infinity, falloff:0.90, mapExclusive:'jungle', useHeat:true, heatPerShot:0.013, maxHeat:100, coolRate:45, dotDamage:8, dotDuration:4, headshotMult: 1.0 },
+  // TESLA: energy weapon — chain hops reduce heat; exponential chain falloff; increased range/damage
+  TESLA:      { name:'TESLA CANNON', dmg:40, range:50, cd:.75, hitscan:true, ammo:Infinity, aps:1, spread:.02, pellets:1, startAmmo:Infinity, falloff:0.25, mapExclusive:'jungle', useHeat:true, heat:0, maxHeat:100, heatPerShot:0.32, coolRate:18, chainTargets:3, chainRange:10, chainHeatReduce:0.10 },
+  // CROSSBOW: reduced base dmg and headshotMult — headshot still lethal, body shots need follow-up; pvpDmgMult for future PvP
+  CROSSBOW:   { name:'CROSSBOW', dmg:55, range:80, cd:1.5, hitscan:true, ammo:12, aps:1, spread:.0, pellets:1, startAmmo:12, falloff:0.10, magSize:1, currentMag:1, reloadTime:0.9, mapExclusive:'jungle', retrievable:true, projSpeed:60, headshotMult: 2.0, pvpDmgMult:0.85 },
 };
 
 export const WCOLORS = {
@@ -198,16 +201,22 @@ function _buildFlamethrower(p) {
     _box(p,'grip', .07, .18, .10, M.gunBrown, 0, -.10, -.08, .2);
 }
 function _buildTesla(p) {
-    _box(p,'body', .08, .12, .55, M.gunMetal, 0, .02, .12);
-    _cyl(p,'coil', .14, .44, M.ledCyan, 0, .02, .32, Math.PI/2);
-    for (let i=0;i<3;i++) _torus(p,'ring'+i, .16, .018, M.plasmaMat, 0, .02, .18+i*.12);
-    _box(p,'grip', .07, .20, .11, M.gunBrown, 0, -.10, -.08, .16);
+  _box(p,'body', .08, .12, .55, M.gunMetal, 0, .02, .12);
+  _cyl(p,'coil', .14, .44, M.ledCyan, 0, .02, .32, Math.PI/2);
+  for (let i=0;i<3;i++) {
+    // name includes 'glow' -> skin will leave its material untouched
+    const ring = _torus(p, 'glow_ring'+i, .16, .018, M.plasmaMat, 0, .02, .18+i*.12);
+    // override material to keep it cyan/emissive
+    ring.material = M.ledCyan;
+  }
+  _box(p,'grip', .07, .20, .11, M.gunBrown, 0, -.10, -.08, .16);
 }
 function _buildCrossbow(p) {
-    _box(p,'body', .06, .09, .55, M.gunBrown, 0, .02, .08);
-    _box(p,'limb', .28, .04, .06, M.gunMetal, 0, .06, .18);
-    _cyl(p,'bolt', .018, .20, M.grey, 0, .05, .30, Math.PI/2);
-    _box(p,'grip', .06, .16, .09, M.gunBrown, 0, -.08, -.08, .18);
+  _box(p,'body', .06, .09, .55, M.gunBrown, 0, .02, .08);
+  _box(p,'limb', .28, .04, .06, M.gunMetal, 0, .06, .18);
+  _cyl(p,'bolt', .018, .20, M.grey, 0, .05, .30, Math.PI/2);
+  // shift grip slightly back and down
+  _box(p,'grip', .06, .16, .09, M.gunBrown, 0, -.08, -.08, .18);
 }
 
 const _modelBuilders = {

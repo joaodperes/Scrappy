@@ -3,7 +3,7 @@ const BABYLON = window.BABYLON;
 import { scene, camera } from './scene.js';
 import { M, fireTex } from './textures.js';
 import { explosiveBarrels, isBarrelMesh, detonateBarrelByMesh } from './level.js';
-import { WDEFS } from './weapons.js';
+import { WDEFS, curWep } from './weapons.js';
 import { projs, enemies, cb } from './gameState.js';
 import { spawnSparks } from './particles.js';
 import { sfx } from './audio.js';
@@ -11,7 +11,7 @@ import { applyExplosionImpulse } from './player.js';
 import { getCurrentMap } from './mapManager.js';
 
 // ── Player projectiles ────────────────────────────────────────
-export function fireRocket() {
+export function fireRocket(effSpeed, effSplash) {
   const fwd = new BABYLON.Vector3(-Math.sin(0) * Math.cos(0), 0, 1); // overridden below
   camera.getForwardRay(1).direction.normalizeToRef(fwd);
   const pos = camera.position.clone().add(fwd.scale(.7));
@@ -31,10 +31,10 @@ export function fireRocket() {
   const light = new BABYLON.PointLight('rLight', pos.clone(), scene);
   light.diffuse = new BABYLON.Color3(1, .4, 0); light.intensity = 2.2; light.range = 8;
 
-  projs.push({ g, light, dir: fwd.clone(), speed: WDEFS.ROCKET.speed, life: 6, dmg: WDEFS.ROCKET.dmg, splash: WDEFS.ROCKET.splash, owner:'player', type:'rocket' });
+  projs.push({ g, light, dir: fwd.clone(), speed: effSpeed || WDEFS.ROCKET.speed, life: 6, dmg: WDEFS.ROCKET.dmg, splash: effSplash ?? WDEFS.ROCKET.splash, owner:'player', type:'rocket' });
 }
 
-export function firePlasma(modDmg) {
+export function firePlasma(modDmg, projSpeed) {
   const fwd = new BABYLON.Vector3();
   camera.getForwardRay(1).direction.normalizeToRef(fwd);
   const pos = camera.position.clone().add(fwd.scale(.6));
@@ -46,7 +46,7 @@ export function firePlasma(modDmg) {
   
   // Use modDmg if provided, otherwise fallback to WDEFS
   const dmg = modDmg || WDEFS.PLASMA.dmg;
-  projs.push({ g:null, mesh, light, dir: fwd.clone(), speed: WDEFS.PLASMA.speed || 40, life: 4, dmg: dmg, splash:0, owner:'player', type:'player_plasma' });
+  projs.push({ g:null, mesh, light, dir: fwd.clone(), speed: projSpeed || WDEFS.PLASMA.speed || 40, life: 4, dmg: dmg, splash:0, owner:'player', type:'player_plasma' });
 }
 
 // ── Enemy shots ───────────────────────────────────────────────
@@ -169,15 +169,20 @@ export function hitscan(meshToEnemy, spread = 0, dmg = 20, range = 90, falloff =
   const dWallHit = scene.pickWithRay(ray, m => m.metadata?.destructible && m.isEnabled());
   if (dWallHit?.hit) {
       const wall = dWallHit.pickedMesh;
-      wall.metadata.hp -= dmg;
-      spawnSparks(dWallHit.pickedPoint, 0xcccccc, 3);
       if (wall.metadata.hp <= 0) {
-          // Remove from scene and from walkableMeshes (if needed)
           wall.dispose();
-          const idx = walkableMeshes.indexOf(wall);
-          if (idx !== -1) walkableMeshes.splice(idx, 1);
-          // Rebuild navmesh (heavy operation; better to batch, but okay for now)
-          navPlugin.createNavMesh(walkableMeshes, NAVMESH_PARAMS);
+          // Dynamically import the correct map data to safely rebuild the navmesh
+          import('./mapManager.js').then(({ getCurrentMap }) => {
+              const map = getCurrentMap();
+              const mapPromise = map === 'jungle' ? import('./levelJungle.js') : import('./level.js');
+              mapPromise.then(levelModule => {
+                  const idx = levelModule.walkableMeshes.indexOf(wall);
+                  if (idx !== -1) levelModule.walkableMeshes.splice(idx, 1);
+                  import('./scene.js').then(({ navPlugin }) => {
+                      navPlugin.createNavMesh(levelModule.walkableMeshes, levelModule.NAVMESH_PARAMS);
+                  });
+              });
+          });
       }
       return { hit: true, destructible: true };
   }
@@ -199,7 +204,9 @@ export function hitscan(meshToEnemy, spread = 0, dmg = 20, range = 90, falloff =
       const mName = pickedMesh.name.toLowerCase();
       const isHeadshot = mName.includes('hd') || mName.includes('vis') || mName.includes('horn');
       if (isHeadshot) {
-          locMult = 2.0; // Headshot bonus applies to all weapons
+          // Replace global multiplier with weapon specific multiplier
+          const weaponDef = WDEFS[curWep];
+          locMult = isHeadshot ? (weaponDef?.headshotMult || 1.5) : 1.0;
       } else if ((mName.includes('leg') || mName.includes('ft')) && dmg < 1000) {
           locMult = 0.5; // Leg penalty only for non-instakill weapons
       }
@@ -554,4 +561,47 @@ export function spawnLightningArc(startPos, endPos) {
         arcMesh.dispose();
         mat.dispose();
     }, 75 + Math.random() * 50);
+}
+
+export function createYellowEMPStunArc(startPos, endPos, scene) {
+    // 1. Generate the jagged lightning path
+    const segments = 6; // Number of "kinks" in the lightning arc
+    const points = [];
+    
+    for (let i = 0; i <= segments; i++) {
+        const fraction = i / segments;
+        // Find the straight-line point at this fraction
+        const currentPos = BABYLON.Vector3.Lerp(startPos, endPos, fraction);
+        
+        // Add random jitter to the middle points to make it jagged
+        if (i > 0 && i < segments) {
+            const jitterAmount = 0.4; // How wild the lightning arcs out
+            currentPos.x += (Math.random() - 0.5) * jitterAmount;
+            currentPos.y += (Math.random() - 0.5) * jitterAmount;
+            currentPos.z += (Math.random() - 0.5) * jitterAmount;
+        }
+        points.push(currentPos);
+    }
+
+    // 2. Create the tube (volume makes it visible and glow)
+    const arcMesh = BABYLON.MeshBuilder.CreateTube('empArc', {
+        path: points,
+        radius: 0.05,           // Slightly thinner for sharp, intense electricity
+        tessellation: 3,        // Triangle tubes are computationally cheap
+        updatable: false
+    }, scene);
+
+    // 3. Make it glow intense yellow
+    const mat = new BABYLON.StandardMaterial('empMat', scene);
+    // RGB values: Max Red, High Green, Low Blue = Bright Yellow
+    mat.emissiveColor = new BABYLON.Color3(1.0, 0.9, 0.1); 
+    mat.disableLighting = true; // Don't let shadows dull the lightning
+    mat.alpha = 0.9;
+    arcMesh.material = mat;
+
+    // 4. Clean up memory quickly (Lightning is fast!)
+    setTimeout(() => {
+        arcMesh.dispose();
+        mat.dispose();
+    }, 100 + Math.random() * 50); // Lasts between 100ms and 150ms
 }

@@ -3,10 +3,11 @@ const BABYLON = window.BABYLON;
 import { scene, camera } from './scene.js';
 import { M } from './textures.js';
 import { pickups, weaponDrops, player, cb } from './gameState.js';
-import { WDEFS, WCOLORS, inventory, activeSlot, makeScaledWeaponModel, setWeapon, refreshSlotHUD, setActiveSlot } from './weapons.js';
+import { WDEFS, WCOLORS, inventory, activeSlot, makeScaledWeaponModel, setWeapon, refreshSlotHUD, setActiveSlot, curWep } from './weapons.js';
 import { sfx } from './audio.js';
 import { TIER_1, TIER_2, TIER_3, TIER_4, TIER_5 } from './level.js';
 import { getCurrentMap } from './mapManager.js';
+import { getLoadout, ATTACHMENTS } from './progression.js';
 
 // Energy weapons refill heat rather than ammo when picked up.
 // The Railgun is also treated as energy (has heat/charge mechanic in some codepaths)
@@ -24,7 +25,36 @@ export function initSecretKits() {
     const S_KITS = [
       { tag: 'secret_health', type: 'secret_health', pos: new BABYLON.Vector3(-25, KIT_Y, 30) },
       { tag: 'secret_armor',  type: 'secret_armor',  pos: new BABYLON.Vector3( 25, KIT_Y, 30) },
-    ];
+    ];   
+    // Spawn jungle secret kits (same logic as scrapyard branch)
+    S_KITS.forEach(kit => {
+      const mesh = BABYLON.MeshBuilder.CreateBox('kit_' + kit.type, { size: 1.2 }, scene);
+      const mat = new BABYLON.StandardMaterial('kitMat_' + kit.type, scene);
+
+      mat.diffuseColor  = kit.type === 'secret_health' ? new BABYLON.Color3(1, 0.13, 0.2) : new BABYLON.Color3(0.13, 0.27, 0.93);
+      mat.emissiveColor = mat.diffuseColor;
+      mat.disableLighting = true;
+
+      const texName = kit.type === 'secret_health' ? 'health' : 'armor';
+      mat.diffuseTexture = new BABYLON.Texture(`assets/textures/lq/${texName}.png`, scene);
+      mesh.material = mat;
+      mesh.position.copyFrom(kit.pos);
+      mesh.setEnabled(true);
+
+      const ring = BABYLON.MeshBuilder.CreateTorus('kitRing', { diameter: 2.0, thickness: 0.1, tessellation: 24 }, scene);
+      ring.position.set(kit.pos.x, kit.pos.y - 0.5, kit.pos.z);
+      ring.material = kit.type === 'secret_health' ? M.ledBlue : M.ledGreen;
+      ring.isPickable = false;
+
+      pickups.push({
+        mesh, ring,
+        type: kit.type,
+        baseY: mesh.position.y,
+        respawnTimer: 0,
+        expires: false,
+        bob: Math.random() * 5,
+      });
+    });
   } else if (map === 'scrapyard') {
   // Floor surface of any floating slab = surfY + 0.22 (see _liftFloatingY in level.js).
   // T5 north-room floor slab has surfY = TIER_5, so its surface is at TIER_5 + 0.22.
@@ -139,7 +169,7 @@ export function initWeaponSpawns() {
     { wName: 'ELECTRON',  x:  30,  y: T3, z:   0 },
 
     // ── T5: 50/50 Railgun or ION Sniper on the north edge ────────
-    { wName: Math.random() > 0.5 ? 'RAILGUN' : 'ION',   x:   0,  y: T5, z:  -30 },
+    { wName: Math.random() < 0.01 ? 'RAILGUN' : 'ION',   x:   0,  y: T5, z:  -30 },
 
     // ── T5 South: Grenade Launcher in front of south entrance ────
     { wName: 'GLAUNCHER', x:   0,  y: T5, z:  -9 },
@@ -269,7 +299,7 @@ export function updatePickups(dt) {
         for (const wName of Object.keys(WDEFS)) {
           const W = WDEFS[wName];
           
-          // --- FIX: Reduce heat by 30% for Energy Weapons ---
+          // --- Reduce heat by 30% for Energy Weapons ---
           if (W.useHeat || wName === 'PLASMA' || wName === 'ELECTRON' || wName === 'ION') {
               if (W.heat > 0) {
                   W.heat = Math.max(0, W.heat - 0.3); // Subtract 30% of max
@@ -281,6 +311,10 @@ export function updatePickups(dt) {
           // Normal ammo calculation
           if (W.ammo !== Infinity) {
             const bonus = Math.ceil((W.startAmmo || 20) / 3);
+            const scavAtt = ATTACHMENTS[ getLoadout(curWep).attachments?.magazine ];
+            if (scavAtt?.mods?.scavengerBonus) {
+                bonus = Math.round(bonus * (1 + scavAtt.mods.scavengerBonus));
+            }
             if (W.ammo < (W.max || 999)) {
                 W.ammo += bonus;
                 if (W.max) W.ammo = Math.min(W.ammo, W.max);
@@ -437,7 +471,13 @@ export function updateWeaponDrops(dt) {
               refreshSlotHUD();
           });
       } else {
-        W.ammo += W.startAmmo;
+        const scavAtt = ATTACHMENTS[ getLoadout(curWep).attachments?.magazine ];
+        if (scavAtt?.mods?.scavengerBonus) {
+            bonus = Math.round(W.startAmmo * (1 + scavAtt.mods.scavengerBonus));
+            W.ammo += bonus;
+        } else {
+            W.ammo += W.startAmmo;
+        }
         if (W.max) W.ammo = Math.min(W.ammo, W.max);
       }
       sfx.wPickup();
@@ -513,6 +553,13 @@ export function tryPickupWeapon(gameRunning, paused) {
         refreshSlotHUD();
       });
       import('./progression.js').then(({ recordRailgunPickup }) => recordRailgunPickup());
+    } else if (wName === 'CROSSBOW') {
+      import('./progression.js').then(({ hasBoltRecovery }) => {
+        // If they have the perk, 60% chance for extra bolt. Otherwise, 10% chance.
+        const extraBoltChance = (typeof hasBoltRecovery === 'function' && hasBoltRecovery()) ? 0.60 : 0.10;
+        W.ammo = 1 + (Math.random() < extraBoltChance ? 1 : 0); 
+        refreshSlotHUD();
+      });
     } else {
       W.ammo = W.startAmmo;
       // Initialize magazine from effective stats (includes attachment bonuses)

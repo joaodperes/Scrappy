@@ -5,9 +5,10 @@ import { M, robotTex, fireTex } from './textures.js';
 import { makeScaledWeaponModel, ROBOT_DROPS, curWep, WDEFS  } from './weapons.js';
 import { enemies, player, cb } from './gameState.js';
 import { spawnSparks } from './particles.js';
-import { fireEnemyShot } from './projectiles.js';
+import { fireEnemyShot, createYellowEMPStunArc } from './projectiles.js';
 import { sfx } from './audio.js';
 import { jumpPads } from './level.js';
+import { getCurrentMap } from './mapManager.js';
 import { recordDamage } from './progression.js';
 
 // ── Mesh→enemy lookup ─────────────────────────────────────────
@@ -215,6 +216,9 @@ function _hasLOS(from, to) {
 // ── Robot mesh builder ────────────────────────────────────────
 export function buildRobot(type) {
   const g = new BABYLON.TransformNode('robot_' + type, scene);
+  let bW = 0.48, bH = 1.18, bD = 0.32, aL = 0.7, aW = 0.10,
+    lW = 0.13, lH = 0.7, fL = 0.22, fH = 0.11,
+    hW = 0.32, hH = 0.36, hD = 0.28;
   const sc = {
     scout:     { r: 72,  gr: 80, b: 72,  led: M.ledGreen,  flyH: 0   },
     heavy:     { r: 100, gr: 68, b: 48,  led: M.ledRed,    flyH: 0   },
@@ -226,6 +230,10 @@ export function buildRobot(type) {
     grenadier: { r: 55,  gr: 110, b: 55, led: M.ledGreen,  flyH: 0   },
     electron_bot: { r: 10,  gr: 180, b: 255, led: M.ledCyan, flyH: 0 },
     ion_sniper:   { r: 140, gr: 20,  b: 200, led: M.plasmaMat, flyH: 0 },
+    medic_bot:    { r: 220, gr: 240, b: 220, led: M.ledGreen,  flyH: 0 },
+    shield_bot:   { r: 80,  gr: 110, b: 160, led: M.ledCyan,   flyH: 0 },
+    teleport_bot: { r: 40,  gr: 200, b: 240, led: M.ledCyan,   flyH: 0 },
+    swarm_host:   { r: 60,  gr: 100, b: 40,  led: M.ledGreen,  flyH: 0 },
   }[type] || { r: 70, gr: 70, b: 70, led: M.ledGreen, flyH: 0 };
   const bmat = robotTex('r_' + type + '_' + Math.random().toString(36).slice(2), sc.r, sc.gr, sc.b);
   const led  = sc.led;
@@ -257,7 +265,6 @@ export function buildRobot(type) {
     addSphere('eye', .14, led, 0, 1.5, .58); addCyl('bbl', .08, .4, M.gunMetal, 0, 1.28, .75, Math.PI / 2);
     for (const s of [-1, 1]) { addBox('arm' + s, .72, .04, .1, M.gunMetal, s * .56, 1.72, 0); addCyl('rot' + s, .56, .04, led, s * .88, 1.76, 0, 0); }
   } else {
-    let bW = 0.48, bH = 1.18, bD = 0.32, aL = 0.7, aW = 0.10, lW = 0.13, lH = 0.7, fL = 0.22, fH = 0.11, hW = 0.32, hH = 0.36, hD = 0.28;
     if (type === 'heavy')   { bW=1.04; bH=1.65; bD=.65; aL=.88; aW=.16; lW=.24; lH=.65; fL=.34; fH=.14; hW=.52; hH=.40; hD=.36; }
     if (type === 'sniper')  { bW=.66; bH=1.1;  bD=.44; aL=.64; aW=.11; lW=.20; lH=.52; fL=.28; fH=.14; hW=.4;  hH=.31; hD=.29; }
     if (type === 'shotgun') { bW=.54; bH=1.12; bD=.34; aL=.72; aW=.12; lW=.16; lH=.68; fL=.25; fH=.12; hW=.34; hH=.33; hD=.26; }
@@ -269,6 +276,38 @@ export function buildRobot(type) {
     if (type === 'armored') { bW=.80; bH=1.3; bD=.50; aL=.80; aW=.18; lW=.24; lH=.60; fL=.35; fH=.15; hW=.45; hH=.35; hD=.35; }
     const bY = bH / 2 + .28;
     const hY = bY + bH/2 + hH*.42;
+    // ── medic_bot: white cross on chest + healing syringe arm ────
+    if (type === 'medic_bot') {
+        addBox('crossV', 0.06, 0.40, 0.06, M.ledGreen, 0, bY + bH * 0.30, bD * 0.52);
+        addBox('crossH', 0.24, 0.06, 0.06, M.ledGreen, 0, bY + bH * 0.30, bD * 0.52);
+        addCyl('syringe', 0.06, 0.38, M.ledWhite, bW/2 + aW/2, bY + bH * 0.18, 0.45, Math.PI / 2);
+        addCyl('syrtip',  0.03, 0.12, M.ledGreen, bW/2 + aW/2, bY + bH * 0.18, 0.68, Math.PI / 2);
+    }
+    // ── shield_bot: broad forearm shield plate ───────────────────
+    if (type === 'shield_bot') {
+        const shMat = new BABYLON.StandardMaterial('shieldBotMat_' + Math.random(), scene);
+        shMat.diffuseColor  = new BABYLON.Color3(0.12, 0.35, 0.65);
+        shMat.emissiveColor = new BABYLON.Color3(0.08, 0.25, 0.55);
+        shMat.alpha = 0.55; shMat.backFaceCulling = false;
+        const shPlate = BABYLON.MeshBuilder.CreateBox('shPlate', { width: 0.10, height: 1.1, depth: 0.65 }, scene);
+        shPlate.position.set(bW/2 + 0.22, bY, bD * 0.22);
+        shPlate.material = shMat; shPlate.parent = g; shPlate.isPickable = true;
+        shPlate.metadata = { enemy: true };
+        addBox('shEdge', 0.04, 1.12, 0.67, M.ledCyan, bW/2 + 0.27, bY, bD * 0.22);
+    }
+    // ── teleport_bot: blink emitter rings ────────────────────────
+    if (type === 'teleport_bot') {
+        addTorus('blinkA', 0.55, 0.06, M.ledCyan,  0, bY + bH * 0.55, 0);
+        addTorus('blinkB', 0.38, 0.04, M.ledBlue,  0, bY + bH * 0.40, 0);
+        addSphere('core',  0.11, M.ledCyan, 0, bY + bH * 0.50, 0);
+    }
+    // ── swarm_host: bulbous abdomen + spawn port ─────────────────
+    if (type === 'swarm_host') {
+        addSphere('abdomen', 0.70, bmat, 0, bY - 0.10, -bD * 0.80);
+        addCyl('port1', 0.14, 0.22, M.ledGreen,  0.20, bY - 0.10, -bD * 1.30, 0);
+        addCyl('port2', 0.14, 0.22, M.ledGreen, -0.20, bY - 0.10, -bD * 1.30, 0);
+        addBox('carapace', bW * 0.9, 0.10, bD * 1.6, M.ledGreen, 0, bY + bH * 0.55, -bD * 0.40);
+    }
     if (type === 'giantbot') {
       addBox('core', bW * 0.6, bH * 0.4, bD * 1.5, M.ledOrange, 0, bY, bD * 0.2);
       
@@ -401,7 +440,8 @@ export function buildRobot(type) {
 }
 
 // ── Curated walkable spawn positions (Expanded for 5 Tiers & Kept away from walls) ───────
-const WALKABLE_SPAWNS = [
+// Default set (used as the base for all maps unless overridden)
+const DEFAULT_WALKABLE_SPAWNS = [
   // TIER 1: Main Floor (y = 0) — kept well clear of all centre walls
   [-30, 0,  30], [ 30, 0,  30], [-30, 0, -30], [ 30, 0, -30], // Far corners
   [-22, 0,   0], [ 22, 0,   0], [  0, 0,  26], [  0, 0, -26], // Mid-points (shifted from ±20/±20 to avoid wall proximity)
@@ -423,13 +463,23 @@ const WALKABLE_SPAWNS = [
   // Moved to South platform (z = -16) to keep the North safe room strictly for players
   //[ 0, 24, -16], [-4, 24, -16], [ 4, 24, -16],
 ];
+
+// Per-map spawn sets — start by reusing the default for both maps so it's
+// easy to scale later. Add new map keys here to customize spawns per map.
+const WALKABLE_SPAWNS_BY_MAP = {
+  scrapyard: DEFAULT_WALKABLE_SPAWNS,
+  jungle:    DEFAULT_WALKABLE_SPAWNS,
+};
+
 const MIN_SPAWN_DIST = 48;
 
 export function spawnBot(type, _x, _spawnY_IGNORED, _z, scale = 1.0) {
   // Completely ignore spawnY so bots scatter across all vertical levels!
-  let validSpawns = WALKABLE_SPAWNS;
+  // Select per-map spawn list (falls back to default)
+  const mapId = (typeof getCurrentMap === 'function') ? getCurrentMap() : null;
+  let validSpawns = WALKABLE_SPAWNS_BY_MAP[mapId] || DEFAULT_WALKABLE_SPAWNS;
   if (type === 'giantbot') {
-      validSpawns = WALKABLE_SPAWNS.filter(sp => sp[1] === 0);
+      validSpawns = validSpawns.filter(sp => sp[1] === 0);
   }
   const shuffled = validSpawns.slice().sort(() => Math.random() - 0.5);
   let px = _x, pz = _z, py = 0;
@@ -480,7 +530,7 @@ export function spawnBot(type, _x, _spawnY_IGNORED, _z, scale = 1.0) {
   rebuildMeshMap();
 }
 
-export function hitRobot(e, dmg, isHeadshot = false, isExplosive = false) {
+export function hitRobot(e, dmg, isHeadshot = false, isExplosive = false, source = 'PLAYER') {
   if (!e.alive) return;
   // Railgun fires 9999 – cap it for boss-tier enemies so they need multiple shots - currently capped at 20% HP
   if (BOSS_TYPES.has(e.type) && dmg > e.maxHp * 0.20) {
@@ -522,18 +572,34 @@ export function hitRobot(e, dmg, isHeadshot = false, isExplosive = false) {
   sfx.hit();
   // EMP rounds check
   import('./progression.js').then(({ getLoadout }) => {
-      if (getLoadout(curWep).attachments?.special === 'emp_rounds' && Math.random() < 0.15 && e.alive) {
+      if (getLoadout(curWep).attachments?.special === 'emp_rounds' && Math.random() < 0.15 && e && e.alive) {
           e._empStunned = 1.0;
-          spawnSparks(e.group.position, 0x4488ff, 8);
+          
+          sfx.plasma();
+          spawnSparks(e.group.position.clone(), 0xffff00, 12);
+          
+          let shocksFired = 0;
+          const shockInterval = setInterval(() => {
+              // Ensure enemy still exists and hasn't been disposed
+              if (e && e.group && !e.group.isDisposed() && e.alive && e._empStunned > 0) {
+                  // Using camera.position instead of player.position
+                  createYellowEMPStunArc(camera.position, e.group.position, scene);
+                  shocksFired++;
+              } else {
+                  clearInterval(shockInterval);
+              }
+
+              if (shocksFired >= 5) clearInterval(shockInterval);
+          }, 150);
+
           import('./progression.js').then(({ recordEmpStun }) => recordEmpStun());
-          sfx.plasma(); // reuse plasma sound for EMP
       }
   });
  
-  if (e.hp <= 0) destroyRobot(e, isHeadshot, isExplosive);
+  if (e.hp <= 0) destroyRobot(e, isHeadshot, isExplosive, source);
 }
 
-export function destroyRobot(e, isHeadshot = false, isExplosive = false) {
+export function destroyRobot(e, isHeadshot = false, isExplosive = false, source = 'PLAYER') {
   e.alive = false;
   if (e._arrowNode) { e._arrowNode.getChildMeshes().forEach(m => m.dispose()); e._arrowNode.dispose(); }
 
@@ -590,6 +656,7 @@ export function destroyRobot(e, isHeadshot = false, isExplosive = false) {
       xpMult,                                    // ← passed through for weapon XP
       isHeadshot: isHeadshot,
       isExplosiveKill: isExplosive,
+      source: source,
     });
 
     // ── Energy Coil: headshot kills on ION vent 40% heat ──────
@@ -770,28 +837,28 @@ export function updateEnemies(dt) {
             }
         }
     }
-    // Apply EMP stun
-    if (e._empStunned > 0) {
-        e._empStunned -= dt;
-        e.group.position.y = e._floorY + e._hopY + bob + (e._yAnimOffset || 0);
-        _eLookAt.set(_ePP.x, e.group.position.y, _ePP.z);
-        e.group.lookAt(_eLookAt);
-        continue; // Skip movement and attack
-    }
-    e.animT += dt;
-
-    // check inside updateEnemies:
+    
     if (window._hazardZones) {
-        for (const haz of window._hazardZones) {
-            const ex = e.group.position.x, ez = e.group.position.z;
-            const halfW = haz.metadata?.halfWidth ?? 0.5;
-            const halfD = haz.metadata?.halfDepth ?? 0.5;
-            const hx = haz.position.x, hz = haz.position.z;
-            if (ex > hx - halfW && ex < hx + halfW && ez > hz - halfD && ez < hz + halfD) {
-                e.hp -= (haz.metadata?.dps || 15) * dt;
-                if (e.hp <= 0) { destroyRobot(e, false); continue; }
-            }
+      for (const haz of window._hazardZones) {
+        const ex = e.group.position.x, ez = e.group.position.z;
+        const halfW = haz.metadata?.halfWidth ?? 0.5;
+        const halfD = haz.metadata?.halfDepth ?? 0.5;
+        const hx = haz.position.x, hz = haz.position.z, hy = haz.position.y;
+        const dy = e.group.position.y - hy;
+
+        // Add a Y check (dy > -1 && dy < 2) so platforms above the lava are safe.
+        if (ex > hx - halfW && ex < hx + halfW && ez > hz - halfD && ez < hz + halfD && dy > -1 && dy < 2.5) {
+            e.hp -= (haz.metadata?.dps || 5) * dt;
+            if (e.hp <= 0) { 
+                // Credit the player with an environmental kill!
+                import('./progression.js').then(({ recordKill }) => {
+                    recordKill(e.type, 'ENVIRONMENT', { xpMult: 1 });
+                });
+                destroyRobot(e, false); 
+                continue; 
+          }
         }
+      }
     }
 
     // Initialize physical properties
@@ -801,6 +868,17 @@ export function updateEnemies(dt) {
     e._stuckTimer = e._stuckTimer || 0;
 
     let bob = (e.flyH > 0) ? (e.flyH + Math.sin(e.animT * 1.9) * .18) : (Math.abs(Math.sin(e.animT * 5.8)) * .04);
+    
+    // Apply EMP stun
+    if (e._empStunned > 0) {
+        e._empStunned -= dt;
+        e.group.position.y = e._floorY + e._hopY + bob + (e._yAnimOffset || 0);
+        _eLookAt.set(_ePP.x, e.group.position.y, _ePP.z);
+        e.group.lookAt(_eLookAt);
+        continue; // Skip movement and attack
+    }
+    e.animT += dt;
+    
     _updateArrow(e);
 
     const dist = BABYLON.Vector3.Distance(e.group.position, _ePP);
@@ -874,24 +952,33 @@ export function updateEnemies(dt) {
       // --- Threshold‑based summon (once per threshold) ---
       const hpPct = e.hp / e.maxHp;
       const thresholds = [0.75, 0.5, 0.25];
+      const summonPool = ['drone', 'scout', 'heavy', 'rocket', 'grenadier', 'electron_bot', 'armored', 'ninja', 'medic_bot', 'shield_bot'];
       for (const t of thresholds) {
-          const key = t.toString();
-          if (hpPct <= t && !e._thresholdsTriggered[key] && enemies.length < 22) {
-              e._thresholdsTriggered[key] = true;
-              // Spawn 2 drones instantly
-              spawnBot('drone', e.group.position.x + 3, e.group.position.y, e.group.position.z, 1.0);
-              spawnBot('drone', e.group.position.x - 3, e.group.position.y, e.group.position.z, 1.0);
-              _roundEnemies += 2;
-          }
+        const key = t.toString();
+        if (hpPct <= t && !e._thresholdsTriggered[key] && enemies.length < 22) {
+            e._thresholdsTriggered[key] = true;
+            
+            // Pick random enemies from the pool
+            const bot1 = summonPool[Math.floor(Math.random() * summonPool.length)];
+            const bot2 = summonPool[Math.floor(Math.random() * summonPool.length)];
+
+            spawnBot(bot1, e.group.position.x + 3, e.group.position.y, e.group.position.z, 1.0);
+            spawnBot(bot2, e.group.position.x - 3, e.group.position.y, e.group.position.z, 1.0);
+            _roundEnemies += 2;
+        }
       }
 
       // --- Random summon (every 30s cooldown, only if HP < 75%) ---
       if (e.summonRandomTimer <= 0 && hpPct < 0.75 && enemies.length < 22) {
           e.summonRandomTimer = 30.0;
-          spawnBot('drone', e.group.position.x + 3, e.group.position.y, e.group.position.z, 1.0);
-          spawnBot('drone', e.group.position.x - 3, e.group.position.y, e.group.position.z, 1.0);
+          const bot1 = summonPool[Math.floor(Math.random() * summonPool.length)];
+          const bot2 = summonPool[Math.floor(Math.random() * summonPool.length)];
+
+          spawnBot(bot1, e.group.position.x + 3, e.group.position.y, e.group.position.z, 1.0);
+          spawnBot(bot2, e.group.position.x - 3, e.group.position.y, e.group.position.z, 1.0);
           _roundEnemies += 2;
       }
+      
       // --- STOMP ---
       if (e._stompTimer === undefined) e._stompTimer = 15.0;
       e._stompTimer -= dt;
@@ -1001,22 +1088,40 @@ export function updateEnemies(dt) {
         const shouldMove = _angryMode || !hasLOS || onWrongFloor || (dist2D > targetDist + 1.0 || dist2D < targetDist - 2.0);
 
         if (shouldMove) {
-            const botFeet   = new BABYLON.Vector3(e.group.position.x, e._floorY + 0.5, e.group.position.z);
-            const playerFeet = new BABYLON.Vector3(_ePP.x, _ePP.y - 0.72, _ePP.z);
-
-            const startPt = navPlugin.getClosestPoint(botFeet);
-            let endPt     = navPlugin.getClosestPoint(playerFeet);
-            let hasPath   = false;
-            let nextWaypoint = null; // full 3D waypoint from navmesh
-
-            if (startPt && endPt) {
-                const path = navPlugin.computePath(startPt, endPt);
-                if (path && path.length > 1) {
-                    nextWaypoint = path[1];
-                    _eDir.copyFrom(nextWaypoint).subtractInPlace(startPt);
-                    hasPath = true;
+          // ── Hazard avoidance: steer away from lava / hazard zones ──────────
+          if (window._hazardZones) {
+            for (const haz of window._hazardZones) {
+                const WARN = 5; // metres of warning margin outside the hazard
+                const ex = e.group.position.x, ez = e.group.position.z;
+                const hx = haz.position.x,    hz = haz.position.z;
+                const hw = (haz.metadata?.halfWidth  ?? 0.5) + WARN;
+                const hd = (haz.metadata?.halfDepth  ?? 0.5) + WARN;
+                if (ex > hx - hw && ex < hx + hw && ez > hz - hd && ez < hz + hd) {
+                    const fleeX = ex - hx, fleeZ = ez - hz;
+                    const len = Math.sqrt(fleeX * fleeX + fleeZ * fleeZ) || 1;
+                    // Strong outward push — overrides pathfinding while inside the margin
+                    _eDir.x += (fleeX / len) * 3.0;
+                    _eDir.z += (fleeZ / len) * 3.0;
                 }
             }
+            if (_eDir.length() > 0.001) _eDir.normalize();
+          }
+          const botFeet   = new BABYLON.Vector3(e.group.position.x, e._floorY + 0.5, e.group.position.z);
+          const playerFeet = new BABYLON.Vector3(_ePP.x, _ePP.y - 0.72, _ePP.z);
+
+          const startPt = navPlugin.getClosestPoint(botFeet);
+          let endPt     = navPlugin.getClosestPoint(playerFeet);
+          let hasPath   = false;
+          let nextWaypoint = null; // full 3D waypoint from navmesh
+
+          if (startPt && endPt) {
+              const path = navPlugin.computePath(startPt, endPt);
+              if (path && path.length > 1) {
+                  nextWaypoint = path[1];
+                  _eDir.copyFrom(nextWaypoint).subtractInPlace(startPt);
+                  hasPath = true;
+              }
+          }
 
             // Fallback: direct vector toward player feet
             if (!hasPath) _eDir.copyFrom(playerFeet).subtractInPlace(botFeet);

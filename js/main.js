@@ -12,7 +12,7 @@ import { updateProjs  } from './projectiles.js';
 import { updateParticles } from './particles.js';
 import { updatePickups, updateWeaponDrops, tryPickupWeapon, initSecretKits, initWeaponSpawns } from './pickups.js';
 import { updateWaves, setCurWave, setWaveOn, setWaveDly, curWave, launchWave, getWaveComposition } from './waves.js';
-import { updatePlayer, setupInput, hurtPlayer, PH, resetPlayer, keys } from './player.js';
+import { updatePlayer, setupInput, hurtPlayer, PH, resetPlayer, keys, movePlayerBody } from './player.js';
 import { updateHUD, tickHitMarker, wireDeathSubmit, showHitMarker, hideFfaHUD } from './ui.js';
 import { submitScore, renderLeaderboard } from './leaderboard.js';
 import { startFfa, updateFfa, isFfaActive, isFfaInPreLobby, showFfaLobby } from './pvp.js';;
@@ -24,6 +24,9 @@ let gameRunning = false;
 let paused      = false;
 
 loadProfile();
+import('./progression.js').then(({ ensureDisplayName, profile }) => {
+    ensureDisplayName(); // non-blocking; modal appears if name missing
+});
 
 // ── Callbacks ──────────────────────────────────────────────────
 cb.hitRobot      = hitRobot;
@@ -152,7 +155,14 @@ function startGame(startWave = 0) {
   
   function finishStart() {
     rebuildMeshMap();
-    resetPlayer(-19, PH, -12);
+    
+    // Spawn in a safe, open area depending on the map
+    if (getCurrentMap() === 'jungle') {
+        resetPlayer(15, PH + 1, -55); 
+    } else {
+        resetPlayer(-19, PH, -12);
+    }
+    
     _hideAllScreens();
     document.getElementById('hud').style.display = 'block';
     setWeapon('PISTOL');
@@ -169,18 +179,20 @@ function startGame(startWave = 0) {
   }
 }
 
-
 function endGame() {
-  gameRunning = false;
-  document.exitPointerLock();
-  document.getElementById('hud').style.display = 'none';
-  document.getElementById('deathStats').textContent =
-    `FINAL SCORE: ${player.score}   \u2014   WAVES: ${curWave}`;
-  const inp = document.getElementById('playerNameInput');
-  const btn = document.getElementById('submitScoreBtn');
-  //if (inp) { inp.value = ''; inp.disabled = false; }
-  if (btn) { btn.disabled = false; btn.textContent = 'SUBMIT SCORE'; }
-  document.getElementById('deathScreen').className = 'screen visible';
+    gameRunning = false;
+    document.exitPointerLock();
+    document.getElementById('hud').style.display = 'none';
+    document.getElementById('deathStats').textContent =
+        `FINAL SCORE: ${player.score}   \u2014   WAVES: ${curWave}`;
+    const inp = document.getElementById('playerNameInput');
+    const btn = document.getElementById('submitScoreBtn');
+    // ← Pre-fill from persistent profile
+    import('./progression.js').then(({ profile }) => {
+        if (inp && profile.displayName) inp.value = profile.displayName;
+    });
+    if (btn) { btn.disabled = false; btn.textContent = 'SUBMIT SCORE'; }
+    document.getElementById('deathScreen').className = 'screen visible';
 }
 
 // ── Pause ──────────────────────────────────────────────────────
@@ -343,6 +355,27 @@ function openLoadout(returnToGame = false) {
       };
       pauseOverlay.appendChild(pl);
     }
+    if (!document.getElementById('pauseQuitBtn')) {
+      const firstBtn = pauseOverlay.querySelector('button');
+      const qb = document.createElement('button');
+      qb.id = 'pauseQuitBtn';
+      qb.textContent = 'QUIT TO MENU';
+      qb.className = firstBtn?.className ?? '';
+      qb.style.marginTop = '10px';
+      qb.style.opacity = '0.75'; // visually distinct from Resume
+      qb.onclick = () => {
+          // Stop the game but do NOT submit to leaderboard
+          paused = false;
+          gameRunning = false;
+          document.exitPointerLock();
+          document.getElementById('pauseOverlay').style.display = 'none';
+          document.getElementById('hud').style.display = 'none';
+          import('./progression.js').then(({ saveProfile }) => saveProfile()); // save progress
+          import('./leaderboard.js').then(({ renderLeaderboard }) => renderLeaderboard());
+          document.getElementById('menuScreen').className = 'screen visible';
+      };
+      pauseOverlay.appendChild(qb);
+    }
   }
 })();
 
@@ -453,17 +486,19 @@ engine.runRenderLoop(() => {
     animWeapon(dt);
     tickHitMarker(dt);
   }
-  // Update moving platforms
+  // Update moving platforms and stick the player to them
   if (window._movingPlatforms && window._movingPlatforms.length > 0) {
       for (const plat of window._movingPlatforms) {
-          if (!plat._moveData) continue;
+          if (!plat._moveData || plat._moveData.paused) continue;
           const md = plat._moveData;
           
-          // Wait at endpoints
           if (md.waitTimer > 0) {
               md.waitTimer -= dt;
               continue;
           }
+          
+          // Store the old position before moving
+          const oldPos = plat.position.clone();
           
           md.t += dt * md.speed * md.dir;
           if (md.t > 1) { md.t = 1; md.dir = -1; md.waitTimer = md.waitTime; }
@@ -473,6 +508,21 @@ engine.runRenderLoop(() => {
           plat.position.x = md.start.x + (md.end.x - md.start.x) * t;
           plat.position.y = md.start.y + (md.end.y - md.start.y) * t;
           plat.position.z = md.start.z + (md.end.z - md.start.z) * t;
+
+          // Calculate how much the platform moved this frame
+          const delta = plat.position.subtract(oldPos);
+
+          // If the player is standing on it, apply the exact same movement
+          if (player.onGround) {
+              const dx = camera.position.x - plat.position.x;
+              const dz = camera.position.z - plat.position.z;
+              const dy = camera.position.y - plat.position.y;
+              
+              // Basic boundary check (width/depth approx 5 units, height within 2.5 units above platform)
+              if (Math.abs(dx) < 3.5 && Math.abs(dz) < 3.5 && dy > 0 && dy < 2.5) {
+                  movePlayerBody(delta);
+              }
+          }
       }
   }
 
@@ -481,12 +531,17 @@ engine.runRenderLoop(() => {
     for (const haz of window._hazardZones) {
       const px = camera.position.x;
       const pz = camera.position.z;
+      const py = camera.position.y; 
       const hx = haz.position.x;
       const hz = haz.position.z;
+      const hy = haz.position.y;
       const hw = haz.metadata.halfWidth;
       const hd = haz.metadata.halfDepth;
-      if (px > hx - hw && px < hx + hw && pz > hz - hd && pz < hz + hd) {
-        hurtPlayer((haz.metadata?.dps || 15) * dt, { isLava: true });
+      const hh = haz.metadata.halfHeight || 5; // Define a default height if missing
+      if (px > hx - hw && px < hx + hw && 
+          py > hy - hh && py < hy + hh && // New Y-axis check
+          pz > hz - hd && pz < hz + hd) {
+          hurtPlayer((haz.metadata?.dps || 15) * dt, { hazardType: haz.metadata.hazardType });
       }
     }
   }

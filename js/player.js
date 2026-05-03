@@ -33,7 +33,7 @@ let _thermalActive = false;
 let _thermalOverlay = null;
 let _heatDelayTimer = 0;
 
-const _playerBody = BABYLON.MeshBuilder.CreateBox('_playerBody', { size: 0.01 }, scene);
+export const _playerBody = BABYLON.MeshBuilder.CreateBox('_playerBody', { size: 0.01 }, scene);
 _playerBody.isVisible       = false;
 _playerBody.isPickable      = false;
 _playerBody.checkCollisions = true;
@@ -77,7 +77,7 @@ export function markHudDirty() { _hudDirty = true; }
 
 let _lavaHitTimer = 0;
 const LAVA_HIT_INTERVAL = 0.6;
-export function hurtPlayer(rawDmg, { isLava = false } = {}) {
+export function hurtPlayer(rawDmg, { hazardType = null} = {}) {
   if (!cb.isGameRunning?.()) return;
   let d = rawDmg;
   if (player.armor > 0) {
@@ -86,7 +86,7 @@ export function hurtPlayer(rawDmg, { isLava = false } = {}) {
     d -= absorb;
   }
   if (d > 0) player.hp = Math.max(0, player.hp - d);
-  if (isLava) {
+  if ( hazardType === 'LAVA') {
     if (_lavaHitTimer <= 0) {
         sfx.lavaDamage();   // deeper sound defined in audio.js
         _lavaHitTimer = LAVA_HIT_INTERVAL;
@@ -98,28 +98,6 @@ export function hurtPlayer(rawDmg, { isLava = false } = {}) {
   if (fl) { fl.classList.add('flash'); setTimeout(() => fl.classList.remove('flash'), 170); }
   markHudDirty();
   if (player.hp <= 0) cb.endGame?.();
-}
-
-function _drawBolt(from, to) {
-    const dir = to.subtract(from);
-    const len = dir.length();
-    if (len < 0.01) return;
-    dir.normalize();
-    const mid = from.add(dir.scale(len * 0.5));
-    const bolt = BABYLON.MeshBuilder.CreateCylinder('bolt_' + Math.random(),
-        { diameter: 0.05, height: len, tessellation: 3 }, scene);
-    bolt.position = mid;
-    const quat = new BABYLON.Quaternion();
-    BABYLON.Quaternion.FromUnitVectorsToRef(BABYLON.Axis.Y, dir, quat);
-    bolt.rotationQuaternion = quat;
-
-    const mat = new BABYLON.StandardMaterial('boltMat_' + Math.random(), scene);
-    mat.emissiveColor = new BABYLON.Color3(0.4, 0.7, 1);
-    mat.disableLighting = true;
-    bolt.material = mat;
-    bolt.isPickable = false;
-
-    setTimeout(() => bolt.dispose(), 400);
 }
 
 export function shoot() {
@@ -307,7 +285,8 @@ export function shoot() {
       
       // Chain lightning to nearby enemies
       if (teslaResult?.hit && teslaResult?.target) {
-          const chainCount = getLoadout('TESLA').attachments?.barrel === 'amplifier_coil' ? 5 : 3;
+          // FIX: amplifier_coil lives in the 'special' slot, not 'barrel'
+          const chainCount = getLoadout('TESLA').attachments?.special === 'amplifier_coil' ? 5 : (W.chainTargets || 3);
           const firstEnemy = teslaResult.target;
           let lastPos = firstEnemy.group.position.clone();
           const chained = new Set([firstEnemy]);
@@ -319,11 +298,13 @@ export function shoot() {
           firstEnemyPos.y += 1.0;
           spawnLightningArc(playerPos, firstEnemyPos);
           
-          let delay = 120; // Start with slight delay for visual clarity
+          let delay = 120;
           const chainInterval = 100;
+          // Each chain hop reduces heat — reward for hitting grouped enemies
+          const heatReducePerChain = W.chainHeatReduce || 0;
           
           for (let i = 0; i < chainCount; i++) {
-              let closest = null, closestDist = W.chainRange || 8;
+              let closest = null, closestDist = W.chainRange || 10;
               for (const e of enemies) {
                   if (!e.alive || chained.has(e)) continue;
                   const d = BABYLON.Vector3.Distance(lastPos, e.group.position);
@@ -331,16 +312,23 @@ export function shoot() {
               }
               if (closest) {
                   const capturedEnemy = closest;
+                  const capturedIndex = i; // capture for setTimeout closure
                   const sourcePos = lastPos.clone();
-                  sourcePos.y += 1.0; // Chest height
+                  sourcePos.y += 1.0;
                   const targetPos = capturedEnemy.group.position.clone();
                   targetPos.y += 1.0;
                   
                   setTimeout(() => {
                       if (!capturedEnemy.alive) return;
-                      cb.hitRobot(capturedEnemy, Math.round(modDmg * (1 - (i+1) / chainCount)));
+                      // Exponential 60% falloff per hop — chains stay meaningful longer
+                      const chainDmg = Math.round(modDmg * Math.pow(0.60, capturedIndex + 1));
+                      cb.hitRobot(capturedEnemy, chainDmg, false, false, 'TESLA_CHAIN');
                       spawnSparks(capturedEnemy.group.position, 0x88ccff, 8);
-                      spawnLightningArc(sourcePos, targetPos); // Use your new function!
+                      spawnLightningArc(sourcePos, targetPos);
+                      // Cool the weapon for each enemy chained
+                      if (heatReducePerChain > 0) {
+                          W.heat = Math.max(0, (W.heat || 0) - heatReducePerChain);
+                      }
                   }, delay);
                   delay += chainInterval;
                   lastPos = capturedEnemy.group.position.clone();
@@ -399,11 +387,11 @@ export function shoot() {
     case 'PLASMA':
       if (!hasSuppressor('PLASMA')) sfx.plasma();
       if (player.plasmaAltMode) { hitscan(_meshToEnemy, spread * spreadMult, modDmg, range, 0); }
-      else { firePlasma(modDmg); }
+      else { firePlasma(modDmg, EW.speed || 40); }
       break;
     case 'ROCKET':
       if (!hasSuppressor('ROCKET')) sfx.rocket();
-      fireRocket();
+      fireRocket(EW.speed, EW.splash);
       break;
     case 'SHOTGUN':
       if (!hasSuppressor('SHOTGUN')) { sfx.shotgun(); setTimeout(() => sfx.shotgun(), 20); }
@@ -418,7 +406,7 @@ export function shoot() {
       camera.getForwardRay(1).direction.normalizeToRef(fwd);
       fwd.y += 0.05; fwd.normalize();
       const origin = camera.position.clone().add(fwd.scale(0.8));
-      fireGrenade('player', origin, fwd, WDEFS.GLAUNCHER.projSpeed, modDmg, WDEFS.GLAUNCHER.splash, hasClusterRounds());
+      fireGrenade('player', origin, fwd, EW.speed || WDEFS.GLAUNCHER.projSpeed, modDmg, EW.splash ?? WDEFS.GLAUNCHER.splash, hasClusterRounds());
       break;
   } 
 
@@ -927,4 +915,8 @@ export function applyExplosionImpulse(explosionPos, maxRadius, force) {
     _zVel += dir.z * power * 2.5;
     _yVel += (dir.y * power * jumpBonus) + (power * 0.4); 
   }
+}
+
+export function movePlayerBody(delta) {
+    if (_playerBody) _playerBody.position.addInPlace(delta);
 }
