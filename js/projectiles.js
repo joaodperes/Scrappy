@@ -12,8 +12,17 @@ import { getCurrentMap } from './mapManager.js';
 
 // ── Player projectiles ────────────────────────────────────────
 export function fireRocket(effSpeed, effSplash) {
-  const fwd = new BABYLON.Vector3(-Math.sin(0) * Math.cos(0), 0, 1); // overridden below
+  const fwd = new BABYLON.Vector3();
   camera.getForwardRay(1).direction.normalizeToRef(fwd);
+  
+  // Apply a tiny random jitter so burst rockets diverge visually
+  if (spread > 0) {
+      fwd.x += (Math.random() - 0.5) * spread;
+      fwd.y += (Math.random() - 0.5) * spread;
+      fwd.z += (Math.random() - 0.5) * spread;
+      fwd.normalize();
+  }
+
   const pos = camera.position.clone().add(fwd.scale(.7));
   pos.y -= .12;
   const g = new BABYLON.TransformNode('rocket', scene);
@@ -40,11 +49,18 @@ export function firePlasma(modDmg, projSpeed) {
   const pos = camera.position.clone().add(fwd.scale(.6));
   pos.y -= .1;
   const mesh = BABYLON.MeshBuilder.CreateSphere('plasma', { diameter:.2, segments:8 }, scene);
-  mesh.position.copyFrom(pos); mesh.material = M.plasmaMat; mesh.isPickable = false;
+  mesh.position.copyFrom(pos);
+  
+  // GUARANTEE IT IS GLOWING BLUE
+  const pMat = new BABYLON.StandardMaterial('pMat', scene);
+  pMat.emissiveColor = new BABYLON.Color3(.27, .53, 1);
+  pMat.disableLighting = true;
+  mesh.material = pMat; 
+  mesh.isPickable = false;
+  
   const light = new BABYLON.PointLight('pLight', pos.clone(), scene);
   light.diffuse = new BABYLON.Color3(.27, .53, 1); light.intensity = 2.0; light.range = 7;
   
-  // Use modDmg if provided, otherwise fallback to WDEFS
   const dmg = modDmg || WDEFS.PLASMA.dmg;
   projs.push({ g:null, mesh, light, dir: fwd.clone(), speed: projSpeed || WDEFS.PLASMA.speed || 40, life: 4, dmg: dmg, splash:0, owner:'player', type:'player_plasma' });
 }
@@ -153,6 +169,30 @@ export function hitscan(meshToEnemy, spread = 0, dmg = 20, range = 90, falloff =
   const hits = scene.multiPickWithRay(ray, m => meshToEnemy.has(m));
   hits.sort((a,b) => a.distance - b.distance);
 
+  const endDist = (hits.length > 0) ? hits[0].distance : (barrelHit?.hit ? barrelHit.distance : range);
+  const endPos = camera.position.clone().add(_rcDir.scale(endDist));
+  
+  const tracer = BABYLON.MeshBuilder.CreateLines('tracer', {
+      points: [flashPos, endPos],
+      updatable: false
+  }, scene);
+  tracer.color = flashColor; // Inherits the cyan/yellow color dynamically
+  tracer.alpha = 0.8;
+  tracer.isPickable = false;
+  
+  // Fade tracer out over ~80ms
+  let fadeTimer = 0;
+  const tracerLife = 0.08; 
+  const onBeforeRender = () => {
+      fadeTimer += scene.getEngine().getDeltaTime() / 1000;
+      tracer.alpha = 1.0 - (fadeTimer / tracerLife);
+      if (fadeTimer >= tracerLife) {
+          tracer.dispose();
+          scene.onBeforeRenderObservable.removeCallback(onBeforeRender);
+      }
+  };
+  scene.onBeforeRenderObservable.add(onBeforeRender);
+
   if (barrelHit?.hit) {
     const enemyDist = hits.length > 0 ? hits[0].distance : Infinity;
     if (barrelHit.distance <= enemyDist) {
@@ -165,13 +205,22 @@ export function hitscan(meshToEnemy, spread = 0, dmg = 20, range = 90, falloff =
     }
   }
 
-  // destructible wall check
+  // destructible wall check — hitscan deals dmg, destroys at hp<=0
   const dWallHit = scene.pickWithRay(ray, m => m.metadata?.destructible && m.isEnabled());
   if (dWallHit?.hit) {
       const wall = dWallHit.pickedMesh;
+      // Apply damage
+      wall.metadata.hp -= dmg;
+      // Orange flash on hit
+      if (wall.material?.emissiveColor) {
+          const orig = wall.material.emissiveColor.clone();
+          wall.material.emissiveColor.set(.9, .35, 0);
+          setTimeout(() => { if (wall.material) wall.material.emissiveColor.copyFrom(orig); }, 110);
+      }
+      spawnSparks(dWallHit.pickedPoint ?? wall.getAbsolutePosition(), 0xff6600, 4);
       if (wall.metadata.hp <= 0) {
+          spawnSparks(wall.getAbsolutePosition(), 0xff8800, 14);
           wall.dispose();
-          // Dynamically import the correct map data to safely rebuild the navmesh
           import('./mapManager.js').then(({ getCurrentMap }) => {
               const map = getCurrentMap();
               const mapPromise = map === 'jungle' ? import('./levelJungle.js') : import('./level.js');

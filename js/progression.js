@@ -1,5 +1,6 @@
 // progression.js – XP, levels, unlocks, challenges, persistence
 // localStorage (offline) + Firebase cross-session sync
+import { player } from './gameState.js';
 
 const XP_BASE = 200, XP_EXP = 1.4;
 export function xpForLevel(level) { return Math.floor(XP_BASE * Math.pow(level, XP_EXP)); }
@@ -256,7 +257,7 @@ export const ATTACHMENTS = {
   napalm_tank: {
     id:'napalm_tank', name:'Napalm Tank', slot:'magazine',
     desc:'+40% tank capacity. Burn longer.',
-    icon:'🔥', mods:{ammoMult:+0.40},
+    icon:'🔥', mods:{ heatMult: -0.40 }, // Changed from ammoMult to heatMult
     visual:{type:'magazine',style:'extended',magScale:1.3},
   },
   wide_nozzle: {
@@ -265,12 +266,30 @@ export const ATTACHMENTS = {
     icon:'📐', mods:{spread:+0.40,range:+0.30},
     visual:{type:'barrel',style:'heavy'},
   },
+  long_barrel_fl: {
+    id:'long_barrel_fl', name:'Long Barrel', slot:'barrel',
+    desc:'+50% range, −25% spread. Longer, tighter flame stream.',
+    icon:'📏', mods:{range:+0.50, spread:-0.25},
+    visual:{type:'barrel',style:'extended'},
+  },
+  efficiency_tank: {
+    id:'efficiency_tank', name:'Efficiency Tank', slot:'magazine',
+    desc:'+35% damage per tick, +30% heat generation per shot. More power, shorter window.',
+    icon:'⚗️', mods:{damage:+0.35, heatMult:+0.30},
+    visual:{type:'magazine',style:'drum',magScale:1.2},
+  },
   // ── Tesla Cannon ──────────────────────────────────────────────────
   amplifier_coil: {
     id:'amplifier_coil', name:'Amplifier Coil', slot:'special',
     desc:'+2 chain targets. Lightning jumps further.',
     icon:'🔗', mods:{chainTargets:+2},
     visual:{type:'barrel',style:'extended'},
+  },
+  magnet_coil: {
+    id:'magnet_coil', name:'Magnet Coil', slot:'special',
+    desc:'+100% chain lightning range.',
+    icon:'🧲', mods:{chainRange:+1.0},   // +1.0 = 100% additive multiplier, handled in player.js
+    visual:{type:'special',style:'energy_coil'},
   },
   capacitor_bank: {
     id:'capacitor_bank', name:'Capacitor Bank', slot:'magazine',
@@ -371,6 +390,12 @@ export const ATTACHMENTS = {
     visual:{type:'special',style:'seasoned_vet'},
     secret:true,
   },
+  rocket_burst: {
+    id:'rocket_burst', name:'Rocket Burst', slot:'special',
+    desc:'Each shot fires 3 rockets in quick succession. Consumes only 1 ammo per burst.',
+    icon:'🚀', mods:{},
+    visual:{type:'special',style:'rocket_burst'},
+  },
 };
 
 export const WEAPON_ATTACHMENT_SLOTS = {
@@ -396,12 +421,12 @@ export const WEAPON_SPECIALS = {
   CHAINGUN:  ['spinning_module', 'carbon_fiber'],
   RAILGUN:   ['power_cell','efficiency_module'],
   PLASMA:    ['dual_trigger','emp_rounds'],
-  ROCKET:    ['seasoned_vet_rocket'],
+  ROCKET:    ['seasoned_vet_rocket','rocket_burst'],
   GLAUNCHER: ['cluster_rounds','seasoned_vet_glauncher'],
   ELECTRON:  ['slow_trigger','freefall_coil','emp_rounds'],
   ION:       ['energy_coil','explosive_bullets','emp_rounds'],
   FLAMETHROWER: [],
-  TESLA:     ['amplifier_coil'],
+  TESLA:     ['amplifier_coil','magnet_coil'],
   CROSSBOW:  ['explosive_tips', 'quick_loader', 'bolt_recovery'],
 };
 
@@ -660,6 +685,13 @@ export const UNLOCK_TABLE = [
   { id:'extended_mag',  weapon:'ROCKET', type:'attachment', challenge:{ track:'damageDealt:ROCKET',            target:22000} },
   { id:'heavy_stock',   weapon:'ROCKET', type:'attachment', challenge:{ track:'multiKillsWith:ROCKET',         target:15  } },
   { id:'folded_stock',  weapon:'ROCKET', type:'attachment', challenge:{ track:'killsOfCombo:scout_ROCKET',     target:20  } }, // rockets vs fast targets
+  { id:'rocket_burst',  weapon:'ROCKET', type:'attachment',
+    challenge:{ desc:'Kill {target} enemies with the Rocket Launcher', track:'killsWith:ROCKET', target:25 } },
+
+  // ── Wonder Weapon secret challenge ──────────────────────────
+  // Tracked under player challenges (no weapon): requires picking up all 3 wonder weapons first
+  { id:'wonder_weapon_secret', type:'playerSkin', secret:true,
+    challenge:{ desc:'Collect all 3 Wonder Weapons in a single run', track:'allWonderWeaponsCollected', target:1 } },
 
   // ── GLAUNCHER ─────────────────────────────────────────────────
   { id:'holo_sight',   weapon:'GLAUNCHER', type:'attachment',
@@ -710,9 +742,9 @@ export const UNLOCK_TABLE = [
 
   // ── ION ───────────────────────────────────────────────────────
   { id:'holo_sight',       weapon:'ION', type:'attachment',
-    challenge:{ desc:'Kill {target} enemies with the Ion Sniper',                    track:'killsWith:ION',              target:5   } },
+    challenge:{ desc:'Kill {target} enemies with the Ion Sniper',                    track:'killsWith:ION',              target:15   } },
   { id:'acog',             weapon:'ION', type:'attachment',
-    challenge:{ desc:'Kill {target} enemies with the Ion Sniper',                    track:'killsWith:ION',              target:15  } },
+    challenge:{ desc:'Get {target} multi-kills with the Ion Sniper',                    track:'multiKillsWith:ION',              target:5  } },
   { id:'thermal',        weapon:'ION', type:'attachment',
     challenge:{ desc:'Kill {target} enemies with the Ion Sniper while scoped',       track:'killsWhileScoped:ION',        target:30  } },
   { id:'extended_barrel',  weapon:'ION', type:'attachment',
@@ -746,18 +778,20 @@ export const UNLOCK_TABLE = [
   { id:'angled_grip',   weapon:'FLAMETHROWER', type:'attachment',
     challenge:{ desc:'Kill {target} enemies while airborne with the Flamethrower', track:'killsWhileJumping:FLAMETHROWER', target:15 } },
   { id:'vertical_grip', weapon:'FLAMETHROWER', type:'attachment',
-    challenge:{ desc:'Kill {target} enemies with the Flamethrower', track:'killsWith:FLAMETHROWER', target:40 } },
+    challenge:{ desc:'Kill {target} enemies with the Flamethrower', track:'damageDealt:FLAMETHROWER', target:40000 } },
   { id:'tactical_grip', weapon:'FLAMETHROWER', type:'attachment',
     challenge:{ desc:'Kill {target} Swarm Hosts with the Flamethrower', track:'killsOfCombo:swarm_host_FLAMETHROWER', target:8 } },
   { id:'heavy_stock',   weapon:'FLAMETHROWER', type:'attachment',
     challenge:{ desc:'Kill {target} Heavy robots with the Flamethrower', track:'killsOfCombo:heavy_FLAMETHROWER', target:20 } },
   { id:'folded_stock',  weapon:'FLAMETHROWER', type:'attachment',
     challenge:{ desc:'Kill {target} enemies with the Flamethrower while airborne', track:'killsWhileJumping:FLAMETHROWER', target:25 } },
+  { id:'efficiency_tank', weapon:'FLAMETHROWER', type:'attachment',
+    challenge:{ desc:'Collect {target} Flamethrower pickups', track:'flamethrowerPickups', target:15 }},
 
   { id:'amplifier_coil', weapon:'TESLA', type:'attachment',
     challenge:{ desc:'Kill {target} enemies with Tesla Chain Lightning', track:'killsWith:TESLA_CHAIN', target:15 } },
-  //{ id:'capacitor_bank', weapon:'TESLA', type:'attachment',
-  //  challenge:{ desc:'Kill {target} Shield Bots with the Tesla Cannon', track:'killsOfCombo:shield_bot_TESLA', target:10 } },
+  { id:'capacitor_bank', weapon:'TESLA', type:'attachment',
+    challenge:{ desc:'Kill {target} Shield Bots with the Tesla Cannon', track:'killsOfCombo:shield_bot_TESLA', target:10 } },
   { id:'holo_sight',     weapon:'TESLA', type:'attachment',
     challenge:{ desc:'Kill {target} enemies while airborne with the Tesla Cannon', track:'killsWhileJumping:TESLA', target:15 } },
   { id:'acog',           weapon:'TESLA', type:'attachment',
@@ -776,6 +810,8 @@ export const UNLOCK_TABLE = [
     challenge:{ desc:'Kill {target} Heavy robots with the Tesla Cannon', track:'killsOfCombo:heavy_TESLA', target:20 } },
   { id:'folded_stock',  weapon:'TESLA', type:'attachment',
     challenge:{ desc:'Kill {target} enemies with the Tesla Cannon', track:'killsWith:TESLA', target:80 } },
+  { id:'magnet_coil', weapon:'TESLA', type:'attachment',
+    challenge:{ desc:'Kill {target} enemies with Tesla Chain Lightning', track:'killsWith:TESLA_CHAIN', target:40 } },
 
   { id:'explosive_tips', weapon:'CROSSBOW', type:'attachment',
     challenge:{ desc:'Kill {target} Teleport Bots with the Crossbow', track:'killsOfCombo:teleport_bot_CROSSBOW', target:10 } },
@@ -1012,6 +1048,8 @@ const _defaultProfile = () => ({
   playerSkin:'default',
   firebaseUid:null,
   stats:{totalKills:0,pvpKills:0,bossWaveClears:0,maxWave:0,killsOfType:{},killsWith:{},killsWhileJumping:{},killsWhileScoped:{},energyPickups:{},bossKillsWith:{}},
+  maxWaveHard: 0,
+  hardModeClears: 0
 });
 
 export let profile = _defaultProfile();
@@ -1313,6 +1351,11 @@ export function recordDamage(weaponKey, amount) {
 export function recordWaveComplete(waveNum, isBoss) {
   if (typeof waveNum!=='number'||isNaN(waveNum)) return;
   profile.stats.maxWave=Math.max(profile.stats.maxWave||0, waveNum);
+
+  if (player.hardMode) {
+      profile.stats.maxWaveHard = Math.max(profile.stats.maxWaveHard||0, waveNum);
+  }
+
   if (isBoss) profile.stats.bossWaveClears=(profile.stats.bossWaveClears||0)+1;
   const n=_checkChallenges(); if(n.length)_showUnlockToasts(n);
   checkProgressMilestones();
@@ -1382,6 +1425,7 @@ function _checkChallenges() {
     else if(track.startsWith('allChallengesComplete:'))val=_allWeaponChallengesComplete(track.split(':')[1])?1:0;
     else if(track === 'barrelDestroys') val = s.barrelDestroys || 0;
     else if(track === 'empStuns') val = s.empStuns || 0;
+    else if(track === 'allWonderWeaponsCollected') val = s.allWonderWeaponsCollected || 0;
     if(val>=target){
       if(u.type==='attachment')profile.unlockedAttachments[u.weapon].push(u.id);
       else if(u.type==='weaponSkin'){if(!profile.unlockedWeaponSkins[u.weapon])profile.unlockedWeaponSkins[u.weapon]=[];profile.unlockedWeaponSkins[u.weapon].push(u.id);}
@@ -1569,8 +1613,8 @@ export function getEffectiveStats(wName, baseDefs) {
       else if (mod === 'spread') out.spread = Math.max(0, (baseDefs.spread || 0) * (1 + delta));
       else if (mod === 'range') out.range = Math.round(baseDefs.range * (1 + delta));
       else if (mod === 'cd') out.cd = Math.max(0.02, baseDefs.cd * (1 + delta));
-      else if (mod === 'speed') out.speed = Math.round((baseDefs.speed || baseDefs.projSpeed || 0) * (1 + delta));
-      else if (mod === 'splash') out.splash = Math.max(0.5, ((baseDefs.splash || 0) * (1 + delta)));
+      else if (mod === 'speed') out.speed = Math.round((baseDefs.speed || 0) * (1 + delta));
+      else if (mod === 'chainRange') out.chainRange = (baseDefs.chainRange || 8) * (1 + delta); // +1.0 = 100% increase
       else if (mod === 'adsSpeedMult') out.adsSpeedMult = (out.adsSpeedMult || 1.0) * delta;
       // Dynamic Magazine and Multiplier Handling
       else if (mod === 'magSize') out.magSize = Math.max(1, (baseDefs.magSize || 0) + delta);
@@ -1615,6 +1659,8 @@ export function hasSeasonedVet(wName){
   return false;
 }
 export function hasFreefallCoil(){ return getLoadout('ELECTRON').attachments?.special==='freefall_coil'; }
+export function hasRocketBurst(){ return getLoadout('ROCKET').attachments?.special==='rocket_burst'; }
+export function hasMagnetCoil(){ return getLoadout('TESLA').attachments?.special==='magnet_coil'; }
 export function hasSuppressor(wName) {
   return getLoadout(wName).attachments?.barrel === 'suppressor';
 }

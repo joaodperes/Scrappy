@@ -13,7 +13,7 @@ import { spawnSparks } from './particles.js';
 import {
   getEffectiveStats, isAkimbo, isAutoFire, hasPowerCell, hasClusterRounds,
   hasLaserDot, hasSlowTrigger, hasDualTrigger, hasEnergyConverter,
-  hasFreefallCoil, hasSuppressor, getSpeedMult,      
+  hasFreefallCoil, hasSuppressor, getSpeedMult, hasRocketBurst, hasMagnetCoil,
   getLoadout, getAdsFov, getScopeShape
 } from './progression.js';
 
@@ -25,7 +25,7 @@ const GRAVITY    = 26;
 const TERM_VEL   = 40;
 const DEFAULT_FOV = 1.48;
 const SCOPE_FOV   = 0.32;
-const COYOTE_TIME = 0.10;  
+const COYOTE_TIME = 0.18;  
 const JUMP_BUFFER = 0.14;  
 
 let _thermalHl = null;
@@ -108,6 +108,9 @@ export function shoot() {
 
   const hasInfiniteAmmo = player.buffs['infinite_ammo'] > 0 || W.ammo === Infinity;
   const isEnergy = W.useHeat || (curWep === 'PLASMA' && hasEnergyConverter());
+  if (curWep === 'PLASMA' && hasDualTrigger() && !player.plasmaAltMode) {
+    if (_burstShotsLeft <= 0) _burstShotsLeft = 3;
+  }
 
   // 1. Energy Logic
   if (isEnergy) {
@@ -285,26 +288,25 @@ export function shoot() {
       
       // Chain lightning to nearby enemies
       if (teslaResult?.hit && teslaResult?.target) {
-          // FIX: amplifier_coil lives in the 'special' slot, not 'barrel'
+          // amplifier_coil is slot:'special' — was previously checking 'barrel' (bug)
           const chainCount = getLoadout('TESLA').attachments?.special === 'amplifier_coil' ? 5 : (W.chainTargets || 3);
+          // magnet_coil doubles chainRange via getEffectiveStats
+          const chainRange = EW.chainRange ?? W.chainRange ?? 8;
           const firstEnemy = teslaResult.target;
           let lastPos = firstEnemy.group.position.clone();
           const chained = new Set([firstEnemy]);
           
-          // Draw bolt from player to first enemy
           const playerPos = camera.position.clone();
-          playerPos.y += 0.5; // Chest height
+          playerPos.y += 0.5;
           const firstEnemyPos = lastPos.clone();
           firstEnemyPos.y += 1.0;
           spawnLightningArc(playerPos, firstEnemyPos);
           
           let delay = 120;
           const chainInterval = 100;
-          // Each chain hop reduces heat — reward for hitting grouped enemies
-          const heatReducePerChain = W.chainHeatReduce || 0;
           
           for (let i = 0; i < chainCount; i++) {
-              let closest = null, closestDist = W.chainRange || 10;
+              let closest = null, closestDist = chainRange;
               for (const e of enemies) {
                   if (!e.alive || chained.has(e)) continue;
                   const d = BABYLON.Vector3.Distance(lastPos, e.group.position);
@@ -312,7 +314,6 @@ export function shoot() {
               }
               if (closest) {
                   const capturedEnemy = closest;
-                  const capturedIndex = i; // capture for setTimeout closure
                   const sourcePos = lastPos.clone();
                   sourcePos.y += 1.0;
                   const targetPos = capturedEnemy.group.position.clone();
@@ -320,15 +321,9 @@ export function shoot() {
                   
                   setTimeout(() => {
                       if (!capturedEnemy.alive) return;
-                      // Exponential 60% falloff per hop — chains stay meaningful longer
-                      const chainDmg = Math.round(modDmg * Math.pow(0.60, capturedIndex + 1));
-                      cb.hitRobot(capturedEnemy, chainDmg, false, false, 'TESLA_CHAIN');
+                      cb.hitRobot(capturedEnemy, Math.round(modDmg * (1 - (i+1) / chainCount)), false, false, 'TESLA_CHAIN');
                       spawnSparks(capturedEnemy.group.position, 0x88ccff, 8);
                       spawnLightningArc(sourcePos, targetPos);
-                      // Cool the weapon for each enemy chained
-                      if (heatReducePerChain > 0) {
-                          W.heat = Math.max(0, (W.heat || 0) - heatReducePerChain);
-                      }
                   }, delay);
                   delay += chainInterval;
                   lastPos = capturedEnemy.group.position.clone();
@@ -387,11 +382,18 @@ export function shoot() {
     case 'PLASMA':
       if (!hasSuppressor('PLASMA')) sfx.plasma();
       if (player.plasmaAltMode) { hitscan(_meshToEnemy, spread * spreadMult, modDmg, range, 0); }
-      else { firePlasma(modDmg, EW.speed || 40); }
+      else { firePlasma(modDmg); }
       break;
     case 'ROCKET':
       if (!hasSuppressor('ROCKET')) sfx.rocket();
-      fireRocket(EW.speed, EW.splash);
+      if (hasRocketBurst()) {
+        // Fire 3 rockets in quick succession, consuming only 1 ammo (ammo already deducted above)
+        fireRocket(EW.speed, EW.splash);
+        setTimeout(() => { if (gameRunning) fireRocket(EW.speed, EW.splash); },  90);
+        setTimeout(() => { if (gameRunning) fireRocket(EW.speed, EW.splash); }, 180);
+      } else {
+        fireRocket(EW.speed, EW.splash);
+      }
       break;
     case 'SHOTGUN':
       if (!hasSuppressor('SHOTGUN')) { sfx.shotgun(); setTimeout(() => sfx.shotgun(), 20); }
@@ -406,7 +408,7 @@ export function shoot() {
       camera.getForwardRay(1).direction.normalizeToRef(fwd);
       fwd.y += 0.05; fwd.normalize();
       const origin = camera.position.clone().add(fwd.scale(0.8));
-      fireGrenade('player', origin, fwd, EW.speed || WDEFS.GLAUNCHER.projSpeed, modDmg, EW.splash ?? WDEFS.GLAUNCHER.splash, hasClusterRounds());
+      fireGrenade('player', origin, fwd, WDEFS.GLAUNCHER.projSpeed, modDmg, WDEFS.GLAUNCHER.splash, hasClusterRounds());
       break;
   } 
 
@@ -588,13 +590,18 @@ export function updatePlayer(dt, gameRunning, paused) {
   // Akimbo no longer forces full-auto trigger mapping
   if (mouseHeld && isAuto) shoot();
 
-  const canJump    = player.onGround || (_coyoteTimer > 0);
+  // Use _wasOnGround (set end of prev frame) so jump works even when
+  // moveWithCollisions causes a micro-separation during the same frame.
+  const canJump    = _wasOnGround || player.onGround || (_coyoteTimer > 0);
   const jumpWanted = keys['Space'] || (_jumpBufTimer > 0);
   if (jumpWanted && canJump) {
     _yVel           = JV;
     player.onGround = false;
+    _wasOnGround    = false;   // prevent double-jump on same latch
     _coyoteTimer    = 0;
     _jumpBufTimer   = 0;
+    // Detach the collision body slightly off the floor mesh to prevent horizontal drag.
+    _playerBody.position.y += 0.02;
   }
 
   if (player.onGround) {

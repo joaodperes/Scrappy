@@ -495,9 +495,25 @@ export function spawnBot(type, _x, _spawnY_IGNORED, _z, scale = 1.0) {
     }
   }
   const e = buildRobot(type);
-  e.hp = Math.round(e.hp * scale); e.maxHp = Math.round(e.maxHp * scale);
-  e.dmg = Math.round(e.dmg * scale);
-  e.speed = e.speed * (0.85 + 0.15 * Math.min(scale, 2.0));
+  let hpMod = scale;
+  let dmgMod = scale;
+  let speedMod = scale;
+    
+  if (player.hardMode) {
+    hpMod *= 1.3;
+    dmgMod *= 1.2;
+    speedMod *= 1.5;
+    e.score *= 2; // Double score
+  }
+
+  e.hp = Math.round(e.hp * hpMod); 
+  e.maxHp = Math.round(e.maxHp * hpMod);
+  e.dmg = Math.round(e.dmg * dmgMod);
+  if (type === 'ninja') {
+    e.speed = e.speed * speedMod;
+  } else {
+    e.speed = e.speed * (0.85 + 0.15 * Math.min(scale, 2.0));
+  }
   if (type === 'giantbot') {
       e.group.scaling.set(3, 3, 3);
   }

@@ -1,5 +1,5 @@
 // waves.js – wave composition and spawning for solo mode
-import { enemies } from './gameState.js';
+import { enemies, player } from './gameState.js';
 import { spawnBot } from './enemies.js';
 import { sfx } from './audio.js';
 import { getCurrentMap } from './mapManager.js';
@@ -66,31 +66,54 @@ const _INTRO_WAVE = {
   grenadier: 14,
 };
 
-// Add them to the open pool for wave 15+
-const _BOT_POOL = ['scout', 'drone', 'heavy', 'ninja', 'sniper', 'electron_bot', 'armored', 'ion_sniper', 'pistol', 'shotgun', 'rocket', 'grenadier'];
+
 function _isBossWave(idx) {
   // idx is 0-based; wave number = idx + 1.
   // Boss on waves 10, 20, 30 … → idx 9, 19, 29 …
   return (idx + 1) % 10 === 0;
 }
 
-export function getWaveComposition(idx) {
-  const waveNum = idx + 1; // human-readable wave number
+const ALL_BOTS_POOL = ['scout', 'drone', 'heavy', 'ninja', 'sniper', 'electron_bot', 'armored', 'ion_sniper', 'pistol', 'shotgun', 'rocket', 'grenadier', 'medic_bot', 'shield_bot', 'teleport_bot', 'swarm_host'];
 
-  // ── BOSS WAVES (10, 20, 30 …) ────────────────────────────────
+export function getWaveComposition(idx) {
+  const waveNum = idx + 1; 
+  
+  // ── 1. BOSS WAVES (10, 20, 30 …) ──
   if (_isBossWave(idx)) {
-    // Scale minion count by boss number (1× on wave 10, 2× on wave 20, …)
     const bossNum = Math.floor(waveNum / 10);
-    // Minions: only types already introduced by the PREVIOUS wave
-    const availableMinions = _currentScenario().botPool.filter(t => _currentScenario().introWave[t] < waveNum);
-    const comp = [{ type: 'giantbot', count: 1 }];
+    // HARD MODE: Spawn extra bosses on wave 20, 30, etc.
+    const numBosses = (player.hardMode && waveNum >= 20) ? bossNum : 1;
+    
+    const availableMinions = player.hardMode 
+        ? ALL_BOTS_POOL 
+        : _currentScenario().botPool.filter(t => _currentScenario().introWave[t] < waveNum);
+        
+    const comp = [{ type: 'giantbot', count: numBosses }];
     for (const t of availableMinions) {
-      comp.push({ type: t, count: bossNum });
+      comp.push({ type: t, count: bossNum }); // Scale minions with boss wave
     }
     return comp;
   }
 
-  // ── INTRODUCTION PHASE (waves 1–12 hand-tuned) ───────────────
+  // ── 2. NORMAL WAVES ──
+  // HARD MODE: Skip intros, full pool, higher budget
+  if (player.hardMode) {
+      const budget = Math.min(6 + Math.floor(waveNum * 0.9), 45);
+      const comp = [];
+      let remaining = budget;
+      const shuffled = ALL_BOTS_POOL.slice().sort(() => Math.random() - 0.5);
+
+      for (const t of shuffled) {
+        if (remaining <= 0) break;
+        const max = Math.max(1, Math.floor(remaining * 0.35));
+        const count = 1 + Math.floor(Math.random() * max);
+        comp.push({ type: t, count: Math.min(count, remaining) });
+        remaining -= count;
+      }
+      return comp;
+  }
+
+  // ── INTRODUCTION PHASE (waves 1–14 hand-tuned) ───────────────
   // All types introduced by this wave
   const available = _currentScenario().botPool.filter(t => _currentScenario().introWave[t] <= waveNum);
 
@@ -164,14 +187,26 @@ export function launchWave(idx) {
   const scale = Math.max(0.40, 0.40 + idx * 0.10);
   const isBoss = _isBossWave(idx);
   const waveLabel = isBoss ? '⚠ BOSS WAVE ' + (idx + 1) + ' ⚠' : 'WAVE ' + (idx + 1);
-
   const comp = getWaveComposition(idx);
   let si = 0;
+  
   for (const grp of comp) {
-    for (let i = 0; i < grp.count; i++) {
-      const sp = SPAWNS[si % SPAWNS.length];
-      spawnBot(grp.type, sp[0]+(Math.random()-.5)*2, sp[1], sp[2]+(Math.random()-.5)*2, scale);
-      si++;
+    // MULTI-BOSS STAGGERING
+    if (grp.type === 'giantbot' && grp.count > 1) {
+        for (let i = 0; i < grp.count; i++) {
+            setTimeout(() => {
+                // Spawn on opposite sides
+                const sp = i % 2 === 0 ? [25, 0, 25] : [-25, 0, -25];
+                spawnBot('giantbot', sp[0], sp[1], sp[2], scale);
+            }, i * 3000); // 3 seconds apart
+        }
+    } else {
+        // STANDARD MINION SPAWNING
+        for (let i = 0; i < grp.count; i++) {
+          const sp = SPAWNS[si % SPAWNS.length];
+          spawnBot(grp.type, sp[0]+(Math.random()-.5)*2, sp[1], sp[2]+(Math.random()-.5)*2, scale);
+          si++;
+        }
     }
   }
   waveOn = true;

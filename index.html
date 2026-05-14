@@ -113,9 +113,9 @@
 
     // 4. Unlock Game & Inject Name into UI
     function enableGame(displayName) {
-       startBtn.style.display = 'inline-block';
-       pvpBtn.style.display = 'inline-block';
-       document.getElementById('mapSelectSection').style.display = 'flex';
+      startBtn.style.display = 'inline-block';
+      pvpBtn.style.display = 'inline-block';
+      document.getElementById('mapSelectSection').style.display = 'flex';
       document.getElementById('leaderboardSection').style.display = 'block';
        
        // Pre-fill and lock the PvP Lobby input
@@ -139,7 +139,7 @@
 body { background:#000; overflow:hidden; font-family:'Arial',sans-serif; }
 #c { display:block; width:100vw; height:100vh; }
 
-.screen { position:fixed; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; transition:opacity .35s; }
+.screen { position:fixed; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; transition:opacity .35s; z-index: 1000; }
 .screen.hidden  { opacity:0; pointer-events:none; }
 .screen.visible { opacity:1; pointer-events:all; }
 
@@ -161,7 +161,7 @@ body { background:#000; overflow:hidden; font-family:'Arial',sans-serif; }
 #leaderboardSection h3 { color:#7a9940; font-size:12px; letter-spacing:4px; margin-bottom:8px; text-transform:uppercase; }
 #leaderboardList { list-style:none; color:#88aa44; font-size:13px; line-height:1.9; background:rgba(0,0,0,.4); border:1px solid #2a3810; border-radius:4px; padding:8px 14px; text-align:left; }
 
-#hud { position:fixed; inset:0; pointer-events:none; display:none; }
+#hud { position:fixed; inset:0; pointer-events:none; display:none; z-index: 500; }
 #crosshair { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:4px; height:4px; background:rgba(255,255,200,.95); border-radius:50%; box-shadow:0 0 0 1px rgba(0,0,0,.5),0 0 5px rgba(255,255,180,.4); }
 #crosshair::before,#crosshair::after { content:''; position:absolute; background:rgba(255,255,200,.75); }
 #crosshair::before { width:12px; height:1px; top:50%; left:8px; transform:translateY(-50%); }
@@ -219,7 +219,7 @@ body { background:#000; overflow:hidden; font-family:'Arial',sans-serif; }
 #playerNameInput { padding:10px 14px; font-size:16px; background:#0d1a05; color:#d8f030; border:1px solid #557733; border-radius:3px; letter-spacing:2px; width:200px; }
 #playerNameInput::placeholder { color:#446622; }
 
-#pauseOverlay { position:fixed; inset:0; background:rgba(0,0,0,.55); display:none; align-items:center; justify-content:center; flex-direction:column; }
+#pauseOverlay { position:fixed; inset:0; background:rgba(0,0,0,.55); display:none; align-items:center; justify-content:center; flex-direction:column; z-index: 2000; }
 #pauseOverlay h2 { color:#d8f030; font-size:38px; font-weight:900; margin-bottom:20px; letter-spacing:4px; }
 #pauseOverlay p  { color:#88aa44; font-size:15px; }
 
@@ -260,6 +260,9 @@ body { background:#000; overflow:hidden; font-family:'Arial',sans-serif; }
       <option value="scrapyard">🏭 SCRAPYARD</option>
       <option value="jungle">🌴 TEMPLE RUINS</option>
     </select>
+    <label style="color:#E85E76; font-size:14px; font-weight:bold; cursor:pointer; margin-left: 10px; letter-spacing: 2px;">
+      <input type="checkbox" id="hardModeToggle"> ⚡ HARD
+    </label>
   </div>
   <button class="btn" id="startBtn" style="display:none;">&#9654; SOLO RUN</button>
   <button class="btn" id="pvpBtn" style="display:none;background:linear-gradient(to bottom,#2a1a50,#10082a);border-color:#5533aa;color:#c8aaff;">&#9876; PvP TDM</button>  <div class="controls-hint">
@@ -267,31 +270,34 @@ body { background:#000; overflow:hidden; font-family:'Arial',sans-serif; }
     <b>Shift</b> Sprint &nbsp;|&nbsp; <b>Space</b> Jump &nbsp;|&nbsp; <b>1/2/3</b> Weapon &nbsp;|&nbsp; <b>Q</b> Quick-swap &nbsp;|&nbsp; <b>F</b> Pick up &nbsp;|&nbsp; <b>ESC</b> Pause
   </div>
   <div id="leaderboardSection" style="display:none">
-    <h3>&#127942; Top Scores</h3>
-    <ul id="leaderboardList"><li style="color:#557733">LOADING&#8230;</li></ul>
+  <div style="display:flex; justify-content:center; gap:10px; margin-bottom: 8px;">
+    <button id="lbStandardBtn" class="btn-sm" style="border-color:#15CAB6; color:#15CAB6;">STANDARD</button>
+    <button id="lbHardBtn" class="btn-sm" style="border-color:#5F6B6D; color:#ADAEB5;">⚡ HARD</button>
   </div>
+  <ul id="leaderboardList"><li style="color:#557733">LOADING…</li></ul>
 </div>
 
-<div id="pvpLobby">
-  <h2>&#9876; PvP Lobby</h2>
-  <div class="pvpField">
-    <label>Your Name</label>
-    <input id="pvpName" maxlength="20" placeholder="ANON" />
-  </div>
-  <div class="pvpField">
-    <label>Room Code (share with friends)</label>
-    <input id="pvpRoom" maxlength="32" placeholder="scrappy-room-1" />
-  </div>
-  <div class="pvpField">
-    <label>Server URL</label>
-    <input id="pvpServer" value="ws://localhost:8080" />
-  </div>
-  <p style="color:#6644aa;font-size:12px;letter-spacing:1px;text-align:center;max-width:340px">
-    10-min Team Deathmatch &#8212; teams auto-assigned &#8212; respawn 5s &#8212; most kills wins
-  </p>
-  <div style="display:flex;gap:10px;margin-top:6px">
-    <button class="btn" id="pvpStartBtn" style="background:linear-gradient(to bottom,#2a1a50,#10082a);border-color:#5533aa;color:#c8aaff;">JOIN / CREATE</button>
-    <button class="btn-sm" id="pvpBackBtn">&#8592; BACK</button>
+  <div id="pvpLobby">
+    <h2>&#9876; PvP Lobby</h2>
+    <div class="pvpField">
+      <label>Your Name</label>
+      <input id="pvpName" maxlength="20" placeholder="ANON" />
+    </div>
+    <div class="pvpField">
+      <label>Room Code (share with friends)</label>
+      <input id="pvpRoom" maxlength="32" placeholder="scrappy-room-1" />
+    </div>
+    <div class="pvpField">
+      <label>Server URL</label>
+      <input id="pvpServer" value="ws://localhost:8080" />
+    </div>
+    <p style="color:#6644aa;font-size:12px;letter-spacing:1px;text-align:center;max-width:340px">
+      10-min Team Deathmatch &#8212; teams auto-assigned &#8212; respawn 5s &#8212; most kills wins
+    </p>
+    <div style="display:flex;gap:10px;margin-top:6px">
+      <button class="btn" id="pvpStartBtn" style="background:linear-gradient(to bottom,#2a1a50,#10082a);border-color:#5533aa;color:#c8aaff;">JOIN / CREATE</button>
+      <button class="btn-sm" id="pvpBackBtn">&#8592; BACK</button>
+    </div>
   </div>
 </div>
 

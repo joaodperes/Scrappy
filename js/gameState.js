@@ -15,6 +15,7 @@ export const player = {
   score: 0,
   onGround: false, yVel: 0,
   buffs: {},
+  hardMode: false,
   
   // New weapon state tracking:
   wepHeat: 0,

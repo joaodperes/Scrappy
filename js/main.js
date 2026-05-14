@@ -88,6 +88,8 @@ function _hideAllScreens() {
 
 // ── Solo PvE ───────────────────────────────────────────────────
 function startGame(startWave = 0) {
+  // Capture Hard Mode state BEFORE resetting everything
+  player.hardMode = document.getElementById('hardModeToggle')?.checked || false;
   ensureAudio();
   player.hp = 100; player.armor = 0; player.score = 0;
   player.yVel = 0; player.onGround = true; player.buffs = {};
@@ -134,8 +136,6 @@ function startGame(startWave = 0) {
   if (window._hazardZones) window._hazardZones.length = 0;
   if (window._movingPlatforms) window._movingPlatforms.length = 0;
   if (window._powerSwitches) window._powerSwitches.length = 0;
-  // Reset navmesh
-  navPlugin.createNavMesh([], { /* empty */ }); // clear old navmesh
 
   if (currentMap === 'jungle') {
     import('./levelJungle.js').then(mod => {
@@ -327,8 +327,32 @@ function openLoadout(returnToGame = false) {
       container.appendChild(db);
     }
   }
-
   
+  document.getElementById('lbStandardBtn')?.addEventListener('click', () => {
+    const btnS = document.getElementById('lbStandardBtn');
+    const btnH = document.getElementById('lbHardBtn');
+    if (btnS && btnH) {
+        btnS.style.borderColor = '#15CAB6'; btnS.style.color = '#15CAB6';
+        btnH.style.borderColor = '#5F6B6D'; btnH.style.color = '#ADAEB5';
+    }
+    import('./leaderboard.js').then(mod => {
+        if (mod.setLeaderboardMode) mod.setLeaderboardMode('solo');
+        if (mod.renderLeaderboard) mod.renderLeaderboard();
+    });
+  });
+
+  document.getElementById('lbHardBtn')?.addEventListener('click', () => {
+    const btnS = document.getElementById('lbStandardBtn');
+    const btnH = document.getElementById('lbHardBtn');
+    if (btnS && btnH) {
+        btnH.style.borderColor = '#15CAB6'; btnH.style.color = '#15CAB6';
+        btnS.style.borderColor = '#5F6B6D'; btnS.style.color = '#ADAEB5';
+    }
+    import('./leaderboard.js').then(mod => {
+        if (mod.setLeaderboardMode) mod.setLeaderboardMode('hard');
+        if (mod.renderLeaderboard) mod.renderLeaderboard();
+    });
+  });
 
   // Inject mode label + loadout button into pause overlay
   const pauseOverlay = document.getElementById('pauseOverlay');
@@ -380,7 +404,11 @@ function openLoadout(returnToGame = false) {
 })();
 
 // ── Score submission ───────────────────────────────────────────
-wireDeathSubmit((name, score) => submitScore(name, score, curWave, 'solo', getCurrentMap()));
+wireDeathSubmit((name, score) => {
+    const mode = player.hardMode ? 'hard' : 'solo';
+    const finalName = player.hardMode ? `[HARD] ${name}` : name;
+    submitScore(finalName, score, curWave, mode, getCurrentMap());
+});
 
 // ── Texture gate ───────────────────────────────────────────────
 const _gatedBtns = ['startBtn','pvpBtn','loadoutBtn','respawnBtn','victoryBtn'];
@@ -526,20 +554,21 @@ engine.runRenderLoop(() => {
       }
   }
 
- // Check hazard zones (lava damage)
+ // Check hazard zones (lava / spike damage) — uses FEET position, not camera eye
   if (window._hazardZones && window._hazardZones.length > 0) {
     for (const haz of window._hazardZones) {
       const px = camera.position.x;
       const pz = camera.position.z;
-      const py = camera.position.y; 
+      const pfeet = camera.position.y - PH; // feet = eye - stand height
       const hx = haz.position.x;
       const hz = haz.position.z;
       const hy = haz.position.y;
       const hw = haz.metadata.halfWidth;
       const hd = haz.metadata.halfDepth;
-      const hh = haz.metadata.halfHeight || 5; // Define a default height if missing
-      if (px > hx - hw && px < hx + hw && 
-          py > hy - hh && py < hy + hh && // New Y-axis check
+      // halfHeight explicitly set on jungle hazards (0.45-0.55); fallback 0.8 for others
+      const hh = haz.metadata.halfHeight ?? 0.8;
+      if (px > hx - hw && px < hx + hw &&
+          pfeet >= hy - hh && pfeet <= hy + hh &&
           pz > hz - hd && pz < hz + hd) {
           hurtPlayer((haz.metadata?.dps || 15) * dt, { hazardType: haz.metadata.hazardType });
       }

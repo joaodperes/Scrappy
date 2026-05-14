@@ -7,27 +7,34 @@ import { hasLaserDot, isAkimbo, hasEnergyConverter, getEffectiveStats, getLoadou
 import { isScoped } from './player.js'
 
 export const WDEFS = {
-  PISTOL:   { name:'PISTOL', dmg:20, range:60, cd:.18, hitscan:true, ammo:24, aps:1, spread:.0, pellets:1, startAmmo:24, falloff:0.30, magSize:12, currentMag:12, reloadTime:1.2, headshotMult: 1.5 },
-  SMG:      { name:'SMG',      dmg:11, range:40, cd:.09, hitscan:true, ammo:0, aps:1, spread:.025, pellets:1, startAmmo:45, falloff:0.65, magSize: 30, currentMag: 30, reloadTime: 1.5 },
-  SHOTGUN:  { name:'SHOTGUN',  dmg:32, range:25, cd:.22, hitscan:true, ammo:0, aps:1, spread:0.10, pellets:10, startAmmo:16, falloff:0.80, magSize: 8,  currentMag: 8, reloadTime: 1.8 },
-  CHAINGUN: { name:'CHAINGUN', dmg:14, range:30, cd:.08, hitscan:true, ammo:0, aps:1, spread:.055, pellets:1, startAmmo:150, falloff:0.70, magSize: 100, currentMag: 100, reloadTime: 2.8 },
-  RAILGUN:  { name:'RAILGUN',  dmg:110, range:130, cd:1.8, hitscan:true, ammo:0, aps:1, spread:.0, pellets:1, startAmmo:6, falloff:0.00, magSize: 6, currentMag: 6, reloadTime: 2.4, pvpDmgMult:0.75 },
-  ROCKET:   { name:'ROCKET LAUNCHER', dmg:95, range:80, cd:1.2, hitscan:false, ammo:0, aps:1, pellets:1, startAmmo:6, speed:16, splash:4.5, falloff:0.00, magSize: 8, currentMag: 8, reloadTime: 2.2, headshotMult: 1.0, pvpDmgMult:0.80 },
-  GLAUNCHER: { name:'LAUNCHER', dmg:95, range:60, cd:0.8, hitscan:false, ammo:0, aps:1, spread:0.02, pellets:1, startAmmo:12, falloff:0, projSpeed: 30, splash: 7.0, magSize: 8, currentMag: 8, reloadTime: 2.0, headshotMult: 1.0 },
-  
+  PISTOL:   { name:'PISTOL', desc:'A reliable semi-auto sidearm. Low recoil and high accuracy make it deadly at range — and a headshot specialist in the right hands.', dmg:20, range:60, cd:.18, hitscan:true, ammo:24, aps:1, spread:.0, pellets:1, startAmmo:24, falloff:0.30, magSize:12, currentMag:12, reloadTime:1.2, headshotMult: 1.5 },
+  SMG:      { name:'SMG', desc:'High fire rate with tight hip-fire spread. Built for aggressive close-quarters play and corridor clearing.', dmg:11, range:40, cd:.09, hitscan:true, ammo:0, aps:1, spread:.025, pellets:1, startAmmo:45, falloff:0.65, magSize: 30, currentMag: 30, reloadTime: 1.5 },
+  SHOTGUN:  { name:'SHOTGUN', desc:'Ten-pellet devastation at close range. Each trigger pull delivers a wall of lead that few targets survive.', dmg:32, range:25, cd:.22, hitscan:true, ammo:0, aps:1, spread:0.10, pellets:10, startAmmo:16, falloff:0.80, magSize: 8, currentMag: 8, reloadTime: 1.8 },
+  CHAINGUN: { name:'CHAINGUN', desc:'The DPS king. Spins up slowly but rewards patience — sustained fire shreds armoured targets and crowds alike.', dmg:16, range:30, cd:.08, hitscan:true, ammo:0, aps:1, spread:.055, pellets:1, startAmmo:150, falloff:0.55, magSize: 100, currentMag: 100, reloadTime: 2.8 },
+  RAILGUN:  { name:'RAILGUN', desc:'One-shot precision that penetrates multiple enemies in a line. Slow but unmatched stopping power at any range.', dmg:110, range:130, cd:1.8, hitscan:true, ammo:0, aps:1, spread:.0, pellets:1, startAmmo:6, falloff:0.00, magSize: 6, currentMag: 6, reloadTime: 2.4, pvpDmgMult:0.75 },
+  ROCKET:   { name:'ROCKET LAUNCHER', desc:'High-damage area denial. Splash radius punishes grouped enemies and enables rocket-jumping to unreachable heights.', dmg:95, range:80, cd:1.2, hitscan:false, ammo:0, aps:1, pellets:1, startAmmo:6, speed:16, splash:4.5, falloff:0.00, magSize: 8, currentMag: 8, reloadTime: 2.2, headshotMult: 1.0, pvpDmgMult:0.80 },
+  GLAUNCHER: { name:'LAUNCHER', desc:'Lobs bouncing explosive rounds that detonate on impact or after a short fuse. Excellent for clearing corners and entrenched cover.', dmg:95, range:60, cd:0.8, hitscan:false, ammo:0, aps:1, spread:0.02, pellets:1, startAmmo:12, falloff:0, projSpeed: 30, splash: 7.0, magSize: 8, currentMag: 8, reloadTime: 2.0, headshotMult: 1.0 },
+
   // Energy
-  ELECTRON: { name:'ELECTRON', dmg:25, range:60, cd:.12, hitscan:true, ammo:Infinity, aps:1, spread:.0, pellets:1, startAmmo:Infinity, falloff:0.40, heat: 0, maxHeat: 100, coolRate: 35, useHeat: true, heatPerShot: 0.09, headshotMult: 2.0 },
-  ION:      { name:'ION',      dmg:85, range:120, cd:1.2, hitscan:true, ammo:Infinity, aps:1, spread:.0,  pellets:1, startAmmo:Infinity, falloff:0.10, heat: 0, maxHeat: 100, coolRate: 20, useHeat: true, heatPerShot: 0.40, pvpDmgMult:0.60 },
-  
+  ELECTRON: { name:'ELECTRON', desc:'Heat-based beam weapon. Continuous fire overheats quickly but deals exceptional headshot multipliers.', dmg:25, range:60, cd:.12, hitscan:true, ammo:Infinity, aps:1, spread:.0, pellets:1, startAmmo:Infinity, falloff:0.40, heat: 0, maxHeat: 100, coolRate: 35, useHeat: true, heatPerShot: 0.09, headshotMult: 2.0 },
+  ION:      { name:'ION', desc:'Charged plasma sniper. Massive single-shot damage with brutal heat build-up — one miss is costly.', dmg:85, range:120, cd:1.2, hitscan:true, ammo:Infinity, aps:1, spread:.0, pellets:1, startAmmo:Infinity, falloff:0.10, heat: 0, maxHeat: 100, coolRate: 20, useHeat: true, heatPerShot: 0.40, pvpDmgMult:0.60 },
+
   // Plasma defaults to Ballistic until 'Energy Converter' is equipped
-  PLASMA:   { name:'PLASMA',   dmg:20, range:60, cd:.15, hitscan:false, ammo:0, aps:1, spread:.02, pellets:1, startAmmo:60, falloff:0.0, magSize: 30, currentMag: 30, reloadTime: 1.8, heat: 0, maxHeat: 100, coolRate: 40, heatPerShot: 0.20, headshotMult: 1.5 },
-  // ── Jungle Map Weapons  ──────
-  // FLAMETHROWER: energy weapon — heatPerShot lowered for ~3.8s spray window; reloadTime removed (heat system only)
-  FLAMETHROWER: { name:'FLAMETHROWER', dmg:8, range:15, cd:.05, hitscan:true, ammo:Infinity, aps:1, spread:.15, pellets:1, startAmmo:Infinity, falloff:0.90, mapExclusive:'jungle', useHeat:true, heatPerShot:0.013, maxHeat:100, coolRate:45, dotDamage:8, dotDuration:4, headshotMult: 1.0 },
-  // TESLA: energy weapon — chain hops reduce heat; exponential chain falloff; increased range/damage
-  TESLA:      { name:'TESLA CANNON', dmg:40, range:50, cd:.75, hitscan:true, ammo:Infinity, aps:1, spread:.02, pellets:1, startAmmo:Infinity, falloff:0.25, mapExclusive:'jungle', useHeat:true, heat:0, maxHeat:100, heatPerShot:0.32, coolRate:18, chainTargets:3, chainRange:10, chainHeatReduce:0.10 },
-  // CROSSBOW: reduced base dmg and headshotMult — headshot still lethal, body shots need follow-up; pvpDmgMult for future PvP
-  CROSSBOW:   { name:'CROSSBOW', dmg:55, range:80, cd:1.5, hitscan:true, ammo:12, aps:1, spread:.0, pellets:1, startAmmo:12, falloff:0.10, magSize:1, currentMag:1, reloadTime:0.9, mapExclusive:'jungle', retrievable:true, projSpeed:60, headshotMult: 2.0, pvpDmgMult:0.85 },
+  PLASMA:   { name:'PLASMA', desc:'Rapid-fire energy bolts with a dual heat/magazine system. Unlock the Dual Trigger to switch between burst and sniper modes.', dmg:25, range:60, cd:.22, hitscan:false, ammo:0, aps:1, spread:.02, pellets:1, startAmmo:60, falloff:0.20, magSize: 30, currentMag: 30, reloadTime: 1.8, heat: 0, maxHeat: 100, coolRate: 40, heatPerShot: 0.20, headshotMult: 1.5 },
+
+  // ── Jungle Map Weapons ───────────────────────────────────────
+  // Flamethrower: energy weapon — heatPerShot lowered for ~3.8s spray window
+  FLAMETHROWER: { name:'FLAMETHROWER', desc:'Short-range fire stream applying a burn-over-time effect. Devastating in tight corridors. Jungle map exclusive.', dmg:8, range:15, cd:.05, hitscan:true, ammo:Infinity, aps:1, spread:.15, pellets:1, startAmmo:Infinity, falloff:0.90, mapExclusive:'jungle', useHeat:true, heatPerShot:0.045, maxHeat:100, coolRate:30, dotDamage:8, dotDuration:4, headshotMult: 1.0 },
+  // Tesla: energy weapon — chain hops reduce heat; exponential chain falloff
+  TESLA:    { name:'TESLA CANNON', desc:'Arc-lightning cannon that chains electricity between nearby enemies. The Amplifier Coil pushes chain count from 3 to 5 targets.', dmg:40, range:50, cd:.75, hitscan:true, ammo:Infinity, aps:1, spread:.02, pellets:1, startAmmo:Infinity, falloff:0.25, mapExclusive:'jungle', useHeat:true, heat:0, maxHeat:100, heatPerShot:0.32, coolRate:18, chainTargets:3, chainRange:10, chainHeatReduce:0.10 },
+  // Crossbow: reduced base dmg — headshot still lethal, body shots need follow-up
+  CROSSBOW: { name:'CROSSBOW', desc:'Silent, high-damage bolt with an extreme headshot multiplier. Bolts can be retrieved from downed enemies. Jungle map exclusive.', dmg:55, range:80, cd:1.5, hitscan:true, ammo:12, aps:1, spread:.0, pellets:1, startAmmo:12, falloff:0.10, magSize:1, currentMag:1, reloadTime:0.9, mapExclusive:'jungle', retrievable:true, projSpeed:60, headshotMult: 2.0, pvpDmgMult:0.85 },
+
+  // ── Wonder Weapons (boss drops only — wonderWeapon:true prevents loadout/ammo pickup) ──
+  THUNDERBOLT: { name:'THUNDERBOLT', desc:'Instant AOE lightning — chains to ALL enemies within 20m simultaneously. Full damage, no falloff. Only 2 shots.', dmg:120, range:20, cd:1.5, hitscan:true, ammo:2, aps:1, spread:.0, pellets:1, startAmmo:2, falloff:0, wonderWeapon:true, useHeat:false, magSize:2, currentMag:2, reloadTime:2.0, splash:20, headshotMult:1.0 },
+  SINGULARITY: { name:'SINGULARITY', desc:'Fires a gravity well that pulls all enemies within 12m for 3 seconds, then implodes for 200 damage. 3 shots.', dmg:200, range:90, cd:2.0, hitscan:false, ammo:3, aps:1, pellets:1, startAmmo:3, speed:18, splash:12, falloff:0, wonderWeapon:true, magSize:3, currentMag:3, reloadTime:2.5, headshotMult:1.0 },
+  PYROCLAST:  { name:'PYROCLAST', desc:'Fires 6 simultaneous flame streams in a wide cone. DoT 20/s for 5 seconds. 4 shots.', dmg:40, range:18, cd:1.2, hitscan:true, ammo:4, aps:1, spread:.35, pellets:6, startAmmo:4, falloff:0.85, wonderWeapon:true, useHeat:false, magSize:4, currentMag:4, reloadTime:2.0, dotDamage:20, dotDuration:5, headshotMult:1.0 },
+  OMEGA_STORM: { name:'OMEGA STORM', desc:'SECRET WONDER WEAPON. Fires a perpetual storm of all three effects simultaneously. 1 shot.', dmg:150, range:25, cd:3.0, hitscan:true, ammo:1, aps:1, spread:.2, pellets:8, startAmmo:1, falloff:0, wonderWeapon:true, secret:true, magSize:1, currentMag:1, reloadTime:3.0, splash:15, dotDamage:25, dotDuration:6, headshotMult:1.0 },
 };
 
 export const WCOLORS = {
@@ -35,6 +42,7 @@ export const WCOLORS = {
   CHAINGUN:0xff3300, RAILGUN:0x00ffcc, PLASMA:0x4488ff, ROCKET:0xcc3300,
   GLAUNCHER:0x44cc44, ELECTRON:0x00ccff, ION:0xaa44ff,
   FLAMETHROWER:0xff4400, TESLA:0x8844ff, CROSSBOW:0x88aa44,
+  THUNDERBOLT:0xffee00, SINGULARITY:0xcc00ff, PYROCLAST:0xff2200, OMEGA_STORM:0xffffff,
 };
 
 export const ROBOT_DROPS = {
@@ -701,6 +709,10 @@ const WPOS = {
   FLAMETHROWER: new BABYLON.Vector3(.30,-.34, .62),
   TESLA: new BABYLON.Vector3(.34,-.35, .66),
   CROSSBOW: new BABYLON.Vector3(.34,-.34, .62),
+  THUNDERBOLT: new BABYLON.Vector3(.32,-.34, .64),
+  SINGULARITY: new BABYLON.Vector3(.30,-.33, .62),
+  PYROCLAST:   new BABYLON.Vector3(.30,-.34, .60),
+  OMEGA_STORM: new BABYLON.Vector3(.32,-.34, .64),
 };
 const WROT = {
   PISTOL:    new BABYLON.Vector3(.06,-.08,0),
@@ -716,6 +728,10 @@ const WROT = {
   FLAMETHROWER: new BABYLON.Vector3(.05,-.11,0),
   TESLA: new BABYLON.Vector3(.04,-.10,0),
   CROSSBOW: new BABYLON.Vector3(.05,-.09,0),
+  THUNDERBOLT: new BABYLON.Vector3(.05,-.10,0),
+  SINGULARITY: new BABYLON.Vector3(.05,-.11,0),
+  PYROCLAST:   new BABYLON.Vector3(.05,-.11,0),
+  OMEGA_STORM: new BABYLON.Vector3(.05,-.10,0),
 };
 
 export function refreshSlotHUD() {
@@ -1002,6 +1018,7 @@ export function animWeapon(dt) {
 /** Called once at startup to init all attachment visual slots */
 export function initAttachmentVisuals() {
   for (const wName of Object.keys(WDEFS)) {
+    if (WDEFS[wName].wonderWeapon) continue; // wonder weapons have no loadout visuals
     _attachmentMeshes[wName] = [];
     applyLoadoutToScene(wName); // <--- Forces initial skin/attachment building
   }

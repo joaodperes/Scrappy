@@ -21,28 +21,27 @@ export function showLoadout(onClose) {
 }
 export function hideLoadout() { document.getElementById('loadoutPanel')?.remove(); }
 
-// ── Colour palette (blue-purple) ──────────────────────────────
+// ── Colour palette (Metricalist Simply Modern Dark) ───────────
 const C = {
-  bg:           '#08090f',
-  bgMid:        '#0d0f1a',
-  bgCard:       '#111422',
-  border:       '#252840',
-  borderHi:     '#4a5aff',
-  accent:       '#6c7fff',
-  accentHi:     '#9aaaff',
-  accentPurple: '#a855f7',
-  accentGreen:  '#22c55e',
-  dim:          '#4a5070',
-  text:         '#e8eaf6',
-  textDim:      '#7880a0',
-  textMuted:    '#3a3f5a',
-  warn:         '#f59e0b',
-  danger:       '#ef4444',
-  chalAtt:      '#6c7fff',
-  chalSkin:     '#a855f7',
-  chalPlayer:   '#22d3ee',
+  bg:           '#262735', // Main Background
+  bgMid:        '#323447', // Cards and Panels
+  bgCard:       '#323447',
+  border:       '#5F6B6D', 
+  borderHi:     '#15CAB6', // Accent / Good
+  accent:       '#15CAB6', // Primary Accent (Teal)
+  accentHi:     '#4AC5BB', // Lighter Teal
+  accentPurple: '#696CB5', // Purple from dataColors
+  accentGreen:  '#15CAB6', 
+  dim:          '#ADAEB5', // Text Dim
+  text:         '#F8FAF7', // Pure text foreground
+  textDim:      '#CCCCCC', // Secondary text
+  textMuted:    '#848591',
+  warn:         '#F6B53D', // Yellow warning
+  danger:       '#E85E76', // Red/Bad
+  chalAtt:      '#15CAB6',
+  chalSkin:     '#696CB5',
+  chalPlayer:   '#287E8F',
 };
-
 // ── Weapon flavour descriptions ───────────────────────────────
 const WEAPON_DESC = {
   PISTOL:       'A reliable semi-auto sidearm. Low recoil and high accuracy make it deadly at range — and a headshot specialist in the right hands.',
@@ -96,7 +95,7 @@ function _progressRow(pct, val, target, col) {
 }
 function _pill(label, n, d, col) {
   const done = d > 0 && n >= d;
-  return `<span style="font-size:9px;background:${C.bg};border:1px solid ${col};color:${col};
+  return `<span style="font-size:11px;background:${C.bg};border:1px solid ${col};color:${col};
     padding:2px 7px;border-radius:10px;letter-spacing:.5px">${label}&nbsp;${n}/${d}${done?' ✓':''}</span>`;
 }
 function _wIcon(w) {
@@ -139,11 +138,11 @@ function _buildPanel(onClose) {
   identity.innerHTML = `
     <div>
       <div id="loadoutDisplayName" style="font-size:20px;font-weight:bold;letter-spacing:3px;color:${C.accentHi}">${_esc(displayName)}</div>
-      <div style="font-size:10px;color:${C.dim};letter-spacing:2px;margin-top:1px">LOADOUT · CUSTOMISE YOUR ARSENAL</div>
+      <div style="font-size:12px;color:${C.dim};letter-spacing:2px;margin-top:1px">LOADOUT · CUSTOMISE YOUR ARSENAL</div>
     </div>`;
   const editBtn = _el('button',
     `background:transparent;border:1px solid ${C.border};color:${C.textDim};` +
-    `padding:3px 9px;cursor:pointer;font-family:${F};font-size:10px;letter-spacing:1px;border-radius:3px`,
+    `padding:3px 9px;cursor:pointer;font-family:${F};font-size:12px;letter-spacing:1px;border-radius:3px`,
     '✎ NAME'
   );
   editBtn.onclick = _showNameEditor;
@@ -156,7 +155,7 @@ function _buildPanel(onClose) {
       LEVEL <span style="color:${C.accent};font-size:19px;font-weight:bold">${level}</span>
     </div>
     ${_bar(pct, C.accent, 5)}
-    <div style="font-size:10px;color:${C.dim};margin-top:2px">${xpThisLevel} / ${xpNeeded} XP</div>`;
+    <div style="font-size:12px;color:${C.dim};margin-top:2px">${xpThisLevel} / ${xpNeeded} XP</div>`;
   topBar.appendChild(xpBlock);
 
   const closeBtn = _el('button',
@@ -194,6 +193,8 @@ function _buildPanel(onClose) {
   );
   sidebar.id = 'loadoutSidebar';
   Object.keys(WDEFS).forEach(wName => {
+    if (WDEFS[wName].wonderWeapon) return;
+
     const btn = _el('div', _wcardStyle(wName === _activeWeapon));
     btn.dataset.wName = wName;
     btn.innerHTML =
@@ -288,13 +289,13 @@ function _weaponLevelBanner(wName) {
   );
   d.innerHTML = `
     <div style="text-align:center;min-width:42px">
-      <div style="font-size:9px;color:${C.dim};letter-spacing:2px">WPN LVL</div>
+      <div style="font-size:11px;color:${C.dim};letter-spacing:2px">WPN LVL</div>
       <div style="font-size:24px;font-weight:bold;color:${col}">${level}</div>
       ${isMax ? `<div style="font-size:8px;color:${C.warn};border:1px solid ${C.warn};padding:0 3px">MAX</div>` : ''}
     </div>
     <div style="flex:1">
       ${_bar(pct, col, 6)}
-      <div style="font-size:10px;color:${C.dim};margin-top:3px">
+      <div style="font-size:12px;color:${C.dim};margin-top:3px">
         ${isMax
           ? 'Prestige — all weapon XP banked'
           : `${xpThisLevel} / ${xpNeeded} XP · ${xpNeeded - xpThisLevel} to next level`}
@@ -373,7 +374,7 @@ function _renderAttachments(main) {
   );
   statDefs.forEach(([l, v]) => {
     sb.innerHTML += `<div>
-      <div style="font-size:9px;color:${C.dim};letter-spacing:1px">${l}</div>
+      <div style="font-size:11px;color:${C.dim};letter-spacing:1px">${l}</div>
       <div style="font-size:15px;color:${C.accent};font-weight:bold">${v}</div>
     </div>`;
   });
@@ -386,7 +387,7 @@ function _renderAttachments(main) {
     if (!available.length) return;
     const section = _el('div','margin-bottom:18px');
     section.appendChild(_el('div',
-      `font-size:10px;color:${C.dim};letter-spacing:3px;margin-bottom:8px;` +
+      `font-size:12px;color:${C.dim};letter-spacing:3px;margin-bottom:8px;` +
       `border-bottom:1px solid ${C.border};padding-bottom:4px;font-weight:bold`,
       slotName.toUpperCase()
     ));
@@ -414,7 +415,7 @@ function _renderAttachments(main) {
         c.innerHTML = `<span style="font-size:20px">❓</span>
           <div>
             <div style="font-size:12px;color:${C.dim}">??? Secret Attachment</div>
-            <div style="font-size:10px;color:${C.textMuted};margin-top:3px">Keep playing to reveal...</div>
+            <div style="font-size:12px;color:${C.textMuted};margin-top:3px">Keep playing to reveal...</div>
           </div>`;
         grid.appendChild(c); return;
       }
@@ -424,15 +425,15 @@ function _renderAttachments(main) {
         const col  = v > 0 ? '#4ade80' : v < 0 ? '#f87171' : C.textDim;
         const lbl  = {damage:'DMG',spread:'SPD',range:'RNG',cd:'CD',ammoMult:'AMMO',
                       speed:'PROJ',heatMult:'HEAT',recoilMult:'RECOIL',scavengerBonus:'SCAV'}[k] ?? k.toUpperCase();
-        return `<span style="color:${col};font-size:9px;font-weight:bold;background:rgba(0,0,0,.4);
+        return `<span style="color:${col};font-size:11px;font-weight:bold;background:rgba(0,0,0,.4);
           padding:1px 4px;border-radius:2px;margin-right:3px">${v>0?'+':''}${Math.round(Math.abs(v)*100)}% ${lbl}</span>`;
       }).join('') : '';
 
       const badges = [
-        att.visual?.adsZoom  ? `<span style="font-size:9px;color:#38bdf8;border:1px solid #0e4f6e;padding:1px 3px">ZOOM ×${(1/att.visual.adsZoom).toFixed(1)}</span>` : '',
-        att.hasLaser         ? `<span style="font-size:9px;color:#fb923c;border:1px solid #7c3415;padding:1px 3px">LASER</span>` : '',
-        uInfo.isSecret && isOwned ? `<span style="font-size:9px;color:${C.accentPurple};border:1px solid #6b21a8;padding:1px 3px">SECRET</span>` : '',
-        att.disablesAds      ? `<span style="font-size:9px;color:${C.warn};border:1px solid #7c5a0a;padding:1px 3px">NO ADS</span>` : '',
+        att.visual?.adsZoom  ? `<span style="font-size:11px;color:#38bdf8;border:1px solid #0e4f6e;padding:1px 3px">ZOOM ×${(1/att.visual.adsZoom).toFixed(1)}</span>` : '',
+        att.hasLaser         ? `<span style="font-size:11px;color:#fb923c;border:1px solid #7c3415;padding:1px 3px">LASER</span>` : '',
+        uInfo.isSecret && isOwned ? `<span style="font-size:11px;color:${C.accentPurple};border:1px solid #6b21a8;padding:1px 3px">SECRET</span>` : '',
+        att.disablesAds      ? `<span style="font-size:11px;color:${C.warn};border:1px solid #7c5a0a;padding:1px 3px">NO ADS</span>` : '',
       ].filter(Boolean).join(' ');
 
       c.innerHTML = `
@@ -470,7 +471,7 @@ function _renderWeaponSkins(main) {
   const wName = _activeWeapon;
   const lo    = getLoadout(wName);
   main.appendChild(_weaponLevelBanner(wName));
-  main.appendChild(_el('div',`font-size:10px;color:${C.dim};letter-spacing:2px;margin-bottom:12px`,
+  main.appendChild(_el('div',`font-size:12px;color:${C.dim};letter-spacing:2px;margin-bottom:12px`,
     `SKINS FOR: ${_esc(WDEFS[wName].name)}`));
 
   const sorted = Object.values(WEAPON_SKINS).sort((a, b) => {
@@ -492,9 +493,9 @@ function _renderWeaponSkins(main) {
       <div style="flex:1;background:rgb(${Math.round(ar*255)},${Math.round(ag*255)},${Math.round(ab*255)})"></div>`;
     card.appendChild(sw);
     card.appendChild(_el('div',`font-size:11px;font-weight:bold;color:${isEquipped?C.accentPurple:C.text}`,_esc(skin.name)));
-    card.appendChild(_el('div',`font-size:9px;color:${C.dim}`,_esc(skin.desc)));
+    card.appendChild(_el('div',`font-size:11px;color:${C.dim}`,_esc(skin.desc)));
     if (!isOwned) { const f=_el('div',''); f.innerHTML=_lockHTML(skin.id, wName, 'weaponSkin'); card.appendChild(f); }
-    else if (isEquipped) card.appendChild(_el('div',`font-size:9px;color:${C.accentGreen}`,'✓ EQUIPPED'));
+    else if (isEquipped) card.appendChild(_el('div',`font-size:11px;color:${C.accentGreen}`,'✓ EQUIPPED'));
     if (isOwned) card.onclick = () => { setWeaponSkin(wName, skin.id); applyLoadoutToScene(wName); _renderContent(); };
     grid.appendChild(card);
   });
@@ -550,7 +551,7 @@ function _renderPlayerSkins(main) {
     card.appendChild(sw);
     card.appendChild(_el('div',`font-size:12px;font-weight:bold;color:${isEquipped?C.accentPurple:C.text}`,_esc(skin.name)));
     if (!isOwned) { const f=_el('div',''); f.innerHTML=_lockHTML(skin.id, null, 'playerSkin'); card.appendChild(f); }
-    else if (isEquipped) card.appendChild(_el('div',`font-size:10px;color:${C.accentGreen};font-weight:bold`,'✓ EQUIPPED'));
+    else if (isEquipped) card.appendChild(_el('div',`font-size:12px;color:${C.accentGreen};font-weight:bold`,'✓ EQUIPPED'));
     if (isOwned) card.onclick = () => { setPlayerSkin(skin.id); _renderContent(); };
     grid.appendChild(card);
   });
@@ -562,36 +563,12 @@ function _renderPlayerSkins(main) {
 // ── PROGRESS tab ──────────────────────────────────────────────
 function _renderProgress(main) {
   const s = profile.stats;
-
-  // Global headline stats
-  const hl = _el('div',
-    `display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:9px;` +
-    `margin-bottom:22px;padding:14px 18px;background:${C.bgMid};border:1.5px solid ${C.border};border-radius:6px`
-  );
-  [
-    ['TOTAL KILLS',  s.totalKills     ?? 0, C.accent],
-    ['PVP KILLS',    s.pvpKills       ?? 0, C.chalPlayer],
-    ['BOSS CLEARS',  s.bossWaveClears ?? 0, C.warn],
-    ['MAX WAVE',     s.maxWave        ?? 0, C.accent],
-    ['MAX COMBO',    s.maxKillCombo   ?? 0, C.accentPurple],
-    ['BARRELS',      s.barrelDestroys ?? 0, C.warn],
-    ['EMP STUNS',    s.empStuns       ?? 0, C.chalPlayer],
-    ['LEVEL',        profile.level,         C.accentHi],
-    ['TOTAL XP',     profile.totalXp,       C.dim],
-  ].forEach(([l, v, col]) => {
-    hl.innerHTML += `<div>
-      <div style="font-size:9px;color:${C.dim};letter-spacing:2px;margin-bottom:2px">${l}</div>
-      <div style="font-size:22px;font-weight:bold;color:${col}">${_fmt(v)}</div>
-    </div>`;
-  });
-  main.appendChild(hl);
-
   // ── PLAYER section ───────────────────────────────────────────
   // Groups: no-weapon challenges + environment kills + player skin challenges
   const playerChallenges = UNLOCK_TABLE.filter(u =>
     u.challenge && (!u.weapon || u.weapon === 'ENVIRONMENT' || u.type === 'playerSkin')
   );
-  _renderProgressSection(main, 'PLAYER', null, playerChallenges, s);
+  _renderProgressSection(main, 'PLAYER METRICS', null, playerChallenges, s);
 
   // ── Per-weapon sections ───────────────────────────────────────
   Object.keys(WDEFS).forEach(wName => {
@@ -632,7 +609,7 @@ function _renderProgressSection(main, title, wName, challenges, s,
     <span style="font-size:17px">${wName ? _wIcon(wName) : '👤'}</span>
     <span style="font-size:14px;font-weight:bold;letter-spacing:2px;color:${allDone?C.accentGreen:C.text}">${_esc(title)}</span>
     ${wLvData ? `
-      <span style="font-size:10px;color:${C.dim};margin-left:2px">LVL</span>
+      <span style="font-size:12px;color:${C.dim};margin-left:2px">LVL</span>
       <span style="font-size:14px;font-weight:bold;color:${wLvData.isMax?C.warn:C.accent}">${wLvData.level}</span>
       <div style="width:50px;height:3px;background:#1a1c2e;border-radius:2px;overflow:hidden">
         <div style="width:${Math.round(wLvData.pct*100)}%;height:100%;background:${wLvData.isMax?C.warn:C.accent}"></div>
@@ -655,13 +632,17 @@ function _renderProgressSection(main, title, wName, challenges, s,
     main.appendChild(_weaponStatsGrid(wName, s));
   } else {
     // Player-level extra stats
-    const row = _el('div','display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:7px;margin-bottom:9px');
-    [
-      ['ENV KILLS',   s.killsWith?.ENVIRONMENT ?? 0, C.warn],
-      ['PVP KILLS',   s.pvpKills ?? 0,               C.chalPlayer],
-      ['BOSS CLEARS', s.bossWaveClears ?? 0,          C.warn],
-    ].forEach(([l,v,col]) => row.appendChild(_statCard(l,v,col)));
-    main.appendChild(row);
+    const row = _el('div','display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:7px;margin-bottom:9px');
+  [
+    ['TOTAL KILLS', s.totalKills ?? 0, C.accent],
+    ['TOTAL XP',    profile.totalXp,   C.accentHi],
+    ['MAX WAVE',    s.maxWave ?? 0,    C.warn],
+    ['BOSS CLEARS', s.bossWaveClears ?? 0, C.warn],
+    ['PVP KILLS',   s.pvpKills ?? 0,   C.chalPlayer],
+    ['ENV KILLS',   s.killsWith?.ENVIRONMENT ?? 0, C.danger],
+    ['EMP STUNS',   s.empStuns ?? 0,   C.accentPurple],
+  ].forEach(([l,v,col]) => row.appendChild(_statCard(l,v,col)));
+  main.appendChild(row);
   }
 
   // Challenges split by type
@@ -705,7 +686,7 @@ function _weaponStatsGrid(wName, s) {
 
 function _statCard(label, val, col) {
   const d = _el('div',`background:${C.bg};border:1px solid ${C.border};padding:7px 10px;border-radius:4px`);
-  d.innerHTML = `<div style="font-size:9px;color:${C.dim};letter-spacing:1px;margin-bottom:2px">${label}</div>
+  d.innerHTML = `<div style="font-size:11px;color:${C.dim};letter-spacing:1px;margin-bottom:2px">${label}</div>
     <div style="font-size:17px;font-weight:bold;color:${col}">${_fmt(val)}</div>`;
   return d;
 }
@@ -715,12 +696,12 @@ function _renderChallengeList(main, subTitle, entries, accentCol) {
   if (!entries.length) return;
   if (subTitle) {
     main.appendChild(_el('div',
-      `font-size:9px;letter-spacing:3px;color:${accentCol};margin:9px 0 5px;` +
+      `font-size:11px;letter-spacing:3px;color:${accentCol};margin:9px 0 5px;` +
       `border-left:3px solid ${accentCol};padding-left:7px;font-weight:bold`,
       subTitle
     ));
   }
-  const grid = _el('div','display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:5px');
+  const grid = _el('div','display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:5px');
   entries.forEach(u => {
     const prog     = getChallengeProgress(u.challenge);
     const isDone   = prog.pct >= 1;
@@ -745,10 +726,10 @@ function _renderChallengeList(main, subTitle, entries, accentCol) {
              white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
           ${_esc(desc)}${isSecret?` <span style="font-size:8px;color:${C.accentPurple}">SECRET</span>`:''}
         </div>
-        <div style="font-size:9px;color:${accentCol};margin-top:1px">🎁 ${rewardType}: ${_esc(rewardName)}</div>
+        <div style="font-size:11px;color:${accentCol};margin-top:1px">🎁 ${rewardType}: ${_esc(rewardName)}</div>
       </div>
       <div style="text-align:right;flex-shrink:0;min-width:72px">
-        <div style="font-size:10px;color:${isDone?C.accentGreen:accentCol}">${_fmt(prog.val)} / ${_fmt(prog.target)}</div>
+        <div style="font-size:12px;color:${isDone?C.accentGreen:accentCol}">${_fmt(prog.val)} / ${_fmt(prog.target)}</div>
         <div style="width:72px;height:3px;background:#1a1c2e;margin-top:3px;border-radius:2px;overflow:hidden">
           <div style="width:${Math.round(prog.pct*100)}%;height:100%;background:${isDone?C.accentGreen:accentCol};border-radius:2px"></div>
         </div>
