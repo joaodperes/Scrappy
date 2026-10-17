@@ -140,6 +140,7 @@ function startGame(startWave = 0) {
   if (currentMap === 'jungle') {
     import('./levelJungle.js').then(mod => {
       mod.buildJungleLevel();
+      window._jungleSpawns = mod.JUNGLE_WALKABLE_SPAWNS;
       window._hazardZones = mod.hazardZones;
       window._movingPlatforms = mod.movingPlatforms;
       window._powerSwitches = mod.powerSwitches;
@@ -147,6 +148,7 @@ function startGame(startWave = 0) {
     });
   } else {
     buildLevel();
+    window._jungleSpawns = null;
     window._hazardZones = []; // No hazards in scrapyard
     window._movingPlatforms = [];
     window._powerSwitches = [];
@@ -517,6 +519,7 @@ engine.runRenderLoop(() => {
   // Update moving platforms and stick the player to them
   if (window._movingPlatforms && window._movingPlatforms.length > 0) {
       for (const plat of window._movingPlatforms) {
+          plat._frameDelta = BABYLON.Vector3.Zero();
           if (!plat._moveData || plat._moveData.paused) continue;
           const md = plat._moveData;
           
@@ -539,6 +542,7 @@ engine.runRenderLoop(() => {
 
           // Calculate how much the platform moved this frame
           const delta = plat.position.subtract(oldPos);
+          plat._frameDelta = delta;
 
           // If the player is standing on it, apply the exact same movement
           if (player.onGround) {
