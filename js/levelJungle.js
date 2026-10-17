@@ -201,7 +201,7 @@ function _movingSlab(name,start,end,speed,sx,sz,wait=1.5) {
   m._moveData={start:start.clone(),end:end.clone(),speed,t:0,dir:1,
                waitTimer:0,waitTime:wait,paused:true};
   m.setEnabled(false);
-  movingPlatforms.push(m); walkableMeshes.push(m); return m;
+  movingPlatforms.push(m); return m; // Dynamic geometry cannot be baked into Recast.
 }
 // _lava: visual lava surface at Y≈0. halfHeight=0.55 so pfeet check only
 // triggers when player is at ground level (pfeet≈0.22), NOT when on T2 (pfeet≈4.4).
