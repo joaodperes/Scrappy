@@ -1,5 +1,5 @@
 {
-  "version": "2.0",
+  "version": 2,
   "objects": [
     {
       "generator": "createSlab",
@@ -25,7 +25,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "jungle-entity-0001"
     },
     {
       "generator": "createSlab",
@@ -51,7 +52,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "jungle-entity-0002"
     },
     {
       "generator": "createSlab",
@@ -77,7 +79,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "jungle-entity-0003"
     },
     {
       "generator": "createSlab",
@@ -103,7 +106,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "jungle-entity-0004"
     },
     {
       "generator": "createSlab",
@@ -129,7 +133,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "jungle-entity-0005"
     },
     {
       "generator": "createSlab",
@@ -155,7 +160,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "jungle-entity-0006"
     },
     {
       "generator": "createSlab",
@@ -181,7 +187,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "jungle-entity-0007"
     },
     {
       "generator": "createSlab",
@@ -207,7 +214,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "jungle-entity-0008"
     },
     {
       "generator": "createSlab",
@@ -233,7 +241,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "jungle-entity-0009"
     },
     {
       "generator": "createSlab",
@@ -259,7 +268,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "jungle-entity-0010"
     },
     {
       "generator": "createSlab",
@@ -285,7 +295,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "jungle-entity-0011"
     },
     {
       "generator": "createSlab",
@@ -311,7 +322,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "jungle-entity-0012"
     },
     {
       "generator": "createSlab",
@@ -337,7 +349,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "jungle-entity-0013"
     },
     {
       "generator": "createPillar",
@@ -363,7 +376,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "jungle-entity-0014"
     },
     {
       "generator": "createPillar",
@@ -389,7 +403,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "jungle-entity-0015"
     },
     {
       "generator": "createPillar",
@@ -415,7 +430,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "jungle-entity-0016"
     },
     {
       "generator": "createPillar",
@@ -441,7 +457,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "jungle-entity-0017"
     },
     {
       "generator": "createPillar",
@@ -467,7 +484,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "jungle-entity-0018"
     },
     {
       "generator": "createPillar",
@@ -493,7 +511,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "jungle-entity-0019"
     },
     {
       "generator": "createPillar",
@@ -519,7 +538,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "jungle-entity-0020"
     },
     {
       "generator": "createPillar",
@@ -545,7 +565,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "jungle-entity-0021"
     },
     {
       "generator": "createWall",
@@ -572,7 +593,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "jungle-entity-0022"
     },
     {
       "generator": "createWall",
@@ -599,7 +621,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "jungle-entity-0023"
     },
     {
       "generator": "createWall",
@@ -626,7 +649,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "jungle-entity-0024"
     },
     {
       "generator": "createWall",
@@ -653,7 +677,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "jungle-entity-0025"
     },
     {
       "generator": "createWall",
@@ -680,7 +705,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "jungle-entity-0026"
     },
     {
       "generator": "createWall",
@@ -707,7 +733,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "jungle-entity-0027"
     },
     {
       "generator": "createWall",
@@ -734,7 +761,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "jungle-entity-0028"
     },
     {
       "generator": "createWall",
@@ -761,7 +789,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "jungle-entity-0029"
     },
     {
       "generator": "createWall",
@@ -788,7 +817,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "jungle-entity-0030"
     },
     {
       "generator": "createWall",
@@ -815,7 +845,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "jungle-entity-0031"
     },
     {
       "generator": "createWall",
@@ -842,7 +873,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "jungle-entity-0032"
     },
     {
       "generator": "createWall",
@@ -869,7 +901,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "jungle-entity-0033"
     },
     {
       "generator": "createSlab",
@@ -895,7 +928,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "jungle-entity-0034"
     },
     {
       "generator": "createSlab",
@@ -921,7 +955,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "jungle-entity-0035"
     },
     {
       "generator": "createSlab",
@@ -947,7 +982,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "jungle-entity-0036"
     },
     {
       "generator": "createSlab",
@@ -973,7 +1009,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "jungle-entity-0037"
     },
     {
       "generator": "createSlab",
@@ -999,7 +1036,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "jungle-entity-0038"
     },
     {
       "generator": "createSlab",
@@ -1025,7 +1063,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "jungle-entity-0039"
     },
     {
       "generator": "createSlab",
@@ -1051,7 +1090,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "jungle-entity-0040"
     },
     {
       "generator": "createSlab",
@@ -1077,7 +1117,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "jungle-entity-0041"
     },
     {
       "generator": "createSlab",
@@ -1103,7 +1144,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "jungle-entity-0042"
     },
     {
       "generator": "createSlab",
@@ -1129,7 +1171,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "jungle-entity-0043"
     },
     {
       "generator": "createSlab",
@@ -1155,7 +1198,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "jungle-entity-0044"
     },
     {
       "generator": "createSlab",
@@ -1181,7 +1225,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "jungle-entity-0045"
     },
     {
       "generator": "createSlab",
@@ -1207,7 +1252,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "jungle-entity-0046"
     },
     {
       "generator": "createSlab",
@@ -1233,7 +1279,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "jungle-entity-0047"
     },
     {
       "generator": "createSlab",
@@ -1259,7 +1306,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "jungle-entity-0048"
     },
     {
       "generator": "createSlab",
@@ -1285,7 +1333,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "jungle-entity-0049"
     },
     {
       "generator": "createSlab",
@@ -1311,7 +1360,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "jungle-entity-0050"
     },
     {
       "generator": "createSlab",
@@ -1337,7 +1387,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "jungle-entity-0051"
     },
     {
       "generator": "createSlab",
@@ -1363,7 +1414,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "jungle-entity-0052"
     },
     {
       "generator": "createSlab",
@@ -1389,7 +1441,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "jungle-entity-0053"
     },
     {
       "generator": "createSlab",
@@ -1415,7 +1468,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "jungle-entity-0054"
     },
     {
       "generator": "createSlab",
@@ -1441,7 +1495,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "jungle-entity-0055"
     },
     {
       "generator": "createSlab",
@@ -1467,7 +1522,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "jungle-entity-0056"
     },
     {
       "generator": "createSlab",
@@ -1493,7 +1549,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "jungle-entity-0057"
     },
     {
       "generator": "createSlab",
@@ -1519,7 +1576,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "jungle-entity-0058"
     },
     {
       "generator": "createSlab",
@@ -1545,7 +1603,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "jungle-entity-0059"
     },
     {
       "generator": "createSlab",
@@ -1571,7 +1630,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "jungle-entity-0060"
     },
     {
       "generator": "createSlab",
@@ -1597,7 +1657,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "jungle-entity-0061"
     },
     {
       "generator": "createSlab",
@@ -1623,7 +1684,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "jungle-entity-0062"
     },
     {
       "generator": "createSlab",
@@ -1649,7 +1711,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "jungle-entity-0063"
     },
     {
       "generator": "createSlab",
@@ -1675,7 +1738,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "jungle-entity-0064"
     },
     {
       "generator": "createSlab",
@@ -1701,7 +1765,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "jungle-entity-0065"
     },
     {
       "generator": "createSlab",
@@ -1727,7 +1792,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "jungle-entity-0066"
     },
     {
       "generator": "createSlab",
@@ -1753,7 +1819,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "jungle-entity-0067"
     },
     {
       "generator": "createSlab",
@@ -1779,7 +1846,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "jungle-entity-0068"
     },
     {
       "generator": "createSlab",
@@ -1805,7 +1873,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "jungle-entity-0069"
     },
     {
       "generator": "createSlab",
@@ -1831,7 +1900,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "jungle-entity-0070"
     },
     {
       "generator": "createSlab",
@@ -1857,7 +1927,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "jungle-entity-0071"
     },
     {
       "generator": "createSlab",
@@ -1883,7 +1954,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "jungle-entity-0072"
     },
     {
       "generator": "createSlab",
@@ -1909,7 +1981,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "jungle-entity-0073"
     },
     {
       "generator": "createSlab",
@@ -1935,7 +2008,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "jungle-entity-0074"
     },
     {
       "generator": "createWall",
@@ -1962,7 +2036,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "jungle-entity-0075"
     },
     {
       "generator": "createWall",
@@ -1989,7 +2064,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "jungle-entity-0076"
     },
     {
       "generator": "createWall",
@@ -2016,7 +2092,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "jungle-entity-0077"
     },
     {
       "generator": "createWall",
@@ -2043,7 +2120,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "jungle-entity-0078"
     },
     {
       "generator": "createBarrel",
@@ -2066,7 +2144,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "jungle-entity-0079"
     },
     {
       "generator": "createBarrel",
@@ -2089,7 +2168,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "jungle-entity-0080"
     },
     {
       "generator": "createBarrel",
@@ -2112,7 +2192,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "jungle-entity-0081"
     },
     {
       "generator": "createBarrel",
@@ -2135,7 +2216,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "jungle-entity-0082"
     },
     {
       "generator": "createBarrel",
@@ -2158,7 +2240,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "jungle-entity-0083"
     },
     {
       "id": "j-border-n",
@@ -2528,5 +2611,6 @@
       }
     }
   ],
-  "map": "jungle"
+  "map": "jungle",
+  "markers": []
 }
