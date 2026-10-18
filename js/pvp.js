@@ -25,6 +25,7 @@ let myScore       = 0;
 let _inPreLobby   = false;
 let _isHost       = false;
 let _externalRoom = false;
+let _scoreboardShown = false;
 let _prelobbyOnStart = null;   // callback when host clicks "START GAME"
 
 // Scoreboard: id → { name, score }
@@ -377,6 +378,48 @@ function _handleRoundEnd(msg, onRoundEnd) {
   onRoundEnd?.(msg.winner ?? 'Nobody', _buildScoreRows());
 }
 
+function drawMatchScoreboard(){
+  const root=document.getElementById('_matchScoreboard');
+  if(!root||!_scoreboardShown)return;
+  const list=root.querySelector('[data-scores]');
+  if(!list)return;
+  list.replaceChildren();
+  const rows=_buildScoreRows();
+  const heading=document.createElement('div');
+  heading.textContent=(roomConfig.mode==='tdm'?'TEAM DEATHMATCH':'FREE FOR ALL')+' · '+Math.ceil(timeLeft)+'s';
+  heading.style.cssText='font-weight:bold;color:#15cab6;margin-bottom:14px';
+  list.appendChild(heading);
+  for(const [i,r] of rows.entries()){
+    const line=document.createElement('div');
+    line.textContent=(i+1)+'. '+r.name+' — '+r.score;
+    line.style.cssText='padding:7px 0;border-bottom:1px solid #444';
+    list.appendChild(line);
+  }
+}
+export function togglePvpScoreboard(){
+  if(!ffaActive||_inPreLobby)return;
+  _scoreboardShown=!_scoreboardShown;
+  let root=document.getElementById('_matchScoreboard');
+  if(!root){
+    root=document.createElement('div');
+    root.id='_matchScoreboard';
+    root.style.cssText='position:fixed;inset:0;z-index:1100;background:rgba(10,12,20,.94);color:#fff;display:none;align-items:center;justify-content:center;font:16px monospace';
+    const panel=document.createElement('div');
+    panel.style.cssText='width:min(540px,90vw);padding:25px;background:#262735;border:1px solid #5f6b6d';
+    const list=document.createElement('div');list.dataset.scores='1';
+    panel.appendChild(list);
+    const resume=document.createElement('button');
+    resume.textContent='RETURN TO MATCH';
+    resume.style.cssText='margin-top:20px;padding:11px 18px;cursor:pointer;background:#15cab6;color:#10121d;border:0';
+    resume.onclick=()=>{
+      _scoreboardShown=false;root.style.display='none';
+      document.getElementById('c')?.requestPointerLock().catch(()=>{});
+    };
+    panel.appendChild(resume);root.appendChild(panel);document.body.appendChild(root);
+  }
+  root.style.display=_scoreboardShown?'flex':'none';
+  if(_scoreboardShown){document.exitPointerLock();drawMatchScoreboard();}
+}
 function _buildScoreRows() {
   const tm = roomConfig.mode === 'tdm';
   const rows = [{ id: getMyId() ?? 'me', name: tm ? '['+(getMyTeam()||'?')+'] '+myName : myName, score: myScore }];
@@ -420,6 +463,9 @@ export function stopFfa() {
   _inPreLobby = false;
   _isHost     = false;
   _externalRoom = false;
+  _scoreboardShown = false;
+  const board=document.getElementById('_matchScoreboard');
+  if(board)board.remove();
   disconnect();
   _clearRemotePlayers();
   _hidePreLobbyOverlay();
@@ -453,6 +499,7 @@ export function updateFfa(dt) {
   if (roundActive) {
     timeLeft = Math.max(0, timeLeft - dt);
     updateFfaHUD(_buildScoreRows(), timeLeft, getMyId());
+    drawMatchScoreboard();
   }
 
   // Periodic bot spawning
@@ -514,10 +561,12 @@ function _showRespawnOverlay(secs) {
     document.body.appendChild(el);
   }
   el.style.display = 'flex';
+  const canvas=document.getElementById('c');if(canvas)canvas.style.filter='grayscale(1)';
 }
 function _hideRespawnOverlay() {
   const el = document.getElementById('ffaRespawnOverlay');
   if (el) el.style.display = 'none';
+  const canvas=document.getElementById('c');if(canvas)canvas.style.filter='';
 }
 function _announce(txt, ms) {
   const el = document.getElementById('waveAnnounce');
