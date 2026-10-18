@@ -41,7 +41,7 @@ wss.on('connection', ws => {
     if (msg.type === 'listRooms') {
       const list = [];
       for (const [rid, r] of rooms) {
-        if (r.started || !r.config?.directoryRoom) continue;
+        if (r.started || r.preparing || !r.config?.directoryRoom) continue;
         const cap = Math.max(2, Math.min(24, Number(r.config.maxPlayers)||2));
         if (r.players.size >= cap) continue;
         list.push({id:rid,name:r.config.name||rid,mapId:r.config.mapId||'scrapyard',
@@ -80,7 +80,7 @@ wss.on('connection', ws => {
       // Never allow a new joiner to usurp an existing host.
       if (room.config?.directoryRoom) {
         const capacity = Math.max(2, Math.min(24, Number(room.config.maxPlayers) || 2));
-        if (room.started || room.players.size >= capacity) {
+        if (room.started || room.preparing || room.players.size >= capacity) {
           ws.send(JSON.stringify({type:'roomError',message:'Room is full or already started'}));
           return;
         }
