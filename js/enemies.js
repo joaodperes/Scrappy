@@ -8,8 +8,9 @@ import { spawnSparks } from './particles.js';
 import { fireEnemyShot, createYellowEMPStunArc } from './projectiles.js';
 import { sfx } from './audio.js';
 import { jumpPads } from './level.js';
-import { getCurrentMap } from './mapManager.js';
-import { recordDamage } from './progression.js';
+import { getCurrentMap, getWalkableSpawns } from './mapManager.js';
+import { recordDamage, isWonderWeaponUnlocked  } from './progression.js';
+import { getBossPoolForCurrentMap } from './waves.js';
 
 // ── Mesh→enemy lookup ─────────────────────────────────────────
 export const _meshToEnemy = new Map();
@@ -112,9 +113,13 @@ function _tickTimers(dt) {
   const rt = document.getElementById('_timerRound');
   const kt = document.getElementById('_killsTotal');
   const kr = document.getElementById('_killsRound');
+  
+  // Clamp visual kills to never exceed the wave's enemy count
+  const displayKills = Math.min(_roundKills, _roundEnemies);
+  
   if (gt) gt.textContent = 'TIME: ' + _fmt(_gameTime);
   if (kt) kt.textContent = 'KILLS: ' + _totalKills;
-  if (kr) kr.textContent = 'ROUND: ' + _roundKills + ' / ' + _roundEnemies;
+  if (kr) kr.textContent = 'ROUND: ' + displayKills + ' / ' + _roundEnemies;
 
   if (_angryMode) {
     if (rt) { rt.style.color = '#f44'; rt.textContent = '⚠ ANGRY MODE'; }
@@ -234,6 +239,11 @@ export function buildRobot(type) {
     shield_bot:   { r: 80,  gr: 110, b: 160, led: M.ledCyan,   flyH: 0 },
     teleport_bot: { r: 40,  gr: 200, b: 240, led: M.ledCyan,   flyH: 0 },
     swarm_host:   { r: 60,  gr: 100, b: 40,  led: M.ledGreen,  flyH: 0 },
+    rivet_bot:    { r: 130, gr: 85,  b: 35,  led: M.ledOrange, flyH: 0 },
+    enforcer:     { r: 55,  gr: 65,  b: 80,  led: M.ledCyan,   flyH: 0 },
+    tactician:    { r: 65,  gr: 78,  b: 60,  led: M.ledGreen,  flyH: 0 },
+    burst_bot: { r: 160, gr: 90, b: 40,  led: M.ledOrange, flyH: 0 }, // Orange/Brown theme
+    dmr_bot:   { r: 70,  gr: 100, b: 70, led: M.ledCyan,   flyH: 0 }, // Green/Grey theme
   }[type] || { r: 70, gr: 70, b: 70, led: M.ledGreen, flyH: 0 };
   const bmat = robotTex('r_' + type + '_' + Math.random().toString(36).slice(2), sc.r, sc.gr, sc.b);
   const led  = sc.led;
@@ -274,6 +284,11 @@ export function buildRobot(type) {
     if (type === 'ion_sniper')   { bW=.60; bH=1.1; bD=.40; aL=.64; aW=.12; lW=.18; lH=.55; fL=.28; fH=.13; hW=.38; hH=.30; hD=.28; }
     if (type === 'ninja') { bW=.45; bH=1.0; bD=.30; aL=.60; aW=.10; lW=.12; lH=.60; fL=.20; fH=.10; hW=.30; hH=.25; hD=.25; }
     if (type === 'armored') { bW=.80; bH=1.3; bD=.50; aL=.80; aW=.18; lW=.24; lH=.60; fL=.35; fH=.15; hW=.45; hH=.35; hD=.35; }
+    if (type === 'rivet_bot') { bW=.78; bH=1.25; bD=.48; aL=.76; aW=.15; lW=.20; lH=.62; fL=.30; fH=.13; hW=.40; hH=.34; hD=.32; }
+    if (type === 'enforcer')  { bW=.92; bH=1.40; bD=.58; aL=.80; aW=.17; lW=.26; lH=.62; fL=.36; fH=.15; hW=.48; hH=.38; hD=.34; }
+    if (type === 'tactician') { bW=.56; bH=1.08; bD=.36; aL=.66; aW=.11; lW=.16; lH=.56; fL=.24; fH=.12; hW=.34; hH=.30; hD=.27; }
+    if (type === 'burst_bot') { bW=.58; bH=1.12; bD=.38; aL=.70; aW=.12; lW=.18; lH=.64; fL=.26; fH=.12; hW=.36; hH=.32; hD=.28; }
+    if (type === 'dmr_bot')   { bW=.52; bH=1.08; bD=.35; aL=.66; aW=.11; lW=.16; lH=.60; fL=.24; fH=.12; hW=.34; hH=.30; hD=.27; }
     const bY = bH / 2 + .28;
     const hY = bY + bH/2 + hH*.42;
     // ── medic_bot: white cross on chest + healing syringe arm ────
@@ -307,6 +322,38 @@ export function buildRobot(type) {
         addCyl('port1', 0.14, 0.22, M.ledGreen,  0.20, bY - 0.10, -bD * 1.30, 0);
         addCyl('port2', 0.14, 0.22, M.ledGreen, -0.20, bY - 0.10, -bD * 1.30, 0);
         addBox('carapace', bW * 0.9, 0.10, bD * 1.6, M.ledGreen, 0, bY + bH * 0.55, -bD * 0.40);
+    }
+    // ── rivet_bot: riveted armour plate with visible stud heads ──
+    if (type === 'rivet_bot') {
+        addBox('plate', bW*0.85, bH*0.45, 0.05, M.gunMetal, 0, bY + bH*0.18, bD*0.52);
+        const studRows = 2, studCols = 3;
+        for (let r = 0; r < studRows; r++) for (let c = 0; c < studCols; c++) {
+            const sx = (c - (studCols-1)/2) * bW*0.28;
+            const sy = bY + bH*0.10 + r*bH*0.16;
+            addCyl('rivetStud'+r+c, 0.05, 0.04, M.ledOrange, sx, sy, bD*0.55, Math.PI/2);
+        }
+        addCyl('shoulderL', 0.22, 0.16, M.gunMetal, bW/2+0.05, bY+bH*0.42, 0, Math.PI/2);
+        addCyl('shoulderR', 0.22, 0.16, M.gunMetal, -bW/2-0.05, bY+bH*0.42, 0, Math.PI/2);
+    }
+    // ── enforcer: broad riot shield + reinforced visor ───────────
+    if (type === 'enforcer') {
+        const shMat = new BABYLON.StandardMaterial('enforcerShield_' + Math.random(), scene);
+        shMat.diffuseColor  = new BABYLON.Color3(0.10, 0.14, 0.20);
+        shMat.emissiveColor = new BABYLON.Color3(0.05, 0.45, 0.55);
+        shMat.alpha = 0.6; shMat.backFaceCulling = false;
+        const shield = BABYLON.MeshBuilder.CreateBox('enfShield', { width: 0.10, height: 1.3, depth: bD*1.3 }, scene);
+        shield.position.set(0, bY, bD*0.55);
+        shield.material = shMat; shield.parent = g; shield.isPickable = true;
+        shield.metadata = { enemy: true };
+        addTorus('enfShieldRim', 0.05, 0.02, M.ledCyan, 0, bY+bH*0.45, bD*0.55+0.05);
+        addBox('visorBar', hW*0.9, 0.06, 0.05, M.ledCyan, 0, hY, hW*0.42);
+    }
+    // ── tactician: scope antenna + tactical data-pack ────────────
+    if (type === 'tactician') {
+        addCyl('antenna', 0.025, 0.42, M.gunMetal, 0, hY + hH*0.55, -hD*0.1, 0);
+        addSphere('antennaTip', 0.05, M.ledGreen, 0, hY + hH*0.55 + 0.21, -hD*0.1);
+        addBox('dataPack', bW*0.7, bH*0.34, 0.14, M.gunMetal, 0, bY + bH*0.10, -bD*0.62);
+        addSphere('packLight', 0.04, M.ledGreen, 0, bY + bH*0.10, -bD*0.62 - 0.08);
     }
     if (type === 'giantbot') {
       addBox('core', bW * 0.6, bH * 0.4, bD * 1.5, M.ledOrange, 0, bY, bD * 0.2);
@@ -395,8 +442,8 @@ export function buildRobot(type) {
       // Green hazard stripe across the chest
       addBox('stripe', bW*.90, .06, .04, M.ledGreen, 0, bY + bH*.38, bD*.52);
     }
-    const wn = type==='heavy'?'CHAINGUN':type==='sniper'?'RAILGUN':type==='pistol'?'PISTOL':type==='shotgun'?'SHOTGUN':type==='rocket'?'ROCKET':type==='grenadier'?'GLAUNCHER':'SMG';
-    const ws = type==='heavy'?.62:type==='sniper'?.50:type==='pistol'?.44:type==='shotgun'?.54:type==='rocket'?.56:type==='grenadier'?.56:.50;
+    const wn = type==='heavy'?'CHAINGUN' : type==='sniper'?'RAILGUN' : type==='pistol'?'PISTOL' : type==='shotgun'?'SHOTGUN' : type==='rocket'?'ROCKET' : type==='grenadier'?'GLAUNCHER' : type==='rivet_bot'?'RIVETER' : type==='enforcer'?'PHALANX' : type==='tactician'?'AEGIS' : type==='burst_bot'?'COMET' : type==='dmr_bot'?'DMR' : 'SMG';
+    const ws = type==='heavy'?.62 : type==='sniper'?.50 : type==='pistol'?.44 : type==='shotgun'?.54 : type==='rocket'?.56 : type==='grenadier'?.56 : type==='rivet_bot'?.58 : type==='enforcer'?.60 : type==='tactician'?.48 : type==='burst_bot'?.50 : type==='dmr_bot'?.52 : .50;
     const wm = makeScaledWeaponModel(wn, ws); wm.parent = g;
     wm.position.set(bW/2+aW/2, bY+bH*.18-.02, .42); wm.rotation.y = 0;
     wm.getChildMeshes().forEach(c => { c.isPickable = false; });
@@ -415,11 +462,16 @@ export function buildRobot(type) {
     ion_sniper:   { hp: 45,  maxHp: 45,  spd: 3.0, dmg: 45, range: 50, rate: 2.0, pt: 'ion', pv: 120, score: 200, mOY: 1.0 },
     grenadier: { hp:45, maxHp:45, spd:3.2, dmg:65, range:40, rate:2.5, pt:'grenade', pv:22, score:160, mOY:1.0 },
     ninja:     { hp:40, maxHp:40, spd:10, dmg:45, range:3.0, rate:0.8, pt:'melee', pv:0, score:150, mOY:1.0 },
-    armored:   { hp:180, maxHp:180, spd:2.8, dmg:15, range:25, rate:0.8, pt:'heavy', pv:45, score:220, mOY:1.0 },
-    medic_bot:   { hp:35, maxHp:35, spd:3.5, dmg:5,  range:20, rate:1.2, pt:'plasma', pv:20, score:130, mOY:1.0, mapExclusive:'jungle' },
-    shield_bot:  { hp:150, maxHp:150, spd:2.0, dmg:12, range:25, rate:0.8, pt:'heavy', pv:45, score:200, mOY:1.0, mapExclusive:'jungle' },
-    teleport_bot:{ hp:25, maxHp:25, spd:7.0, dmg:18, range:8, rate:0.4, pt:'melee', pv:0, score:160, mOY:1.0, mapExclusive:'jungle' },
-    swarm_host:  { hp:300, maxHp:300, spd:0, dmg:0, range:0, rate:0, pt:'none', pv:0, score:300, mOY:1.5, mapExclusive:'jungle' },
+    armored:   { hp:150, maxHp:150, spd:2.8, dmg:15, range:25, rate:0.8, pt:'heavy', pv:45, score:220, mOY:1.0 },
+    medic_bot:   { hp:35, maxHp:35, spd:3.5, dmg:5,  range:20, rate:1.2, pt:'plasma', pv:20, score:130, mOY:1.0},
+    shield_bot:  { hp:150, maxHp:150, spd:2.0, dmg:12, range:25, rate:0.8, pt:'heavy', pv:45, score:200, mOY:1.0},
+    teleport_bot:{ hp:25, maxHp:25, spd:7.0, dmg:18, range:8, rate:0.4, pt:'melee', pv:0, score:160, mOY:1.0},
+    swarm_host:  { hp:300, maxHp:300, spd:0, dmg:0, range:0, rate:0, pt:'none', pv:0, score:300, mOY:1.5},
+    rivet_bot: { hp:95,  maxHp:95,  spd:3.2, dmg:16, range:24, rate:1.0, pt:'heavy',   pv:30, score:170, mOY:1.0 },
+    enforcer:  { hp:165, maxHp:165, spd:2.1, dmg:13, range:16, rate:0.9, pt:'shotgun', pv:16, score:210, mOY:1.0 },
+    tactician: { hp:50,  maxHp:50,  spd:3.4, dmg:26, range:42, rate:1.6, pt:'sniper',  pv:46, score:190, mOY:1.0 },
+    burst_bot: { hp: 70, maxHp: 70, spd: 4.8, dmg: 14, range: 45, rate: 0.8, pt: 'bullet', pv: 35, score: 110, mOY: 1.0 },
+    dmr_bot:   { hp: 40, maxHp: 40, spd: 3.5, dmg: 35, range: 40, rate: 2.0, pt: 'sniper', pv: 70, score: 130, mOY: 1.0 },
   }[type] || {};
 
   return {
@@ -464,31 +516,24 @@ const DEFAULT_WALKABLE_SPAWNS = [
   //[ 0, 24, -16], [-4, 24, -16], [ 4, 24, -16],
 ];
 
-// Per-map spawn sets — start by reusing the default for both maps so it's
-// easy to scale later. Add new map keys here to customize spawns per map.
-const WALKABLE_SPAWNS_BY_MAP = {
-  scrapyard: DEFAULT_WALKABLE_SPAWNS,
-  jungle:    DEFAULT_WALKABLE_SPAWNS,
-};
+const MIN_SPAWN_DIST = 16; // Reduced so valid spawns actually work
 
-const MIN_SPAWN_DIST = 48;
-
-export function spawnBot(type, _x, _spawnY_IGNORED, _z, scale = 1.0) {
-  // Completely ignore spawnY so bots scatter across all vertical levels!
-  // Select per-map spawn list (falls back to default)
-  const mapId = (typeof getCurrentMap === 'function') ? getCurrentMap() : null;
-  let validSpawns = WALKABLE_SPAWNS_BY_MAP[mapId] || DEFAULT_WALKABLE_SPAWNS;
+export function spawnBot(type, _x, _spawnY, _z, scale = 1.0) {
+  //console.log(`Attempting to spawn ${type} at ${_x}, ${_spawnY}, ${_z}`); 
+  const mapId = getCurrentMap();
+  let validSpawns = getWalkableSpawns(mapId); 
   if (type === 'giantbot') {
-      validSpawns = validSpawns.filter(sp => sp[1] === 0);
+    validSpawns = validSpawns.filter(sp => sp[1] === 0);
   }
   const shuffled = validSpawns.slice().sort(() => Math.random() - 0.5);
-  let px = _x, pz = _z, py = 0;
+  
+  // Actually respect the passed-in Y coordinate as our fallback
+  let px = _x, pz = _z, py = (_spawnY !== undefined) ? _spawnY : 0;
   
   for (const [cx, cy, cz] of shuffled) {
     const dx = cx - camera.position.x, dz = cz - camera.position.z;
-    // Ensure they don't spawn right on top of the player
     if (dx * dx + dz * dz >= MIN_SPAWN_DIST * MIN_SPAWN_DIST) {
-      px = cx + (Math.random() - 0.5) * 2.0; // Add slight random scatter
+      px = cx + (Math.random() - 0.5) * 2.0; 
       py = cy;
       pz = cz + (Math.random() - 0.5) * 2.0;
       break;
@@ -503,7 +548,7 @@ export function spawnBot(type, _x, _spawnY_IGNORED, _z, scale = 1.0) {
     hpMod *= 1.3;
     dmgMod *= 1.2;
     speedMod *= 1.5;
-    e.score *= 2; // Double score
+    e.score *= 2; 
   }
 
   e.hp = Math.round(e.hp * hpMod); 
@@ -512,22 +557,28 @@ export function spawnBot(type, _x, _spawnY_IGNORED, _z, scale = 1.0) {
   if (type === 'ninja') {
     e.speed = e.speed * speedMod;
   } else {
-    e.speed = e.speed * (0.85 + 0.15 * Math.min(scale, 2.0));
+    e.speed = e.speed * speedMod * (0.85 + 0.15 * Math.min(scale, 2.0));
   }
+  
+  e._yaw = Math.random() * Math.PI * 2;
+  e._wanderAngle = 0;
+  e._wanderTimer = Math.random() * 2.5;
+  e.speed *= 0.9 + Math.random() * 0.2; 
   if (type === 'giantbot') {
       e.group.scaling.set(3, 3, 3);
   }
 
-  // Snap the chosen spawn to the nearest valid NavMesh point so bots can never
-  // materialise inside wall geometry even if the raw coordinate is slightly off.
   const rawSpawn = new BABYLON.Vector3(px, py + (e.flyH > 0 ? e.flyH : 0) + 0.5, pz);
   const snapped  = navPlugin.getClosestPoint(rawSpawn);
   if (snapped) {
+    // Defense: If the dummy plugin just returned our exact query, remove the 0.5 height offset
+    if (Math.abs(snapped.y - rawSpawn.y) < 0.001 && Math.abs(snapped.x - rawSpawn.x) < 0.001) {
+        snapped.y -= 0.5;
+    }
     px = snapped.x;
     py = snapped.y;
     pz = snapped.z;
     
-    // Push the bot away from walls at spawn
     const dirs = [new BABYLON.Vector3(1,0,0), new BABYLON.Vector3(-1,0,0), new BABYLON.Vector3(0,0,1), new BABYLON.Vector3(0,0,-1)];
     for (const d of dirs) {
         const r = new BABYLON.Ray(new BABYLON.Vector3(px, py + 0.5, pz), d, 0.6);
@@ -548,25 +599,26 @@ export function spawnBot(type, _x, _spawnY_IGNORED, _z, scale = 1.0) {
 
 export function hitRobot(e, dmg, isHeadshot = false, isExplosive = false, source = 'PLAYER') {
   if (!e.alive) return;
+
   // Railgun fires 9999 – cap it for boss-tier enemies so they need multiple shots - currently capped at 20% HP
   if (BOSS_TYPES.has(e.type) && dmg > e.maxHp * 0.20) {
     dmg = Math.round(e.maxHp * 0.20);
   }
   let actualDmg = Math.min(dmg, e.hp); // clamp so overkill doesn't inflate totals
 
-  if (e.type === 'armored') {
+  if (e.type === 'armored' || e.type === 'shield_bot') {
     const W = WDEFS[curWep];
     const isEnergy = W.useHeat || (curWep === 'PLASMA' && W.ammo === Infinity) || curWep === 'RAILGUN';
+    const hasBypass = curWep === 'AEGIS' && getLoadout('AEGIS').attachments?.special === 'bypass_algorithms';
     
     // Check if player is behind the shield (shooting from the side/back)
     const toPlayer = camera.position.subtract(e.group.position);
-    const botForward = new BABYLON.Vector3(0, 0, 1);
-    botForward.rotateByQuaternionToRef(e.group.rotationQuaternion || BABYLON.Quaternion.Identity(), botForward);
+    const botForward = new BABYLON.Vector3(Math.sin(e._yaw), 0, Math.cos(e._yaw));
     const dotProduct = BABYLON.Vector3.Dot(toPlayer.normalize(), botForward);
     
-    if (dotProduct > 0 && !isEnergy) {
-        // Player is in front of shield and not using energy weapon - 60% damage reduction
-        actualDmg = Math.round(actualDmg * 0.40);
+    if (dotProduct > 0 && !isEnergy && !hasBypass) {
+        // Player is in front of shield and not using energy weapon - 50% damage reduction
+        actualDmg = Math.round(actualDmg * 0.50);
         
         // Visual feedback - flash shield
         const shieldMesh = e.group.getChildMeshes().find(m => m.name.includes('shieldVis'));
@@ -683,8 +735,21 @@ export function destroyRobot(e, isHeadshot = false, isExplosive = false, source 
 
   _totalKills++;
   _roundKills++;
+  // Trigger Cosmic skin radiant flare if currently equipped on active weapon
+    import('./progression.js').then(({ getLoadout }) => {
+        const loadout = getLoadout();
+        if (loadout[curWep]?.skin === 'cosmic') {
+            import('./weapons.js').then(({ triggerCosmicGlow }) => triggerCosmicGlow());
+        }
+    });
   
-  const names = { scout:'Scout destroyed!',heavy:'Heavy down!',sniper:'Sniper eliminated!',drone:'Drone shot down!',pistol:'Pistol bot down!',shotgun:'Shotgunner destroyed!',rocket:'Rocket bot destroyed!',grenadier:'Grenadier down!',electron_bot:'Electron Bot destroyed!',ion_sniper:'Ion Sniper eliminated!' };
+  const names = 
+  { scout:'Scout destroyed!',heavy:'Heavy down!',sniper:'Sniper eliminated!',drone:'Drone shot down!',pistol:'Pistol bot down!',shotgun:'Shotgunner destroyed!',
+    rocket:'Rocket bot destroyed!',grenadier:'Grenadier down!',electron_bot:'Electron Bot destroyed!',ion_sniper:'Ion Sniper eliminated!',
+    giantbot: '★ BOSS DEFEATED! ★', ninja: 'Ninja bot vanquished!', armored: 'Armored bot cracked!',
+    medic_bot: 'Medic bot neutralised!', shield_bot: 'Shield bot breached!', teleport_bot: 'Teleport bot phased out!', swarm_host: 'Swarm host eliminated!',
+    rivet_bot: 'Rivet bot dismantled!', enforcer_bot: 'Enforcer bot taken down!', tactician: 'Tactician bot destroyed!',
+};
   const feed = document.getElementById('killFeed');
   if (feed) { 
       feed.textContent = (names[e.type] || 'Robot destroyed!') + (_angryMode ? ' [ENRAGED]' : ''); 
@@ -695,31 +760,63 @@ export function destroyRobot(e, isHeadshot = false, isExplosive = false, source 
   import('./pickups.js').then(({ spawnPickup, spawnWeaponDrop, spawnPowerup, spawnTypedPickup }) => {
    // --- EPIC BOSS LOOT EXPLOSION ---
     if (e.type === 'giantbot') {
-      spawnPowerup(pos.add(new BABYLON.Vector3( 1.5, 0, 0)), 'quad_damage');
-      spawnPowerup(pos.add(new BABYLON.Vector3(-1.5, 0, 0)), 'infinite_ammo');
-      spawnPickup(pos.add(new BABYLON.Vector3(0, 0,  1.5)));
-      spawnPickup(pos.add(new BABYLON.Vector3(0, 0, -1.5)));
-      spawnWeaponDrop(pos, 'ROCKET');
+        const pTypes = ['quad_damage', 'infinite_ammo', 'haste', 'double_score'];
+        const pt = pTypes[Math.floor(Math.random() * pTypes.length)];
+        spawnPowerup(pos, pt);
+        spawnPickup(pos.add(new BABYLON.Vector3(0, 0,  1.5)));
+        spawnPickup(pos.add(new BABYLON.Vector3(0, 0, -1.5)));
+        // Build wonder weapon pool
+        const wonderWeapons = ['THUNDERBOLT', 'SINGULARITY', 'PYROCLAST'];
+        // Check if OMEGA_STORM is unlocked
+        if (isWonderWeaponUnlocked('OMEGA_STORM')) {
+            wonderWeapons.push('OMEGA_STORM');
+        }
+        const randomWW = wonderWeapons[Math.floor(Math.random() * wonderWeapons.length)];
+        spawnWeaponDrop(pos, randomWW);
+        return;
     } else if (e.type === 'ninja') {
-      // --- NINJA FIXED DROPS ---
+      // --- FIXED DROPS ---
       spawnTypedPickup(pos.add(new BABYLON.Vector3( 0.6, 0, 0)), 'ammo');
       spawnTypedPickup(pos.add(new BABYLON.Vector3(-0.6, 0, 0)), 'armor');
+      return;
+    } else if (e.type === 'swarm_host') {
+        spawnTypedPickup(pos.add(new BABYLON.Vector3( 0.6, 0,  0.6)), 'health');
+        spawnTypedPickup(pos.add(new BABYLON.Vector3(-0.6, 0, -0.6)), 'armor');
+        spawnTypedPickup(pos.add(new BABYLON.Vector3( 0,   0,  0.8)), 'ammo');
+        return;
     } else {
       // --- NORMAL BOT LOOT ---
+      if (e.type === 'medic_bot') {
+        spawnTypedPickup(pos, 'health'); // Adds to standard drops for Medic bot
+        }
       // 5% chance to drop a rare Powerup
       if (Math.random() < 0.05) { 
         const pTypes = ['quad_damage', 'infinite_ammo', 'haste', 'double_score'];
         const pt = pTypes[Math.floor(Math.random() * pTypes.length)];
         spawnPowerup(pos, pt);
       } 
-      // Independent 45% chance to drop Health/Armor/Ammo
-      if (Math.random() < 0.45) {
+      // Independent 30% chance to drop Health/Armor/Ammo
+      if (Math.random() < 0.3) {
         spawnPickup(pos);
       }
+      
+      // ALWAYS drop the robot's standard weapon to prevent soft locks
       const dropWep = ROBOT_DROPS[e.type];
       if (dropWep) spawnWeaponDrop(pos, dropWep);
+
+      // Crossbow Bolt Recovery Mechanic (Independent roll)
       if (curWep === 'CROSSBOW') {
-        spawnWeaponDrop(pos, 'CROSSBOW');};
+          import('./progression.js').then(({ hasBoltRecovery }) => {
+              // 10% base chance to recover a bolt, 60% if the attachment is equipped
+              const recoveryChance = (typeof hasBoltRecovery === 'function' && hasBoltRecovery()) ? 0.60 : 0.10;
+              
+              if (Math.random() < recoveryChance) {
+                  // Offset the bolt drop slightly so it doesn't perfectly overlap the standard weapon drop
+                  const offsetPos = pos.add(new BABYLON.Vector3((Math.random() - 0.5) * 1.5, 0, (Math.random() - 0.5) * 1.5));
+                  spawnWeaponDrop(offsetPos, 'CROSSBOW');
+              }
+          });
+      }
     }
   });
   cb.markHudDirty?.();
@@ -736,6 +833,27 @@ const _STEER   = [0, Math.PI/4, -Math.PI/4, Math.PI/2, -Math.PI/2, (3*Math.PI)/4
 const _STEER_SCOUT = [0, Math.PI/6, -Math.PI/6, Math.PI/3, -Math.PI/3, Math.PI/2, -Math.PI/2, (2*Math.PI)/3, -(2*Math.PI)/3, Math.PI];
 
 function _rotY(v, a) { const c=Math.cos(a),s=Math.sin(a),nx=v.x*c-v.z*s,nz=v.x*s+v.z*c; v.x=nx; v.z=nz; }
+
+// ── Off-navmesh leash ─────────────────────────────────────────
+// Knockback (Phalanx / Thermal Backfire) and failed hop landings both
+// skip the normal navmesh-clamped move, so a grounded bot can end up off
+// the walkable mesh entirely with nothing to bring it back. If it sits
+// >2.5u off the nearest navmesh point for over a second, snap it home.
+// Skipped while genuinely mid-hop/jump, and for drones (handled below).
+function _leashToNavmesh(e, dt) {
+  if (e.flyH > 0 || e._hopY > 0) { e._leashTimer = 0; return; }
+  const probe = new BABYLON.Vector3(e.group.position.x, e._floorY + 1.0, e.group.position.z);
+  const safe = navPlugin.getClosestPoint(probe);
+  const off = safe ? Math.hypot(safe.x - probe.x, safe.z - probe.z) : Infinity;
+  e._leashTimer = off > 2.5 ? (e._leashTimer || 0) + dt : 0;
+  if (e._leashTimer <= 1.0) return;
+  if (safe) {
+    e.group.position.x = safe.x; e.group.position.z = safe.z; e._floorY = safe.y;
+  } else {
+    e.group.position.x = 0; e.group.position.z = 0; e._floorY = 0; // last resort: map centre
+  }
+  e._hopY = 0; e._yVel = 0; e._leashTimer = 0;
+}
 
 export function updateEnemies(dt) {
   _tickTimers(dt);
@@ -853,7 +971,96 @@ export function updateEnemies(dt) {
             }
         }
     }
-    
+
+    // Process POISON effects (Crossbow Coated Tips)
+    if (e._poisonDots && e._poisonDots.length > 0) {
+        let totalDps = 0;
+        for (let i = e._poisonDots.length - 1; i >= 0; i--) {
+            const dot = e._poisonDots[i];
+            totalDps += dot.dps;
+            dot.remaining -= dt;
+            if (dot.remaining <= 0) e._poisonDots.splice(i, 1);
+        }
+        
+        if (totalDps > 0) {
+            e.hp -= totalDps * dt;
+            
+            // Visual green aura effect (avoids shared material conflicts)
+            if (!e._poisonAura) {
+                e._poisonTimer = 0;
+                const mat = new BABYLON.StandardMaterial('poisonMat_' + e.group.name, scene);
+                mat.emissiveColor = new BABYLON.Color3(0.1, 0.9, 0.1);
+                mat.alpha = 0.45;
+                mat.disableLighting = true;
+                
+                e._poisonAura = BABYLON.MeshBuilder.CreateSphere('poisonAura', {diameter: 1.6, segments: 8}, scene);
+                e._poisonAura.material = mat;
+                e._poisonAura.parent = e.group;
+                e._poisonAura.position.y = e.flyH > 0 ? 0.5 : 1.0;
+                e._poisonAura.isPickable = false;
+            }
+            
+            // Pulse the aura
+            e._poisonTimer += dt;
+            const pulse = 1.0 + Math.sin(e._poisonTimer * 6) * 0.15;
+            if (e._poisonAura) e._poisonAura.scaling.setAll(pulse);
+            
+            if (e.hp <= 0) {
+                destroyRobot(e, false, false, 'POISON');
+                continue;
+            }
+        }
+    } else if (e._poisonAura) {
+        // Clean up aura when poison expires
+        e._poisonAura.dispose();
+        e._poisonAura = null;
+    }
+    // Process Bot Healing
+    if (e._hots && e._hots.length > 0) {
+        let totalHps = 0;
+        for (let i = e._hots.length - 1; i >= 0; i--) {
+            const hot = e._hots[i];
+            totalHps += hot.hps;
+            hot.remaining -= dt;
+            if (hot.remaining <= 0) {
+                e._hots.splice(i, 1);
+            }
+        }
+        // Only heal and animate if the bot is actually alive and damaged
+        if (totalHps > 0 && e.hp < e.maxHp && e.alive) {
+            e.hp = Math.min(e.maxHp, e.hp + totalHps * dt);
+            
+            // Dynamic Glowing Healing Aura Indicator
+            if (!e._healAura) {
+                e._healTimer = 0;
+                const mat = new BABYLON.StandardMaterial('healMat_' + e.group.name, scene);
+                mat.emissiveColor = new BABYLON.Color3(0.0, 1.0, 0.35); // Vibrant emerald green
+                mat.alpha = 0.35;
+                mat.disableLighting = true;
+                
+                e._healAura = BABYLON.MeshBuilder.CreateSphere('healAura', { diameter: 1.5, segments: 8 }, scene);
+                e._healAura.material = mat;
+                e._healAura.parent = e.group;
+                // Position above floor or adjust for flying bots
+                e._healAura.position.y = e.flyH > 0 ? 0.5 : 1.0;
+                e._healAura.isPickable = false;
+            }
+            
+            // Animate aura scale pulsing over time
+            e._healTimer += dt;
+            const pulse = 1.0 + Math.sin(e._healTimer * 8.0) * 0.12;
+            if (e._healAura) {
+                e._healAura.setEnabled(true);
+                e._healAura.scaling.setAll(pulse);
+            }
+        }
+    } else {
+        // Hide the aura mesh when no longer receiving healing
+        if (e._healAura) {
+            e._healAura.setEnabled(false);
+        }
+    }
+
     if (window._hazardZones) {
       for (const haz of window._hazardZones) {
         const ex = e.group.position.x, ez = e.group.position.z;
@@ -914,41 +1121,120 @@ export function updateEnemies(dt) {
     // 2. If I have LOS, I only move if I'm outside my preferred 2D range.
     const hasLOS = _hasLOS(_eMuzzle, playerEye);
 
-    // Medic bot: heal nearby allies
-    if (e.type === 'medic_bot') {
-        for (const ally of enemies) {
-            if (ally === e || !ally.alive) continue;
-            const dist = BABYLON.Vector3.Distance(e.group.position, ally.group.position);
-            if (dist < 8 && ally.hp < ally.maxHp) {
-                ally.hp = Math.min(ally.maxHp, ally.hp + 5 * dt);
+    // Medic bot: cast AoE Heal over Time
+    if (e.type === 'medic_bot' && e.alive) {
+        if (e.healCooldown === undefined) e.healCooldown = Math.random() * 2; // Slight offset so multiple medics don't sync up perfectly
+        e.healCooldown -= dt;
+        
+        if (e.healCooldown <= 0) {
+            e.healCooldown = 5.0; // Casts exactly every 5 seconds
+            
+            // Spawn green particle splash at caster position
+            if (typeof spawnSparks === 'function') spawnSparks(e.group.position, 0x00ff55, 12);
+            
+            // Apply the reverse DoT effect to all nearby bots within casting range
+            for (const ally of enemies) {
+                if (ally === e || !ally.alive) continue;
+                
+                const distToAlly = BABYLON.Vector3.Distance(e.group.position, ally.group.position);
+                if (distToAlly < 12.0) {
+                    if (!ally._hots) ally._hots = [];
+                    // Apply 4 HP/sec over 5 seconds (20 HP total)
+                    ally._hots.push({ hps: 4, remaining: 5.0 });
+                }
             }
         }
     }
 
-    // Teleport bot: random blink
-    if (e.type === 'teleport_bot') {
-        if (!e._teleportTimer) e._teleportTimer = 3.0;
-        e._teleportTimer -= dt;
-        if (e._teleportTimer <= 0) {
-            e._teleportTimer = 2.0 + Math.random() * 4.0;
-            // Blink to random position near player
-            const angle = Math.random() * Math.PI * 2;
-            const dist = 5 + Math.random() * 10;
-            e.group.position.x = _ePP.x + Math.cos(angle) * dist;
-            e.group.position.z = _ePP.z + Math.sin(angle) * dist;
-            e._floorY = e.group.position.y; // reset floor
+    // Teleport bot: random blink towards the player
+    if (e.type === 'teleport_bot' && e.alive) {
+        if (e.teleportCooldown === undefined) e.teleportCooldown = Math.random() * 3.0;
+        e.teleportCooldown -= dt;
+
+        const distToPlayer = BABYLON.Vector3.Distance(e.group.position, camera.position);
+        const attackRange = 12.0; 
+
+        // Only attempt teleporting if outside effective attack range
+        if (distToPlayer > attackRange && e.teleportCooldown <= 0) {
+            // Step 1: Calculate a randomized target close to the player
+            const randomAngle = Math.random() * Math.PI * 2;
+            const randomRadius = 2.0 + Math.random() * 4.0; // Scattered 2-6 units from player
+            
+            const targetDest = camera.position.clone();
+            targetDest.x += Math.cos(randomAngle) * randomRadius;
+            targetDest.z += Math.sin(randomAngle) * randomRadius;
+
+            // Step 2: Cap the leap distance relative to the bot's current location
+            const displacement = targetDest.subtract(e.group.position);
+            const maxFlashDistance = 10.0; // Caps single-flash distance
+            
+            if (displacement.length() > maxFlashDistance) {
+                displacement.normalize().scaleInPlace(maxFlashDistance);
+                targetDest.copyFrom(e.group.position).addInPlace(displacement);
+            }
+
+            // Step 3: Flash FX, execution, and boundary adherence
+            if (typeof spawnSparks === 'function') spawnSparks(e.group.position, 0x00ffff, 8);
+
+            e.group.position.copyFrom(targetDest);
+            if (navPlugin && navPlugin.getClosestPoint) {
+                e.group.position = navPlugin.getClosestPoint(e.group.position); // Clamp safely to NavMesh
+            }
+
+            if (typeof spawnSparks === 'function') spawnSparks(e.group.position, 0x00ffff, 8);
+            e.teleportCooldown = 4.5; // Reset cooldown
         }
     }
 
-    // Swarm host: spawn tiny drones
-    if (e.type === 'swarm_host') {
+    // Swarm host: spawn map-pool minions
+    if (e.type === 'swarm_host' && e.alive) {
+        if (!e._activeSummons) e._activeSummons = [];
+        // Filter out summons that have died so slots open back up
+        e._activeSummons = e._activeSummons.filter(summon => summon.alive);
+
+        // Limit scales proportionally to Wave Number: e.g., 2 summons at wave 10, 4 at wave 20
+        const waveNum = typeof currentWave !== 'undefined' ? currentWave : 10;
+        const maxSummons = Math.max(1, Math.floor(waveNum / 5));
+
         if (!e._spawnTimer) e._spawnTimer = 5.0;
         e._spawnTimer -= dt;
-        if (e._spawnTimer <= 0 && enemies.length < 25) {
-            e._spawnTimer = 5.0;
-            const offset = new BABYLON.Vector3(Math.random()*4-2, 0, Math.random()*4-2);
-            spawnBot('drone', e.group.position.x + offset.x, e.group.position.y, e.group.position.z + offset.z, 0.5);
-            _roundEnemies++;
+
+        if (e._spawnTimer <= 0 && e._activeSummons.length < maxSummons && enemies.length < 25) {
+            e._spawnTimer = 6.0; // Ability cooldown behavior
+            
+            // Pull enemy types natively from current map pool
+            const rawPool = getBossPoolForCurrentMap();
+            
+            // SAFEGUARD: Filter out 'swarm_host' to prevent infinite nesting
+            const safePool = (rawPool || []).filter(type => type !== 'swarm_host');
+            
+            // Pick a random bot, falling back to 'drone' if the pool is empty
+            const botType = safePool.length > 0 ? safePool[Math.floor(Math.random() * safePool.length)] : 'drone';
+            
+            // Spawn directly next to the swarm host
+            const offset = new BABYLON.Vector3((Math.random() - 0.5) * 3.0, 0, (Math.random() - 0.5) * 3.0);
+            const spawnX = e.group.position.x + offset.x;
+            const spawnY = e.group.position.y;
+            const spawnZ = e.group.position.z + offset.z;
+            
+            const preCount = enemies.length;
+            
+            // Spawn scaled down at 0.5 size
+            spawnBot(botType, spawnX, spawnY, spawnZ, 0.5);
+            
+            // Configure specific summon attributes if successfully instantiated
+            if (enemies.length > preCount) {
+                const spawnedBot = enemies[enemies.length - 1];
+                if (spawnedBot && spawnedBot.group) {
+                    spawnedBot.group.scaling.set(0.5, 0.5, 0.5); // Visually smaller
+                    spawnedBot.speed *= 0.65;                    // Reduced movement speed
+                    spawnedBot.rate *= 1.8;                      // Higher reload delay = slower attack speed
+                }
+                e._activeSummons.push(spawnedBot);
+            }
+            
+            // Crucial: Increment global counter so destruction feeds XP/Challenges tracking natively
+            _roundEnemies++; 
         }
     }
 
@@ -968,7 +1254,7 @@ export function updateEnemies(dt) {
       // --- Threshold‑based summon (once per threshold) ---
       const hpPct = e.hp / e.maxHp;
       const thresholds = [0.75, 0.5, 0.25];
-      const summonPool = ['drone', 'scout', 'heavy', 'rocket', 'grenadier', 'electron_bot', 'armored', 'ninja', 'medic_bot', 'shield_bot'];
+      const summonPool = getBossPoolForCurrentMap();
       for (const t of thresholds) {
         const key = t.toString();
         if (hpPct <= t && !e._thresholdsTriggered[key] && enemies.length < 22) {
@@ -1043,8 +1329,9 @@ export function updateEnemies(dt) {
                   if (o === e || !o.alive || o.type !== 'drone') continue;
                   const sep = e.group.position.subtract(o.group.position);
                   const len = sep.length();
-                  if (len > 0.01 && len < 2.5) {
-                      sep.normalize().scaleInPlace(0.6);
+                  const _dSepR = 3.5;
+                  if (len > 0.01 && len < _dSepR) {
+                      sep.normalize().scaleInPlace((_dSepR - len) / _dSepR * 1.4);
                       _eDir.addInPlace(sep);
                   }
               }
@@ -1088,9 +1375,13 @@ export function updateEnemies(dt) {
         else if (e.type === 'heavy') targetDist = 12.0;
         else if (e.type === 'rocket' || e.type === 'drone') targetDist = 14.0;
         else if (e.type === 'shotgun') targetDist = 3.0;
+        else if (e.type === 'ninja') targetDist = 1.5;
         else if (e.type === 'scout' || e.type === 'pistol') targetDist = 6.0;
+        else if (e.type === 'rivet_bot') targetDist = 11.0;
+        else if (e.type === 'enforcer') targetDist = 5.0;
+        else if (e.type === 'tactician') targetDist = 18.0;
 
-        // NEW FIX: Use 2D distance so bots prioritize finding stairs instead of standing directly below you
+        // Use 2D distance so bots prioritize finding stairs instead of standing directly below you
         const dist2D = Math.sqrt(
             Math.pow(e.group.position.x - _ePP.x, 2) + 
             Math.pow(e.group.position.z - _ePP.z, 2)
@@ -1098,7 +1389,7 @@ export function updateEnemies(dt) {
 
         // Calculate vertical difference to detect if bot is on wrong floor
         const verticalDiff = Math.abs(e.group.position.y - _ePP.y);
-        const onWrongFloor = verticalDiff > 4.0; // More than 4 units of height difference
+        const onWrongFloor = verticalDiff > 2.0; // More than 2 units of height difference
 
         // Always move if: angry mode, no LOS, wrong floor, or outside preferred range
         const shouldMove = _angryMode || !hasLOS || onWrongFloor || (dist2D > targetDist + 1.0 || dist2D < targetDist - 2.0);
@@ -1142,16 +1433,7 @@ export function updateEnemies(dt) {
             // Fallback: direct vector toward player feet
             if (!hasPath) _eDir.copyFrom(playerFeet).subtractInPlace(botFeet);
 
-            // ── Stair climbing: if the next waypoint is meaningfully higher,
-            //    initiate a hop so the bot actually rises onto the step.
-            if (nextWaypoint && e._hopY <= 0) {
-                const stepUp = nextWaypoint.y - e._floorY;
-                if (stepUp > 0.25 && stepUp < 3.5) {
-                    // Proportional jump velocity: just enough to clear the step
-                    e._yVel  = Math.sqrt(2 * 35.0 * stepUp) * 1.2;
-                    e._hopY  = 0.05; // seed mid-air branch
-                }
-            }
+                  // (stair detection moved to per-frame floor-follow below)
 
             _eDir.y = 0;
             if (_eDir.length() > 0.001) _eDir.normalize();
@@ -1186,17 +1468,60 @@ export function updateEnemies(dt) {
                 }
             }
 
-            // Separation push
+            // Separation push — wider radius so bots spread naturally
             for (const o of enemies) {
                 if (o === e || !o.alive) continue;
                 _eSep.copyFrom(e.group.position).subtractInPlace(o.group.position);
                 _eSep.y = 0;
                 const sepLen = _eSep.length();
-                if (sepLen > 0.05 && sepLen < 1.8) _eDir.addInPlace(_eSep.normalize().scale(0.5));
+                const _sepR = 3.2;
+                if (sepLen > 0.05 && sepLen < _sepR) {
+                    _eDir.addInPlace(_eSep.normalize().scale((_sepR - sepLen) / _sepR * 1.8));
+                }
             }
             if (_eDir.length() > 0.001) _eDir.normalize();
+            // Lateral wander for organic, non-robotic paths
+            if (e._wanderTimer !== undefined) {
+                e._wanderTimer -= dt;
+                if (e._wanderTimer <= 0) {
+                    e._wanderTimer = 1.8 + Math.random() * 2.5;
+                    e._wanderAngle = (Math.random() - 0.5) * 0.5;
+                }
+                if (e._wanderAngle && dist > targetDist * 0.5) {
+                    const _wc = Math.cos(e._wanderAngle), _ws = Math.sin(e._wanderAngle);
+                    const _wx = _eDir.x * _wc - _eDir.z * _ws;
+                    const _wz = _eDir.x * _ws + _eDir.z * _wc;
+                    _eDir.x = _wx; _eDir.z = _wz;
+                    if (_eDir.length() > 0.001) _eDir.normalize();
+                }
+            }
 
-            const speed = e.speed * dt;
+            let currentSpeed = e.speed;
+
+            // Apply CRYO-CORE slow effect
+            if (e.cryoTimer > 0) {
+                e.cryoTimer -= dt;
+                currentSpeed *= 0.35; // 65% Movement Speed Penalty
+                e.atkTimer += dt * 0.45; // Also slows down their attack firing cycle
+                
+                // Visual tint using Babylon's non-destructive Overlay
+                if (!e._cryoTinted) {
+                    e.group.getChildMeshes().forEach(m => {
+                        m.renderOverlay = true;
+                        m.overlayColor = new BABYLON.Color3(0.2, 0.6, 1.0);
+                        m.overlayAlpha = 0.6;
+                    });
+                    e._cryoTinted = true;
+                }
+            } else if (e._cryoTinted) {
+                // Revert visual tint when timer expires
+                e.group.getChildMeshes().forEach(m => {
+                    m.renderOverlay = false; 
+                });
+                e._cryoTinted = false;
+            }
+            
+            const speed = currentSpeed * dt;
 
             // MID-AIR MOVEMENT (The Hop / Fall)
             if (e._hopY > 0) {
@@ -1207,7 +1532,7 @@ export function updateEnemies(dt) {
                     e.group.position.z += _eDir.z * speed;
                 }
                 
-                // FIX: Cast ray down from +2.0 units high to ensure it always starts above the steps!
+                // Cast ray down from +2.0 units high to ensure it always starts above the steps!
                 const downRay = new BABYLON.Ray(new BABYLON.Vector3(e.group.position.x, e._floorY + e._hopY + 2.0, e.group.position.z), new BABYLON.Vector3(0, -1, 0), 100);
                 const dHit = scene.pickWithRay(downRay, m => m.checkCollisions && !m.metadata?.enemy && m.isEnabled());                if (dHit?.hit) {
                     const groundY = dHit.pickedPoint.y;
@@ -1221,9 +1546,16 @@ export function updateEnemies(dt) {
             // GROUND MOVEMENT
             else {
                 const intendedPos = e.group.position.add(_eDir.scale(speed));
-                const clampedPos = navPlugin.getClosestPoint(new BABYLON.Vector3(intendedPos.x, e._floorY + 1.2, intendedPos.z));
+                const queryPos = new BABYLON.Vector3(intendedPos.x, e._floorY + 1.2, intendedPos.z);
+                const clampedPos = navPlugin.getClosestPoint(queryPos);
                 
                 if (clampedPos) {
+                    // DEFENSE: If it's the dummy plugin returning our exact query, strip the 1.2 offset 
+                    // so the bots don't continuously climb into the sky
+                    if (Math.abs(clampedPos.y - queryPos.y) < 0.001 && Math.abs(clampedPos.x - queryPos.x) < 0.001) {
+                        clampedPos.y -= 1.2;
+                    }
+                    
                     // Prevent clipping by raycasting the intended path using the bot's radius
                     const moveDir = clampedPos.subtract(e.group.position);
                     moveDir.y = 0;
@@ -1234,7 +1566,6 @@ export function updateEnemies(dt) {
                         const wallRay = new BABYLON.Ray(new BABYLON.Vector3(e.group.position.x, e._floorY + 1.2, e.group.position.z), moveDir, moveDist + 0.55);
                         const wallHit = scene.pickWithRay(wallRay, m => m.checkCollisions && !m.metadata?.enemy && m.isEnabled());
                         if (wallHit?.hit) {
-                            // Hit a wall? Stop slightly before it
                             const safeDist = Math.max(0, wallHit.distance - 0.56);
                             clampedPos.copyFrom(e.group.position).addInPlace(moveDir.scale(safeDist));
                         }
@@ -1255,9 +1586,6 @@ export function updateEnemies(dt) {
                             e.group.position.z = clampedPos.z;
                             e._floorY = clampedPos.y;
 
-                            // ── Footstep sound ─────────────────────────────────────
-                            // Interval scales with speed: fast scouts step rapidly,
-                            // slow heavies plod. Capped so it never fires too fast.
                             if (!e._stepTimer) e._stepTimer = 0;
                             e._stepTimer -= dt;
                             if (e._stepTimer <= 0) {
@@ -1271,7 +1599,6 @@ export function updateEnemies(dt) {
                     e._stuckTimer += dt; 
                 }
 
-                // TRIGGER JUMP: If stuck at a gap or wall for 0.4 seconds, vault over!
                 if (e._stuckTimer > 0.4) {
                     e._yVel = 12.0; 
                     e._stuckTimer = 0;
@@ -1279,6 +1606,35 @@ export function updateEnemies(dt) {
             }
         }
         
+        // ── Per-frame floor follow: smooth stair climbing & edge detection ──
+        if (e._hopY <= 0 && e.flyH === 0) {
+            const _fRay = new BABYLON.Ray(
+                new BABYLON.Vector3(e.group.position.x, e._floorY + 1.0, e.group.position.z),
+                new BABYLON.Vector3(0, -1, 0), 100.0 // Extended to 100 to detect deep drops/spawning in air
+            );
+            const _fHit = scene.pickWithRay(_fRay, m => m.checkCollisions && !m.metadata?.enemy && m.isEnabled());
+            if (_fHit?.hit) {
+                const _newY = _fHit.pickedPoint.y;
+                const _dy = _newY - e._floorY;
+                
+                if (_dy > 0.04 && _dy <= 0.65) {
+                    // Smooth step-up (0.5-unit stair steps)
+                    e._floorY += Math.min(_dy, e.speed * dt * 6.0 + 0.06);
+                } else if (_dy > 0.65 && _dy < 3.5) {
+                    // Large ledge: jump
+                    e._yVel = Math.sqrt(2 * 35.0 * _dy) * 1.1;
+                    e._hopY = 0.05;
+                } else if (_dy < -0.25) {
+                    // Floor has dropped out beneath the bot - initiate fall!
+                    e._hopY = Math.abs(_dy); 
+                    e._floorY = _newY;
+                    e._yVel = 0; 
+                } else {
+                    // Lock strictly to the exact floor level to prevent micro-drifting
+                    e._floorY = _newY;
+                }
+            }
+        }
         // Apply Gravity 
         if (e._hopY > 0 || e._yVel !== 0) {
             e._yVel -= 35.0 * dt; 
@@ -1294,9 +1650,36 @@ export function updateEnemies(dt) {
     }
 
     // --- 3. APPLY TRANSFORM ---
+    // Apply THERMAL BLAST Knockback Velocity
+    if (e.knockbackVel && e.knockbackVel.length() > 0.05) {
+        const oldPos = e.group.position.clone();
+        const moveStep = e.knockbackVel.scale(dt);
+        
+        // Resonance Cascade Wall Slam Check
+        if (e._phalanxShatter) {
+            const ray = new BABYLON.Ray(new BABYLON.Vector3(oldPos.x, e._floorY + 1.0, oldPos.z), e.knockbackVel.clone().normalize(), moveStep.length() + 0.6);
+            const wHit = scene.pickWithRay(ray, m => m.checkCollisions && !m.metadata?.enemy);
+            if (wHit?.hit) {
+                cb.hitRobot(e, 85, false, false, 'PHALANX_SHATTER'); // Massive wall slam damage
+                if(!e.alive) continue;
+                spawnSparks(wHit.pickedPoint, 0xcccccc, 15);
+                e.knockbackVel.setAll(0);
+                e._phalanxShatter = false;
+            }
+        }
+        _leashToNavmesh(e, dt)
+        e.group.position.addInPlace(moveStep);
+        e.knockbackVel.scaleInPlace(Math.max(0, 1 - dt * 6.0));
+    }
     e.group.position.y = e._floorY + e._hopY + bob + (e._yAnimOffset || 0);
-    _eLookAt.set(_ePP.x, e.group.position.y, _ePP.z);
-    e.group.lookAt(_eLookAt);
+    // Smooth yaw rotation — heavy/boss types have more rotational inertia
+    const _tYaw = Math.atan2(_ePP.x - e.group.position.x, _ePP.z - e.group.position.z);
+    if (e._yaw === undefined) e._yaw = _tYaw;
+    let _dYaw = _tYaw - e._yaw;
+    while (_dYaw >  Math.PI) _dYaw -= Math.PI * 2;
+    while (_dYaw < -Math.PI) _dYaw += Math.PI * 2;
+    const _turnRate = e.type === 'giantbot' ? 1.2 : (e.type === 'heavy' || e.type === 'armored' || e.type === 'shield_bot') ? 2.5 : 5.5;    e._yaw += _dYaw * Math.min(1.0, dt * _turnRate);
+    e.group.rotation.y = e._yaw;
 
     // --- 4. ATTACK ---
     if (dist < e.range && hasLOS) {

@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Level Editor – Standalone</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: #111; }
+        #editorPanel {
+            position: fixed; top: 20px; right: 20px;
+            background: rgba(20,20,30,0.92);
+            color: #ddd;
+            padding: 14px;
+            border-radius: 10px;
+            font-family: monospace;
+            display: none;
+            flex-direction: column;
+            gap: 6px;
+            z-index: 9999;
+            min-width: 170px;
+            border: 1px solid #666;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+            pointer-events: none;
+        }
+        #editorPanel > * { pointer-events: auto; }
+        #editorPanel button {
+            background: #2a4a6a;
+            border: none;
+            color: white;
+            padding: 6px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: inherit;
+        }
+        #editorPanel button:hover { background: #3a6a8a; }
+        #editorPanel .danger { color: #ff6666; }
+        #editorPanel .success { color: #66ff66; }
+        #editorPanel .warning { color: #ffcc66; }
+        #editorPanel .live { color: #66ccff; }
+        #editorPanel kbd {
+            background: #333;
+            padding: 1px 6px;
+            border-radius: 3px;
+            font-size: 11px;
+        }
+        #editorPanel hr {
+            border-color: #555;
+            width: 100%;
+            margin: 4px 0;
+        }
+        #info {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            color: #888;
+            font-family: monospace;
+            font-size: 12px;
+            pointer-events: none;
+            text-shadow: 0 0 10px rgba(0,0,0,0.8);
+        }
+        #mapSwitcher {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            font-family: monospace;
+            font-size: 11px;
+            color: #888;
+            background: rgba(20,20,30,0.7);
+            padding: 8px 10px;
+            border-radius: 6px;
+            z-index: 9999;
+        }
+        #mapSwitcher a {
+            color: #6af;
+            text-decoration: none;
+            margin-right: 8px;
+        }
+        #mapSwitcher a.active { color: #9f6; font-weight: bold; }
+        #error {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #ff6666;
+            font-family: monospace;
+            background: rgba(0,0,0,0.8);
+            padding: 10px 20px;
+            border-radius: 8px;
+            display: none;
+            z-index: 10000;
+        }
+        #navRebuildBtn {
+            background: #4a6a2a;
+        }
+        #navRebuildBtn:hover {
+            background: #6a8a4a;
+        }
+    </style>
+</head>
+<body>
+    <div id="error"></div>
+    <div id="mapSwitcher">
+        EDIT MAP:
+        <a href="?map=scrapyard" data-map="scrapyard">Scrapyard</a>
+        <a href="?map=jungle" data-map="jungle">Jungle</a>
+        <a href="?map=city" data-map="city">City</a>
+        <a href="?map=terminal" data-map="terminal">Terminal</a>
+    </div>
+    <div id="editorPanel">
+        <div style="font-weight:bold; font-size:18px; color:#6af; margin-bottom:6px;">🧰 EDITOR</div>
+        <div style="font-size:11px; color:#aaa; margin-bottom:8px;">
+            <kbd>F4</kbd> toggle &nbsp;|&nbsp; <kbd>G</kbd> <kbd>R</kbd> <kbd>S</kbd> mode<br>
+            <kbd>P</kbd> print &nbsp;|&nbsp; <kbd>Del</kbd> delete<br>
+            <kbd>←↑↓→</kbd> nudge &nbsp; <kbd>PgUp/PgDn</kbd> Y
+        </div>
+        <hr>
+        <button data-action="addSlab">+ Slab</button>
+        <button data-action="addWall">+ Wall</button>
+        <button data-action="addPillar">+ Pillar</button>
+        <button data-action="addColumn">+ Column</button>
+        <button data-action="addGlass">+ Glass</button>
+        <button data-action="addRamp">+ Ramp</button>
+        <button data-action="addRampDirectional">+ Ramp (Rise)</button>
+        <button data-action="addBarrel">+ Barrel</button>
+        <button data-action="addCrate">+ Crate</button>
+        <button data-action="addLava" class="warning">+ Lava</button>
+        <button data-action="addDestWall">+ Dest. Wall</button>
+        <button data-action="addSpike" class="warning">+ Spikes</button>
+        <hr>
+        <button data-action="delete" class="danger">🗑 Delete</button>
+        <button data-action="export" class="success">📦 Export JSON</button>
+        <button data-action="import" class="warning">📂 Import JSON</button>
+        <button data-action="loadLive" class="live">📡 Load Live (assets/maps/)</button>
+        <button id="navRebuildBtn" class="warning" style="background:#4a6a2a;">🔄 Rebuild NavMesh</button>
+    </div>
+    <div id="info">🛠️ Standalone Editor – press F4 to start</div>
+
+    <!-- Load Babylon from local file (same as index.html) -->
+    <script src="/js/babylon.max.js"></script>
+    <!-- Recast for navmesh (level builder might use it) -->
+    <script src="https://cdn.babylonjs.com/recast.js"></script>
+
+    <script type="module">
+        const BABYLON = window.BABYLON;
+        const errorEl = document.getElementById('error');
+
+        // ── Which map are we editing? ──────────────────────────────────
+        // Every level*.js build function now accepts the same (customScene)
+        // signature and is loaded the same way, so swapping maps is just a
+        // path/build-fn lookup — append ?map=city (or scrapyard/jungle/terminal)
+        // to this page's URL, or click one of the links in the top-left.
+        const MAP_MODULES = {
+            scrapyard: { path: '/js/level.js',         buildFn: 'buildLevel' },
+            jungle:    { path: '/js/levelJungle.js',   buildFn: 'buildJungleLevel' },
+            city:      { path: '/js/levelCity.js',     buildFn: 'buildCityLevel' },
+            terminal:  { path: '/js/levelTerminal.js', buildFn: 'buildTerminalLevel' },
+        };
+        const mapId = new URLSearchParams(location.search).get('map') || 'jungle';
+        const { path: levelPath, buildFn } = MAP_MODULES[mapId] || MAP_MODULES.jungle;
+        document.querySelectorAll('#mapSwitcher a').forEach(a => {
+            if (a.dataset.map === mapId) a.classList.add('active');
+        });
+
+        try {
+            // ---- Create our own scene ----
+            const canvas = document.createElement('canvas');
+            canvas.id = 'renderCanvas';
+            document.body.prepend(canvas);
+            canvas.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; display:block;';
+
+            const engine = new BABYLON.Engine(canvas, true);
+            const scene = new BABYLON.Scene(engine);
+            scene.clearColor = new BABYLON.Color3(0.1, 0.1, 0.15);
+
+            const camera = new BABYLON.ArcRotateCamera('camera', -Math.PI/2, Math.PI/3, 120, BABYLON.Vector3.Zero(), scene);
+            camera.attachControl(canvas, true);
+            camera.wheelPrecision = 50;
+
+            const light = new BABYLON.HemisphericLight('light', new BABYLON.Vector3(0, 1, 0), scene);
+            light.intensity = 0.8;
+
+            // ---- Set globals for the level builder ----
+            window.__levelScene = scene;
+            // Provide a no-op navPlugin for the editor (we don't need navmesh)
+            window.__levelNavPlugin = { createNavMesh: () => {} };
+
+            // ---- Dynamically import the chosen level module + shared helpers ----
+            const levelMod = await import(levelPath);
+            const NAVMESH_PARAMS = levelMod.NAVMESH_PARAMS;
+            const {
+                createSlab, createWall, createPillar, createColumn, createGlass,
+                createRampBox, createRamp, createLava, createDestructibleWall, createSpikeTrap,
+                createBarrel, createCrate,
+                applyEditableLayout, loadMapOverride,
+            } = await import('/js/levelHelpers.js');
+            const { walkableMeshes, explosiveBarrels } = await import('/js/level.js');
+            // hazardZones/destructibleWalls are declared PER MAP (each level*.js
+            // owns its own array, same as walkableMeshes is shared/global but
+            // these aren't) — pull whichever ones this specific map exports.
+            // Defensive fallback to [] for forward-compat with any future map
+            // module that doesn't happen to export them.
+            const hazardZones       = levelMod.hazardZones       || [];
+            const destructibleWalls = levelMod.destructibleWalls || [];
+
+            console.log('[Editor] All modules loaded for map:', mapId);
+
+            // ---- Build the level (every buildXLevel() now takes the same
+            // optional customScene param and is async — it awaits its own
+            // assets/maps/<mapId>.json fetch before baking the NavMesh) ----
+            await levelMod[buildFn](scene);
+
+            // ---- Editor ----
+            class StandaloneEditor {
+                constructor(scene, canvas) {
+                    this.scene = scene;
+                    this.canvas = canvas;
+                    this.enabled = false;
+                    this.selectedMesh = null;
+                    this.gizmoManager = new BABYLON.GizmoManager(scene);
+                    this.gizmoManager.positionGizmoEnabled = true;
+                    this.gizmoManager.rotationGizmoEnabled = true;
+                    this.gizmoManager.scaleGizmoEnabled = true;
+                    this.gizmoManager.clearGizmoOnEmptyPointerEvent = true;
+
+                    this.setupPicking();
+                    this.setupKeys();
+                    this.setupUI();
+                }
+
+                setupPicking() {
+                    this.scene.onPointerObservable.add((pointerInfo) => {
+                        if (!this.enabled) return;
+                        if (pointerInfo.type !== BABYLON.PointerEventTypes.POINTERPICK) return;
+                        const mesh = pointerInfo.pickInfo?.pickedMesh;
+                        if (!mesh || !mesh.metadata?.editable) return;
+                        this.selectedMesh = mesh;
+                        this.gizmoManager.attachToMesh(mesh);
+                        console.log(`[Editor] Selected: ${mesh.name}`);
+                    });
+                }
+
+                setupKeys() {
+                    window.addEventListener('keydown', (e) => {
+                        if (e.code === 'F4') {
+                            e.preventDefault();
+                            this.toggle();
+                            return;
+                        }
+                        if (!this.enabled) return;
+
+                        if (e.key === 'g') {
+                            this.gizmoManager.positionGizmoEnabled = true;
+                            this.gizmoManager.rotationGizmoEnabled = false;
+                            this.gizmoManager.scaleGizmoEnabled = false;
+                        }
+                        if (e.key === 'r') {
+                            this.gizmoManager.positionGizmoEnabled = false;
+                            this.gizmoManager.rotationGizmoEnabled = true;
+                            this.gizmoManager.scaleGizmoEnabled = false;
+                        }
+                        if (e.key === 's') {
+                            this.gizmoManager.positionGizmoEnabled = false;
+                            this.gizmoManager.rotationGizmoEnabled = false;
+                            this.gizmoManager.scaleGizmoEnabled = true;
+                        }
+                        if (e.key === 'p' || e.key === 'P') this.printSelected();
+                        if (e.key === 'Delete') this.deleteSelected();
+
+                        if (!this.selectedMesh) return;
+                        const step = e.shiftKey ? 1.0 : 0.1;
+                        let moved = false;
+                        switch (e.key) {
+                            case 'ArrowUp':   this.selectedMesh.position.z -= step; moved = true; break;
+                            case 'ArrowDown': this.selectedMesh.position.z += step; moved = true; break;
+                            case 'ArrowLeft': this.selectedMesh.position.x -= step; moved = true; break;
+                            case 'ArrowRight':this.selectedMesh.position.x += step; moved = true; break;
+                            case 'PageUp':    this.selectedMesh.position.y += step; moved = true; break;
+                            case 'PageDown':  this.selectedMesh.position.y -= step; moved = true; break;
+                        }
+                        if (moved) e.preventDefault();
+                    });
+                }
+
+                setupUI() {
+                    const panel = document.getElementById('editorPanel');
+                    panel.querySelectorAll('button[data-action]').forEach(btn => {
+                        btn.addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            const action = btn.dataset.action;
+                            if (action === 'addSlab') this.addObject('slab');
+                            else if (action === 'addWall') this.addObject('wall');
+                            else if (action === 'addPillar') this.addObject('pillar');
+                            else if (action === 'addColumn') this.addObject('column');
+                            else if (action === 'addGlass') this.addObject('glass');
+                            else if (action === 'addRamp') this.addObject('ramp');
+                            else if (action === 'addRampDirectional') this.addObject('rampDirectional');
+                            else if (action === 'addBarrel') this.addObject('barrel');
+                            else if (action === 'addCrate') this.addObject('crate');
+                            else if (action === 'addLava') this.addObject('lava');
+                            else if (action === 'addDestWall') this.addObject('destWall');
+                            else if (action === 'addSpike') this.addObject('spike');
+                            else if (action === 'delete') this.deleteSelected();
+                            else if (action === 'export') this.exportLevel();
+                            else if (action === 'import') this.importLevel();
+                            else if (action === 'loadLive') this.loadLiveLayout();
+                        });
+                    });
+                    // NavMesh rebuild button
+                    document.getElementById('navRebuildBtn').addEventListener('click', () => {
+                        this.rebuildNavMesh();
+                    });
+                }
+
+                toggle() {
+                    this.enabled = !this.enabled;
+                    console.log(`[Editor] ${this.enabled ? 'ON' : 'OFF'}`);
+                    document.getElementById('editorPanel').style.display = this.enabled ? 'flex' : 'none';
+                    document.getElementById('info').textContent = this.enabled
+                        ? `🛠️ EDITOR ACTIVE — editing "${mapId}"`
+                        : '🛠️ Editor – press F4';
+                    if (!this.enabled) {
+                        this.gizmoManager.attachToMesh(null);
+                        this.selectedMesh = null;
+                    }
+                }
+
+                addObject(type) {
+                    const dir = camera.getForwardRay().direction.clone();
+                    const pos = camera.position.add(dir.scale(5));
+                    const y = pos.y;
+                    let mesh;
+                    switch (type) {
+                        case 'slab':   mesh = createSlab(pos.x, y, pos.z, 4, 4); break;
+                        case 'wall':   mesh = createWall(pos.x, y+2, pos.z, 2, 4, 0.5); break;
+                        case 'pillar': mesh = createPillar(pos.x, pos.z, y-2, 6, 1.2); break;
+                        case 'column': mesh = createColumn(pos.x, y, pos.z, 4, 0.5); break;
+                        case 'glass':  mesh = createGlass(pos.x, y, pos.z, 3, 3, 0.2); break;
+                        case 'ramp':   mesh = createRampBox(pos.x, y, pos.z, 4, 0.5, 6, 0.3, 0); break;
+                        case 'rampDirectional': mesh = createRamp(pos.x, pos.z, 'N', 4, y, y - 2, 8); break;
+                        case 'barrel': mesh = createBarrel(pos.x, pos.z, 0); break;
+                        case 'crate':  mesh = createCrate(pos.x, y+1, pos.z, 2, 2, 2); break;
+                        case 'lava':   mesh = createLava(pos.x, pos.z, 6, 6, { hazardZones }); break;
+                        case 'destWall': mesh = createDestructibleWall(pos.x, y, pos.z, 4, 4, 1, 140, { destructibleWalls }); break;
+                        case 'spike':  mesh = createSpikeTrap(pos.x, pos.z, 4, 4, y, { hazardZones }); break;
+                    }
+                    if (mesh) {
+                        this.selectedMesh = mesh;
+                        this.gizmoManager.attachToMesh(mesh);
+                        console.log(`[Editor] Added ${type}`);
+                    }
+                }
+
+                deleteSelected() {
+                    if (!this.selectedMesh) return;
+                    const m = this.selectedMesh;
+                    const idx = walkableMeshes.indexOf(m);
+                    if (idx !== -1) walkableMeshes.splice(idx, 1);
+
+                    // Barrels are multi-mesh (body + 2 hoop bands) — only the
+                    // body is individually selectable, but deleting it should
+                    // take its hoops (and bookkeeping entry) with it.
+                    for (let i = explosiveBarrels.length - 1; i >= 0; i--) {
+                        const entry = explosiveBarrels[i];
+                        if (entry.meshes && entry.meshes.includes(m)) {
+                            entry.meshes.forEach(hm => { if (!hm.isDisposed()) hm.dispose(); });
+                            explosiveBarrels.splice(i, 1);
+                            this.selectedMesh = null;
+                            this.gizmoManager.attachToMesh(null);
+                            console.log('[Editor] Deleted barrel (+hoops)');
+                            return;
+                        }
+                    }
+
+                    // Lava / spike traps live in hazardZones; destructible walls
+                    // live in destructibleWalls. Pull the entry out of whichever
+                    // one it's in (a mesh is only ever in one, if either) so
+                    // nothing stale is left pointing at a disposed mesh.
+                    const hzIdx = hazardZones.indexOf(m);
+                    if (hzIdx !== -1) hazardZones.splice(hzIdx, 1);
+                    const dwIdx = destructibleWalls.indexOf(m);
+                    if (dwIdx !== -1) destructibleWalls.splice(dwIdx, 1);
+
+                    // Spike trap child spikes are parented to the floor mesh and
+                    // dispose automatically (Babylon's dispose() recurses into
+                    // children by default), so no extra cleanup needed for them.
+                    m.dispose();
+                    this.selectedMesh = null;
+                    this.gizmoManager.attachToMesh(null);
+                    console.log('[Editor] Deleted');
+                }
+
+                // Walks scene.meshes for the generic editable-prop tag and
+                // serializes generator+params+transform. Re-creating uses
+                // applyEditableLayout() from levelHelpers.js — same function
+                // the live game calls when it loads assets/maps/<mapId>.json.
+                exportLevel() {
+                    const editableMeshes = [];
+                    this.scene.meshes.forEach(m => {
+                        if (m.metadata?.editable && m.metadata?.generator) {
+                            editableMeshes.push({
+                                generator: m.metadata.generator,
+                                params: m.metadata.params,
+                                position: { x: m.position.x, y: m.position.y, z: m.position.z },
+                                rotation: { x: m.rotation.x, y: m.rotation.y, z: m.rotation.z },
+                                scaling: { x: m.scaling.x, y: m.scaling.y, z: m.scaling.z }
+                            });
+                        }
+                    });
+                    const data = { version: '1.0', map: mapId, objects: editableMeshes };
+                    const json = JSON.stringify(data, null, 2);
+                    const blob = new Blob([json], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = mapId + '.json';
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                    console.log(`[Editor] Exported ${editableMeshes.length} objects as "${mapId}.json".`);
+                    console.log(`[Editor] Place it at assets/maps/${mapId}.json to make it live — the game fetches that path automatically on load.`);
+                }
+
+                importLevel() {
+                    const input = document.createElement('input');
+                    input.type = 'file';
+                    input.accept = '.json';
+                    input.onchange = (e) => {
+                        const file = e.target.files[0];
+                        if (!file) return;
+                        const reader = new FileReader();
+                        reader.onload = (ev) => {
+                            try {
+                                const data = JSON.parse(ev.target.result);
+                                this.importFromData(data);
+                            } catch (err) {
+                                console.error('[Editor] Invalid JSON', err);
+                            }
+                        };
+                        reader.readAsText(file);
+                    };
+                    input.click();
+                }
+
+                importFromData(data) {
+                    const objects = data?.objects || [];
+                    applyEditableLayout(objects, { hazardZones, destructibleWalls }); // clears + rebuilds the editable layer
+                    console.log('[Editor] Imported', objects.length, 'objects');
+                    this.rebuildNavMesh();
+                }
+
+                // Fetches the map's CURRENTLY LIVE layout straight from
+                // assets/maps/<mapId>.json — handy for pulling down whatever
+                // is actually deployed right now to keep tweaking it, instead
+                // of having to track down the last exported file on disk.
+                async loadLiveLayout() {
+                    const objects = await loadMapOverride(mapId);
+                    if (!objects) {
+                        console.warn(`[Editor] No live layout found at assets/maps/${mapId}.json — nothing to load.`);
+                        return;
+                    }
+                    applyEditableLayout(objects, { hazardZones, destructibleWalls });
+                    this.rebuildNavMesh();
+                    console.log(`[Editor] Loaded live layout from assets/maps/${mapId}.json (${objects.length} objects).`);
+                }
+
+                rebuildNavMesh() {
+                    const navPlugin = window.__levelNavPlugin;
+                    if (navPlugin && navPlugin.createNavMesh) {
+                        walkableMeshes.forEach(m => m.computeWorldMatrix(true));
+                        navPlugin.createNavMesh(walkableMeshes, NAVMESH_PARAMS);
+                        console.log('[Editor] NavMesh rebuilt');
+                    } else {
+                        console.warn('[Editor] NavMesh plugin not available');
+                    }
+                }
+
+                printSelected() {
+                    if (!this.selectedMesh) {
+                        console.warn('[Editor] No mesh selected');
+                        return;
+                    }
+                    const m = this.selectedMesh;
+                    console.log({
+                        name: m.name,
+                        position: { x: m.position.x, y: m.position.y, z: m.position.z },
+                        scaling: { x: m.scaling.x, y: m.scaling.y, z: m.scaling.z },
+                        rotation: { x: m.rotation.x, y: m.rotation.y, z: m.rotation.z },
+                        metadata: m.metadata
+                    });
+                }
+            }
+
+            const editor = new StandaloneEditor(scene, canvas);
+
+            // ---- Render loop ----
+            engine.runRenderLoop(() => {
+                scene.render();
+            });
+
+            window.addEventListener('resize', () => engine.resize());
+
+        } catch (err) {
+            console.error('[Editor] Load error:', err);
+            errorEl.textContent = `❌ Failed to load: ${err.message}`;
+            errorEl.style.display = 'block';
+        }
+    </script>
+</body>
+</html>

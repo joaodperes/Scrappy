@@ -44,7 +44,7 @@ export async function fetchTopScores(mode = 'solo', map = 'scrapyard', count = 1
   return snap.docs.map(d => d.data());
 }
 
-export async function renderLeaderboard() {
+export async function renderLeaderboard(mapIdOverride) {
   if (typeof firebase === 'undefined') return;
   const list = document.getElementById('leaderboardList');
   if (!list) return;
@@ -54,7 +54,7 @@ export async function renderLeaderboard() {
   const collectionName = currentLeaderboardMode === 'hard' ? 'scores_hard' : 'scores';
 
   import('./mapManager.js').then(async ({ getCurrentMap }) => {
-    const currentMap = getCurrentMap() || 'scrapyard';
+    const currentMap = mapIdOverride || getCurrentMap() || 'scrapyard';
 
     try {
       // ── Single-field query (no composite index needed) ────

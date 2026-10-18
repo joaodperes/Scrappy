@@ -9,9 +9,10 @@ import { spawnSparks } from './particles.js';
 import { sfx } from './audio.js';
 import { applyExplosionImpulse } from './player.js';
 import { getCurrentMap } from './mapManager.js';
+import { getLoadout } from './progression.js';
 
 // ── Player projectiles ────────────────────────────────────────
-export function fireRocket(effSpeed, effSplash) {
+export function fireRocket(effSpeed, effSplash, spread = 0) {
   const fwd = new BABYLON.Vector3();
   camera.getForwardRay(1).direction.normalizeToRef(fwd);
   
@@ -172,22 +173,31 @@ export function hitscan(meshToEnemy, spread = 0, dmg = 20, range = 90, falloff =
   const endDist = (hits.length > 0) ? hits[0].distance : (barrelHit?.hit ? barrelHit.distance : range);
   const endPos = camera.position.clone().add(_rcDir.scale(endDist));
   
-  const tracer = BABYLON.MeshBuilder.CreateLines('tracer', {
-      points: [flashPos, endPos],
+  //Use CreateTube instead of CreateLines for visible thickness
+  const isBeam = curWep === 'ELECTRON' || curWep === 'ION';
+  const tracer = BABYLON.MeshBuilder.CreateTube('tracer', {
+      path: [flashPos, endPos],
+      radius: isBeam ? 0.06 : 0.015, // Thicker beam for energy weapons
       updatable: false
   }, scene);
-  tracer.color = flashColor; // Inherits the cyan/yellow color dynamically
-  tracer.alpha = 0.8;
+  
+  // Use emissive color for the beam to make it glow
+  const tracerMat = new BABYLON.StandardMaterial('tracerMat', scene);
+  tracerMat.emissiveColor = flashColor;
+  tracerMat.disableLighting = true;
+  tracerMat.alpha = 0.8;
+  tracer.material = tracerMat;
   tracer.isPickable = false;
   
   // Fade tracer out over ~80ms
   let fadeTimer = 0;
-  const tracerLife = 0.08; 
+  const tracerLife = isBeam ? 0.12 : 0.08; // Beams linger slightly longer
   const onBeforeRender = () => {
       fadeTimer += scene.getEngine().getDeltaTime() / 1000;
-      tracer.alpha = 1.0 - (fadeTimer / tracerLife);
+      tracer.material.alpha = 1.0 - (fadeTimer / tracerLife);
       if (fadeTimer >= tracerLife) {
           tracer.dispose();
+          tracerMat.dispose(); // Don't forget to clean up the material
           scene.onBeforeRenderObservable.removeCallback(onBeforeRender);
       }
   };
@@ -300,8 +310,10 @@ export function updateProjs(dt) {
 
     // ── GRENADE: fully self-contained physics — skip shared movement code ──
     if (p.type === 'grenade') {
+      if (p.fuse === undefined)   p.fuse   = 1.5;  // fireEnemyShot() never sets this
+      if (p.splash === undefined) p.splash = 3.5;  // ditto — also fixes silent/no-damage booms
       p.fuse -= dt;
-      
+
       if (!p.vel) {
             p.vel = p.dir.scale(p.speed || 30);
         }
@@ -376,7 +388,7 @@ export function updateProjs(dt) {
             const n   = gHit.getNormal(true);
             const dot = BABYLON.Vector3.Dot(p.vel, n);
             p.vel.subtractInPlace(n.scale(2 * dot));
-            p.vel.scaleInPlace(0.65);
+            p.vel.scaleInPlace(0.30); // Reduced speed to minimize bouncing
             p.mesh.position.copyFrom(gHit.pickedPoint).addInPlace(n.scale(0.12));
           }
         }
@@ -396,34 +408,214 @@ export function updateProjs(dt) {
         projs.splice(i, 1);
       }
       continue; // Skip all shared movement / hit code below
-    } else if (p.type === 'flame') {
-        p.life -= dt;
-        p.mesh.position.addInPlace(p.dir.scale(p.speed * dt));
-        // check enemy hit
-        let hitEnemy = false;
-        for (const e of enemies) {
-          if (!e.alive) continue;
-          const bodyCy = e.group.position.y + (e.flyH > 0 ? 0.5 : 1.0);
-          const ep = new BABYLON.Vector3(e.group.position.x, bodyCy, e.group.position.z);
-          if (BABYLON.Vector3.Distance(p.mesh.position, ep) < 0.8) {
-              cb.hitRobot?.(e, p.dmg);
-              // apply DOT
-              if (!e._flameDotted) {
-                  e._flameDotted = true;
-                  if (!e._dots) e._dots = [];
-                  e._dots.push({ dmg: 4, remaining: 3 });
-                  setTimeout(() => { if (e) e._flameDotted = false; }, 500);
-              }
-              hitEnemy = true;
-              break;
+  } else if (p.type === 'flame') {
+    p.life -= dt;
+    p.mesh.position.addInPlace(p.dir.scale(p.speed * dt));
+
+    // Calculate balance modifiers on the fly
+    let impactMult = 1.0;
+    let dotDmg = 4; // Base DOT
+    if (p.isCryo) {
+        impactMult = 0.6; // 40% reduction
+        dotDmg *= 0.5;       // Weaker burn
+    } else if (p.isSticky) {
+        impactMult = 0.8; // 20% reduction
+        dotDmg *= 0.75;       // Slightly reduced burn
+    }
+
+    // ── STICKY FUEL: Check if flame hits the ground/wall ──
+    if (p.isSticky) {
+        const ray = new BABYLON.Ray(p.mesh.position, p.dir, p.speed * dt + 0.2);
+        const pick = scene.pickWithRay(ray, (m) => m.isPickable && !m.metadata?.enemy && m.name !== '_playerBody');
+        if (pick && pick.hit) {
+            const n = pick.getNormal(true);
+            
+            // Create a flame plane instead of a flat disc
+            const patchMesh = BABYLON.MeshBuilder.CreatePlane('sticky_patch', { width: 1.5, height: 1.5 }, scene);
+            patchMesh.position = pick.pickedPoint.add(n.scale(0.1));
+            
+            // If it hits a floor, billboard it so it stands up. If it hits a wall, plaster it against the wall.
+            if (Math.abs(n.y) > 0.8) patchMesh.billboardMode = BABYLON.Mesh.BILLBOARDMODE_Y;
+            else patchMesh.lookAt(patchMesh.position.add(n));
+
+            const patchMat = new BABYLON.StandardMaterial('patchMat', scene);
+            patchMat.diffuseTexture = fireTex;
+            patchMat.emissiveTexture = fireTex;
+            patchMat.emissiveColor = new BABYLON.Color3(0.5, 0.2, 0); // Darker, oil-like fire
+            patchMat.useAlphaFromDiffuseTexture = true;
+            patchMat.disableLighting = true;
+            patchMesh.material = patchMat;
+
+            // Add a small light so the puddle actually casts a glow
+            const patchLight = new BABYLON.PointLight('patchLight', patchMesh.position, scene);
+            patchLight.diffuse = new BABYLON.Color3(1.0, 0.4, 0.0);
+            patchLight.intensity = 0.8;
+            patchLight.range = 4.0;
+
+            projs.push({
+                type: 'sticky_patch', mesh: patchMesh, light: patchLight,
+                damage: p.dmg * impactMult,
+                dotDmg: dotDmg,             
+                life: 3.5, tickTimer: 0
+            });
+
+            p.mesh.dispose();
+            projs.splice(i, 1);
+            continue;
+        }
+    }
+
+    let hitEnemy = false;
+    for (const e of enemies) {
+        if (!e.alive) continue;
+        const bodyCy = e.group.position.y + (e.flyH > 0 ? 0.5 : 1.0);
+        const ep = new BABYLON.Vector3(e.group.position.x, bodyCy, e.group.position.z);
+        if (BABYLON.Vector3.Distance(p.mesh.position, ep) < 0.8) {
+            
+            // Apply Scaled Impact Damage
+            cb.hitRobot?.(e, p.dmg * impactMult);
+            
+            // Apply Scaled Burn DOT
+            if (!e._flameDotted) {
+                e._flameDotted = true;
+                if (!e._dots) e._dots = [];
+                e._dots.push({ dmg: dotDmg, remaining: 3 });
+                setTimeout(() => { if (e) e._flameDotted = false; }, 500);
             }
-          }
-          if (hitEnemy || p.life <= 0) {
-              p.mesh.dispose();
-              projs.splice(i, 1);
-              continue;
+
+            // Apply Cryo Effect
+            if (p.isCryo) {
+                e.cryoTimer = 4.0; 
+            }
+            
+            hitEnemy = true;
+            break;
+        }
+    }
+    if (hitEnemy || p.life <= 0) {
+        p.mesh.dispose();
+        projs.splice(i, 1);
+        continue;
+    }
+  } else if (p.type === 'sticky_patch') {
+    // ── STICKY FUEL: AOE Damage Tick ──
+    p.life -= dt;
+    if (p.life <= 0) {
+      if (p.light) p.light.dispose();
+      p.mesh.dispose();
+      projs.splice(i, 1);
+      continue;
+    }
+    p.tickTimer -= dt;
+    if (p.tickTimer <= 0) {
+        p.tickTimer = 0.3; // Damage ticks every 300ms
+        for (const e of enemies) {
+            if (!e.alive) continue;
+            if (BABYLON.Vector3.Distance(p.mesh.position, e.group.position) < 1.8) {
+                cb.hitRobot?.(e, p.damage, false, false, 'FLAMETHROWER');
+                if (!e._dots) e._dots = [];
+                // Use the dotDmg stored when the patch was created
+                e._dots.push({ dmg: p.dotDmg, remaining: 1.0 }); 
+            }
+        }
+    }
+  } else if (p.type === 'rivet') {
+      p.life -= dt;
+      let step = p.dir.scale(p.speed * dt);
+      let destroyed = false;
+
+      // 1. EXPLOSIVE BARREL CHECK (New!)
+      for (const b of explosiveBarrels) {
+          if (!b.alive) continue;
+          if (BABYLON.Vector3.Distance(p.mesh.position, b.pos) < 0.8) {
+              b.alive = false;
+              for (const m of b.meshes) { m.setEnabled(false); m.checkCollisions = false; }
+              boom(b.pos.clone(), 3.5, 70, true); // Detonate the barrel!
+              destroyed = true;
+              break;
           }
       }
+
+      if (destroyed) {
+          p.mesh.dispose();
+          projs.splice(i, 1);
+          continue; 
+      }
+
+      // 2. MAGNETIC HOMING
+      if (p.isMagnetic) {
+          let closest = null, minDist = 2.0; 
+          for (const e of enemies) {
+              if (!e.alive) continue;
+              const bodyCenter = e.group.position.clone();
+              bodyCenter.y += (e.flyH > 0 ? 0.5 : 1.0);
+              
+              const dist = BABYLON.Vector3.Distance(p.mesh.position, bodyCenter);
+              if (dist < minDist) { minDist = dist; closest = e; }
+          }
+          if (closest) {
+              const bodyCenter = closest.group.position.clone();
+              bodyCenter.y += (closest.flyH > 0 ? 0.5 : 1.0);
+              const toEnemy = bodyCenter.subtract(p.mesh.position).normalize();
+              
+              p.dir = BABYLON.Vector3.Lerp(p.dir, toEnemy, dt * 12).normalize();
+              p.mesh.lookAt(p.mesh.position.clone().add(p.dir));
+              step = p.dir.scale(p.speed * dt); 
+          }
+      }
+
+      // 3. WALL BOUNCING
+      const wallRay = new BABYLON.Ray(p.mesh.position, p.dir, step.length() + 0.2);
+      const wHit = scene.pickWithRay(wallRay, m => m.checkCollisions && !m.metadata?.enemy && m.isEnabled());
+      
+      if (wHit?.hit) {
+          if (p.bounces > 0) {
+              p.bounces--;
+              const normal = wHit.getNormal(true);
+              const dot = BABYLON.Vector3.Dot(p.dir, normal);
+              p.dir.subtractInPlace(normal.scale(2 * dot)).normalize();
+              
+              p.mesh.position.copyFrom(wHit.pickedPoint).addInPlace(normal.scale(0.1));
+              p.mesh.lookAt(p.mesh.position.clone().add(p.dir));
+              spawnSparks(wHit.pickedPoint, 0xffaa00, 6);
+              
+              continue; // Keep the rivet alive!
+          } else {
+              destroyed = true; 
+          }
+      } else {
+          p.mesh.position.addInPlace(step);
+      }
+
+      // 4. ENEMY HIT LOGIC
+      if (!destroyed) {
+          for (const e of enemies) {
+              if (!e.alive) continue;
+              const bodyCenter = e.group.position.clone();
+              bodyCenter.y += (e.flyH > 0 ? 0.5 : 1.0);
+              
+              if (BABYLON.Vector3.Distance(p.mesh.position, bodyCenter) < 1.2) {
+                  if (p.isSuperheated) {
+                      if (!e._dots) e._dots = [];
+                      e._dots.push({ dmg: 15, remaining: 4.0 }); 
+                      spawnSparks(bodyCenter, 0xff4400, 10);
+                  } else {
+                      cb.hitRobot(e, p.dmg);
+                  }
+                  destroyed = true; 
+                  break; 
+              }
+          }
+      }
+
+      // 5. CLEANUP
+      if (destroyed || p.life <= 0) {
+          p.mesh.dispose();
+          projs.splice(i, 1);
+      }
+      
+      continue; 
+  }
 
     // ── All other projectiles: shared linear movement ─────────────
     const step = p.dir.scale(p.speed * dt);
@@ -539,17 +731,35 @@ export function fireGrenade(owner, origin, dir, speed, dmg, splash, isCluster = 
   });
 }
 
-export function fireFlame(origin, dir, dmg) {
+export function fireFlame(origin, dir, dmg, range) {
+    const specialAtt = getLoadout('FLAMETHROWER').attachments?.special;
+    const isCryo = specialAtt === 'cryo_core';
+    const isSticky = specialAtt === 'sticky_fuel';
+
+    // The base weapon range in WDEFS is 25. 
+    // We create a multiplier based on the effective range vs base range.
+    const rangeMult = (range || 25) / 25.0;
+
     const speed = 10 + Math.random() * 5;
-    const life = 0.18 + Math.random() * 0.12;
-    const mesh = BABYLON.MeshBuilder.CreatePlane('flame', { width: 0.5, height: 0.7 }, scene);
+    // Scale the lifespan of the projectile by the range multiplier
+    const life = (0.18 + Math.random() * 0.12) * rangeMult;
+    const mesh = BABYLON.MeshBuilder.CreatePlane('flame', { width: 0.25, height: 0.35 }, scene);
     mesh.billboardMode = BABYLON.Mesh.BILLBOARDMODE_ALL;
     const mat = new BABYLON.StandardMaterial('flameMat', scene);
-    mat.diffuseTexture = fireTex;
-    mat.emissiveTexture = fireTex;
-    mat.emissiveColor = BABYLON.Color3.Black();//new BABYLON.Color3(0.5, 0.2, 0);
+    if (isCryo) {
+        mat.emissiveColor = new BABYLON.Color3(0.2, 0.6, 1.0);
+    } else if (isSticky) {
+        // Make Sticky fuel black/dark
+        mat.diffuseColor = new BABYLON.Color3(0.05, 0.05, 0.05);
+        mat.emissiveColor = new BABYLON.Color3(0.0, 0.0, 0.0);
+    } else {
+        mat.diffuseTexture = fireTex;
+        mat.emissiveTexture = fireTex;
+        mat.emissiveColor = BABYLON.Color3.Black();
+        mat.useAlphaFromDiffuseTexture = true;
+    }
+    
     mat.alpha = 1.0;
-    mat.useAlphaFromDiffuseTexture = true;
     mat.disableLighting = true;
     mesh.material = mat;
     mesh.position = origin.add(dir.scale(0.4));
@@ -557,8 +767,8 @@ export function fireFlame(origin, dir, dmg) {
 
     projs.push({
         type: 'flame', mesh, dir: dir.clone(), speed, life, dmg,
-        owner: 'player', splash: 0, // no splash
-        light: null
+        owner: 'player', splash: 0, light: null,
+        isCryo, isSticky
     });
 }
 
@@ -610,6 +820,41 @@ export function spawnLightningArc(startPos, endPos) {
         arcMesh.dispose();
         mat.dispose();
     }, 75 + Math.random() * 50);
+}
+
+export function fireRivet(speed, dmg, isSuperheated, isMagnetic, bounces) {
+    const fwd = new BABYLON.Vector3();
+    camera.getForwardRay(1).direction.normalizeToRef(fwd);
+    
+    // Start slightly in front of the player
+    const origin = camera.position.clone().add(fwd.scale(0.8));
+    
+    // Create the Rivet projectile mesh
+    const mesh = BABYLON.MeshBuilder.CreateCylinder("rivet", {diameter: 0.05, height: 0.3}, scene);
+    mesh.rotation.x = Math.PI / 2;
+    mesh.position.copyFrom(origin);
+    
+    // Make it look like metal (or glowing orange if superheated)
+    const mat = new BABYLON.StandardMaterial("rivetMat", scene);
+    if (isSuperheated) {
+        mat.emissiveColor = new BABYLON.Color3(1, 0.4, 0); // Glowing Orange
+    } else {
+        mat.diffuseColor = new BABYLON.Color3(0.4, 0.4, 0.4); // Grey metal
+    }
+    mesh.material = mat;
+
+    // Add it to your game's projectile array so the engine tracks it
+    projs.push({
+        mesh: mesh,
+        dir: fwd,
+        speed: speed,
+        dmg: dmg,
+        type: 'rivet',
+        bounces: bounces,
+        isSuperheated: isSuperheated,
+        isMagnetic: isMagnetic,
+        life: 2.0 + (bounces * 0.5) // Disappears after 2 seconds
+    });
 }
 
 export function createYellowEMPStunArc(startPos, endPos, scene) {

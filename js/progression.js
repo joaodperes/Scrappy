@@ -1,6 +1,8 @@
 // progression.js – XP, levels, unlocks, challenges, persistence
 // localStorage (offline) + Firebase cross-session sync
 import { player } from './gameState.js';
+import { getCurrentMap } from './mapManager.js';
+import { WDEFS } from './weapons.js';
 
 const XP_BASE = 200, XP_EXP = 1.4;
 export function xpForLevel(level) { return Math.floor(XP_BASE * Math.pow(level, XP_EXP)); }
@@ -81,9 +83,15 @@ export const ATTACHMENTS = {
   // Barrels
   suppressor: {
     id:'suppressor', name:'Suppressor', slot:'barrel',
-    desc:'−20% damage. Enemies not alerted at long range.',
-    icon:'🔇', mods:{damage:-0.20},
+    desc:'−10% damage. Weapon becomes silent.',
+    icon:'🔇', mods:{damage:-0.10},
     visual:{type:'barrel',style:'suppressor'},
+  },
+  ported_barrel: {
+    id:'ported_barrel', name:'Ported Barrel', slot:'barrel',
+    desc:'Reduces weapon recoil and barrel climb.',
+    icon:'💨', mods:{recoilMult:0.65},
+    visual:{type:'barrel',style:'ported'},
   },
   heavy_barrel: {
     id:'heavy_barrel', name:'Heavy Barrel', slot:'barrel',
@@ -166,7 +174,7 @@ export const ATTACHMENTS = {
     id:'endless_magazine', name:'Endless Magazine', slot:'special', weapon:'PISTOL',
     desc:'Infinite reserve ammo. Never scavenge for pistol rounds again.',
     icon:'∞', mods:{ammoType:'infinite'},
-    visual:{type:'special',style:'endless_mag'},
+    visual:{type:'special',style:'endless_magazine'},
     starterGear:true,
   },
   akimbo: {
@@ -278,6 +286,33 @@ export const ATTACHMENTS = {
     icon:'⚗️', mods:{damage:+0.35, heatMult:+0.30},
     visual:{type:'magazine',style:'drum',magScale:1.2},
   },
+  sticky_fuel: {
+    id: 'sticky_fuel',
+    name: 'Sticky Fuel',
+    slot: 'special',
+    desc: 'Flames cling to floors and walls, creating short-lived burning hazards. Direct hit damage is mildly reduced.',
+    icon: '🧪',
+    mods: { damage: -0.10, range: +0.80 },
+    visual: { type: 'special', style: 'sticky_valves' }
+  },
+  cryo_core: {
+    id: 'cryo_core',
+    name: 'Cryo-Core',
+    slot: 'special',
+    desc: 'Converts chemical fuel into liquid nitrogen. Direct hits deal direct damage and decelerate enemies up to 45%, but deals reduced damage.',
+    icon: '❄️',
+    mods: { damage: -0.15, range: +0.40, heatMult: -0.25 },
+    visual: { type: 'special', style: 'cryo_tanks' }
+  },
+  thermal_blast: {
+    id: 'thermal_blast',
+    name: 'Thermal Backfire',
+    slot: 'special',
+    desc: 'Press [V] to discharge an emergency localized combustion shockwave that knocks back threats, but instantly builds +50% heat.',
+    icon: '💥',
+    mods: { damage: +0.05 },
+    visual: { type: 'special', style: 'reinforced_shroud' }
+    },
   // ── Tesla Cannon ──────────────────────────────────────────────────
   amplifier_coil: {
     id:'amplifier_coil', name:'Amplifier Coil', slot:'special',
@@ -315,6 +350,12 @@ export const ATTACHMENTS = {
     desc:'60% chance to recover 1 extra bolt on kill.',
     icon:'🔄', mods:{boltRecoveryChance:0.60},
   },
+  coated_tips: {
+    id:'coated_tips', name:'Coated Tips', slot:'special', weapon:'CROSSBOW',
+    desc:'Bolts are coated in a lethal neurotoxin. Deals 2% of enemy max HP per second for 5 seconds. Stacks on multiple hits.',
+    icon:'🧪', mods:{},
+    visual:{type:'special',style:'explosive_tips'},
+  },
   // ── Chaingun ──────────────────────────────────────────────────
   spinning_module: {
     id:'spinning_module', name:'Spinning Module', slot:'special',
@@ -337,7 +378,7 @@ export const ATTACHMENTS = {
   },
   dual_trigger: {
     id:'dual_trigger', name:'Dual Trigger', slot:'special',
-    desc:'Swap between semi-auto (3-shot burst) and sniper mode (single shot, 3× damage) with [Q].',
+    desc:'Swap between semi-auto (3-shot burst) and sniper mode (single shot, 3× damage) with [V].',
     icon:'🔀', mods:{},
     visual:{type:'special',style:'dual_trigger'},
   },
@@ -396,28 +437,156 @@ export const ATTACHMENTS = {
     icon:'🚀', mods:{},
     visual:{type:'special',style:'rocket_burst'},
   },
+  lantern: {
+    id:'lantern', name:'Tactical Lantern', slot:'sight',
+    desc:'Projects a bright beam of light forward. Crucial for pitch-black sectors.',
+    icon:'🔦', mods:{},
+    visual:{type:'sight',style:'lantern'},
+  },
+  night_vision: {
+    id:'night_vision', name:'NVG Optic', slot:'sight',
+    desc:'Right-click applies a green night-vision amplification overlay.',
+    icon:'👁️', mods:{},
+    visual:{type:'sight',style:'night_vision',adsZoom:0.75,scopeShape:'square'},
+  },
+  magnetic_coils: { id:'magnetic_coils', name:'Magnetic Coils', slot:'special', weapon:'RIVETER', desc:'Nails gain a slight homing effect if they pass within 1.5 units of an enemy.', icon:'🧲', mods:{} },
+  superheated_rivets: { id:'superheated_rivets', name:'Superheated Rivets', slot:'special', weapon:'RIVETER', desc:'Replaces raw damage with a severe burn effect.', icon:'🔥', mods:{ damage: -0.80 } },
+  resonance_cascade: { id:'resonance_cascade', name:'Resonance Cascade', slot:'special', weapon:'PHALANX', desc:'Enemies knocked into walls take massive shatter damage.', icon:'💥', mods:{} },
+  emp_frequency: { id:'emp_frequency', name:'EMP Frequency', slot:'special', weapon:'PHALANX', desc:'Converts knockback into a 1.5s EMP stun.', icon:'⚡', mods:{} },
+  multi_thread: { id:'multi_thread', name:'Multi-Thread Processor', slot:'special', weapon:'AEGIS', desc:'Increases maximum painted targets from 3 to 6.', icon:'🎯', mods:{ maxTargets: 3 } },
+  bypass_algorithms: { id:'bypass_algorithms', name:'Bypass Algorithms', slot:'special', weapon:'AEGIS', desc:'Smart rounds bypass enemy armor and shields.', icon:'🔓', mods:{} },
+  sonic_amplifier: {
+    id:'sonic_amplifier', name:'Sonic Amplifier', slot:'barrel',
+    weapon: 'PHALANX',
+    desc:'+30% knockback force. Enemies fly further.',
+    icon:'📢', mods:{knockbackMult:+0.30},
+    visual:{type:'barrel',style:'heavy'},
+  },
+  wide_diaphragm: {
+    id:'wide_diaphragm', name:'Wide Diaphragm', slot:'barrel',
+    weapon: 'PHALANX',
+    desc:'+25% range, +20% spread. Wider cone of effect.',
+    icon:'📐', mods:{range:+0.25, spread:+0.20},
+    visual:{type:'barrel',style:'compensator'},
+  },
+
+  // ── New Stock (for precision / support weapons) ──────────────────
+  stabilizing_brace: {
+    id:'stabilizing_brace', name:'Stabilizing Brace', slot:'stock',
+    desc:'+15% ADS speed, -10% recoil. Keeps weapon steady.',
+    icon:'📏', mods:{adsSpeedMult:1.15, recoilMult:0.90},
+    visual:{type:'stock',style:'folded'},
+  },
+  single_thread: {
+    id:'single_thread', name:'Single-Thread Override', slot:'special', weapon:'AEGIS',
+    desc:'Focuses targeting. Limits max painted targets to 1, but increases smart round damage by 150%.',
+    icon:'🎯', mods:{ maxTargetsOverride: 1, dmgMult: 2.5 },
+    incompatibleWith:['multi_thread']
+  },
+  slug_rounds: {
+    id:'slug_rounds', name:'Slug Rounds', slot:'special', weapon:'SHOTGUN',
+    desc:'Fires a single, highly accurate slug. +150% damage, +60% range, zero spread.',
+    icon:'🎯', mods:{ pelletsOverride: 1, dmgMult: 2.5, spreadOverride: 0.0, range: +0.60 }
+  },
+  dragons_breath: {
+    id:'dragons_breath', name:'Dragon\'s Breath', slot:'special', weapon:'SHOTGUN',
+    desc:'Ignites enemies on hit, dealing heavy burn damage over 3 seconds, but reduces initial impact damage.',
+    icon:'🔥', mods:{ damage: -0.30, dotDamage: 12, dotDuration: 3 }
+  },
+  bouncy_rivets: {
+    id:'bouncy_rivets', name:'High-Tensile Rivets', slot:'special', weapon:'RIVETER',
+    desc:'Rivets can bounce 3 additional times before embedding. -15% projectile speed.',
+    icon:'🪀', mods:{ bounces: 3, speed: -0.15 }
+  },
+  // ── New COMET attachments ──────────────────────────────────────
+  burst_modulator: {
+    id: 'burst_modulator',
+    name: 'Burst Modulator',
+    slot: 'special',
+    weapon: 'COMET',
+    desc: 'Increases burst count to 5, but fire rate is slightly reduced.',
+    icon: '🔁',
+    mods: { burstCount: 5, cd: +0.20 },
+    visual: { type: 'special', style: 'burst_modulator' },
+  },
+  precision_barrel: {
+    id: 'precision_barrel',
+    name: 'Precision Barrel',
+    slot: 'barrel',
+    weapon: 'COMET',
+    desc: 'Precision‑machined barrel reduces spread and increases range.',
+    icon: '🎯',
+    mods: { spread: -0.20, range: +0.15 },
+    visual: { type: 'barrel', style: 'extended' },
+  },
+  lightweight_handguard: {
+    id: 'lightweight_handguard',
+    name: 'Lightweight Handguard',
+    slot: 'grip',
+    weapon: 'COMET',
+    desc: 'Ergonomic grip improves ADS speed and stability.',
+    icon: '✋',
+    mods: { adsSpeedMult: 1.20, spread: -0.10 },
+    visual: { type: 'grip', style: 'angled' },
+  },
+  // ── New DMR attachments ────────────────────────────────────────
+  high_caliber: {
+    id: 'high_caliber',
+    name: 'High‑Caliber Rounds',
+    slot: 'magazine',
+    weapon: 'DMR',
+    desc: 'Heavy rounds deal +30% damage but reduce magazine capacity.',
+    icon: '💢',
+    mods: { dmgMult: 1.30, magSize: -3 },
+    visual: { type: 'magazine', style: 'extended' },
+  },
+  stabilizing_bipod: {
+    id: 'stabilizing_bipod',
+    name: 'Stabilizing Bipod',
+    slot: 'grip',
+    weapon: 'DMR',
+    desc: 'Deploys a bipod that greatly reduces spread when stationary.',
+      icon: '🦵',
+      mods: { spread: -0.40 },
+      visual: { type: 'grip', style: 'vertical' },
+  },
+  precision_stock: {
+    id: 'precision_stock',
+    name: 'Precision Stock',
+    slot: 'stock',
+    weapon: 'DMR',
+    desc: 'Adjustable stock reduces recoil and speeds up ADS.',
+    icon: '📐',
+    mods: { recoilMult: 0.70, adsSpeedMult: 1.15 },
+    visual: { type: 'stock', style: 'heavy' },
+  },
 };
 
 export const WEAPON_ATTACHMENT_SLOTS = {
-  PISTOL:    ['sight','barrel','magazine','grip','stock','special'],
-  SMG:       ['sight','barrel','magazine','grip','stock','special'],
-  SHOTGUN:   ['sight','barrel','magazine','grip','stock','special'],
-  CHAINGUN:  ['sight','barrel','magazine','grip','stock','special'],
-  RAILGUN:   ['sight','barrel','stock','special'],
-  PLASMA:    ['sight','barrel','magazine','grip','stock','special'],
-  ROCKET:    ['sight','barrel','magazine','stock','special'],
-  GLAUNCHER: ['sight','barrel','magazine','stock','special'],
-  ELECTRON:  ['sight','barrel','grip','stock','special'],
-  ION:       ['sight','barrel','grip','stock','special'],
+  PISTOL:       ['sight','barrel','magazine','grip','stock','special'],
+  SMG:          ['sight','barrel','magazine','grip','stock','special'],
+  SHOTGUN:      ['sight','barrel','magazine','grip','stock','special'],
+  CHAINGUN:     ['sight','barrel','magazine','grip','stock','special'],
+  RAILGUN:      ['sight','barrel','stock','grip','special'],
+  PLASMA:       ['sight','barrel','magazine','grip','stock','special'],
+  ROCKET:       ['sight','barrel','magazine','stock','special'],
+  GLAUNCHER:    ['sight','barrel','magazine','stock','special'],
+  ELECTRON:     ['sight','barrel','grip','stock','special'],
+  ION:          ['sight','barrel','grip','stock','special'],
   FLAMETHROWER: ['sight','barrel','magazine','grip','stock'],
-  TESLA:        ['sight','grip','stock','special'],
+  TESLA:        ['sight', 'magazine','grip','stock','special'],
   CROSSBOW:     ['sight','barrel','grip','stock','special'],
+  RIVETER:      ['sight','barrel','magazine','grip','stock','special'],
+  PHALANX:      ['sight','barrel','magazine','grip','stock','special'],
+  AEGIS:        ['sight','barrel','magazine','grip','stock','special'],
+  DMR: ['sight','barrel','magazine','grip','stock','special'],
+  COMET: ['sight','barrel','magazine','grip','stock','special'],
 };
 
 export const WEAPON_SPECIALS = {
-  PISTOL:    ['endless_mag','akimbo','quick_trigger'],
+  PISTOL:    ['endless_magazine','akimbo','quick_trigger'],
   SMG:       ['quick_trigger','akimbo'],
-  SHOTGUN:   ['akimbo','auto_fire'],
+  SHOTGUN:   ['slug_rounds','dragons_breath'],
   CHAINGUN:  ['spinning_module', 'carbon_fiber'],
   RAILGUN:   ['power_cell','efficiency_module'],
   PLASMA:    ['dual_trigger','emp_rounds'],
@@ -425,30 +594,41 @@ export const WEAPON_SPECIALS = {
   GLAUNCHER: ['cluster_rounds','seasoned_vet_glauncher'],
   ELECTRON:  ['slow_trigger','freefall_coil','emp_rounds'],
   ION:       ['energy_coil','explosive_bullets','emp_rounds'],
-  FLAMETHROWER: [],
+  FLAMETHROWER: ['sticky_fuel','cryo_core','thermal_blast'],
   TESLA:     ['amplifier_coil','magnet_coil'],
-  CROSSBOW:  ['explosive_tips', 'quick_loader', 'bolt_recovery'],
+  CROSSBOW:  ['explosive_tips', 'quick_loader', 'bolt_recovery', 'coated_tips'],
+  RIVETER: ['magnetic_coils', 'superheated_rivets', 'bouncy_rivets'],
+  PHALANX: ['resonance_cascade', 'emp_frequency'],
+  AEGIS:   ['multi_thread', 'bypass_algorithms', 'single_thread'],
+  DMR: ['power_cell', 'emp_rounds'],
+  COMET: ['quick_trigger', 'emp_rounds', 'burst_modulator']
 };
 
-// ── Skins ─────────────────────────────────────────────────────
 export const WEAPON_SKINS = {
-  default:    {id:'default',    name:'Factory',    desc:'Standard issue.',           body:[0.45,0.45,0.45], accent:[0.25,0.25,0.25], grip:[0.30,0.20,0.10]},
-  midnight:   {id:'midnight',   name:'Midnight',   desc:'All-black tactical.',       body:[0.05,0.05,0.05], accent:[0.10,0.10,0.10], grip:[0.05,0.05,0.05]},
-  desert:     {id:'desert',     name:'Desert',     desc:'Sand and tan camo.',        body:[0.70,0.60,0.35], accent:[0.55,0.44,0.22], grip:[0.42,0.30,0.14]},
-  arctic:     {id:'arctic',     name:'Arctic',     desc:'Snow-pattern white.',       body:[0.75,0.78,0.82], accent:[0.50,0.55,0.60], grip:[0.35,0.40,0.45]},
-  hazard:     {id:'hazard',     name:'Hazard',     desc:'Safety orange and black.',  body:[0.90,0.30,0.02], accent:[0.10,0.10,0.10], grip:[0.06,0.06,0.06]},
-  jungle:     {id:'jungle',     name:'Jungle',     desc:'Dark ops foliage.',         body:[0.10,0.22,0.06], accent:[0.16,0.32,0.09], grip:[0.07,0.14,0.04]},
-  plasma_glow:{id:'plasma_glow',name:'Plasma',     desc:'Cyan energy accents.',      body:[0.10,0.15,0.25], accent:[0.05,0.80,0.90], grip:[0.05,0.10,0.15]},
-  toxic:      {id:'toxic',      name:'Toxic',      desc:'Radioactive slime finish.', body:[0.18,0.78,0.04], accent:[0.38,0.96,0.14], grip:[0.09,0.48,0.02]},
-  gold:       {id:'gold',       name:'Gold',       desc:'Prestige finish.',          body:[0.83,0.70,0.25], accent:[0.96,0.88,0.52], grip:[0.55,0.40,0.15]},
-  crimson:    {id:'crimson',    name:'Crimson',    desc:'Blood red.',                body:[0.22,0.01,0.01], accent:[0.12,0.01,0.01], grip:[0.08,0.01,0.01]},
-  bengal:     {id:'bengal',     name:'Bengal',     desc:'Predator stripe pattern.',  body:[0.78,0.35,0.04], accent:[0.06,0.06,0.06], grip:[0.52,0.22,0.03]},
-  dark_matter:{id:'dark_matter',name:'Dark Matter',desc:'Cosmic singularity.',       body:[0.04,0.01,0.12], accent:[0.50,0.05,0.90], grip:[0.06,0.02,0.14]},
+  // --- GAMEPLAY SKINS ---
+  default:    {id:'default',    category:'Gameplay', name:'Factory',    desc:'Standard issue.',           body:[0.45,0.45,0.45], accent:[0.25,0.25,0.25], grip:[0.30,0.20,0.10]},
+  midnight:   {id:'midnight',   category:'Gameplay', name:'Midnight',   desc:'All-black tactical.',       body:[0.05,0.05,0.05], accent:[0.10,0.10,0.10], grip:[0.05,0.05,0.05]},
+  desert:     {id:'desert',     category:'Gameplay', name:'Desert',     desc:'Sand and tan camo.',        body:[0.70,0.60,0.35], accent:[0.55,0.44,0.22], grip:[0.42,0.30,0.14]},
+  arctic:     {id:'arctic',     category:'Gameplay', name:'Arctic',     desc:'Snow-pattern white.',       body:[0.75,0.78,0.82], accent:[0.50,0.55,0.60], grip:[0.35,0.40,0.45]},
+  hazard:     {id:'hazard',     category:'Gameplay', name:'Hazard',     desc:'Safety orange and black.',  body:[0.90,0.30,0.02], accent:[0.10,0.10,0.10], grip:[0.06,0.06,0.06]},
+  jungle:     {id:'jungle',     category:'Gameplay', name:'Jungle',     desc:'Dark ops foliage.',         body:[0.10,0.22,0.06], accent:[0.16,0.32,0.09], grip:[0.07,0.14,0.04]},
+  plasma_glow:{id:'plasma_glow',category:'Gameplay', name:'Plasma',     desc:'Cyan energy accents.',      body:[0.10,0.15,0.25], accent:[0.05,0.80,0.90], grip:[0.05,0.10,0.15]},
+  toxic:      {id:'toxic',      category:'Gameplay', name:'Toxic',      desc:'Radioactive slime finish.', body:[0.18,0.78,0.04], accent:[0.38,0.96,0.14], grip:[0.09,0.48,0.02]},
+  gold:       {id:'gold',       category:'Gameplay', name:'Gold',       desc:'Prestige finish.',          body:[0.83,0.70,0.25], accent:[0.96,0.88,0.52], grip:[0.55,0.40,0.15]},
+  crimson:    {id:'crimson',    category:'Gameplay', name:'Crimson',    desc:'Blood red.',                body:[0.22,0.01,0.01], accent:[0.12,0.01,0.01], grip:[0.08,0.01,0.01]},
+  bengal:     {id:'bengal',     category:'Gameplay', name:'Bengal',     desc:'Predator stripe pattern.',  body:[0.78,0.35,0.04], accent:[0.06,0.06,0.06], grip:[0.52,0.22,0.03]},
+  
+  // --- MASTERY SKINS ---
+  dark_matter:{id:'dark_matter',category:'Mastery',  name:'Dark Matter',desc:'Cosmic singularity.',       body:[0.04,0.01,0.12], accent:[0.50,0.05,0.90], grip:[0.06,0.02,0.14]},
+  cosmic:     {id:'cosmic',     category:'Mastery',  name:'Cosmic',     desc:'Stellar constellations.',   body:[0.01,0.04,0.08], accent:[0.10,0.80,0.60], grip:[0.05,0.10,0.15]},
+
+  // --- COLLECTOR SKINS ---
+  aurora:     {id:'aurora',     category:'Collector',name:'Aurora',    desc:'Ethereal green pulse.',     body:[0.01,0.10,0.03], accent:[0.10,0.90,0.30], grip:[0.02,0.15,0.05], pulseMult: 1.5},
 };
 
 export const SKIN_DIFFICULTY_ORDER = [
   'default','midnight','desert','crimson','arctic','hazard',
-  'jungle','plasma_glow','toxic','gold','bengal','dark_matter'
+  'jungle','plasma_glow','toxic','gold','bengal',//'dark_matter', 'cosmic'
 ];
 
 export const PLAYER_SKINS = {
@@ -479,553 +659,1710 @@ export const PLAYER_SKINS = {
 
 const _WNAME = { PISTOL:'Pistol', SMG:'SMG', SHOTGUN:'Shotgun', CHAINGUN:'Chaingun',
   RAILGUN:'Railgun', PLASMA:'Plasma Rifle', ROCKET:'Rocket Launcher',
-  GLAUNCHER:'Grenade Launcher', ELECTRON:'Electron', ION:'Ion Sniper' };
+  GLAUNCHER:'Grenade Launcher', ELECTRON:'Electron', ION:'Ion Sniper', 
+  FLAMETHROWER:'Flamethrower', TESLA:'Tesla Cannon', CROSSBOW:'Crossbow', 
+  RIVETER:'Riveter', PHALANX:'Phalanx', AEGIS:'Aegis', DMR:'DMR', COMET:'Comet'
+};
 
 export const UNLOCK_TABLE = [
-
   // ════════════════════════════════════════════════════════════════
-  //  ATTACHMENTS — all weapon-kill challenges
+  //  ATTACHMENTS
   // ════════════════════════════════════════════════════════════════
 
-  // ── PISTOL ────────────────────────────────────────────────────
-  { id:'endless_mag', weapon:'PISTOL', type:'attachment',
-    challenge:{ desc:'Reach Pistol level {target}.', track:'weaponLevel:PISTOL', target:1 } },
-  { id:'holo_sight',     weapon:'PISTOL', type:'attachment',
-    challenge:{ desc:'Kill {target} enemies while airborne with the Pistol', track:'killsWhileJumping:PISTOL', target:15 } },
-  { id:'acog',           weapon:'PISTOL', type:'attachment',
-    challenge:{ desc:'Kill {target} Snipers with the Pistol', track:'killsOfCombo:sniper_PISTOL', target:15 } },
-  { id:'thermal',        weapon:'PISTOL', type:'attachment',
-    challenge:{ desc:'Kill {target} Ion Snipers with the Pistol', track:'killsOfCombo:ion_sniper_PISTOL', target:10 } },
-  { id:'suppressor',      weapon:'PISTOL', type:'attachment',
-    challenge:{ desc:'Kill {target} enemies with the Pistol',  track:'killsWith:PISTOL', target:25 } },
-  { id:'heavy_barrel',    weapon:'PISTOL', type:'attachment',
-    challenge:{ desc:'Kill {target} enemies while airborne with the Pistol', track:'killsWhileJumping:PISTOL', target:15 } },
+    // PISTOL
+  { id:'endless_magazine', weapon:'PISTOL', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'PISTOL', weaponLevel:true }, target:1,
+      desc:'Reach Pistol level {target}.' } },
+  { id:'holo_sight', weapon:'PISTOL', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'PISTOL', playerState:'airborne' }, target:15,
+      desc:'Get {target} kills while airborne with the Pistol' } },
+  { id:'acog', weapon:'PISTOL', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'PISTOL', targetType:'sniper' }, target:15,
+      desc:'Kill {target} Snipers with the Pistol' } },
+  { id:'thermal', weapon:'PISTOL', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'PISTOL', targetType:'ion_sniper' }, target:10,
+      desc:'Kill {target} Ion Snipers with the Pistol' } },
+  { id:'suppressor', weapon:'PISTOL', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'PISTOL', bareWeapon:true }, target:30,
+      desc:'Kill {target} enemies with an unmodified Pistol' } },
+  { id:'ported_barrel', weapon:'PISTOL', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ maxCombo:true }, target:5,
+      desc:'Reach a {target}‑kill combo with the Pistol' } },
+  { id:'heavy_barrel', weapon:'PISTOL', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'PISTOL', playerState:'scoped' }, target:15,
+      desc:'Kill {target} enemies while scoped with the Pistol' } },
   { id:'extended_barrel', weapon:'PISTOL', type:'attachment',
-    challenge:{ desc:'Kill {target} enemies with the Pistol',  track:'killsWith:PISTOL', target:50 } },
-  { id:'quick_swap_mag',  weapon:'PISTOL', type:'attachment',
-    challenge:{ desc:'Kill {target} enemies with the Pistol', track:'killsWith:PISTOL', target:40 } },
-  { id:'mag_50_cal',      weapon:'PISTOL', type:'attachment',
-    challenge:{ desc:'Kill {target} Heavy robots with the Pistol', track:'killsOfCombo:heavy_PISTOL', target:10 } },
-  { id:'pdw_conversion',  weapon:'PISTOL', type:'attachment', secret:true,
-    challenge:{ desc:'Kill {target} enemies with the Pistol while airborne', track:'killsWhileJumping:PISTOL', target:30 } },
-  { id:'akimbo',          weapon:'PISTOL', type:'attachment', secret:true,
-    challenge:{ desc:'Kill {target} enemies with the Pistol',  track:'killsWith:PISTOL', target:75 } },
-  { id:'compensator',   weapon:'PISTOL', type:'attachment', challenge:{ track:'killsOfCombo:scout_PISTOL',     target:25  } }, // scouts are fast — reward spread control
-  { id:'angled_grip',   weapon:'PISTOL', type:'attachment', challenge:{ track:'killsWhileJumping:PISTOL',      target:20  } },
-  { id:'vertical_grip', weapon:'PISTOL', type:'attachment', challenge:{ track:'multiKillsWith:PISTOL',         target:10  } }, // grip = fast follow-up shots
-  { id:'tactical_grip', weapon:'PISTOL', type:'attachment', challenge:{ track:'killsFullyEquipped:PISTOL',     target:30  } },
-  { id:'folded_stock',  weapon:'PISTOL', type:'attachment', challenge:{ track:'killsBareWeapon:PISTOL',        target:40  } }, // earn the stock by going without it
-  { id:'heavy_stock',   weapon:'PISTOL', type:'attachment', challenge:{ track:'killsOfCombo:heavy_PISTOL',     target:15  } },
+    challenge:{ event:'KILL', conditions:{ weapon:'PISTOL', targetType:'heavy' }, target:20,
+      desc:'Kill {target} Heavy robots with the Pistol' } },
+  { id:'quick_swap_mag', weapon:'PISTOL', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'PISTOL', fullyEquipped:true }, target:25,
+      desc:'Kill {target} enemies with a fully‑equipped Pistol' } },
+  { id:'mag_50_cal', weapon:'PISTOL', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'PISTOL', boss:true }, target:1,
+      desc:'Kill a boss with the Pistol' } },
+  { id:'pdw_conversion', weapon:'PISTOL', type:'attachment', secret:true,
+    challenge:{ event:'KILL', conditions:{ weapon:'PISTOL', explosive:true }, target:20,
+      desc:'Get {target} explosive kills with the Pistol' } },
+  { id:'akimbo', weapon:'PISTOL', type:'attachment', secret:true,
+    challenge:{ event:'KILL', conditions:{ weapon:'PISTOL', isHeadshot:true }, target:15,
+      desc:'Hit {target} headshots with the Pistol' } },
+  { id:'compensator', weapon:'PISTOL', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'PISTOL', targetType:'drone' }, target:20,
+      desc:'Kill {target} Drones with the Pistol' } },
+  { id:'angled_grip', weapon:'PISTOL', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'PISTOL', map:'jungle' }, target:20,
+      desc:'Kill {target} enemies with the Pistol in the Jungle' } },
+  { id:'vertical_grip', weapon:'PISTOL', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'PISTOL', targetType:'shotgun' }, target:15,
+      desc:'Kill {target} Shotgunners with the Pistol' } },
+  { id:'tactical_grip', weapon:'PISTOL', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'PISTOL', targetType:'scout' }, target:30,
+      desc:'Kill {target} Scouts with the Pistol' } },
+  { id:'folded_stock', weapon:'PISTOL', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'PISTOL', withAttachment:'suppressor' }, target:10,
+      desc:'Kill {target} enemies with the Pistol while using a Suppressor' } },
+  { id:'heavy_stock', weapon:'PISTOL', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'PISTOL', targetType:'heavy' }, target:15,
+      desc:'Kill {target} Heavy robots with the Pistol' } },
   { id:'quick_trigger', weapon:'PISTOL', type:'attachment', secret:true,
-    challenge:{ desc:'Hit {target} headshots with the Pistol.', track:'headshotKills:PISTOL', target:20 } },
-  { id:'scavenger', weapon:'PISTOL',   type:'attachment',
-    challenge:{ desc:'Kill {target} enemies with the Pistol', track:'killsWith:PISTOL',   target:60 } },
+    challenge:{ event:'KILL', conditions:{ weapon:'PISTOL', multiKill:true }, target:12,
+      desc:'Get {target} multi‑kills with the Pistol' } },
+  { id:'scavenger', weapon:'PISTOL', type:'attachment',
+    challenge:{ event:'DAMAGE_DEALT', conditions:{ weapon:'PISTOL' }, target:25000,
+      desc:'Deal {target} damage with the Pistol' } },
+  { id:'lantern', weapon:'PISTOL', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'PISTOL', map:'scrapyard' }, target:25,
+      desc:'Kill {target} enemies with the Pistol in the Scrapyard' } },
+  { id:'night_vision', weapon:'PISTOL', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ withAttachment:'lantern', weapon:'PISTOL', map:'scrapyard' }, target:15,
+      desc:'Kill {target} enemies with the Pistol and Lantern in the Scrapyard' } },
 
-
-  // ── SMG ───────────────────────────────────────────────────────
-  { id:'holo_sight',  weapon:'SMG', type:'attachment',
-    challenge:{ desc:'Kill {target} enemies with the SMG',                         track:'killsWith:SMG',         target:25  } },
-  { id:'acog',        weapon:'SMG', type:'attachment',
-    challenge:{ desc:'Kill {target} Drones with the SMG',                          track:'killsOfCombo:drone_SMG', target:30  } },
-  { id:'thermal',     weapon:'SMG', type:'attachment',
-    challenge:{ desc:'Kill {target} Electron Bots with the SMG',                   track:'killsOfCombo:electron_bot_SMG', target:20 } },
-  { id:'compensator',  weapon:'SMG', type:'attachment',
-    challenge:{ desc:'Kill {target} enemies with the SMG',                         track:'killsWith:SMG',         target:30  } },
-  { id:'angled_grip',  weapon:'SMG', type:'attachment',
-    challenge:{ desc:'Kill {target} enemies while airborne with the SMG',          track:'killsWhileJumping:SMG', target:20  } },
+  // SMG
+  { id:'holo_sight', weapon:'SMG', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'SMG', playerState:'airborne' }, target:20,
+      desc:'Get {target} kills while airborne with the SMG' } },
+  { id:'acog', weapon:'SMG', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'SMG', targetType:'drone' }, target:30,
+      desc:'Kill {target} Drones with the SMG' } },
+  { id:'thermal', weapon:'SMG', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'SMG', targetType:'electron_bot' }, target:20,
+      desc:'Kill {target} Electron Bots with the SMG' } },
+  { id:'compensator', weapon:'SMG', type:'attachment',
+    challenge:{ event:'DAMAGE_DEALT', conditions:{ weapon:'SMG' }, target:18000,
+      desc:'Deal {target} damage with the SMG' } },
+  { id:'angled_grip', weapon:'SMG', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'SMG', playerState:'scoped' }, target:25,
+      desc:'Kill {target} enemies while scoped with the SMG' } },
   { id:'folded_stock', weapon:'SMG', type:'attachment',
-    challenge:{ desc:'Kill {target} enemies with the SMG',                         track:'killsWith:SMG',         target:65  } },
+    challenge:{ event:'KILL', conditions:{ weapon:'SMG', bareWeapon:true }, target:40,
+      desc:'Kill {target} enemies with an unmodified SMG' } },
   { id:'extended_mag', weapon:'SMG', type:'attachment',
-    challenge:{ desc:'Kill {target} enemies with the SMG',                         track:'killsWith:SMG',         target:50  } },
-  { id:'quick_mag',    weapon:'SMG', type:'attachment',
-    challenge:{ desc:'Kill {target} enemies with the SMG',                         track:'killsWith:SMG',         target:80  } },
-  { id:'drum_mag',     weapon:'SMG', type:'attachment',
-    challenge:{ desc:'Kill {target} enemies with the SMG',                        track:'killsWith:SMG',          target:130 } },
-  { id:'suppressor',   weapon:'SMG', type:'attachment',
-    challenge:{ desc:'Kill {target} Snipers with the SMG',                         track:'killsOfType:sniper',    target:25  } },
-  { id:'suppressor',    weapon:'SMG', type:'attachment', challenge:{ track:'killsBareWeapon:SMG',              target:40  } },
-  { id:'extended_barrel',weapon:'SMG',type:'attachment', challenge:{ track:'killsWhileJumping:SMG',            target:30  } },
-  { id:'heavy_barrel',  weapon:'SMG', type:'attachment', challenge:{ track:'killsOfCombo:heavy_SMG',           target:20  } },
-  { id:'quick_swap_mag',weapon:'SMG', type:'attachment', challenge:{ track:'damageDealt:SMG',                  target:15000} },
-  { id:'heavy_stock',   weapon:'SMG', type:'attachment', challenge:{ track:'killsOfCombo:scout_SMG',           target:50  } },
-  { id:'vertical_grip', weapon:'SMG', type:'attachment', challenge:{ track:'killsWhileScoped:SMG',             target:30  } },
-  { id:'tactical_grip', weapon:'SMG', type:'attachment', challenge:{ track:'killsFullyEquipped:SMG',           target:40  } },
-  { id:'quick_trigger', weapon:'SMG', type:'attachment', challenge:{ track:'multiKillsWith:SMG',               target:20  } },
+    challenge:{ event:'KILL', conditions:{ weapon:'SMG', fullyEquipped:true }, target:30,
+      desc:'Kill {target} enemies with a fully‑equipped SMG' } },
+  { id:'quick_mag', weapon:'SMG', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'SMG', boss:true }, target:1,
+      desc:'Kill a boss with the SMG' } },
+  { id:'drum_mag', weapon:'SMG', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'SMG', explosive:true }, target:25,
+      desc:'Get {target} explosive kills with the SMG' } },
+  { id:'suppressor', weapon:'SMG', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'SMG', targetType:'sniper' }, target:25,
+      desc:'Kill {target} Snipers with the SMG' } },
+  { id:'extended_barrel', weapon:'SMG', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'SMG', playerState:'airborne' }, target:30,
+      desc:'Kill {target} enemies while airborne with the SMG' } },
+  { id:'heavy_barrel', weapon:'SMG', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'SMG', targetType:'heavy' }, target:20,
+      desc:'Kill {target} Heavy robots with the SMG' } },
+  { id:'quick_swap_mag', weapon:'SMG', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'SMG', isHeadshot:true }, target:35,
+      desc:'Hit {target} headshots with the SMG' } },
+  { id:'heavy_stock', weapon:'SMG', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'SMG', targetType:'scout' }, target:50,
+      desc:'Kill {target} Scouts with the SMG' } },
+  { id:'vertical_grip', weapon:'SMG', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'SMG', playerState:'scoped' }, target:30,
+      desc:'Kill {target} enemies while scoped with the SMG' } },
+  { id:'tactical_grip', weapon:'SMG', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'SMG', multiKill:true }, target:20,
+      desc:'Get {target} multi‑kills with the SMG' } },
+  { id:'quick_trigger', weapon:'SMG', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'SMG', playerState:'airborne' }, target:25,
+      desc:'Kill {target} enemies while airborne with the SMG' } },
   { id:'akimbo', weapon:'SMG', type:'attachment', secret:true,
-    challenge:{ desc:'Hit {target} headshots with the SMG.', track:'headshotKills:SMG', target:10 } },
-  { id:'recoil_dampener', weapon:'SMG', type:'attachment', challenge:{ track:'killsOfCombo:scout_SMG',      target:60  } },
-  { id:'scavenger', weapon:'SMG',      type:'attachment',
-  challenge:{ desc:'Kill {target} enemies with the SMG',    track:'killsWith:SMG',      target:60 } },
+    challenge:{ event:'KILL', conditions:{ weapon:'SMG', isHeadshot:true }, target:10,
+      desc:'Hit {target} headshots with the SMG' } },
+  { id:'recoil_dampener', weapon:'SMG', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'SMG', targetType:'scout' }, target:60,
+      desc:'Kill {target} Scouts with the SMG' } },
+  { id:'scavenger', weapon:'SMG', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'SMG', boss:true }, target:2,
+      desc:'Kill {target} bosses with the SMG' } },
+  { id:'lantern', weapon:'SMG', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'SMG', map:'scrapyard' }, target:40,
+      desc:'Kill {target} enemies with the SMG in the Scrapyard' } },
+  { id:'night_vision', weapon:'SMG', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ withAttachment:'lantern', weapon:'SMG', map:'scrapyard' }, target:25,
+      desc:'Kill {target} enemies with the SMG and Lantern in the Scrapyard' } },
 
-  // ── SHOTGUN ──────────────────────────────────────────────────
-  { id:'holo_sight',     weapon:'SHOTGUN', type:'attachment',
-    challenge:{ desc:'Kill {target} enemies with the Shotgun',                      track:'killsWith:SHOTGUN',         target:20  } },
-  { id:'acog',           weapon:'SHOTGUN', type:'attachment',
-    challenge:{ desc:'Kill {target} Pistol bots with the Shotgun',                  track:'killsOfCombo:pistol_SHOTGUN', target:15  } },
-  { id:'thermal',        weapon:'SHOTGUN', type:'attachment',
-    challenge:{ desc:'Kill {target} Ion Snipers with the Shotgun',                  track:'killsOfCombo:ion_sniper_SHOTGUN', target:10 } },
+  // SHOTGUN
+  { id:'holo_sight', weapon:'SHOTGUN', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'SHOTGUN', playerState:'airborne' }, target:20,
+      desc:'Get {target} kills while airborne with the Shotgun' } },
+  { id:'acog', weapon:'SHOTGUN', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'SHOTGUN', targetType:'pistol' }, target:15,
+      desc:'Kill {target} Pistol bots with the Shotgun' } },
+  { id:'thermal', weapon:'SHOTGUN', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'SHOTGUN', targetType:'ion_sniper' }, target:10,
+      desc:'Kill {target} Ion Snipers with the Shotgun' } },
   { id:'vertical_grip', weapon:'SHOTGUN', type:'attachment',
-    challenge:{ desc:'Kill {target} enemies with the Shotgun',                  track:'killsWith:SHOTGUN',   target:30  } },
-  { id:'heavy_stock',   weapon:'SHOTGUN', type:'attachment',
-    challenge:{ desc:'Kill {target} enemies while airborne with the Shotgun',   track:'killsWhileJumping:SHOTGUN', target:15 } },
-  { id:'compensator',   weapon:'SHOTGUN', type:'attachment',
-    challenge:{ desc:'Kill {target} enemies with the Shotgun',                  track:'killsWith:SHOTGUN',   target:20  } },
-  { id:'extended_mag',  weapon:'SHOTGUN', type:'attachment',
-    challenge:{ desc:'Kill {target} enemies with the Shotgun',                  track:'killsWith:SHOTGUN',   target:40  } },
-  { id:'akimbo',        weapon:'SHOTGUN', type:'attachment', secret:true,
-    challenge:{ desc:'Kill {target} enemies with the Shotgun',                  track:'killsWith:SHOTGUN',   target:60  } },
-  { id:'auto_fire',     weapon:'SHOTGUN', type:'attachment', secret:true,
-    challenge:{ desc:'Kill {target} Heavy robots with the Shotgun',             track:'killsOfType:heavy',   target:30  } },
-  { id:'suppressor',    weapon:'SHOTGUN', type:'attachment', challenge:{ track:'killsFullyEquipped:SHOTGUN',   target:30  } },
-  { id:'extended_barrel',weapon:'SHOTGUN',type:'attachment', challenge:{ track:'damageDealt:SHOTGUN',          target:20000} },
-  { id:'heavy_barrel',  weapon:'SHOTGUN', type:'attachment', challenge:{ track:'killsOfType:heavy',            target:25  } },
-  { id:'quick_swap_mag',weapon:'SHOTGUN', type:'attachment', challenge:{ track:'killsOfCombo:shotgun_SHOTGUN', target:15  } }, // mirror-match
-  { id:'drum_mag',      weapon:'SHOTGUN', type:'attachment', challenge:{ track:'damageDealt:SHOTGUN',          target:45000} },
-  { id:'folded_stock',  weapon:'SHOTGUN', type:'attachment', challenge:{ track:'multiKillsWith:SHOTGUN',       target:25  } },
-  { id:'angled_grip',   weapon:'SHOTGUN', type:'attachment', challenge:{ track:'killsWhileJumping:SHOTGUN',    target:20  } },
-  { id:'tactical_grip', weapon:'SHOTGUN', type:'attachment', challenge:{ track:'killsBareWeapon:SHOTGUN',      target:50  } },
-  { id:'recoil_dampener', weapon:'SHOTGUN', type:'attachment', challenge:{ track:'headshotKills:SHOTGUN',      target:15  } },
-  { id:'scavenger', weapon:'SHOTGUN',  type:'attachment',
-    challenge:{ desc:'Kill {target} enemies with the Shotgun',track:'killsWith:SHOTGUN',  target:50 } },
+    challenge:{ event:'KILL', conditions:{ weapon:'SHOTGUN', fullyEquipped:true }, target:20,
+      desc:'Kill {target} enemies with a fully‑equipped Shotgun' } },
+  { id:'heavy_stock', weapon:'SHOTGUN', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'SHOTGUN', playerState:'airborne' }, target:15,
+      desc:'Kill {target} enemies while airborne with the Shotgun' } },
+  { id:'compensator', weapon:'SHOTGUN', type:'attachment',
+    challenge:{ event:'DAMAGE_DEALT', conditions:{ weapon:'SHOTGUN' }, target:20000,
+      desc:'Deal {target} damage with the Shotgun' } },
+  { id:'extended_mag', weapon:'SHOTGUN', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'SHOTGUN', boss:true }, target:1,
+      desc:'Kill a boss with the Shotgun' } },
+  { id:'slug_rounds', weapon:'SHOTGUN', type:'attachment', secret:true,
+    challenge:{ event:'KILL', conditions:{ weapon:'SHOTGUN', isHeadshot:true }, target:20,
+      desc:'Hit {target} headshots with the Shotgun' } },
+  { id:'dragons_breath', weapon:'SHOTGUN', type:'attachment', secret:true,
+    challenge:{ event:'KILL', conditions:{ weapon:'SHOTGUN', targetType:'heavy' }, target:30,
+      desc:'Kill {target} Heavy robots with the Shotgun' } },
+  { id:'suppressor', weapon:'SHOTGUN', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'SHOTGUN', bareWeapon:true }, target:30,
+      desc:'Kill {target} enemies with an unmodified Shotgun' } },
+  { id:'extended_barrel', weapon:'SHOTGUN', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'SHOTGUN', targetType:'shotgun' }, target:25,
+      desc:'Kill {target} Shotgunners with the Shotgun' } },
+  { id:'heavy_barrel', weapon:'SHOTGUN', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'SHOTGUN', targetType:'heavy' }, target:25,
+      desc:'Kill {target} Heavy robots with the Shotgun' } },
+  { id:'quick_swap_mag', weapon:'SHOTGUN', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'SHOTGUN', multiKill:true }, target:20,
+      desc:'Get {target} multi‑kills with the Shotgun' } },
+  { id:'folded_stock', weapon:'SHOTGUN', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'SHOTGUN', playerState:'scoped' }, target:15,
+      desc:'Kill {target} enemies while scoped with the Shotgun' } },
+  { id:'angled_grip', weapon:'SHOTGUN', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'SHOTGUN', playerState:'airborne' }, target:20,
+      desc:'Kill {target} enemies while airborne with the Shotgun' } },
+  { id:'tactical_grip', weapon:'SHOTGUN', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'SHOTGUN', bareWeapon:true }, target:50,
+      desc:'Kill {target} enemies with an unmodified Shotgun' } },
+  { id:'recoil_dampener', weapon:'SHOTGUN', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'SHOTGUN', isHeadshot:true }, target:15,
+      desc:'Hit {target} headshots with the Shotgun' } },
+  { id:'scavenger', weapon:'SHOTGUN', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'SHOTGUN', explosive:true }, target:20,
+      desc:'Get {target} explosive kills with the Shotgun' } },
+  { id:'lantern', weapon:'SHOTGUN', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'SHOTGUN', map:'scrapyard' }, target:25,
+      desc:'Kill {target} enemies with the Shotgun in the Scrapyard' } },
+  { id:'night_vision', weapon:'SHOTGUN', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ withAttachment:'lantern', weapon:'SHOTGUN', map:'scrapyard' }, target:15,
+      desc:'Kill {target} enemies with the Shotgun and Lantern in the Scrapyard' } },
 
-  // ── CHAINGUN ─────────────────────────────────────────────────
-  { id:'holo_sight',     weapon:'CHAINGUN', type:'attachment',
-    challenge:{ desc:'Kill {target} enemies with the Chaingun',                  track:'killsWith:CHAINGUN',          target:30  } },
-  { id:'acog',           weapon:'CHAINGUN', type:'attachment',
-    challenge:{ desc:'Kill {target} Scouts with the Chaingun',                   track:'killsOfCombo:scout_CHAINGUN', target:50  } },
-  { id:'thermal',        weapon:'CHAINGUN', type:'attachment',
-    challenge:{ desc:'Kill {target} Drones with the Chaingun',                   track:'killsOfCombo:drone_CHAINGUN', target:30  } },
-  { id:'heavy_barrel',  weapon:'CHAINGUN', type:'attachment',
-    challenge:{ desc:'Kill {target} enemies with the Chaingun',                 track:'killsWith:CHAINGUN',  target:30  } },
+  // CHAINGUN
+  { id:'holo_sight', weapon:'CHAINGUN', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'CHAINGUN', playerState:'airborne' }, target:30,
+      desc:'Get {target} kills while airborne with the Chaingun' } },
+  { id:'heavy_barrel', weapon:'CHAINGUN', type:'attachment',
+    challenge:{ event:'DAMAGE_DEALT', conditions:{ weapon:'CHAINGUN' }, target:30000,
+      desc:'Deal {target} damage with the Chaingun' } },
   { id:'vertical_grip', weapon:'CHAINGUN', type:'attachment',
-    challenge:{ desc:'Kill {target} enemies with the Chaingun',                 track:'killsWith:CHAINGUN',  target:60  } },
-  { id:'compensator',   weapon:'CHAINGUN', type:'attachment',
-    challenge:{ desc:'Kill {target} Scouts with the Chaingun',                  track:'killsOfType:scout',   target:40  } },
-  { id:'drum_mag',      weapon:'CHAINGUN', type:'attachment',
-    challenge:{ desc:'Kill {target} enemies with the Chaingun',                track:'killsWith:CHAINGUN',  target:150 } },
+    challenge:{ event:'KILL', conditions:{ weapon:'CHAINGUN', boss:true }, target:1,
+      desc:'Kill a boss with the Chaingun' } },
+  { id:'compensator', weapon:'CHAINGUN', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'CHAINGUN', targetType:'scout' }, target:40,
+      desc:'Kill {target} Scouts with the Chaingun' } },
+  { id:'drum_mag', weapon:'CHAINGUN', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'CHAINGUN', explosive:true }, target:30,
+      desc:'Get {target} explosive kills with the Chaingun' } },
   { id:'spinning_module', weapon:'CHAINGUN', type:'attachment', secret:true,
-    challenge:{ desc:'Kill {target} enemies while airborne with the Chaingun',  track:'killsWhileJumping:CHAINGUN', target:80 } },
-  { id:'suppressor',    weapon:'CHAINGUN', type:'attachment', challenge:{ track:'killsOfType:scout',           target:80  } }, // suppress scouts
-  { id:'extended_barrel',weapon:'CHAINGUN',type:'attachment', challenge:{ track:'damageDealt:CHAINGUN',        target:30000} },
-  { id:'quick_swap_mag',weapon:'CHAINGUN', type:'attachment', challenge:{ track:'killsOfCombo:drone_CHAINGUN', target:50  } },
-  { id:'extended_mag',  weapon:'CHAINGUN', type:'attachment', challenge:{ track:'damageDealt:CHAINGUN',        target:65000} },
-  { id:'heavy_stock',   weapon:'CHAINGUN', type:'attachment', challenge:{ track:'killsFullyEquipped:CHAINGUN', target:50  } },
-  { id:'folded_stock',  weapon:'CHAINGUN', type:'attachment', challenge:{ track:'multiKillsWith:CHAINGUN',     target:30  } },
-  { id:'angled_grip',   weapon:'CHAINGUN', type:'attachment', challenge:{ track:'killsWhileJumping:CHAINGUN',  target:40  } },
-  { id:'carbon_fiber',  weapon:'CHAINGUN', type:'attachment', secret:true, challenge:{ track:'multiKillsWith:CHAINGUN', target:30 } },
+    challenge:{ event:'KILL', conditions:{ weapon:'CHAINGUN', playerState:'airborne' }, target:80,
+      desc:'Kill {target} enemies while airborne with the Chaingun' } },
+  { id:'extended_barrel', weapon:'CHAINGUN', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'CHAINGUN', multiKill:true }, target:40,
+      desc:'Get {target} multi‑kills with the Chaingun' } },
+  { id:'quick_swap_mag', weapon:'CHAINGUN', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'CHAINGUN', targetType:'drone' }, target:50,
+      desc:'Kill {target} Drones with the Chaingun' } },
+  { id:'extended_mag', weapon:'CHAINGUN', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'CHAINGUN', fullyEquipped:true }, target:60,
+      desc:'Kill {target} enemies with a fully‑equipped Chaingun' } },
+  { id:'heavy_stock', weapon:'CHAINGUN', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'CHAINGUN', targetType:'heavy' }, target:30,
+      desc:'Kill {target} Heavy robots with the Chaingun' } },
+  { id:'folded_stock', weapon:'CHAINGUN', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'CHAINGUN', playerState:'scoped' }, target:25,
+      desc:'Kill {target} enemies while scoped with the Chaingun' } },
+  { id:'angled_grip', weapon:'CHAINGUN', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'CHAINGUN', playerState:'airborne' }, target:40,
+      desc:'Kill {target} enemies while airborne with the Chaingun' } },
+  { id:'carbon_fiber', weapon:'CHAINGUN', type:'attachment', secret:true,
+    challenge:{ event:'KILL', conditions:{ weapon:'CHAINGUN', multiKill:true }, target:30,
+      desc:'Get {target} multi‑kills with the Chaingun' } },
   { id:'scavenger', weapon:'CHAINGUN', type:'attachment',
-  challenge:{ desc:'Kill {target} enemies with the Chaingun',track:'killsWith:CHAINGUN',target:80 } },
+    challenge:{ event:'KILL', conditions:{ weapon:'CHAINGUN', boss:true }, target:2,
+      desc:'Kill {target} bosses with the Chaingun' } },
+  { id:'lantern', weapon:'CHAINGUN', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'CHAINGUN', map:'scrapyard' }, target:30,
+      desc:'Kill {target} enemies with the Chaingun in the Scrapyard' } },
+  { id:'night_vision', weapon:'CHAINGUN', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ withAttachment:'lantern', weapon:'CHAINGUN', map:'scrapyard' }, target:18,
+      desc:'Kill {target} enemies with the Chaingun and Lantern in the Scrapyard' } },
 
-  // ── RAILGUN ──────────────────────────────────────────────────
-  { id:'holo_sight',       weapon:'RAILGUN', type:'attachment',
-    challenge:{ desc:'Kill {target} enemies with the Railgun',                   track:'killsWith:RAILGUN',          target:5   } },
-  { id:'acog',             weapon:'RAILGUN', type:'attachment',
-    challenge:{ desc:'Kill {target} Snipers with the Railgun',                   track:'killsOfCombo:sniper_RAILGUN', target:15  } },
-  { id:'thermal',          weapon:'RAILGUN', type:'attachment',
-    challenge:{ desc:'Kill {target} Heavy robots with the Railgun',             track:'killsOfType:heavy',   target:15  } },
+  // RAILGUN
+  { id:'holo_sight', weapon:'RAILGUN', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'RAILGUN', playerState:'airborne' }, target:10,
+      desc:'Get {target} kills while airborne with the Railgun' } },
+  { id:'acog', weapon:'RAILGUN', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'RAILGUN', targetType:'sniper' }, target:15,
+      desc:'Kill {target} Snipers with the Railgun' } },
+  { id:'thermal', weapon:'RAILGUN', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'RAILGUN', targetType:'heavy' }, target:15,
+      desc:'Kill {target} Heavy robots with the Railgun' } },
   { id:'extended_barrel', weapon:'RAILGUN', type:'attachment',
-    challenge:{ desc:'Kill {target} enemies with the Railgun',                  track:'killsWith:RAILGUN',   target:20  } },
-  { id:'power_cell',      weapon:'RAILGUN', type:'attachment', secret:true,
-    challenge:{ desc:'Kill {target} Snipers with the Railgun',                  track:'killsOfType:sniper',  target:25  } },
+    challenge:{ event:'DAMAGE_DEALT', conditions:{ weapon:'RAILGUN' }, target:50000,
+      desc:'Deal {target} damage with the Railgun' } },
+  { id:'power_cell', weapon:'RAILGUN', type:'attachment', secret:true,
+    challenge:{ event:'KILL', conditions:{ weapon:'RAILGUN', targetType:'sniper' }, target:25,
+      desc:'Kill {target} Snipers with the Railgun' } },
   { id:'efficiency_module', weapon:'RAILGUN', type:'attachment', secret:true,
-    challenge:{ desc:'Pick up {target} Railgun ammo drops', track:'railgunPickups', target:20 } },
-  { id:'suppressor',    weapon:'RAILGUN', type:'attachment', challenge:{ track:'killsOfCombo:sniper_RAILGUN',  target:20  } }, // sniper v sniper
-  { id:'extended_barrel',weapon:'RAILGUN',type:'attachment', challenge:{ track:'killsWhileScoped:RAILGUN',     target:20  } },
-  { id:'compensator',   weapon:'RAILGUN', type:'attachment', challenge:{ track:'killsOfCombo:heavy_RAILGUN',   target:12  } },
-  { id:'heavy_barrel',  weapon:'RAILGUN', type:'attachment', challenge:{ track:'killsOfCombo:drone_RAILGUN',   target:15  } },
-  //{ id:'quick_swap_mag',weapon:'RAILGUN', type:'attachment', challenge:{ track:'damageDealt:RAILGUN',          target:18000} },
-  { id:'heavy_stock',   weapon:'RAILGUN', type:'attachment', challenge:{ track:'killsBareWeapon:RAILGUN',      target:15  } },
-  { id:'folded_stock',  weapon:'RAILGUN', type:'attachment', challenge:{ track:'multiKillsWith:RAILGUN',       target:8   } }, // tight for a sniper — high bar
+    challenge:{ event:'PICKUP', conditions:{ pickupType:'railgun' }, target:20,
+      desc:'Pick up {target} Railgun ammo drops' } },
+  { id:'suppressor', weapon:'RAILGUN', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'RAILGUN', bareWeapon:true }, target:15,
+      desc:'Kill {target} enemies with an unmodified Railgun' } },
+  { id:'extended_barrel2', weapon:'RAILGUN', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'RAILGUN', playerState:'scoped' }, target:20,
+      desc:'Kill {target} enemies while scoped with the Railgun' } },
+  { id:'compensator', weapon:'RAILGUN', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'RAILGUN', targetType:'heavy' }, target:12,
+      desc:'Kill {target} Heavy robots with the Railgun' } },
+  { id:'folded_stock', weapon:'RAILGUN', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'RAILGUN', multiKill:true }, target:8,
+      desc:'Get {target} multi‑kills with the Railgun' } },
+  { id:'angled_grip', weapon:'RAILGUN', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'RAILGUN', playerState:'scoped' }, target:15,
+      desc:'Kill {target} enemies while scoped with the Railgun' } },
+  { id:'vertical_grip', weapon:'RAILGUN', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'RAILGUN', targetType:'sniper' }, target:15,
+      desc:'Kill {target} Snipers with the Railgun' } },
+  { id:'lantern', weapon:'RAILGUN', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'RAILGUN', map:'scrapyard' }, target:15,
+      desc:'Kill {target} enemies with the Railgun in the Scrapyard' } },
+  { id:'night_vision', weapon:'RAILGUN', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ withAttachment:'lantern', weapon:'RAILGUN', map:'scrapyard' }, target:10,
+      desc:'Kill {target} enemies with the Railgun and Lantern in the Scrapyard' } },
+  { id:'recoil_dampener', weapon:'RAILGUN', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'RAILGUN', playerState:'airborne' }, target:15,
+      desc:'Kill {target} enemies while airborne with the Railgun' } },
+  { id:'stabilizing_brace', weapon:'RAILGUN', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ withAttachment:'acog', weapon:'RAILGUN' }, target:10,
+      desc:'Kill {target} enemies with the Railgun while using ACOG' } },
 
-  // ── PLASMA ───────────────────────────────────────────────────
-  { id:'holo_sight',         weapon:'PLASMA', type:'attachment',
-    challenge:{ desc:'Kill {target} enemies with the Plasma Rifle',              track:'killsWith:PLASMA',           target:15  } },
-  { id:'thermal',            weapon:'PLASMA', type:'attachment',
-    challenge:{ desc:'Kill {target} Drone bots with the Plasma Rifle',           track:'killsOfCombo:drone_PLASMA',  target:20  } },
-  { id:'acog',               weapon:'PLASMA', type:'attachment',
-    challenge:{ desc:'Kill {target} enemies with the Plasma Rifle while scoped', track:'killsWhileScoped:PLASMA',    target:30  } },
-  { id:'extended_mag',       weapon:'PLASMA', type:'attachment',
-    challenge:{ desc:'Kill {target} Drones with the Plasma Rifle',               track:'killsOfType:drone',          target:30  } },
+  // PLASMA
+  { id:'holo_sight', weapon:'PLASMA', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'PLASMA', playerState:'airborne' }, target:20,
+      desc:'Get {target} kills while airborne with the Plasma Rifle' } },
+  { id:'thermal', weapon:'PLASMA', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'PLASMA', targetType:'drone' }, target:20,
+      desc:'Kill {target} Drones with the Plasma Rifle' } },
+  { id:'acog', weapon:'PLASMA', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'PLASMA', playerState:'scoped' }, target:30,
+      desc:'Kill {target} enemies while scoped with the Plasma Rifle' } },
+  { id:'extended_mag', weapon:'PLASMA', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'PLASMA', targetType:'electron_bot' }, target:30,
+      desc:'Kill {target} Electron Bots with the Plasma Rifle' } },
   { id:'plasma_accelerator', weapon:'PLASMA', type:'attachment',
-    challenge:{ desc:'Kill {target} enemies with the Plasma Rifle while airborne', track:'killsWhileJumping:PLASMA', target:25  } },
+    challenge:{ event:'KILL', conditions:{ weapon:'PLASMA', playerState:'airborne' }, target:25,
+      desc:'Kill {target} enemies while airborne with the Plasma Rifle' } },
   { id:'energy_converter', weapon:'PLASMA', type:'attachment', secret:true,
-    challenge:{ desc:'Pick up {target} Plasma Rifle drops',                      track:'energyPickups:PLASMA',       target:15  } },
-  { id:'dual_trigger',       weapon:'PLASMA', type:'attachment', secret:true,
-    challenge:{ desc:'Kill {target} enemies with the Plasma Rifle',              track:'killsWith:PLASMA',           target:60  } },
-  { id:'suppressor',    weapon:'PLASMA', type:'attachment', challenge:{ track:'killsWhileScoped:PLASMA',       target:20  } },
-  { id:'extended_barrel',weapon:'PLASMA',type:'attachment', challenge:{ track:'damageDealt:PLASMA',            target:25000} },
-  { id:'compensator',   weapon:'PLASMA', type:'attachment', challenge:{ track:'killsOfCombo:drone_PLASMA',     target:20  } },
-  { id:'heavy_barrel',  weapon:'PLASMA', type:'attachment', challenge:{ track:'killsOfCombo:heavy_PLASMA',     target:20  } },
-  { id:'quick_swap_mag',weapon:'PLASMA', type:'attachment', challenge:{ track:'multiKillsWith:PLASMA',         target:20  } },
-  { id:'extended_mag',  weapon:'PLASMA', type:'attachment', challenge:{ track:'killsOfType:electron_bot',      target:25  } },
-  { id:'drum_mag',      weapon:'PLASMA', type:'attachment', challenge:{ track:'damageDealt:PLASMA',            target:65000} },
-  { id:'heavy_stock',   weapon:'PLASMA', type:'attachment', challenge:{ track:'killsFullyEquipped:PLASMA',     target:40  } },
-  { id:'folded_stock',  weapon:'PLASMA', type:'attachment', challenge:{ track:'killsBareWeapon:PLASMA',        target:30  } },
-  { id:'angled_grip',   weapon:'PLASMA', type:'attachment', challenge:{ track:'killsWhileJumping:PLASMA',      target:20  } },
-  { id:'vertical_grip', weapon:'PLASMA', type:'attachment', challenge:{ track:'killsOfCombo:scout_PLASMA',     target:40  } },
-  { id:'emp_rounds', weapon:'PLASMA', type:'attachment', challenge:{ track:'killsOfCombo:ninja_PLASMA',    target:30  } },
+    challenge:{ event:'KILL', conditions:{ weapon:'PLASMA', targetType:'ion_sniper' }, target:10,
+      desc:'Kill {target} Ion Snipers with the Plasma Rifle' } },
+  { id:'dual_trigger', weapon:'PLASMA', type:'attachment', secret:true,
+    challenge:{ event:'KILL', conditions:{ weapon:'PLASMA', boss:true }, target:2,
+      desc:'Kill {target} bosses with the Plasma Rifle' } },
+  { id:'suppressor', weapon:'PLASMA', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'PLASMA', bareWeapon:true }, target:30,
+      desc:'Kill {target} enemies with an unmodified Plasma Rifle' } },
+  { id:'extended_barrel', weapon:'PLASMA', type:'attachment',
+    challenge:{ event:'DAMAGE_DEALT', conditions:{ weapon:'PLASMA' }, target:25000,
+      desc:'Deal {target} damage with the Plasma Rifle' } },
+  { id:'compensator', weapon:'PLASMA', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'PLASMA', targetType:'scout' }, target:30,
+      desc:'Kill {target} Scouts with the Plasma Rifle' } },
+  { id:'heavy_barrel', weapon:'PLASMA', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'PLASMA', targetType:'heavy' }, target:20,
+      desc:'Kill {target} Heavy robots with the Plasma Rifle' } },
+  { id:'quick_swap_mag', weapon:'PLASMA', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'PLASMA', multiKill:true }, target:20,
+      desc:'Get {target} multi‑kills with the Plasma Rifle' } },
+  { id:'extended_mag2', weapon:'PLASMA', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'PLASMA', targetType:'electron_bot' }, target:25,
+      desc:'Kill {target} Electron Bots with the Plasma Rifle' } },
+  { id:'heavy_stock', weapon:'PLASMA', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'PLASMA', fullyEquipped:true }, target:40,
+      desc:'Kill {target} enemies with a fully‑equipped Plasma Rifle' } },
+  { id:'folded_stock', weapon:'PLASMA', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'PLASMA', bareWeapon:true }, target:30,
+      desc:'Kill {target} enemies with an unmodified Plasma Rifle' } },
+  { id:'angled_grip', weapon:'PLASMA', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'PLASMA', playerState:'airborne' }, target:20,
+      desc:'Kill {target} enemies while airborne with the Plasma Rifle' } },
+  { id:'vertical_grip', weapon:'PLASMA', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'PLASMA', targetType:'scout' }, target:40,
+      desc:'Kill {target} Scouts with the Plasma Rifle' } },
+  { id:'emp_rounds', weapon:'PLASMA', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'PLASMA', targetType:'ninja' }, target:30,
+      desc:'Kill {target} Ninjas with the Plasma Rifle' } },
+  { id:'lantern', weapon:'PLASMA', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'PLASMA', map:'scrapyard' }, target:25,
+      desc:'Kill {target} enemies with the Plasma Rifle in the Scrapyard' } },
+  { id:'night_vision', weapon:'PLASMA', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ withAttachment:'lantern', weapon:'PLASMA', map:'scrapyard' }, target:15,
+      desc:'Kill {target} enemies with the Plasma Rifle and Lantern in the Scrapyard' } },
+  { id:'stabilizing_brace', weapon:'PLASMA', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ withAttachment:'acog', weapon:'PLASMA' }, target:15,
+      desc:'Kill {target} enemies with the Plasma Rifle while using ACOG' } },
 
-  // ── ROCKET ────────────────────────────────────────────────────
-  { id:'holo_sight',   weapon:'ROCKET', type:'attachment',
-    challenge:{ desc:'Kill {target} enemies with the Rocket Launcher',                    track:'killsWith:ROCKET',          target:8   } },
-  { id:'acog',         weapon:'ROCKET', type:'attachment',
-    challenge:{ desc:'Kill {target} enemies while airborne with the Rocket Launcher',     track:'killsWhileJumping:ROCKET',  target:5   } },
-  { id:'thermal',      weapon:'ROCKET', type:'attachment',
-    challenge:{ desc:'Kill {target} bosses with the Rocket Launcher',                     track:'explosiveKills',           target:50   } },
-  { id:'suppressor',   weapon:'ROCKET', type:'attachment',
-    challenge:{ desc:'Kill {target} enemies while airborne with the Rocket Launcher',     track:'killsWhileJumping:ROCKET',  target:15  } },
+  // ROCKET
+  { id:'holo_sight', weapon:'ROCKET', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'ROCKET', playerState:'airborne' }, target:10,
+      desc:'Get {target} kills while airborne with the Rocket Launcher' } },
+  { id:'acog', weapon:'ROCKET', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'ROCKET', playerState:'scoped' }, target:10,
+      desc:'Kill {target} enemies while scoped with the Rocket Launcher' } },
+  { id:'thermal', weapon:'ROCKET', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ explosive:true }, target:50,
+      desc:'Get {target} explosive kills with the Rocket Launcher' } },
+  { id:'suppressor', weapon:'ROCKET', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'ROCKET', playerState:'airborne' }, target:15,
+      desc:'Kill {target} enemies while airborne with the Rocket Launcher' } },
   { id:'heavy_barrel', weapon:'ROCKET', type:'attachment',
-    challenge:{ desc:'Kill {target} enemies with the Rocket Launcher',                    track:'killsWith:ROCKET',          target:20  } },
+    challenge:{ event:'DAMAGE_DEALT', conditions:{ weapon:'ROCKET' }, target:25000,
+      desc:'Deal {target} damage with the Rocket Launcher' } },
   { id:'seasoned_vet_rocket', weapon:'ROCKET', type:'attachment', secret:true,
-    challenge:{ desc:'Kill {target} bosses with the Rocket Launcher',                     track:'killedBossWith:ROCKET',     target:1   } },
-  { id:'extended_barrel',weapon:'ROCKET',type:'attachment', challenge:{ track:'killsWhileJumping:ROCKET',      target:10  } }, // rocket jump kills
-  { id:'heavy_propellant',weapon:'ROCKET', type:'attachment',
-    challenge:{ desc:'Kill {target} enemies with direct rocket hits', track:'killsWith:ROCKET', target:30 } },
-  { id:'quick_swap_mag',weapon:'ROCKET', type:'attachment', challenge:{ track:'killsOfCombo:heavy_ROCKET',     target:8   } },
-  { id:'extended_mag',  weapon:'ROCKET', type:'attachment', challenge:{ track:'damageDealt:ROCKET',            target:22000} },
-  { id:'heavy_stock',   weapon:'ROCKET', type:'attachment', challenge:{ track:'multiKillsWith:ROCKET',         target:15  } },
-  { id:'folded_stock',  weapon:'ROCKET', type:'attachment', challenge:{ track:'killsOfCombo:scout_ROCKET',     target:20  } }, // rockets vs fast targets
-  { id:'rocket_burst',  weapon:'ROCKET', type:'attachment',
-    challenge:{ desc:'Kill {target} enemies with the Rocket Launcher', track:'killsWith:ROCKET', target:25 } },
+    challenge:{ event:'KILL', conditions:{ weapon:'ROCKET', boss:true }, target:1,
+      desc:'Kill a boss with the Rocket Launcher' } },
+  { id:'extended_barrel', weapon:'ROCKET', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'ROCKET', playerState:'airborne' }, target:10,
+      desc:'Kill {target} enemies while airborne with the Rocket Launcher' } },
+  { id:'heavy_propellant', weapon:'ROCKET', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'ROCKET', targetType:'heavy' }, target:10,
+      desc:'Kill {target} Heavy robots with the Rocket Launcher' } },
+  { id:'quick_swap_mag', weapon:'ROCKET', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'ROCKET', targetType:'heavy' }, target:8,
+      desc:'Kill {target} Heavy robots with the Rocket Launcher' } },
+  { id:'extended_mag', weapon:'ROCKET', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'ROCKET', multiKill:true }, target:20,
+      desc:'Get {target} multi‑kills with the Rocket Launcher' } },
+  { id:'heavy_stock', weapon:'ROCKET', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'ROCKET', targetType:'scout' }, target:20,
+      desc:'Kill {target} Scouts with the Rocket Launcher' } },
+  { id:'folded_stock', weapon:'ROCKET', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'ROCKET', targetType:'scout' }, target:20,
+      desc:'Kill {target} Scouts with the Rocket Launcher' } },
+  { id:'rocket_burst', weapon:'ROCKET', type:'attachment', secret:true,
+    challenge:{ event:'KILL', conditions:{ weapon:'ROCKET', boss:true }, target:2,
+      desc:'Kill {target} bosses with the Rocket Launcher' } },
+  { id:'lantern', weapon:'ROCKET', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'ROCKET', map:'scrapyard' }, target:20,
+      desc:'Kill {target} enemies with the Rocket Launcher in the Scrapyard' } },
+  { id:'night_vision', weapon:'ROCKET', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ withAttachment:'lantern', weapon:'ROCKET', map:'scrapyard' }, target:12,
+      desc:'Kill {target} enemies with the Rocket Launcher and Lantern in the Scrapyard' } },
 
-  // ── Wonder Weapon secret challenge ──────────────────────────
-  // Tracked under player challenges (no weapon): requires picking up all 3 wonder weapons first
-  { id:'wonder_weapon_secret', type:'playerSkin', secret:true,
-    challenge:{ desc:'Collect all 3 Wonder Weapons in a single run', track:'allWonderWeaponsCollected', target:1 } },
-
-  // ── GLAUNCHER ─────────────────────────────────────────────────
-  { id:'holo_sight',   weapon:'GLAUNCHER', type:'attachment',
-    challenge:{ desc:'Kill {target} enemies with the Grenade Launcher',              track:'killsWith:GLAUNCHER',               target:10  } },
-  { id:'acog',         weapon:'GLAUNCHER', type:'attachment',
-    challenge:{ desc:'Kill {target} enemies with the Grenade Launcher',              track:'killsWith:GLAUNCHER',               target:15  } },
-  { id:'thermal',      weapon:'GLAUNCHER', type:'attachment',
-    challenge:{ desc:'Kill {target} Grenadiers with the Grenade Launcher',           track:'killsOfCombo:grenadier_GLAUNCHER',  target:20  } },
-  { id:'compensator',  weapon:'GLAUNCHER', type:'attachment',
-    challenge:{ desc:'Kill {target} enemies with the Grenade Launcher',              track:'killsWith:GLAUNCHER',               target:25  } },
+  // GLAUNCHER
+  { id:'holo_sight', weapon:'GLAUNCHER', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'GLAUNCHER', playerState:'airborne' }, target:12,
+      desc:'Get {target} kills while airborne with the Grenade Launcher' } },
+  { id:'acog', weapon:'GLAUNCHER', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'GLAUNCHER', playerState:'scoped' }, target:15,
+      desc:'Kill {target} enemies while scoped with the Grenade Launcher' } },
+  { id:'thermal', weapon:'GLAUNCHER', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'GLAUNCHER', targetType:'grenadier' }, target:20,
+      desc:'Kill {target} Grenadiers with the Grenade Launcher' } },
+  { id:'compensator', weapon:'GLAUNCHER', type:'attachment',
+    challenge:{ event:'DAMAGE_DEALT', conditions:{ weapon:'GLAUNCHER' }, target:20000,
+      desc:'Deal {target} damage with the Grenade Launcher' } },
   { id:'cluster_rounds', weapon:'GLAUNCHER', type:'attachment', secret:true,
-    challenge:{ desc:'Kill {target} enemies with the Grenade Launcher',              track:'explosiveKills',               target:30  } },
+    challenge:{ event:'KILL', conditions:{ explosive:true }, target:30,
+      desc:'Get {target} explosive kills with the Grenade Launcher' } },
   { id:'seasoned_vet_glauncher', weapon:'GLAUNCHER', type:'attachment', secret:true,
-    challenge:{ desc:'Kill {target} bosses with the Grenade Launcher',               track:'killedBossWith:GLAUNCHER',          target:1   } },
-  { id:'suppressor',    weapon:'GLAUNCHER', type:'attachment', challenge:{ track:'killsOfCombo:grenadier_GLAUNCHER', target:15 } },
-  { id:'extended_barrel',weapon:'GLAUNCHER',type:'attachment', challenge:{ track:'killsOfType:grenadier',      target:15  } },
+    challenge:{ event:'KILL', conditions:{ weapon:'GLAUNCHER', boss:true }, target:1,
+      desc:'Kill a boss with the Grenade Launcher' } },
+  { id:'suppressor', weapon:'GLAUNCHER', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'GLAUNCHER', bareWeapon:true }, target:20,
+      desc:'Kill {target} enemies with an unmodified Grenade Launcher' } },
+  { id:'extended_barrel', weapon:'GLAUNCHER', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'GLAUNCHER', targetType:'grenadier' }, target:15,
+      desc:'Kill {target} Grenadiers with the Grenade Launcher' } },
   { id:'long_barrel_gl', weapon:'GLAUNCHER', type:'attachment',
-    challenge:{ desc:'Kill {target} enemies with direct grenade hits', track:'killsWith:GLAUNCHER', target:25 } },
-  { id:'heavy_barrel',  weapon:'GLAUNCHER', type:'attachment', challenge:{ track:'multiKillsWith:GLAUNCHER',   target:15  } },
-  { id:'quick_swap_mag',weapon:'GLAUNCHER', type:'attachment', challenge:{ track:'killsWhileJumping:GLAUNCHER',target:20  } },
-  { id:'extended_mag',  weapon:'GLAUNCHER', type:'attachment', challenge:{ track:'damageDealt:GLAUNCHER',      target:18000} },
-  { id:'heavy_stock',   weapon:'GLAUNCHER', type:'attachment', challenge:{ track:'maxKillCombo',               target:8   } }, // reward big wave clearing
-  { id:'folded_stock',  weapon:'GLAUNCHER', type:'attachment', challenge:{ track:'killsOfCombo:rocket_GLAUNCHER', target:12} },
+    challenge:{ event:'KILL', conditions:{ weapon:'GLAUNCHER', targetType:'rocket' }, target:15,
+      desc:'Kill {target} Rocket bots with the Grenade Launcher' } },
+  { id:'heavy_barrel', weapon:'GLAUNCHER', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'GLAUNCHER', multiKill:true }, target:15,
+      desc:'Get {target} multi‑kills with the Grenade Launcher' } },
+  { id:'quick_swap_mag', weapon:'GLAUNCHER', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'GLAUNCHER', playerState:'airborne' }, target:20,
+      desc:'Kill {target} enemies while airborne with the Grenade Launcher' } },
+  { id:'extended_mag', weapon:'GLAUNCHER', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'GLAUNCHER', fullyEquipped:true }, target:25,
+      desc:'Kill {target} enemies with a fully‑equipped Grenade Launcher' } },
+  { id:'heavy_stock', weapon:'GLAUNCHER', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ maxCombo:true }, target:8,
+      desc:'Reach a {target}‑kill combo with the Grenade Launcher' } },
+  { id:'folded_stock', weapon:'GLAUNCHER', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'GLAUNCHER', targetType:'rocket' }, target:12,
+      desc:'Kill {target} Rocket bots with the Grenade Launcher' } },
+  { id:'lantern', weapon:'GLAUNCHER', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'GLAUNCHER', map:'scrapyard' }, target:22,
+      desc:'Kill {target} enemies with the Grenade Launcher in the Scrapyard' } },
+  { id:'night_vision', weapon:'GLAUNCHER', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ withAttachment:'lantern', weapon:'GLAUNCHER', map:'scrapyard' }, target:14,
+      desc:'Kill {target} enemies with the Grenade Launcher and Lantern in the Scrapyard' } },
 
-  // ── ELECTRON ──────────────────────────────────────────────────
-  { id:'holo_sight',       weapon:'ELECTRON', type:'attachment',
-    challenge:{ desc:'Kill {target} enemies with the Electron',                      track:'killsWith:ELECTRON',          target:15  } },
-  { id:'acog',             weapon:'ELECTRON', type:'attachment',
-    challenge:{ desc:'Kill {target} Scouts with the Electron',                       track:'killsOfCombo:scout_ELECTRON', target:25  } },
-  { id:'thermal',          weapon:'ELECTRON', type:'attachment',
-    challenge:{ desc:'Kill {target} enemies with the Electron while scoped',         track:'killsWhileScoped:ELECTRON',   target:30  } },
-  { id:'compensator',      weapon:'ELECTRON', type:'attachment',
-    challenge:{ desc:'Kill {target} enemies with the Electron',                      track:'killsWith:ELECTRON',          target:35  } },
-  { id:'heavy_barrel',     weapon:'ELECTRON', type:'attachment',
-    challenge:{ desc:'Kill {target} Scouts with the Electron',                       track:'killsOfCombo:scout_ELECTRON', target:25  } },
-  { id:'extended_barrel',  weapon:'ELECTRON', type:'attachment',
-    challenge:{ desc:'Kill {target} bosses with the Electron',                        track:'killedBossWith:ELECTRON',  target:2  } },
-  { id:'slow_trigger',    weapon:'ELECTRON', type:'attachment', secret:true,
-    challenge:{ desc:'Kill {target} enemies with the Electron while airborne', track:'killsWhileJumping:ELECTRON', target:30 } },
-  
-  { id:'heavy_stock',   weapon:'ELECTRON', type:'attachment', challenge:{ track:'killsOfCombo:electron_bot_ELECTRON', target:20 } },
-  { id:'folded_stock',  weapon:'ELECTRON', type:'attachment', challenge:{ track:'damageDealt:ELECTRON',  target:5000  } },
-  { id:'angled_grip',   weapon:'ELECTRON', type:'attachment', challenge:{ track:'multiKillsWith:ELECTRON',     target:20  } },
-  { id:'vertical_grip', weapon:'ELECTRON', type:'attachment', challenge:{ track:'killsWhileScoped:ELECTRON',   target:25  } },
-  { id:'freefall_coil', weapon:'ELECTRON', type:'attachment', secret:true, challenge:{ track:'killsWhileJumping:ELECTRON', target:40 } },
+  // ELECTRON
+  { id:'holo_sight', weapon:'ELECTRON', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'ELECTRON', playerState:'airborne' }, target:15,
+      desc:'Get {target} kills while airborne with the Electron' } },
+  { id:'acog', weapon:'ELECTRON', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'ELECTRON', targetType:'scout' }, target:25,
+      desc:'Kill {target} Scouts with the Electron' } },
+  { id:'thermal', weapon:'ELECTRON', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'ELECTRON', playerState:'scoped' }, target:30,
+      desc:'Kill {target} enemies while scoped with the Electron' } },
+  { id:'compensator', weapon:'ELECTRON', type:'attachment',
+    challenge:{ event:'DAMAGE_DEALT', conditions:{ weapon:'ELECTRON' }, target:8000,
+      desc:'Deal {target} damage with the Electron' } },
+  { id:'heavy_barrel', weapon:'ELECTRON', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'ELECTRON', targetType:'scout' }, target:25,
+      desc:'Kill {target} Scouts with the Electron' } },
+  { id:'extended_barrel', weapon:'ELECTRON', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'ELECTRON', boss:true }, target:2,
+      desc:'Kill {target} bosses with the Electron' } },
+  { id:'slow_trigger', weapon:'ELECTRON', type:'attachment', secret:true,
+    challenge:{ event:'KILL', conditions:{ weapon:'ELECTRON', playerState:'airborne' }, target:30,
+      desc:'Kill {target} enemies while airborne with the Electron' } },
+  { id:'heavy_stock', weapon:'ELECTRON', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'ELECTRON', targetType:'electron_bot' }, target:20,
+      desc:'Kill {target} Electron Bots with the Electron' } },
+  { id:'folded_stock', weapon:'ELECTRON', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'ELECTRON', bareWeapon:true }, target:25,
+      desc:'Kill {target} enemies with an unmodified Electron' } },
+  { id:'angled_grip', weapon:'ELECTRON', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'ELECTRON', multiKill:true }, target:20,
+      desc:'Get {target} multi‑kills with the Electron' } },
+  { id:'vertical_grip', weapon:'ELECTRON', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'ELECTRON', playerState:'scoped' }, target:25,
+      desc:'Kill {target} enemies while scoped with the Electron' } },
+  { id:'freefall_coil', weapon:'ELECTRON', type:'attachment', secret:true,
+    challenge:{ event:'KILL', conditions:{ weapon:'ELECTRON', playerState:'airborne' }, target:40,
+      desc:'Kill {target} enemies while airborne with the Electron' } },
   { id:'emp_rounds', weapon:'ELECTRON', type:'attachment', secret:true,
-    challenge:{ desc:'Stun {target} enemies with EMP rounds', track:'empStuns', target:50 } },
+    challenge:{ event:'STATUS_APPLIED', conditions:{ statusType:'EMP_STUN' }, target:50,
+      desc:'Stun {target} enemies with EMP rounds' } },
+  { id:'lantern', weapon:'ELECTRON', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'ELECTRON', map:'scrapyard' }, target:30,
+      desc:'Kill {target} enemies with the Electron in the Scrapyard' } },
+  { id:'night_vision', weapon:'ELECTRON', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ withAttachment:'lantern', weapon:'ELECTRON', map:'scrapyard' }, target:18,
+      desc:'Kill {target} enemies with the Electron and Lantern in the Scrapyard' } },
+  { id:'stabilizing_brace', weapon:'ELECTRON', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ withAttachment:'acog', weapon:'ELECTRON' }, target:20,
+      desc:'Kill {target} enemies with the Electron while using ACOG' } },
 
-  // ── ION ───────────────────────────────────────────────────────
-  { id:'holo_sight',       weapon:'ION', type:'attachment',
-    challenge:{ desc:'Kill {target} enemies with the Ion Sniper',                    track:'killsWith:ION',              target:15   } },
-  { id:'acog',             weapon:'ION', type:'attachment',
-    challenge:{ desc:'Get {target} multi-kills with the Ion Sniper',                    track:'multiKillsWith:ION',              target:5  } },
-  { id:'thermal',        weapon:'ION', type:'attachment',
-    challenge:{ desc:'Kill {target} enemies with the Ion Sniper while scoped',       track:'killsWhileScoped:ION',        target:30  } },
-  { id:'extended_barrel',  weapon:'ION', type:'attachment',
-    challenge:{ desc:'Kill {target} enemies with the Ion Sniper',                    track:'killsWith:ION',              target:30  } },
-  { id:'energy_coil',      weapon:'ION', type:'attachment', secret:true,
-    challenge:{ desc:'Kill {target} enemies with the Ion Sniper while airborne',       track:'killsWhileJumping:ION',       target:30  } },
-  { id:'suppressor',    weapon:'ION', type:'attachment', challenge:{ track:'killsOfCombo:sniper_ION',          target:8   } },
-  { id:'heavy_barrel',  weapon:'ION', type:'attachment', challenge:{ track:'killsOfCombo:heavy_ION',           target:10  } },
-  { id:'compensator',   weapon:'ION', type:'attachment', challenge:{ track:'killsWhileScoped:ION',             target:25  } },
-  //{ id:'quick_swap_mag',weapon:'ION', type:'attachment', challenge:{ track:'damageDealt:ION',                  target:15000} },
-  { id:'heavy_stock',   weapon:'ION', type:'attachment', challenge:{ track:'killedBossWith:ION',               target:2   } },
-  { id:'folded_stock',  weapon:'ION', type:'attachment', challenge:{ track:'multiKillsWith:ION',               target:5   } },
-  { id:'angled_grip',   weapon:'ION', type:'attachment', challenge:{ track:'killsWhileJumping:ION',            target:15  } },
-  { id:'vertical_grip', weapon:'ION', type:'attachment', challenge:{ track:'killsOfCombo:drone_ION',           target:20  } },
+  // ION
+  { id:'holo_sight', weapon:'ION', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'ION', isHeadshot:true }, target:10,
+      desc:'Hit {target} headshots with the Ion Sniper' } },
+  { id:'acog', weapon:'ION', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'ION', multiKill:true }, target:5,
+      desc:'Get {target} multi‑kills with the Ion Sniper' } },
+  { id:'thermal', weapon:'ION', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'ION', playerState:'scoped' }, target:30,
+      desc:'Kill {target} enemies while scoped with the Ion Sniper' } },
+  { id:'extended_barrel', weapon:'ION', type:'attachment',
+    challenge:{ event:'DAMAGE_DEALT', conditions:{ weapon:'ION' }, target:30000,
+      desc:'Deal {target} damage with the Ion Sniper' } },
+  { id:'energy_coil', weapon:'ION', type:'attachment', secret:true,
+    challenge:{ event:'KILL', conditions:{ weapon:'ION', playerState:'airborne' }, target:30,
+      desc:'Kill {target} enemies while airborne with the Ion Sniper' } },
+  { id:'suppressor', weapon:'ION', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'ION', targetType:'sniper' }, target:8,
+      desc:'Kill {target} Snipers with the Ion Sniper' } },
+  { id:'heavy_barrel', weapon:'ION', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'ION', targetType:'heavy' }, target:10,
+      desc:'Kill {target} Heavy robots with the Ion Sniper' } },
+  { id:'compensator', weapon:'ION', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'ION', playerState:'scoped' }, target:25,
+      desc:'Kill {target} enemies while scoped with the Ion Sniper' } },
+  { id:'heavy_stock', weapon:'ION', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'ION', boss:true }, target:2,
+      desc:'Kill {target} bosses with the Ion Sniper' } },
+  { id:'folded_stock', weapon:'ION', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'ION', multiKill:true }, target:5,
+      desc:'Get {target} multi‑kills with the Ion Sniper' } },
+  { id:'angled_grip', weapon:'ION', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'ION', playerState:'airborne' }, target:15,
+      desc:'Kill {target} enemies while airborne with the Ion Sniper' } },
+  { id:'vertical_grip', weapon:'ION', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'ION', targetType:'drone' }, target:20,
+      desc:'Kill {target} Drones with the Ion Sniper' } },
   { id:'explosive_bullets', weapon:'ION', type:'attachment', secret:true,
-    challenge:{ desc:'Destroy {target} explosive barrels', track:'barrelDestroys', target:30 } },
+    challenge:{ event:'BARREL_DESTROYED', conditions:{}, target:30,
+      desc:'Destroy {target} explosive barrels' } },
   { id:'emp_rounds', weapon:'ION', type:'attachment', secret:true,
-    challenge:{ desc:'Kill {target} Heavy robots with the Ion Sniper', track:'killsOfCombo:heavy_ELECTRON', target:15 } },
+    challenge:{ event:'KILL', conditions:{ weapon:'ION', targetType:'heavy' }, target:15,
+      desc:'Kill {target} Heavy robots with the Ion Sniper' } },
+  { id:'lantern', weapon:'ION', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'ION', map:'scrapyard' }, target:20,
+      desc:'Kill {target} enemies with the Ion Sniper in the Scrapyard' } },
+  { id:'night_vision', weapon:'ION', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ withAttachment:'lantern', weapon:'ION', map:'scrapyard' }, target:12,
+      desc:'Kill {target} enemies with the Ion Sniper and Lantern in the Scrapyard' } },
+  { id:'recoil_dampener', weapon:'ION', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'ION', playerState:'airborne' }, target:20,
+      desc:'Kill {target} enemies while airborne with the Ion Sniper' } },
 
-  // ── JUNGLE WEAPONS ATTACHMENTS ───────────────────────────────
+  // FLAMETHROWER
   { id:'napalm_tank', weapon:'FLAMETHROWER', type:'attachment',
-    challenge:{ desc:'Kill {target} Swarm Hosts with the Flamethrower', track:'killsOfCombo:swarm_host_FLAMETHROWER', target:10 } },
+    challenge:{ event:'KILL', conditions:{ weapon:'FLAMETHROWER', targetType:'swarm_host' }, target:10,
+      desc:'Kill {target} Swarm Hosts with the Flamethrower' } },
   { id:'wide_nozzle', weapon:'FLAMETHROWER', type:'attachment',
-    challenge:{ desc:'Kill {target} enemies with the Flamethrower', track:'killsWith:FLAMETHROWER', target:50 } },
-  { id:'holo_sight',     weapon:'FLAMETHROWER', type:'attachment',
-    challenge:{ desc:'Kill {target} enemies with the environment', track:'killsWith:ENVIRONMENT', target:15 } },
-  { id:'acog',           weapon:'FLAMETHROWER', type:'attachment',
-    challenge:{ desc:'Kill {target} Shield Bots with the Flamethrower', track:'killsOfCombo:shield_bot_FLAMETHROWER', target:15 } },
-  { id:'thermal',        weapon:'FLAMETHROWER', type:'attachment',
-    challenge:{ desc:'Kill {target} Medic Bots with the Flamethrower', track:'killsOfCombo:medic_bot_FLAMETHROWER', target:10 } },
-  { id:'angled_grip',   weapon:'FLAMETHROWER', type:'attachment',
-    challenge:{ desc:'Kill {target} enemies while airborne with the Flamethrower', track:'killsWhileJumping:FLAMETHROWER', target:15 } },
+    challenge:{ event:'KILL', conditions:{ weapon:'FLAMETHROWER', targetType:'shield_bot' }, target:20,
+      desc:'Kill {target} Shield Bots with the Flamethrower' } },
+  { id:'holo_sight', weapon:'FLAMETHROWER', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'FLAMETHROWER', playerState:'airborne' }, target:20,
+      desc:'Get {target} kills while airborne with the Flamethrower' } },
+  { id:'acog', weapon:'FLAMETHROWER', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'FLAMETHROWER', targetType:'shield_bot' }, target:15,
+      desc:'Kill {target} Shield Bots with the Flamethrower' } },
+  { id:'thermal', weapon:'FLAMETHROWER', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'FLAMETHROWER', targetType:'medic_bot' }, target:10,
+      desc:'Kill {target} Medic Bots with the Flamethrower' } },
+  { id:'angled_grip', weapon:'FLAMETHROWER', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'FLAMETHROWER', playerState:'airborne' }, target:15,
+      desc:'Kill {target} enemies while airborne with the Flamethrower' } },
   { id:'vertical_grip', weapon:'FLAMETHROWER', type:'attachment',
-    challenge:{ desc:'Kill {target} enemies with the Flamethrower', track:'damageDealt:FLAMETHROWER', target:40000 } },
+    challenge:{ event:'DAMAGE_DEALT', conditions:{ weapon:'FLAMETHROWER' }, target:40000,
+      desc:'Deal {target} damage with the Flamethrower' } },
   { id:'tactical_grip', weapon:'FLAMETHROWER', type:'attachment',
-    challenge:{ desc:'Kill {target} Swarm Hosts with the Flamethrower', track:'killsOfCombo:swarm_host_FLAMETHROWER', target:8 } },
-  { id:'heavy_stock',   weapon:'FLAMETHROWER', type:'attachment',
-    challenge:{ desc:'Kill {target} Heavy robots with the Flamethrower', track:'killsOfCombo:heavy_FLAMETHROWER', target:20 } },
-  { id:'folded_stock',  weapon:'FLAMETHROWER', type:'attachment',
-    challenge:{ desc:'Kill {target} enemies with the Flamethrower while airborne', track:'killsWhileJumping:FLAMETHROWER', target:25 } },
+    challenge:{ event:'KILL', conditions:{ weapon:'FLAMETHROWER', targetType:'swarm_host' }, target:8,
+      desc:'Kill {target} Swarm Hosts with the Flamethrower' } },
+  { id:'heavy_stock', weapon:'FLAMETHROWER', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'FLAMETHROWER', targetType:'heavy' }, target:20,
+      desc:'Kill {target} Heavy robots with the Flamethrower' } },
+  { id:'folded_stock', weapon:'FLAMETHROWER', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'FLAMETHROWER', playerState:'airborne' }, target:25,
+      desc:'Kill {target} enemies while airborne with the Flamethrower' } },
   { id:'efficiency_tank', weapon:'FLAMETHROWER', type:'attachment',
-    challenge:{ desc:'Collect {target} Flamethrower pickups', track:'flamethrowerPickups', target:15 }},
+    challenge:{ event:'PICKUP', conditions:{ pickupType:'flamethrower' }, target:15,
+      desc:'Collect {target} Flamethrower pickups' } },
+  { id:'long_barrel_fl', weapon:'FLAMETHROWER', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'FLAMETHROWER', playerState:'airborne' }, target:20,
+      desc:'Kill {target} enemies while airborne with the Flamethrower' } },
+  { id:'lantern', weapon:'FLAMETHROWER', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'FLAMETHROWER', map:'jungle' }, target:30,
+      desc:'Kill {target} enemies with the Flamethrower in the Jungle' } },
+  { id:'night_vision', weapon:'FLAMETHROWER', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ withAttachment:'lantern', weapon:'FLAMETHROWER', map:'jungle' }, target:18,
+      desc:'Kill {target} enemies with the Flamethrower and Lantern in the Jungle' } },
 
-  { id:'amplifier_coil', weapon:'TESLA', type:'attachment',
-    challenge:{ desc:'Kill {target} enemies with Tesla Chain Lightning', track:'killsWith:TESLA_CHAIN', target:15 } },
+  // TESLA
+  { id:'amplifier_coil', weapon:'TESLA', type:'attachment', secret:true,
+    challenge:{ event:'KILL', conditions:{ weapon:'TESLA_CHAIN' }, target:15,
+      desc:'Kill {target} enemies with Tesla Chain Lightning' } },
   { id:'capacitor_bank', weapon:'TESLA', type:'attachment',
-    challenge:{ desc:'Kill {target} Shield Bots with the Tesla Cannon', track:'killsOfCombo:shield_bot_TESLA', target:10 } },
-  { id:'holo_sight',     weapon:'TESLA', type:'attachment',
-    challenge:{ desc:'Kill {target} enemies while airborne with the Tesla Cannon', track:'killsWhileJumping:TESLA', target:15 } },
-  { id:'acog',           weapon:'TESLA', type:'attachment',
-    challenge:{ desc:'Kill {target} Swarm Hosts with the Tesla Cannon', track:'killsOfCombo:swarm_host_TESLA', target:15 } },
-  { id:'thermal',        weapon:'TESLA', type:'attachment',
-    challenge:{ desc:'Kill {target} Teleport Bots with the Tesla Cannon', track:'killsOfCombo:teleport_bot_TESLA', target:10 } },
-  { id:'auto_fire',     weapon:'TESLA', type:'attachment', secret:true,
-    challenge:{ desc:'Kill {target} Heavy robots with the Tesla Cannon',             track:'killsOfType:heavy',   target:30  } },
-    { id:'angled_grip',   weapon:'TESLA', type:'attachment',
-    challenge:{ desc:'Kill {target} enemies while airborne with the Tesla Cannon', track:'killsWhileJumping:TESLA', target:20 } },
+    challenge:{ event:'KILL', conditions:{ weapon:'TESLA', targetType:'shield_bot' }, target:10,
+      desc:'Kill {target} Shield Bots with the Tesla Cannon' } },
+  { id:'efficiency_tank', weapon:'TESLA', type:'attachment',
+    challenge:{ event:'DAMAGE_DEALT', conditions:{ weapon:'TESLA' }, target:50000,
+      desc:'Deal {target} damage with the Tesla Cannon' } },
+  { id:'holo_sight', weapon:'TESLA', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'TESLA', playerState:'airborne' }, target:15,
+      desc:'Get {target} kills while airborne with the Tesla Cannon' } },
+  { id:'acog', weapon:'TESLA', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'TESLA', targetType:'swarm_host' }, target:15,
+      desc:'Kill {target} Swarm Hosts with the Tesla Cannon' } },
+  { id:'thermal', weapon:'TESLA', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'TESLA', targetType:'teleport_bot' }, target:10,
+      desc:'Kill {target} Teleport Bots with the Tesla Cannon' } },
+  { id:'angled_grip', weapon:'TESLA', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'TESLA', playerState:'airborne' }, target:20,
+      desc:'Kill {target} enemies while airborne with the Tesla Cannon' } },
   { id:'vertical_grip', weapon:'TESLA', type:'attachment',
-    challenge:{ desc:'Kill {target} enemies with the Tesla Cannon', track:'killsWith:TESLA', target:40 } },
+    challenge:{ event:'KILL', conditions:{ weapon:'TESLA', boss:true }, target:2,
+      desc:'Kill {target} bosses with the Tesla Cannon' } },
   { id:'tactical_grip', weapon:'TESLA', type:'attachment',
-    challenge:{ desc:'Kill {target} Shield Bots with the Tesla Cannon', track:'killsOfCombo:shield_bot_TESLA', target:15 } },
-  { id:'heavy_stock',   weapon:'TESLA', type:'attachment',
-    challenge:{ desc:'Kill {target} Heavy robots with the Tesla Cannon', track:'killsOfCombo:heavy_TESLA', target:20 } },
-  { id:'folded_stock',  weapon:'TESLA', type:'attachment',
-    challenge:{ desc:'Kill {target} enemies with the Tesla Cannon', track:'killsWith:TESLA', target:80 } },
-  { id:'magnet_coil', weapon:'TESLA', type:'attachment',
-    challenge:{ desc:'Kill {target} enemies with Tesla Chain Lightning', track:'killsWith:TESLA_CHAIN', target:40 } },
+    challenge:{ event:'KILL', conditions:{ weapon:'TESLA', targetType:'shield_bot' }, target:15,
+      desc:'Kill {target} Shield Bots with the Tesla Cannon' } },
+  { id:'heavy_stock', weapon:'TESLA', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'TESLA', targetType:'heavy' }, target:20,
+      desc:'Kill {target} Heavy robots with the Tesla Cannon' } },
+  { id:'folded_stock', weapon:'TESLA', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'TESLA', explosive:true }, target:20,
+      desc:'Get {target} explosive kills with the Tesla Cannon' } },
+  { id:'magnet_coil', weapon:'TESLA', type:'attachment', secret:true,
+    challenge:{ event:'KILL', conditions:{ weapon:'TESLA_CHAIN' }, target:40,
+      desc:'Kill {target} enemies with Tesla Chain Lightning' } },
+  { id:'compensator', weapon:'TESLA', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'TESLA', targetType:'drone' }, target:20,
+      desc:'Kill {target} Drones with the Tesla Cannon' } },
+  { id:'ported_barrel', weapon:'TESLA', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'TESLA', multiKill:true }, target:15,
+      desc:'Get {target} multi‑kills with the Tesla Cannon' } },
+  { id:'lantern', weapon:'TESLA', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'TESLA', map:'jungle' }, target:25,
+      desc:'Kill {target} enemies with the Tesla Cannon in the Jungle' } },
+  { id:'night_vision', weapon:'TESLA', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ withAttachment:'lantern', weapon:'TESLA', map:'jungle' }, target:15,
+      desc:'Kill {target} enemies with the Tesla Cannon and Lantern in the Jungle' } },
 
-  { id:'explosive_tips', weapon:'CROSSBOW', type:'attachment',
-    challenge:{ desc:'Kill {target} Teleport Bots with the Crossbow', track:'killsOfCombo:teleport_bot_CROSSBOW', target:10 } },
-  { id:'quick_loader', weapon:'CROSSBOW', type:'attachment',
-    challenge:{ desc:'Kill {target} enemies with the Crossbow', track:'killsWith:CROSSBOW', target:50 } },
-  { id:'holo_sight',     weapon:'CROSSBOW', type:'attachment',
-    challenge:{ desc:'Kill {target} enemies while airborne with the Crossbow', track:'killsWhileJumping:CROSSBOW', target:15 } },
-  { id:'acog',           weapon:'CROSSBOW', type:'attachment',
-    challenge:{ desc:'Kill {target} Ninjas with the Crossbow', track:'killsOfCombo:ninja_CROSSBOW', target:15 } },
-  { id:'thermal',        weapon:'CROSSBOW', type:'attachment',
-    challenge:{ desc:'Kill {target} Heavy robots with the Crossbow', track:'killsOfCombo:heavy_CROSSBOW', target:10 } },
-  { id:'extended_barrel',weapon:'CROSSBOW',type:'attachment', 
-    challenge:{ desc:'Kill {target} enemies with the environment', track:'killsWith:ENVIRONMENT',      target:15  } },
+  // CROSSBOW
+  { id:'explosive_tips', weapon:'CROSSBOW', type:'attachment', secret:true,
+    challenge:{ event:'KILL', conditions:{ weapon:'CROSSBOW', targetType:'teleport_bot' }, target:10,
+      desc:'Kill {target} Teleport Bots with the Crossbow' } },
+  { id:'quick_loader', weapon:'CROSSBOW', type:'attachment', secret:true,
+    challenge:{ event:'KILL', conditions:{ weapon:'CROSSBOW', boss:true }, target:1,
+      desc:'Kill a boss with the Crossbow' } },
+  { id:'holo_sight', weapon:'CROSSBOW', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'CROSSBOW', playerState:'airborne' }, target:12,
+      desc:'Get {target} kills while airborne with the Crossbow' } },
+  { id:'acog', weapon:'CROSSBOW', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'CROSSBOW', targetType:'ninja' }, target:15,
+      desc:'Kill {target} Ninjas with the Crossbow' } },
+  { id:'thermal', weapon:'CROSSBOW', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'CROSSBOW', targetType:'heavy' }, target:10,
+      desc:'Kill {target} Heavy robots with the Crossbow' } },
+  { id:'extended_barrel', weapon:'CROSSBOW', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'CROSSBOW', targetType:'scout' }, target:20,
+      desc:'Kill {target} Scouts with the Crossbow' } },
   { id:'lightweight_limbs', weapon:'CROSSBOW', type:'attachment',
-    challenge:{ desc:'Kill {target} enemies with the Crossbow while airborne', track:'killsWhileJumping:CROSSBOW', target:15 } },
-  { id:'heavy_barrel',  weapon:'CROSSBOW', type:'attachment', challenge:{ track:'multiKillsWith:CROSSBOW',   target:15  } },
-  { id:'bolt_recovery', weapon:'CROSSBOW', type:'attachment', challenge:{ track:'headshotKills:CROSSBOW', target:30  } },
-  { id:'angled_grip',   weapon:'CROSSBOW', type:'attachment',
-    challenge:{ desc:'Kill {target} enemies while airborne with the Crossbow', track:'killsWhileJumping:CROSSBOW', target:20 } },
+    challenge:{ event:'KILL', conditions:{ weapon:'CROSSBOW', playerState:'airborne' }, target:15,
+      desc:'Kill {target} enemies while airborne with the Crossbow' } },
+  { id:'heavy_barrel', weapon:'CROSSBOW', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'CROSSBOW', multiKill:true }, target:15,
+      desc:'Get {target} multi‑kills with the Crossbow' } },
+  { id:'bolt_recovery', weapon:'CROSSBOW', type:'attachment', secret:true,
+    challenge:{ event:'KILL', conditions:{ weapon:'CROSSBOW', isHeadshot:true }, target:30,
+      desc:'Hit {target} headshots with the Crossbow' } },
+  { id:'angled_grip', weapon:'CROSSBOW', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'CROSSBOW', playerState:'airborne' }, target:20,
+      desc:'Kill {target} enemies while airborne with the Crossbow' } },
   { id:'vertical_grip', weapon:'CROSSBOW', type:'attachment',
-    challenge:{ desc:'Kill {target} enemies with the Crossbow', track:'killsWith:CROSSBOW', target:40 } },
+    challenge:{ event:'KILL', conditions:{ weapon:'CROSSBOW', targetType:'scout' }, target:20,
+      desc:'Kill {target} Scouts with the Crossbow' } },
   { id:'tactical_grip', weapon:'CROSSBOW', type:'attachment',
-    challenge:{ desc:'Kill {target} Ninjas with the Crossbow', track:'killsOfCombo:ninja_CROSSBOW', target:20 } },
-  { id:'heavy_stock',   weapon:'CROSSBOW', type:'attachment',
-    challenge:{ desc:'Kill {target} Heavy robots with the Crossbow', track:'killsOfCombo:heavy_CROSSBOW', target:15 } },
-  { id:'folded_stock',  weapon:'CROSSBOW', type:'attachment',
-    challenge:{ desc:'Kill {target} enemies with the Crossbow', track:'killsWith:CROSSBOW', target:60 } },
+    challenge:{ event:'KILL', conditions:{ weapon:'CROSSBOW', targetType:'ninja' }, target:20,
+      desc:'Kill {target} Ninjas with the Crossbow' } },
+  { id:'heavy_stock', weapon:'CROSSBOW', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'CROSSBOW', targetType:'scout' }, target:15,
+      desc:'Kill {target} Scouts with the Crossbow' } },
+  { id:'folded_stock', weapon:'CROSSBOW', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'CROSSBOW', bareWeapon:true }, target:30,
+      desc:'Kill {target} enemies with an unmodified Crossbow' } },
+  { id:'coated_tips', weapon:'CROSSBOW', type:'attachment', secret:true,
+    challenge:{ event:'BARREL_DESTROYED', conditions:{}, target:30,
+      desc:'Destroy {target} explosive barrels' } },
+  { id:'lantern', weapon:'CROSSBOW', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'CROSSBOW', map:'jungle' }, target:25,
+      desc:'Kill {target} enemies with the Crossbow in the Jungle' } },
+  { id:'night_vision', weapon:'CROSSBOW', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ withAttachment:'lantern', weapon:'CROSSBOW', map:'jungle' }, target:15,
+      desc:'Kill {target} enemies with the Crossbow and Lantern in the Jungle' } },
+
+  // RIVETER
+  { id:'holo_sight', weapon:'RIVETER', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'RIVETER', playerState:'airborne' }, target:15,
+      desc:'Get {target} kills while airborne with the Riveter' } },
+  { id:'acog', weapon:'RIVETER', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'RIVETER', isHeadshot:true }, target:15,
+      desc:'Hit {target} headshots with the Riveter' } },
+  { id:'thermal', weapon:'RIVETER', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'RIVETER', targetType:'drone' }, target:20,
+      desc:'Kill {target} Drones with the Riveter' } },
+  { id:'lantern', weapon:'RIVETER', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'RIVETER', map:'city' }, target:20,
+      desc:'Kill {target} enemies with the Riveter in the City' } },
+  { id:'night_vision', weapon:'RIVETER', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ withAttachment:'lantern', weapon:'RIVETER', map:'city' }, target:12,
+      desc:'Kill {target} enemies with the Riveter and Lantern in the City' } },
+  { id:'suppressor', weapon:'RIVETER', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'RIVETER', playerState:'airborne' }, target:20,
+      desc:'Kill {target} enemies while airborne with the Riveter' } },
+  { id:'compensator', weapon:'RIVETER', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'RIVETER', multiKill:true }, target:15,
+      desc:'Get {target} multi‑kills with the Riveter' } },
+  { id:'extended_mag', weapon:'RIVETER', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'RIVETER', targetType:'drone' }, target:20,
+      desc:'Kill {target} Drones with the Riveter' } },
+  { id:'drum_mag', weapon:'RIVETER', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'RIVETER', targetType:'heavy' }, target:15,
+      desc:'Kill {target} Heavy robots with the Riveter' } },
+  { id:'heavy_stock', weapon:'RIVETER', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'RIVETER', playerState:'scoped' }, target:15,
+      desc:'Kill {target} enemies while scoped with the Riveter' } },
+  { id:'folded_stock', weapon:'RIVETER', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'RIVETER', bareWeapon:true }, target:20,
+      desc:'Kill {target} enemies with an unmodified Riveter' } },
+  { id:'magnetic_coils', weapon:'RIVETER', type:'attachment', secret:true,
+    challenge:{ event:'KILL', conditions:{ weapon:'RIVETER' }, target:30,
+      desc:'Kill {target} enemies with the Riveter' } },
+  { id:'superheated_rivets', weapon:'RIVETER', type:'attachment', secret:true,
+    challenge:{ event:'DAMAGE_DEALT', conditions:{ weapon:'RIVETER' }, target:15000,
+      desc:'Deal {target} damage with the Riveter' } },
+  { id:'bouncy_rivets', weapon:'RIVETER', type:'attachment', secret:true,
+    challenge:{ event:'KILL', conditions:{ weapon:'RIVETER' }, target:30,
+      desc:'Kill {target} enemies with bounced Rivets' } },
+  { id:'angled_grip', weapon:'RIVETER', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'RIVETER', playerState:'airborne' }, target:15,
+      desc:'Kill {target} enemies while airborne with the Riveter' } },
+  { id:'vertical_grip', weapon:'RIVETER', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'RIVETER', targetType:'scout' }, target:15,
+      desc:'Kill {target} Scouts with the Riveter' } },
+  { id:'stabilizing_brace', weapon:'RIVETER', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ withAttachment:'acog', weapon:'RIVETER' }, target:15,
+      desc:'Kill {target} enemies with the Riveter while using ACOG' } },
+  { id:'heavy_barrel', weapon:'RIVETER', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'RIVETER', targetType:'heavy' }, target:15,
+      desc:'Kill {target} Heavy robots with the Riveter' } },
+  { id:'extended_barrel', weapon:'RIVETER', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'RIVETER', playerState:'scoped' }, target:20,
+      desc:'Kill {target} enemies while scoped with the Riveter' } },
+  { id:'lightweight_handguard', weapon:'RIVETER', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'RIVETER', playerState:'airborne' }, target:20,
+      desc:'Kill {target} enemies while airborne with the Riveter' } },
+  { id:'quick_swap_mag', weapon:'RIVETER', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'RIVETER', multiKill:true }, target:15,
+      desc:'Get {target} multi‑kills with the Riveter' } },
+
+  // PHALANX
+  { id:'holo_sight', weapon:'PHALANX', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'PHALANX', playerState:'airborne' }, target:15,
+      desc:'Get {target} kills while airborne with the Phalanx' } },
+  { id:'acog', weapon:'PHALANX', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'PHALANX', multiKill:true }, target:15,
+      desc:'Get {target} multi‑kills with the Phalanx' } },
+  { id:'thermal', weapon:'PHALANX', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'PHALANX', targetType:'heavy' }, target:15,
+      desc:'Kill {target} Heavy robots with the Phalanx' } },
+  { id:'lantern', weapon:'PHALANX', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'PHALANX', map:'city' }, target:20,
+      desc:'Kill {target} enemies with the Phalanx in the City' } },
+  { id:'night_vision', weapon:'PHALANX', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ withAttachment:'lantern', weapon:'PHALANX', map:'city' }, target:12,
+      desc:'Kill {target} enemies with the Phalanx and Lantern in the City' } },
+  { id:'extended_mag', weapon:'PHALANX', type:'attachment',
+    challenge:{ event:'DAMAGE_DEALT', conditions:{ weapon:'PHALANX' }, target:25000,
+      desc:'Deal {target} damage with the Phalanx' } },
+  { id:'drum_mag', weapon:'PHALANX', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'PHALANX', playerState:'airborne' }, target:25,
+      desc:'Kill {target} enemies while airborne with the Phalanx' } },
+  { id:'angled_grip', weapon:'PHALANX', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'PHALANX', multiKill:true }, target:20,
+      desc:'Get {target} multi‑kills with the Phalanx' } },
+  { id:'vertical_grip', weapon:'PHALANX', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'PHALANX', playerState:'scoped' }, target:20,
+      desc:'Kill {target} enemies while scoped with the Phalanx' } },
+  { id:'resonance_cascade', weapon:'PHALANX', type:'attachment', secret:true,
+    challenge:{ event:'KILL', conditions:{ weapon:'PHALANX', targetType:'heavy' }, target:15,
+      desc:'Kill {target} Heavy robots with the Phalanx' } },
+  { id:'emp_frequency', weapon:'PHALANX', type:'attachment', secret:true,
+    challenge:{ event:'STATUS_APPLIED', conditions:{ statusType:'EMP_STUN' }, target:40,
+      desc:'Stun {target} enemies' } },
+  { id:'sonic_amplifier', weapon:'PHALANX', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'PHALANX', targetType:'heavy' }, target:15,
+      desc:'Kill {target} Heavy robots with the Phalanx' } },
+  { id:'wide_diaphragm', weapon:'PHALANX', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'PHALANX', boss:true }, target:2,
+      desc:'Kill {target} bosses with the Phalanx' } },
+  { id:'heavy_stock', weapon:'PHALANX', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'PHALANX', playerState:'scoped' }, target:15,
+      desc:'Kill {target} enemies while scoped with the Phalanx' } },
+  { id:'folded_stock', weapon:'PHALANX', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'PHALANX', playerState:'airborne' }, target:20,
+      desc:'Kill {target} enemies while airborne with the Phalanx' } },
+  { id:'heavy_barrel', weapon:'PHALANX', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'PHALANX', targetType:'heavy' }, target:15,
+      desc:'Kill {target} Heavy robots with the Phalanx' } },
+  { id:'extended_barrel', weapon:'PHALANX', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'PHALANX', playerState:'scoped' }, target:20,
+      desc:'Kill {target} enemies while scoped with the Phalanx' } },
+  { id:'lightweight_handguard', weapon:'PHALANX', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'PHALANX', playerState:'airborne' }, target:20,
+      desc:'Kill {target} enemies while airborne with the Phalanx' } },
+  { id:'quick_swap_mag', weapon:'PHALANX', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'PHALANX', multiKill:true }, target:15,
+      desc:'Get {target} multi‑kills with the Phalanx' } },
+
+  // AEGIS
+  { id:'holo_sight', weapon:'AEGIS', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'AEGIS', playerState:'airborne' }, target:15,
+      desc:'Get {target} kills while airborne with the Aegis' } },
+  { id:'acog', weapon:'AEGIS', type:'attachment',
+    challenge:{ event:'DAMAGE_DEALT', conditions:{ weapon:'AEGIS' }, target:25000,
+      desc:'Deal {target} damage with the Aegis' } },
+  { id:'thermal', weapon:'AEGIS', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'AEGIS', targetType:'scout' }, target:20,
+      desc:'Kill {target} Scouts with the Aegis' } },
+  { id:'lantern', weapon:'AEGIS', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'AEGIS', map:'city' }, target:20,
+      desc:'Kill {target} enemies with the Aegis in the City' } },
+  { id:'night_vision', weapon:'AEGIS', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ withAttachment:'lantern', weapon:'AEGIS', map:'city' }, target:12,
+      desc:'Kill {target} enemies with the Aegis and Lantern in the City' } },
+  { id:'suppressor', weapon:'AEGIS', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'AEGIS', bareWeapon:true }, target:25,
+      desc:'Kill {target} enemies with an unmodified Aegis' } },
+  { id:'compensator', weapon:'AEGIS', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'AEGIS', playerState:'airborne' }, target:25,
+      desc:'Kill {target} enemies while airborne with the Aegis' } },
+  { id:'extended_mag', weapon:'AEGIS', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'AEGIS', targetType:'scout' }, target:20,
+      desc:'Kill {target} Scouts with the Aegis' } },
+  { id:'drum_mag', weapon:'AEGIS', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'AEGIS', multiKill:true }, target:30,
+      desc:'Get {target} multi‑kills with the Aegis' } },
+  { id:'angled_grip', weapon:'AEGIS', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'AEGIS', playerState:'scoped' }, target:20,
+      desc:'Kill {target} enemies while scoped with the Aegis' } },
+  { id:'vertical_grip', weapon:'AEGIS', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'AEGIS', bareWeapon:true }, target:25,
+      desc:'Kill {target} enemies with an unmodified Aegis' } },
+  { id:'multi_thread', weapon:'AEGIS', type:'attachment', secret:true,
+    challenge:{ event:'KILL', conditions:{ weapon:'AEGIS', multiKill:true }, target:25,
+      desc:'Get {target} multi‑kills with the Aegis' } },
+  { id:'bypass_algorithms', weapon:'AEGIS', type:'attachment', secret:true,
+    challenge:{ event:'KILL', conditions:{ weapon:'AEGIS', targetType:'shield_bot' }, target:15,
+      desc:'Kill {target} Shield Bots with the Aegis' } },
+  { id:'heavy_stock', weapon:'AEGIS', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'AEGIS', targetType:'heavy' }, target:20,
+      desc:'Kill {target} Heavy robots with the Aegis' } },
+  { id:'folded_stock', weapon:'AEGIS', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'AEGIS', targetType:'scout' }, target:15,
+      desc:'Kill {target} Scouts with the Aegis' } },
+  { id:'stabilizing_brace', weapon:'AEGIS', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ withAttachment:'acog', weapon:'AEGIS' }, target:15,
+      desc:'Kill {target} enemies with the Aegis while using ACOG' } },
+  { id:'single_thread', weapon:'AEGIS', type:'attachment', secret:true,
+    challenge:{ event:'KILL', conditions:{ weapon:'AEGIS', boss:true }, target:2,
+      desc:'Kill {target} bosses with the Aegis' } },
+  { id:'heavy_barrel', weapon:'AEGIS', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'AEGIS', targetType:'heavy' }, target:15,
+      desc:'Kill {target} Heavy robots with the Aegis' } },
+  { id:'extended_barrel', weapon:'AEGIS', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'AEGIS', playerState:'scoped' }, target:20,
+      desc:'Kill {target} enemies while scoped with the Aegis' } },
+  { id:'quick_swap_mag', weapon:'AEGIS', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'AEGIS', multiKill:true }, target:15,
+      desc:'Get {target} multi‑kills with the Aegis' } },
+
+  // ── COMET (Burst Rifle) attachments ──────────────────────────
+  { id:'holo_sight', weapon:'COMET', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'COMET', playerState:'airborne' }, target:15,
+      desc:'Get {target} kills while airborne with the COMET' } },
+  { id:'acog', weapon:'COMET', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'COMET', playerState:'scoped' }, target:20,
+      desc:'Kill {target} enemies while scoped with the COMET' } },
+  { id:'thermal', weapon:'COMET', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'COMET', targetType:'drone' }, target:15,
+      desc:'Kill {target} Drones with the COMET' } },
+  { id:'suppressor', weapon:'COMET', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'COMET', bareWeapon:true }, target:25,
+      desc:'Kill {target} enemies with an unmodified COMET' } },
+  { id:'compensator', weapon:'COMET', type:'attachment',
+    challenge:{ event:'DAMAGE_DEALT', conditions:{ weapon:'COMET' }, target:20000,
+      desc:'Deal {target} damage with the COMET' } },
+  { id:'extended_barrel', weapon:'COMET', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'COMET', playerState:'scoped' }, target:20,
+      desc:'Kill {target} enemies while scoped with the COMET' } },
+  { id:'heavy_barrel', weapon:'COMET', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'COMET', targetType:'heavy' }, target:15,
+      desc:'Kill {target} Heavy robots with the COMET' } },
+  { id:'quick_swap_mag', weapon:'COMET', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'COMET', boss:true }, target:1,
+      desc:'Kill a boss with the COMET' } },
+  { id:'extended_mag', weapon:'COMET', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'COMET', fullyEquipped:true }, target:30,
+      desc:'Kill {target} enemies with a fully‑equipped COMET' } },
+  { id:'drum_mag', weapon:'COMET', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'COMET', explosive:true }, target:15,
+      desc:'Get {target} explosive kills with the COMET' } },
+  { id:'angled_grip', weapon:'COMET', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'COMET', playerState:'airborne' }, target:20,
+      desc:'Kill {target} enemies while airborne with the COMET' } },
+  { id:'vertical_grip', weapon:'COMET', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'COMET', playerState:'scoped' }, target:30,
+      desc:'Kill {target} enemies while scoped with the COMET' } },
+  { id:'tactical_grip', weapon:'COMET', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'COMET', multiKill:true }, target:10,
+      desc:'Get {target} multi‑kills with the COMET' } },
+  { id:'heavy_stock', weapon:'COMET', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'COMET', targetType:'heavy' }, target:10,
+      desc:'Kill {target} Heavy robots with the COMET' } },
+  { id:'folded_stock', weapon:'COMET', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'COMET', fullyEquipped:true }, target:30,
+      desc:'Kill {target} enemies with a fully‑equipped COMET' } },
+  { id:'recoil_dampener', weapon:'COMET', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'COMET', isHeadshot:true }, target:20,
+      desc:'Hit {target} headshots with the COMET' } },
+  { id:'burst_modulator', weapon:'COMET', type:'attachment', secret:true,
+    challenge:{ event:'KILL', conditions:{ weapon:'COMET', multiKill:true }, target:15,
+      desc:'Get {target} multi‑kills with the COMET' } },
+  { id:'precision_barrel', weapon:'COMET', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'COMET', isHeadshot:true }, target:15,
+      desc:'Hit {target} headshots with the COMET' } },
+  { id:'lightweight_handguard', weapon:'COMET', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'COMET', playerState:'airborne' }, target:20,
+      desc:'Kill {target} enemies while airborne with the COMET' } },
+  { id:'quick_trigger', weapon:'COMET', type:'attachment', secret:true,
+    challenge:{ event:'KILL', conditions:{ weapon:'COMET', playerState:'airborne' }, target:15,
+      desc:'Kill {target} enemies while airborne with the COMET' } },
+  { id:'emp_rounds', weapon:'COMET', type:'attachment', secret:true,
+    challenge:{ event:'KILL', conditions:{ weapon:'COMET', targetType:'heavy' }, target:12,
+      desc:'Kill {target} Heavy robots with the COMET' } },
+
+  // ── DMR attachments ──────────────────────────────────────────
+  { id:'holo_sight', weapon:'DMR', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'DMR', playerState:'airborne' }, target:12,
+      desc:'Get {target} kills while airborne with the DMR' } },
+  { id:'acog', weapon:'DMR', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'DMR', playerState:'scoped' }, target:20,
+      desc:'Kill {target} enemies while scoped with the DMR' } },
+  { id:'thermal', weapon:'DMR', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'DMR', targetType:'sniper' }, target:15,
+      desc:'Kill {target} Snipers with the DMR' } },
+  { id:'suppressor', weapon:'DMR', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'DMR', bareWeapon:true }, target:20,
+      desc:'Kill {target} enemies with an unmodified DMR' } },
+  { id:'compensator', weapon:'DMR', type:'attachment',
+    challenge:{ event:'DAMAGE_DEALT', conditions:{ weapon:'DMR' }, target:25000,
+      desc:'Deal {target} damage with the DMR' } },
+  { id:'extended_barrel', weapon:'DMR', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'DMR', playerState:'scoped' }, target:25,
+      desc:'Kill {target} enemies while scoped with the DMR' } },
+  { id:'heavy_barrel', weapon:'DMR', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'DMR', targetType:'heavy' }, target:15,
+      desc:'Kill {target} Heavy robots with the DMR' } },
+  { id:'quick_swap_mag', weapon:'DMR', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'DMR', boss:true }, target:1,
+      desc:'Kill a boss with the DMR' } },
+  { id:'extended_mag', weapon:'DMR', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'DMR', fullyEquipped:true }, target:25,
+      desc:'Kill {target} enemies with a fully‑equipped DMR' } },
+  { id:'angled_grip', weapon:'DMR', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'DMR', playerState:'airborne' }, target:15,
+      desc:'Kill {target} enemies while airborne with the DMR' } },
+  { id:'vertical_grip', weapon:'DMR', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'DMR', explosive:true }, target:15,
+      desc:'Get {target} explosive kills with the DMR' } },
+  { id:'tactical_grip', weapon:'DMR', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'DMR', multiKill:true }, target:10,
+      desc:'Get {target} multi‑kills with the DMR' } },
+  { id:'heavy_stock', weapon:'DMR', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'DMR', targetType:'heavy' }, target:10,
+      desc:'Kill {target} Heavy robots with the DMR' } },
+  { id:'folded_stock', weapon:'DMR', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'DMR', fullyEquipped:true }, target:30,
+      desc:'Kill {target} enemies with a fully‑equipped DMR' } },
+  { id:'recoil_dampener', weapon:'DMR', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'DMR', isHeadshot:true }, target:20,
+      desc:'Hit {target} headshots with the DMR' } },
+  { id:'high_caliber', weapon:'DMR', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'DMR', isHeadshot:true }, target:20,
+      desc:'Hit {target} headshots with the DMR' } },
+  { id:'stabilizing_bipod', weapon:'DMR', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'DMR', playerState:'scoped' }, target:30,
+      desc:'Kill {target} enemies while scoped with the DMR' } },
+  { id:'precision_stock', weapon:'DMR', type:'attachment',
+    challenge:{ event:'KILL', conditions:{ weapon:'DMR', playerState:'airborne' }, target:25,
+      desc:'Kill {target} enemies while airborne with the DMR' } },
+  { id:'power_cell', weapon:'DMR', type:'attachment', secret:true,
+    challenge:{ event:'KILL', conditions:{ weapon:'DMR', multiKill:true }, target:12,
+      desc:'Get {target} multi‑kills with the DMR' } },
+  { id:'emp_rounds', weapon:'DMR', type:'attachment', secret:true,
+    challenge:{ event:'KILL', conditions:{ weapon:'DMR', targetType:'heavy' }, target:12,
+      desc:'Kill {target} Heavy robots with the DMR' } },
 
   // ════════════════════════════════════════════════════════════════
-  //  WEAPON SKINS — 7 tiers, all weapon-kill based, no level gates
-  //  PISTOL · SMG · SHOTGUN · CHAINGUN · RAILGUN · PLASMA
-  //  ROCKET · GLAUNCHER · ELECTRON · ION
+  //  WEAPON SKINS
   // ════════════════════════════════════════════════════════════════
+  // PISTOL
+  { id:'midnight', weapon:'PISTOL', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'PISTOL' }, target:30,
+      desc:'Kill {target} enemies with the Pistol' } },
+  { id:'desert', weapon:'PISTOL', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'PISTOL', isHeadshot:true }, target:15,
+      desc:'Get {target} headshot kills with the Pistol' } },
+  { id:'arctic', weapon:'PISTOL', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'PISTOL', playerState:'airborne' }, target:20,
+      desc:'Get {target} kills while airborne with the Pistol' } },
+  { id:'hazard', weapon:'PISTOL', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'PISTOL', targetType:'scout' }, target:30,
+      desc:'Kill {target} Scouts with the Pistol' } },
+  { id:'jungle', weapon:'PISTOL', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'PISTOL', playerState:'scoped' }, target:25,
+      desc:'Kill {target} enemies while scoped with the Pistol' } },
+  { id:'plasma_glow', weapon:'PISTOL', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'PISTOL', multiKill:true }, target:15,
+      desc:'Get {target} multi‑kills with the Pistol' } },
+  { id:'toxic', weapon:'PISTOL', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'PISTOL', targetType:'drone' }, target:30,
+      desc:'Kill {target} Drones with the Pistol' } },
+  { id:'gold', weapon:'PISTOL', type:'weaponSkin',
+    challenge:{ event:'DAMAGE_DEALT', conditions:{ weapon:'PISTOL' }, target:25000,
+      desc:'Deal {target} damage with the Pistol' } },
+  { id:'crimson', weapon:'PISTOL', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'PISTOL', boss:true }, target:1,
+      desc:'Kill a boss with the Pistol' } },
+  { id:'bengal', weapon:'PISTOL', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'PISTOL', weaponLevel:true }, target:10,
+      desc:'Reach Pistol level 10' } },
+  { id:'dark_matter', weapon:'PISTOL', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ allChallenges:true, weapon:'PISTOL' }, target:1,
+      desc:'Complete all Pistol challenges' } },
+  { id:'cosmic', weapon:'PISTOL', type:'weaponSkin', requires:'dark_matter',
+    challenge: { 
+      isComposite: true,
+      desc: 'Get 30 Pistol kills and 15 airborne SMG kills.',
+      subChallenges: [
+        { event: 'KILL', conditions: { weapon: 'PISTOL' }, target: 30, desc: 'Pistol Kills' },
+        { event: 'KILL', conditions: { weapon: 'SMG', playerState: 'airborne' }, target: 10, desc: 'Airborne SMG Kills' }
+      ]
+    } 
+  },
 
-  // ── MIDNIGHT (tier 1) ─────────────────────────────────────────
-  { id:'midnight', weapon:'PISTOL',    type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the Pistol',           track:'killsWith:PISTOL',    target:30  } },
-  { id:'midnight', weapon:'SMG',       type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the SMG',              track:'killsWith:SMG',       target:20  } },
-  { id:'midnight', weapon:'SHOTGUN',   type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the Shotgun',          track:'killsWith:SHOTGUN',   target:25  } },
-  { id:'midnight', weapon:'CHAINGUN',  type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the Chaingun',         track:'killsWith:CHAINGUN',  target:15  } },
-  { id:'midnight', weapon:'RAILGUN',   type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the Railgun',          track:'killsWith:RAILGUN',   target:10  } },
-  { id:'midnight', weapon:'PLASMA',    type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the Plasma Rifle',     track:'killsWith:PLASMA',    target:20  } },
-  { id:'midnight', weapon:'ROCKET',    type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the Rocket Launcher',  track:'killsWith:ROCKET',    target:15  } },
-  { id:'midnight', weapon:'GLAUNCHER', type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the Grenade Launcher', track:'killsWith:GLAUNCHER', target:20  } },
-  { id:'midnight', weapon:'ELECTRON',  type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the Electron',         track:'killsWith:ELECTRON',  target:20  } },
-  { id:'midnight', weapon:'ION',       type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the Ion Sniper',       track:'killsWith:ION',       target:10  } },
+  // SMG
+  { id:'midnight', weapon:'SMG', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'SMG' }, target:30,
+      desc:'Kill {target} enemies with the SMG' } },
+  { id:'desert', weapon:'SMG', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'SMG', isHeadshot:true }, target:15,
+      desc:'Get {target} headshot kills with the SMG' } },
+  { id:'arctic', weapon:'SMG', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'SMG', playerState:'airborne' }, target:20,
+      desc:'Get {target} kills while airborne with the SMG' } },
+  { id:'hazard', weapon:'SMG', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'SMG', targetType:'drone' }, target:30,
+      desc:'Kill {target} Drones with the SMG' } },
+  { id:'jungle', weapon:'SMG', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'SMG', playerState:'scoped' }, target:25,
+      desc:'Kill {target} enemies while scoped with the SMG' } },
+  { id:'plasma_glow', weapon:'SMG', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'SMG', multiKill:true }, target:15,
+      desc:'Get {target} multi‑kills with the SMG' } },
+  { id:'toxic', weapon:'SMG', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'SMG', targetType:'electron_bot' }, target:25,
+      desc:'Kill {target} Electron Bots with the SMG' } },
+  { id:'gold', weapon:'SMG', type:'weaponSkin',
+    challenge:{ event:'DAMAGE_DEALT', conditions:{ weapon:'SMG' }, target:25000,
+      desc:'Deal {target} damage with the SMG' } },
+  { id:'crimson', weapon:'SMG', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'SMG', boss:true }, target:1,
+      desc:'Kill a boss with the SMG' } },
+  { id:'bengal', weapon:'SMG', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'SMG', weaponLevel:true }, target:10,
+      desc:'Reach SMG level 10' } },
+  { id:'dark_matter', weapon:'SMG', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ allChallenges:true, weapon:'SMG' }, target:1,
+      desc:'Complete all SMG challenges' } },
 
-  // ── DESERT (tier 2) ───────────────────────────────────────────
-  { id:'desert', weapon:'PISTOL',    type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the Pistol',           track:'killsWith:PISTOL',    target:75  } },
-  { id:'desert', weapon:'SMG',       type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the SMG',              track:'killsWith:SMG',       target:50  } },
-  { id:'desert', weapon:'SHOTGUN',   type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the Shotgun',          track:'killsWith:SHOTGUN',   target:60  } },
-  { id:'desert', weapon:'CHAINGUN',  type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the Chaingun',         track:'killsWith:CHAINGUN',  target:40  } },
-  { id:'desert', weapon:'RAILGUN',   type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the Railgun',          track:'killsWith:RAILGUN',   target:25  } },
-  { id:'desert', weapon:'PLASMA',    type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the Plasma Rifle',     track:'killsWith:PLASMA',    target:50  } },
-  { id:'desert', weapon:'ROCKET',    type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the Rocket Launcher',  track:'killsWith:ROCKET',    target:35  } },
-  { id:'desert', weapon:'GLAUNCHER', type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the Grenade Launcher', track:'killsWith:GLAUNCHER', target:45  } },
-  { id:'desert', weapon:'ELECTRON',  type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the Electron',         track:'killsWith:ELECTRON',  target:50  } },
-  { id:'desert', weapon:'ION',       type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the Ion Sniper',       track:'killsWith:ION',       target:25  } },
+  // SHOTGUN
+  { id:'midnight', weapon:'SHOTGUN', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'SHOTGUN' }, target:25,
+      desc:'Kill {target} enemies with the Shotgun' } },
+  { id:'desert', weapon:'SHOTGUN', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'SHOTGUN', isHeadshot:true }, target:15,
+      desc:'Get {target} headshot kills with the Shotgun' } },
+  { id:'arctic', weapon:'SHOTGUN', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'SHOTGUN', playerState:'airborne' }, target:20,
+      desc:'Get {target} kills while airborne with the Shotgun' } },
+  { id:'hazard', weapon:'SHOTGUN', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'SHOTGUN', targetType:'heavy' }, target:20,
+      desc:'Kill {target} Heavy robots with the Shotgun' } },
+  { id:'jungle', weapon:'SHOTGUN', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'SHOTGUN', playerState:'scoped' }, target:25,
+      desc:'Kill {target} enemies while scoped with the Shotgun' } },
+  { id:'plasma_glow', weapon:'SHOTGUN', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'SHOTGUN', multiKill:true }, target:15,
+      desc:'Get {target} multi‑kills with the Shotgun' } },
+  { id:'toxic', weapon:'SHOTGUN', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'SHOTGUN', targetType:'shotgun' }, target:25,
+      desc:'Kill {target} Shotgunners with the Shotgun' } },
+  { id:'gold', weapon:'SHOTGUN', type:'weaponSkin',
+    challenge:{ event:'DAMAGE_DEALT', conditions:{ weapon:'SHOTGUN' }, target:20000,
+      desc:'Deal {target} damage with the Shotgun' } },
+  { id:'crimson', weapon:'SHOTGUN', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'SHOTGUN', boss:true }, target:1,
+      desc:'Kill a boss with the Shotgun' } },
+  { id:'bengal', weapon:'SHOTGUN', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'SHOTGUN', weaponLevel:true }, target:10,
+      desc:'Reach Shotgun level 10' } },
+  { id:'dark_matter', weapon:'SHOTGUN', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ allChallenges:true, weapon:'SHOTGUN' }, target:1,
+      desc:'Complete all Shotgun challenges' } },
 
-  // ── CRIMSON (tier 3) ──────────────────────────────────────────
-  { id:'crimson', weapon:'PISTOL',    type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the Pistol',           track:'killsWith:PISTOL',    target:120 } },
-  { id:'crimson', weapon:'SMG',       type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the SMG',               track:'killsWith:SMG',       target:90  } },
-  { id:'crimson', weapon:'SHOTGUN',   type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the Shotgun',          track:'killsWith:SHOTGUN',   target:100 } },
-  { id:'crimson', weapon:'CHAINGUN',  type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the Chaingun',          track:'killsWith:CHAINGUN',  target:75  } },
-  { id:'crimson', weapon:'RAILGUN',   type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the Railgun',           track:'killsWith:RAILGUN',   target:50  } },
-  { id:'crimson', weapon:'PLASMA',    type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the Plasma Rifle',      track:'killsWith:PLASMA',    target:85  } },
-  { id:'crimson', weapon:'ROCKET',    type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the Rocket Launcher',   track:'killsWith:ROCKET',    target:60  } },
-  { id:'crimson', weapon:'GLAUNCHER', type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the Grenade Launcher',  track:'killsWith:GLAUNCHER', target:75  } },
-  { id:'crimson', weapon:'ELECTRON',  type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the Electron',          track:'killsWith:ELECTRON',  target:85  } },
-  { id:'crimson', weapon:'ION',       type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the Ion Sniper',        track:'killsWith:ION',       target:50  } },
+  // CHAINGUN
+  { id:'midnight', weapon:'CHAINGUN', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'CHAINGUN' }, target:30,
+      desc:'Kill {target} enemies with the Chaingun' } },
+  { id:'desert', weapon:'CHAINGUN', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'CHAINGUN', isHeadshot:true }, target:15,
+      desc:'Get {target} headshot kills with the Chaingun' } },
+  { id:'arctic', weapon:'CHAINGUN', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'CHAINGUN', playerState:'airborne' }, target:25,
+      desc:'Get {target} kills while airborne with the Chaingun' } },
+  { id:'hazard', weapon:'CHAINGUN', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'CHAINGUN', targetType:'heavy' }, target:25,
+      desc:'Kill {target} Heavy robots with the Chaingun' } },
+  { id:'jungle', weapon:'CHAINGUN', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'CHAINGUN', playerState:'scoped' }, target:25,
+      desc:'Kill {target} enemies while scoped with the Chaingun' } },
+  { id:'plasma_glow', weapon:'CHAINGUN', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'CHAINGUN', multiKill:true }, target:20,
+      desc:'Get {target} multi‑kills with the Chaingun' } },
+  { id:'toxic', weapon:'CHAINGUN', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'CHAINGUN', targetType:'drone' }, target:30,
+      desc:'Kill {target} Drones with the Chaingun' } },
+  { id:'gold', weapon:'CHAINGUN', type:'weaponSkin',
+    challenge:{ event:'DAMAGE_DEALT', conditions:{ weapon:'CHAINGUN' }, target:35000,
+      desc:'Deal {target} damage with the Chaingun' } },
+  { id:'crimson', weapon:'CHAINGUN', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'CHAINGUN', boss:true }, target:1,
+      desc:'Kill a boss with the Chaingun' } },
+  { id:'bengal', weapon:'CHAINGUN', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'CHAINGUN', weaponLevel:true }, target:10,
+      desc:'Reach Chaingun level 10' } },
+  { id:'dark_matter', weapon:'CHAINGUN', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ allChallenges:true, weapon:'CHAINGUN' }, target:1,
+      desc:'Complete all Chaingun challenges' } },
 
-  // ── ARCTIC (tier 4) ───────────────────────────────────────────
-  { id:'arctic', weapon:'PISTOL',    type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the Pistol',           track:'killsWith:PISTOL',    target:180 } },
-  { id:'arctic', weapon:'SMG',       type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the SMG',              track:'killsWith:SMG',       target:150 } },
-  { id:'arctic', weapon:'SHOTGUN',   type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the Shotgun',          track:'killsWith:SHOTGUN',   target:160 } },
-  { id:'arctic', weapon:'CHAINGUN',  type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the Chaingun',         track:'killsWith:CHAINGUN',  target:120 } },
-  { id:'arctic', weapon:'RAILGUN',   type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the Railgun',           track:'killsWith:RAILGUN',   target:80  } },
-  { id:'arctic', weapon:'PLASMA',    type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the Plasma Rifle',     track:'killsWith:PLASMA',    target:140 } },
-  { id:'arctic', weapon:'ROCKET',    type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the Rocket Launcher',  track:'killsWith:ROCKET',    target:100 } },
-  { id:'arctic', weapon:'GLAUNCHER', type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the Grenade Launcher', track:'killsWith:GLAUNCHER', target:130 } },
-  { id:'arctic', weapon:'ELECTRON',  type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the Electron',         track:'killsWith:ELECTRON',  target:140 } },
-  { id:'arctic', weapon:'ION',       type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the Ion Sniper',        track:'killsWith:ION',       target:80  } },
+  // RAILGUN
+  { id:'midnight', weapon:'RAILGUN', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'RAILGUN' }, target:20,
+      desc:'Kill {target} enemies with the Railgun' } },
+  { id:'desert', weapon:'RAILGUN', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'RAILGUN', isHeadshot:true }, target:10,
+      desc:'Get {target} headshot kills with the Railgun' } },
+  { id:'arctic', weapon:'RAILGUN', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'RAILGUN', playerState:'airborne' }, target:15,
+      desc:'Get {target} kills while airborne with the Railgun' } },
+  { id:'hazard', weapon:'RAILGUN', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'RAILGUN', targetType:'sniper' }, target:15,
+      desc:'Kill {target} Snipers with the Railgun' } },
+  { id:'jungle', weapon:'RAILGUN', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'RAILGUN', playerState:'scoped' }, target:20,
+      desc:'Kill {target} enemies while scoped with the Railgun' } },
+  { id:'plasma_glow', weapon:'RAILGUN', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'RAILGUN', multiKill:true }, target:10,
+      desc:'Get {target} multi‑kills with the Railgun' } },
+  { id:'toxic', weapon:'RAILGUN', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'RAILGUN', targetType:'heavy' }, target:15,
+      desc:'Kill {target} Heavy robots with the Railgun' } },
+  { id:'gold', weapon:'RAILGUN', type:'weaponSkin',
+    challenge:{ event:'DAMAGE_DEALT', conditions:{ weapon:'RAILGUN' }, target:30000,
+      desc:'Deal {target} damage with the Railgun' } },
+  { id:'crimson', weapon:'RAILGUN', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'RAILGUN', boss:true }, target:1,
+      desc:'Kill a boss with the Railgun' } },
+  { id:'bengal', weapon:'RAILGUN', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'RAILGUN', weaponLevel:true }, target:10,
+      desc:'Reach Railgun level 10' } },
+  { id:'dark_matter', weapon:'RAILGUN', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ allChallenges:true, weapon:'RAILGUN' }, target:1,
+      desc:'Complete all Railgun challenges' } },
 
-   // ── JUNGLE (tier 4 — sustained damage) ───────────────────────
-  { id:'jungle', weapon:'PISTOL',    type:'weaponSkin', challenge:{ track:'damageDealt:PISTOL',    target:20000 } },
-  { id:'jungle', weapon:'SMG',       type:'weaponSkin', challenge:{ track:'damageDealt:SMG',       target:35000 } },
-  { id:'jungle', weapon:'SHOTGUN',   type:'weaponSkin', challenge:{ track:'damageDealt:SHOTGUN',   target:28000 } },
-  { id:'jungle', weapon:'CHAINGUN',  type:'weaponSkin', challenge:{ track:'damageDealt:CHAINGUN',  target:48000 } },
-  { id:'jungle', weapon:'RAILGUN',   type:'weaponSkin', challenge:{ track:'damageDealt:RAILGUN',   target:22000 } },
-  { id:'jungle', weapon:'PLASMA',    type:'weaponSkin', challenge:{ track:'damageDealt:PLASMA',    target:32000 } },
-  { id:'jungle', weapon:'ROCKET',    type:'weaponSkin', challenge:{ track:'damageDealt:ROCKET',    target:26000 } },
-  { id:'jungle', weapon:'GLAUNCHER', type:'weaponSkin', challenge:{ track:'damageDealt:GLAUNCHER', target:22000 } },
-  { id:'jungle', weapon:'ELECTRON',  type:'weaponSkin', challenge:{ track:'damageDealt:ELECTRON',  target:38000 } },
-  { id:'jungle', weapon:'ION',       type:'weaponSkin', challenge:{ track:'damageDealt:ION',       target:24000 } },
+  // PLASMA
+  { id:'midnight', weapon:'PLASMA', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'PLASMA' }, target:30,
+      desc:'Kill {target} enemies with the Plasma Rifle' } },
+  { id:'desert', weapon:'PLASMA', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'PLASMA', isHeadshot:true }, target:15,
+      desc:'Get {target} headshot kills with the Plasma Rifle' } },
+  { id:'arctic', weapon:'PLASMA', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'PLASMA', playerState:'airborne' }, target:20,
+      desc:'Get {target} kills while airborne with the Plasma Rifle' } },
+  { id:'hazard', weapon:'PLASMA', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'PLASMA', targetType:'electron_bot' }, target:20,
+      desc:'Kill {target} Electron Bots with the Plasma Rifle' } },
+  { id:'jungle', weapon:'PLASMA', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'PLASMA', playerState:'scoped' }, target:25,
+      desc:'Kill {target} enemies while scoped with the Plasma Rifle' } },
+  { id:'plasma_glow', weapon:'PLASMA', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'PLASMA', multiKill:true }, target:15,
+      desc:'Get {target} multi‑kills with the Plasma Rifle' } },
+  { id:'toxic', weapon:'PLASMA', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'PLASMA', targetType:'scout' }, target:25,
+      desc:'Kill {target} Scouts with the Plasma Rifle' } },
+  { id:'gold', weapon:'PLASMA', type:'weaponSkin',
+    challenge:{ event:'DAMAGE_DEALT', conditions:{ weapon:'PLASMA' }, target:30000,
+      desc:'Deal {target} damage with the Plasma Rifle' } },
+  { id:'crimson', weapon:'PLASMA', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'PLASMA', boss:true }, target:1,
+      desc:'Kill a boss with the Plasma Rifle' } },
+  { id:'bengal', weapon:'PLASMA', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'PLASMA', weaponLevel:true }, target:10,
+      desc:'Reach Plasma Rifle level 10' } },
+  { id:'dark_matter', weapon:'PLASMA', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ allChallenges:true, weapon:'PLASMA' }, target:1,
+      desc:'Complete all Plasma Rifle challenges' } },
 
-  // ── TOXIC (tier 5 — multi-kills) ──────────────────────────────
-  { id:'toxic', weapon:'PISTOL',    type:'weaponSkin', challenge:{ track:'multiKillsWith:PISTOL',    target:25  } },
-  { id:'toxic', weapon:'SMG',       type:'weaponSkin', challenge:{ track:'multiKillsWith:SMG',       target:50  } },
-  { id:'toxic', weapon:'SHOTGUN',   type:'weaponSkin', challenge:{ track:'multiKillsWith:SHOTGUN',   target:60  } },
-  { id:'toxic', weapon:'CHAINGUN',  type:'weaponSkin', challenge:{ track:'multiKillsWith:CHAINGUN',  target:80  } },
-  { id:'toxic', weapon:'RAILGUN',   type:'weaponSkin', challenge:{ track:'multiKillsWith:RAILGUN',   target:15  } },
-  { id:'toxic', weapon:'PLASMA',    type:'weaponSkin', challenge:{ track:'multiKillsWith:PLASMA',    target:40  } },
-  { id:'toxic', weapon:'ROCKET',    type:'weaponSkin', challenge:{ track:'multiKillsWith:ROCKET',    target:35  } },
-  { id:'toxic', weapon:'GLAUNCHER', type:'weaponSkin', challenge:{ track:'multiKillsWith:GLAUNCHER', target:35  } },
-  { id:'toxic', weapon:'ELECTRON',  type:'weaponSkin', challenge:{ track:'multiKillsWith:ELECTRON',  target:45  } },
-  { id:'toxic', weapon:'ION',       type:'weaponSkin', challenge:{ track:'multiKillsWith:ION',       target:12  } },
+  // ROCKET
+  { id:'midnight', weapon:'ROCKET', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'ROCKET' }, target:20,
+      desc:'Kill {target} enemies with the Rocket Launcher' } },
+  { id:'desert', weapon:'ROCKET', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'ROCKET', isHeadshot:true }, target:10,
+      desc:'Get {target} headshot kills with the Rocket Launcher' } },
+  { id:'arctic', weapon:'ROCKET', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'ROCKET', playerState:'airborne' }, target:15,
+      desc:'Get {target} kills while airborne with the Rocket Launcher' } },
+  { id:'hazard', weapon:'ROCKET', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'ROCKET', targetType:'heavy' }, target:15,
+      desc:'Kill {target} Heavy robots with the Rocket Launcher' } },
+  { id:'jungle', weapon:'ROCKET', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'ROCKET', playerState:'scoped' }, target:15,
+      desc:'Kill {target} enemies while scoped with the Rocket Launcher' } },
+  { id:'plasma_glow', weapon:'ROCKET', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'ROCKET', multiKill:true }, target:12,
+      desc:'Get {target} multi‑kills with the Rocket Launcher' } },
+  { id:'toxic', weapon:'ROCKET', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'ROCKET', targetType:'scout' }, target:20,
+      desc:'Kill {target} Scouts with the Rocket Launcher' } },
+  { id:'gold', weapon:'ROCKET', type:'weaponSkin',
+    challenge:{ event:'DAMAGE_DEALT', conditions:{ weapon:'ROCKET' }, target:25000,
+      desc:'Deal {target} damage with the Rocket Launcher' } },
+  { id:'crimson', weapon:'ROCKET', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'ROCKET', boss:true }, target:1,
+      desc:'Kill a boss with the Rocket Launcher' } },
+  { id:'bengal', weapon:'ROCKET', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'ROCKET', weaponLevel:true }, target:10,
+      desc:'Reach Rocket Launcher level 10' } },
+  { id:'dark_matter', weapon:'ROCKET', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ allChallenges:true, weapon:'ROCKET' }, target:1,
+      desc:'Complete all Rocket Launcher challenges' } },
 
-  // ── HAZARD (tier 5 — enemy-type challenges) ───────────────────
-  { id:'hazard', weapon:'PISTOL', type:'weaponSkin', challenge:{ desc:'Kill {target} Scouts with the Pistol', track:'killsOfCombo:scout_PISTOL', target:50 } },
-  { id:'hazard', weapon:'SMG',       type:'weaponSkin', challenge:{ desc:'Kill {target} Drones with the SMG',              track:'killsOfCombo:drone_SMG',        target:30  } },
-  { id:'hazard', weapon:'SHOTGUN',   type:'weaponSkin', challenge:{ desc:'Kill {target} Heavy robots with the SHOTGUN',        track:'killsOfCombo:heavy_SHOTGUN',        target:25  } },
-  { id:'hazard', weapon:'CHAINGUN',  type:'weaponSkin', challenge:{ desc:'Kill {target} Scouts with the CHAINGUN',              track:'killsOfCombo:scout_CHAINGUN',        target:80  } },
-  { id:'hazard', weapon:'RAILGUN',   type:'weaponSkin', challenge:{ desc:'Kill {target} Snipers with the RAILGUN',             track:'killsOfCombo:sniper_RAILGUN',       target:20  } },
-  { id:'hazard', weapon:'PLASMA',    type:'weaponSkin', challenge:{ desc:'Kill {target} Drones with the PLASMA',              track:'killsOfCombo:drone_PLASMA',        target:25  } },
-  { id:'hazard', weapon:'ROCKET',    type:'weaponSkin', challenge:{ desc:'Destroy {target} bosses with the ROCKET',            track:'bossWaveClears',           target:3   } },
-  { id:'hazard', weapon:'GLAUNCHER', type:'weaponSkin', challenge:{ desc:'Kill {target} Grenadiers with the GLAUNCHER',          track:'killsOfCombo:grenadier_GLAUNCHER',    target:20  } },
-  { id:'hazard', weapon:'ELECTRON',  type:'weaponSkin', challenge:{ desc:'Kill {target} Electron Bots with the ELECTRON',       track:'killsOfCombo:electron_bot_ELECTRON', target:25  } },
-  { id:'hazard', weapon:'ION',       type:'weaponSkin', challenge:{ desc:'Kill {target} Ion Snipers with the ION',         track:'killsOfCombo:ion_sniper_ION',   target:15  } },
+  // GLAUNCHER
+  { id:'midnight', weapon:'GLAUNCHER', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'GLAUNCHER' }, target:20,
+      desc:'Kill {target} enemies with the Grenade Launcher' } },
+  { id:'desert', weapon:'GLAUNCHER', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'GLAUNCHER', isHeadshot:true }, target:10,
+      desc:'Get {target} headshot kills with the Grenade Launcher' } },
+  { id:'arctic', weapon:'GLAUNCHER', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'GLAUNCHER', playerState:'airborne' }, target:15,
+      desc:'Get {target} kills while airborne with the Grenade Launcher' } },
+  { id:'hazard', weapon:'GLAUNCHER', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'GLAUNCHER', targetType:'grenadier' }, target:15,
+      desc:'Kill {target} Grenadiers with the Grenade Launcher' } },
+  { id:'jungle', weapon:'GLAUNCHER', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'GLAUNCHER', playerState:'scoped' }, target:15,
+      desc:'Kill {target} enemies while scoped with the Grenade Launcher' } },
+  { id:'plasma_glow', weapon:'GLAUNCHER', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'GLAUNCHER', multiKill:true }, target:12,
+      desc:'Get {target} multi‑kills with the Grenade Launcher' } },
+  { id:'toxic', weapon:'GLAUNCHER', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'GLAUNCHER', targetType:'rocket' }, target:15,
+      desc:'Kill {target} Rocket bots with the Grenade Launcher' } },
+  { id:'gold', weapon:'GLAUNCHER', type:'weaponSkin',
+    challenge:{ event:'DAMAGE_DEALT', conditions:{ weapon:'GLAUNCHER' }, target:25000,
+      desc:'Deal {target} damage with the Grenade Launcher' } },
+  { id:'crimson', weapon:'GLAUNCHER', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'GLAUNCHER', boss:true }, target:1,
+      desc:'Kill a boss with the Grenade Launcher' } },
+  { id:'bengal', weapon:'GLAUNCHER', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'GLAUNCHER', weaponLevel:true }, target:10,
+      desc:'Reach Grenade Launcher level 10' } },
+  { id:'dark_matter', weapon:'GLAUNCHER', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ allChallenges:true, weapon:'GLAUNCHER' }, target:1,
+      desc:'Complete all Grenade Launcher challenges' } },
 
-  // ── PLASMA GLOW (tier 6 — advanced weapon-kill challenges) ────
-  { id:'plasma_glow', weapon:'PISTOL',    type:'weaponSkin', challenge:{ desc:'Kill {target} Drones with the PISTOL',             track:'killsOfCombo:drone_PISTOL',        target:60  } },
-  { id:'plasma_glow', weapon:'SMG',       type:'weaponSkin', challenge:{ desc:'Kill {target} Heavy robots with the SMG',       track:'killsOfCombo:heavy_SMG',        target:20  } },
-  { id:'plasma_glow', weapon:'SHOTGUN',   type:'weaponSkin', challenge:{ desc:'Kill {target} Shotgunners with the SHOTGUN',        track:'killsOfCombo:shotgun_SHOTGUN',      target:30  } },
-  { id:'plasma_glow', weapon:'CHAINGUN',  type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the Chaingun',      track:'killsWith:CHAINGUN',       target:200 } },
-  { id:'plasma_glow', weapon:'RAILGUN',   type:'weaponSkin', challenge:{ desc:'Kill {target} bosses with the RAILGUN',              track:'bossWaveClears',           target:5   } },
-  { id:'plasma_glow', weapon:'PLASMA',    type:'weaponSkin', challenge:{ desc:'Kill {target} Electron Bots with the PLASMA',      track:'killsOfCombo:electron_bot_PLASMA', target:20  } },
-  { id:'plasma_glow', weapon:'ROCKET',    type:'weaponSkin', challenge:{ desc:'Kill {target} Rocket bots with the ROCKET',        track:'killsOfCombo:rocket_ROCKET',       target:20  } },
-  { id:'plasma_glow', weapon:'GLAUNCHER', type:'weaponSkin', challenge:{ desc:'Kill {target} Rocket bots with the GLAUNCHER',        track:'killsOfCombo:rocket_GLAUNCHER',       target:15  } },
-  { id:'plasma_glow', weapon:'ELECTRON',  type:'weaponSkin', challenge:{ desc:'Kill {target} Drones with the ELECTRON',             track:'killsOfCombo:drone_ELECTRON',        target:20  } },
-  { id:'plasma_glow', weapon:'ION',       type:'weaponSkin', challenge:{ desc:'Kill {target} Snipers with the ION',            track:'killsOfCombo:sniper_ION',       target:15  } },
+  // ELECTRON
+  { id:'midnight', weapon:'ELECTRON', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'ELECTRON' }, target:25,
+      desc:'Kill {target} enemies with the Electron' } },
+  { id:'desert', weapon:'ELECTRON', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'ELECTRON', isHeadshot:true }, target:15,
+      desc:'Get {target} headshot kills with the Electron' } },
+  { id:'arctic', weapon:'ELECTRON', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'ELECTRON', playerState:'airborne' }, target:20,
+      desc:'Get {target} kills while airborne with the Electron' } },
+  { id:'hazard', weapon:'ELECTRON', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'ELECTRON', targetType:'scout' }, target:25,
+      desc:'Kill {target} Scouts with the Electron' } },
+  { id:'jungle', weapon:'ELECTRON', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'ELECTRON', playerState:'scoped' }, target:25,
+      desc:'Kill {target} enemies while scoped with the Electron' } },
+  { id:'plasma_glow', weapon:'ELECTRON', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'ELECTRON', multiKill:true }, target:15,
+      desc:'Get {target} multi‑kills with the Electron' } },
+  { id:'toxic', weapon:'ELECTRON', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'ELECTRON', targetType:'electron_bot' }, target:20,
+      desc:'Kill {target} Electron Bots with the Electron' } },
+  { id:'gold', weapon:'ELECTRON', type:'weaponSkin',
+    challenge:{ event:'DAMAGE_DEALT', conditions:{ weapon:'ELECTRON' }, target:20000,
+      desc:'Deal {target} damage with the Electron' } },
+  { id:'crimson', weapon:'ELECTRON', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'ELECTRON', boss:true }, target:1,
+      desc:'Kill a boss with the Electron' } },
+  { id:'bengal', weapon:'ELECTRON', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'ELECTRON', weaponLevel:true }, target:10,
+      desc:'Reach Electron level 10' } },
+  { id:'dark_matter', weapon:'ELECTRON', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ allChallenges:true, weapon:'ELECTRON' }, target:1,
+      desc:'Complete all Electron challenges' } },
 
-  // ── GOLD (tier 7 — prestige, high kill counts) ────────────────
-  { id:'gold', weapon:'PISTOL',    type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the Pistol',           track:'killsWith:PISTOL',    target:1000 } },
-  { id:'gold', weapon:'SMG',       type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the SMG',              track:'killsWith:SMG',       target:4500 } },
-  { id:'gold', weapon:'SHOTGUN',   type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the Shotgun',          track:'killsWith:SHOTGUN',   target:1800 } },
-  { id:'gold', weapon:'CHAINGUN',  type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the Chaingun',         track:'killsWith:CHAINGUN',  target:4000 } },
-  { id:'gold', weapon:'RAILGUN',   type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the Railgun',          track:'killsWith:RAILGUN',   target:1500 } },
-  { id:'gold', weapon:'PLASMA',    type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the Plasma Rifle',     track:'killsWith:PLASMA',    target:2200 } },
-  { id:'gold', weapon:'ROCKET',    type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the Rocket Launcher',  track:'killsWith:ROCKET',    target:1500 } },
-  { id:'gold', weapon:'GLAUNCHER', type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the Grenade Launcher', track:'killsWith:GLAUNCHER', target:2000 } },
-  { id:'gold', weapon:'ELECTRON',  type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the Electron',         track:'killsWith:ELECTRON',  target:2000 } },
-  { id:'gold', weapon:'ION',       type:'weaponSkin', challenge:{ desc:'Kill {target} enemies with the Ion Sniper',       track:'killsWith:ION',       target:1500 } },
-  
-  // ── BENGAL (prestige — weapon level 10) ──────────────────────
-  { id:'bengal', weapon:'PISTOL',    type:'weaponSkin', challenge:{ track:'weaponLevel:PISTOL',    target:10 } },
-  { id:'bengal', weapon:'SMG',       type:'weaponSkin', challenge:{ track:'weaponLevel:SMG',       target:10 } },
-  { id:'bengal', weapon:'SHOTGUN',   type:'weaponSkin', challenge:{ track:'weaponLevel:SHOTGUN',   target:10 } },
-  { id:'bengal', weapon:'CHAINGUN',  type:'weaponSkin', challenge:{ track:'weaponLevel:CHAINGUN',  target:10 } },
-  { id:'bengal', weapon:'RAILGUN',   type:'weaponSkin', challenge:{ track:'weaponLevel:RAILGUN',   target:10 } },
-  { id:'bengal', weapon:'PLASMA',    type:'weaponSkin', challenge:{ track:'weaponLevel:PLASMA',    target:10 } },
-  { id:'bengal', weapon:'ROCKET',    type:'weaponSkin', challenge:{ track:'weaponLevel:ROCKET',    target:10 } },
-  { id:'bengal', weapon:'GLAUNCHER', type:'weaponSkin', challenge:{ track:'weaponLevel:GLAUNCHER', target:10 } },
-  { id:'bengal', weapon:'ELECTRON',  type:'weaponSkin', challenge:{ track:'weaponLevel:ELECTRON',  target:10 } },
-  { id:'bengal', weapon:'ION',       type:'weaponSkin', challenge:{ track:'weaponLevel:ION',       target:10 } },
+  // ION
+  { id:'midnight', weapon:'ION', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'ION' }, target:15,
+      desc:'Kill {target} enemies with the Ion Sniper' } },
+  { id:'desert', weapon:'ION', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'ION', isHeadshot:true }, target:10,
+      desc:'Get {target} headshot kills with the Ion Sniper' } },
+  { id:'arctic', weapon:'ION', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'ION', playerState:'airborne' }, target:15,
+      desc:'Get {target} kills while airborne with the Ion Sniper' } },
+  { id:'hazard', weapon:'ION', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'ION', targetType:'sniper' }, target:10,
+      desc:'Kill {target} Snipers with the Ion Sniper' } },
+  { id:'jungle', weapon:'ION', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'ION', playerState:'scoped' }, target:20,
+      desc:'Kill {target} enemies while scoped with the Ion Sniper' } },
+  { id:'plasma_glow', weapon:'ION', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'ION', multiKill:true }, target:8,
+      desc:'Get {target} multi‑kills with the Ion Sniper' } },
+  { id:'toxic', weapon:'ION', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'ION', targetType:'heavy' }, target:15,
+      desc:'Kill {target} Heavy robots with the Ion Sniper' } },
+  { id:'gold', weapon:'ION', type:'weaponSkin',
+    challenge:{ event:'DAMAGE_DEALT', conditions:{ weapon:'ION' }, target:30000,
+      desc:'Deal {target} damage with the Ion Sniper' } },
+  { id:'crimson', weapon:'ION', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'ION', boss:true }, target:1,
+      desc:'Kill a boss with the Ion Sniper' } },
+  { id:'bengal', weapon:'ION', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'ION', weaponLevel:true }, target:10,
+      desc:'Reach Ion Sniper level 10' } },
+  { id:'dark_matter', weapon:'ION', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ allChallenges:true, weapon:'ION' }, target:1,
+      desc:'Complete all Ion Sniper challenges' } },
 
-  // ── DARK MATTER (complete all weapon challenges) ──────────────
-  { id:'dark_matter', weapon:'PISTOL',    type:'weaponSkin', challenge:{ track:'allChallengesComplete:PISTOL',    target:1 } },
-  { id:'dark_matter', weapon:'SMG',       type:'weaponSkin', challenge:{ track:'allChallengesComplete:SMG',       target:1 } },
-  { id:'dark_matter', weapon:'SHOTGUN',   type:'weaponSkin', challenge:{ track:'allChallengesComplete:SHOTGUN',   target:1 } },
-  { id:'dark_matter', weapon:'CHAINGUN',  type:'weaponSkin', challenge:{ track:'allChallengesComplete:CHAINGUN',  target:1 } },
-  { id:'dark_matter', weapon:'RAILGUN',   type:'weaponSkin', challenge:{ track:'allChallengesComplete:RAILGUN',   target:1 } },
-  { id:'dark_matter', weapon:'PLASMA',    type:'weaponSkin', challenge:{ track:'allChallengesComplete:PLASMA',    target:1 } },
-  { id:'dark_matter', weapon:'ROCKET',    type:'weaponSkin', challenge:{ track:'allChallengesComplete:ROCKET',    target:1 } },
-  { id:'dark_matter', weapon:'GLAUNCHER', type:'weaponSkin', challenge:{ track:'allChallengesComplete:GLAUNCHER', target:1 } },
-  { id:'dark_matter', weapon:'ELECTRON',  type:'weaponSkin', challenge:{ track:'allChallengesComplete:ELECTRON',  target:1 } },
-  { id:'dark_matter', weapon:'ION',       type:'weaponSkin', challenge:{ track:'allChallengesComplete:ION',       target:1 } },
+  // FLAMETHROWER
+  { id:'midnight', weapon:'FLAMETHROWER', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'FLAMETHROWER' }, target:30,
+      desc:'Kill {target} enemies with the Flamethrower' } },
+  { id:'desert', weapon:'FLAMETHROWER', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'FLAMETHROWER', isHeadshot:true }, target:15,
+      desc:'Get {target} headshot kills with the Flamethrower' } },
+  { id:'arctic', weapon:'FLAMETHROWER', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'FLAMETHROWER', playerState:'airborne' }, target:20,
+      desc:'Get {target} kills while airborne with the Flamethrower' } },
+  { id:'hazard', weapon:'FLAMETHROWER', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'FLAMETHROWER', targetType:'shield_bot' }, target:20,
+      desc:'Kill {target} Shield Bots with the Flamethrower' } },
+  { id:'jungle', weapon:'FLAMETHROWER', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'FLAMETHROWER', playerState:'scoped' }, target:20,
+      desc:'Kill {target} enemies while scoped with the Flamethrower' } },
+  { id:'plasma_glow', weapon:'FLAMETHROWER', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'FLAMETHROWER', multiKill:true }, target:15,
+      desc:'Get {target} multi‑kills with the Flamethrower' } },
+  { id:'toxic', weapon:'FLAMETHROWER', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'FLAMETHROWER', targetType:'swarm_host' }, target:15,
+      desc:'Kill {target} Swarm Hosts with the Flamethrower' } },
+  { id:'gold', weapon:'FLAMETHROWER', type:'weaponSkin',
+    challenge:{ event:'DAMAGE_DEALT', conditions:{ weapon:'FLAMETHROWER' }, target:40000,
+      desc:'Deal {target} damage with the Flamethrower' } },
+  { id:'crimson', weapon:'FLAMETHROWER', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'FLAMETHROWER', boss:true }, target:1,
+      desc:'Kill a boss with the Flamethrower' } },
+  { id:'bengal', weapon:'FLAMETHROWER', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'FLAMETHROWER', weaponLevel:true }, target:10,
+      desc:'Reach Flamethrower level 10' } },
+  { id:'dark_matter', weapon:'FLAMETHROWER', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ allChallenges:true, weapon:'FLAMETHROWER' }, target:1,
+      desc:'Complete all Flamethrower challenges' } },
 
-  // ── FLAMETHROWER SKINS ────────────────────────────────────────
-  { id:'midnight', weapon:'FLAMETHROWER', type:'weaponSkin', challenge:{ track:'killsWith:FLAMETHROWER', target:20 } },
-  { id:'desert',   weapon:'FLAMETHROWER', type:'weaponSkin', challenge:{ track:'killsWith:FLAMETHROWER', target:50 } },
-  { id:'crimson',  weapon:'FLAMETHROWER', type:'weaponSkin', challenge:{ track:'killsWith:FLAMETHROWER', target:80 } },
-  { id:'arctic',   weapon:'FLAMETHROWER', type:'weaponSkin', challenge:{ track:'killsWith:FLAMETHROWER', target:140 } },
-  { id:'hazard',   weapon:'FLAMETHROWER', type:'weaponSkin', challenge:{ track:'killsOfCombo:heavy_FLAMETHROWER', target:15 } },
-  { id:'plasma_glow', weapon:'FLAMETHROWER', type:'weaponSkin', challenge:{ track:'killsWith:FLAMETHROWER', target:200 } },
-  { id:'gold',     weapon:'FLAMETHROWER', type:'weaponSkin', challenge:{ track:'killsWith:FLAMETHROWER', target:800 } },
-  { id:'jungle',   weapon:'FLAMETHROWER', type:'weaponSkin', challenge:{ track:'damageDealt:FLAMETHROWER', target:30000 } },
-  { id:'toxic',    weapon:'FLAMETHROWER', type:'weaponSkin', challenge:{ track:'multiKillsWith:FLAMETHROWER', target:30 } },
-  { id:'bengal',   weapon:'FLAMETHROWER', type:'weaponSkin', challenge:{ track:'weaponLevel:FLAMETHROWER', target:10 } },
-  { id:'dark_matter', weapon:'FLAMETHROWER', type:'weaponSkin', challenge:{ track:'allChallengesComplete:FLAMETHROWER', target:1 } },
+  // TESLA
+  { id:'midnight', weapon:'TESLA', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'TESLA' }, target:30,
+      desc:'Kill {target} enemies with the Tesla Cannon' } },
+  { id:'desert', weapon:'TESLA', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'TESLA', isHeadshot:true }, target:15,
+      desc:'Get {target} headshot kills with the Tesla Cannon' } },
+  { id:'arctic', weapon:'TESLA', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'TESLA', playerState:'airborne' }, target:20,
+      desc:'Get {target} kills while airborne with the Tesla Cannon' } },
+  { id:'hazard', weapon:'TESLA', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'TESLA', targetType:'shield_bot' }, target:20,
+      desc:'Kill {target} Shield Bots with the Tesla Cannon' } },
+  { id:'jungle', weapon:'TESLA', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'TESLA', playerState:'scoped' }, target:20,
+      desc:'Kill {target} enemies while scoped with the Tesla Cannon' } },
+  { id:'plasma_glow', weapon:'TESLA', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'TESLA', multiKill:true }, target:15,
+      desc:'Get {target} multi‑kills with the Tesla Cannon' } },
+  { id:'toxic', weapon:'TESLA', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'TESLA', targetType:'teleport_bot' }, target:15,
+      desc:'Kill {target} Teleport Bots with the Tesla Cannon' } },
+  { id:'gold', weapon:'TESLA', type:'weaponSkin',
+    challenge:{ event:'DAMAGE_DEALT', conditions:{ weapon:'TESLA' }, target:40000,
+      desc:'Deal {target} damage with the Tesla Cannon' } },
+  { id:'crimson', weapon:'TESLA', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'TESLA', boss:true }, target:1,
+      desc:'Kill a boss with the Tesla Cannon' } },
+  { id:'bengal', weapon:'TESLA', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'TESLA', weaponLevel:true }, target:10,
+      desc:'Reach Tesla Cannon level 10' } },
+  { id:'dark_matter', weapon:'TESLA', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ allChallenges:true, weapon:'TESLA' }, target:1,
+      desc:'Complete all Tesla Cannon challenges' } },
 
-  // ── Tesla SKINS ────────────────────────────────────────
-  { id:'midnight', weapon:'TESLA', type:'weaponSkin', challenge:{ track:'killsWith:TESLA', target:20 } },
-  { id:'desert',   weapon:'TESLA', type:'weaponSkin', challenge:{ track:'killsWith:TESLA', target:50 } },
-  { id:'crimson',  weapon:'TESLA', type:'weaponSkin', challenge:{ track:'killsWith:TESLA', target:80 } },
-  { id:'arctic',   weapon:'TESLA', type:'weaponSkin', challenge:{ track:'killsWith:TESLA', target:140 } },
-  { id:'hazard',   weapon:'TESLA', type:'weaponSkin', challenge:{ track:'killsOfCombo:heavy_TESLA', target:15 } },
-  { id:'plasma_glow', weapon:'TESLA', type:'weaponSkin', challenge:{ track:'killsWith:TESLA', target:200 } },
-  { id:'gold',     weapon:'TESLA', type:'weaponSkin', challenge:{ track:'killsWith:TESLA', target:800 } },
-  { id:'jungle',   weapon:'TESLA', type:'weaponSkin', challenge:{ track:'damageDealt:TESLA', target:30000 } },
-  { id:'toxic',    weapon:'TESLA', type:'weaponSkin', challenge:{ track:'multiKillsWith:TESLA', target:30 } },
-  { id:'bengal',   weapon:'TESLA', type:'weaponSkin', challenge:{ track:'weaponLevel:TESLA', target:10 } },
-  { id:'dark_matter', weapon:'TESLA', type:'weaponSkin', challenge:{ track:'allChallengesComplete:TESLA', target:1 } },
+  // CROSSBOW
+  { id:'midnight', weapon:'CROSSBOW', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'CROSSBOW' }, target:25,
+      desc:'Kill {target} enemies with the Crossbow' } },
+  { id:'desert', weapon:'CROSSBOW', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'CROSSBOW', isHeadshot:true }, target:15,
+      desc:'Get {target} headshot kills with the Crossbow' } },
+  { id:'arctic', weapon:'CROSSBOW', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'CROSSBOW', playerState:'airborne' }, target:20,
+      desc:'Get {target} kills while airborne with the Crossbow' } },
+  { id:'hazard', weapon:'CROSSBOW', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'CROSSBOW', targetType:'ninja' }, target:20,
+      desc:'Kill {target} Ninjas with the Crossbow' } },
+  { id:'jungle', weapon:'CROSSBOW', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'CROSSBOW', playerState:'scoped' }, target:20,
+      desc:'Kill {target} enemies while scoped with the Crossbow' } },
+  { id:'plasma_glow', weapon:'CROSSBOW', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'CROSSBOW', multiKill:true }, target:15,
+      desc:'Get {target} multi‑kills with the Crossbow' } },
+  { id:'toxic', weapon:'CROSSBOW', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'CROSSBOW', targetType:'teleport_bot' }, target:15,
+      desc:'Kill {target} Teleport Bots with the Crossbow' } },
+  { id:'gold', weapon:'CROSSBOW', type:'weaponSkin',
+    challenge:{ event:'DAMAGE_DEALT', conditions:{ weapon:'CROSSBOW' }, target:25000,
+      desc:'Deal {target} damage with the Crossbow' } },
+  { id:'crimson', weapon:'CROSSBOW', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'CROSSBOW', boss:true }, target:1,
+      desc:'Kill a boss with the Crossbow' } },
+  { id:'bengal', weapon:'CROSSBOW', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'CROSSBOW', weaponLevel:true }, target:10,
+      desc:'Reach Crossbow level 10' } },
+  { id:'dark_matter', weapon:'CROSSBOW', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ allChallenges:true, weapon:'CROSSBOW' }, target:1,
+      desc:'Complete all Crossbow challenges' } },
 
-  // ── Crossbow SKINS ────────────────────────────────────────
-  { id:'midnight', weapon:'CROSSBOW', type:'weaponSkin', challenge:{ track:'killsWith:CROSSBOW', target:20 } },
-  { id:'desert',   weapon:'CROSSBOW', type:'weaponSkin', challenge:{ track:'killsWith:CROSSBOW', target:50 } },
-  { id:'crimson',  weapon:'CROSSBOW', type:'weaponSkin', challenge:{ track:'killsWith:CROSSBOW', target:80 } },
-  { id:'arctic',   weapon:'CROSSBOW', type:'weaponSkin', challenge:{ track:'killsWith:CROSSBOW', target:140 } },
-  { id:'hazard',   weapon:'CROSSBOW', type:'weaponSkin', challenge:{ track:'killsOfCombo:heavy_CROSSBOW', target:15 } },
-  { id:'plasma_glow', weapon:'CROSSBOW', type:'weaponSkin', challenge:{ track:'killsWith:CROSSBOW', target:200 } },
-  { id:'gold',     weapon:'CROSSBOW', type:'weaponSkin', challenge:{ track:'killsWith:CROSSBOW', target:800 } },
-  { id:'jungle',   weapon:'CROSSBOW', type:'weaponSkin', challenge:{ track:'damageDealt:CROSSBOW', target:30000 } },
-  { id:'toxic',    weapon:'CROSSBOW', type:'weaponSkin', challenge:{ track:'multiKillsWith:CROSSBOW', target:30 } },
-  { id:'bengal',   weapon:'CROSSBOW', type:'weaponSkin', challenge:{ track:'weaponLevel:CROSSBOW', target:10 } },
-  { id:'dark_matter', weapon:'CROSSBOW', type:'weaponSkin', challenge:{ track:'allChallengesComplete:CROSSBOW', target:1 } },
+  // RIVETER
+  { id:'midnight', weapon:'RIVETER', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'RIVETER' }, target:30,
+      desc:'Kill {target} enemies with the Riveter' } },
+  { id:'desert', weapon:'RIVETER', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'RIVETER', isHeadshot:true }, target:15,
+      desc:'Get {target} headshot kills with the Riveter' } },
+  { id:'arctic', weapon:'RIVETER', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'RIVETER', playerState:'airborne' }, target:20,
+      desc:'Get {target} kills while airborne with the Riveter' } },
+  { id:'hazard', weapon:'RIVETER', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'RIVETER', targetType:'scout' }, target:25,
+      desc:'Kill {target} Scouts with the Riveter' } },
+  { id:'jungle', weapon:'RIVETER', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'RIVETER', playerState:'scoped' }, target:25,
+      desc:'Kill {target} enemies while scoped with the Riveter' } },
+  { id:'plasma_glow', weapon:'RIVETER', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'RIVETER', multiKill:true }, target:15,
+      desc:'Get {target} multi‑kills with the Riveter' } },
+  { id:'toxic', weapon:'RIVETER', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'RIVETER', targetType:'drone' }, target:25,
+      desc:'Kill {target} Drones with the Riveter' } },
+  { id:'gold', weapon:'RIVETER', type:'weaponSkin',
+    challenge:{ event:'DAMAGE_DEALT', conditions:{ weapon:'RIVETER' }, target:25000,
+      desc:'Deal {target} damage with the Riveter' } },
+  { id:'crimson', weapon:'RIVETER', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'RIVETER', boss:true }, target:1,
+      desc:'Kill a boss with the Riveter' } },
+  { id:'bengal', weapon:'RIVETER', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'RIVETER', weaponLevel:true }, target:10,
+      desc:'Reach Riveter level 10' } },
+  { id:'dark_matter', weapon:'RIVETER', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ allChallenges:true, weapon:'RIVETER' }, target:1,
+      desc:'Complete all Riveter challenges' } },
 
-  // ════════════════════════════════════════════════════════════════
-  //  PLAYER SKINS — kept separate, not weapon-related
-  // ════════════════════════════════════════════════════════════════
+  // PHALANX
+  { id:'midnight', weapon:'PHALANX', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'PHALANX' }, target:25,
+      desc:'Kill {target} enemies with the Phalanx' } },
+  { id:'desert', weapon:'PHALANX', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'PHALANX', isHeadshot:true }, target:15,
+      desc:'Get {target} headshot kills with the Phalanx' } },
+  { id:'arctic', weapon:'PHALANX', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'PHALANX', playerState:'airborne' }, target:20,
+      desc:'Get {target} kills while airborne with the Phalanx' } },
+  { id:'hazard', weapon:'PHALANX', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'PHALANX', targetType:'heavy' }, target:20,
+      desc:'Kill {target} Heavy robots with the Phalanx' } },
+  { id:'jungle', weapon:'PHALANX', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'PHALANX', playerState:'scoped' }, target:20,
+      desc:'Kill {target} enemies while scoped with the Phalanx' } },
+  { id:'plasma_glow', weapon:'PHALANX', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'PHALANX', multiKill:true }, target:15,
+      desc:'Get {target} multi‑kills with the Phalanx' } },
+  { id:'toxic', weapon:'PHALANX', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'PHALANX', targetType:'shotgun' }, target:20,
+      desc:'Kill {target} Shotgunners with the Phalanx' } },
+  { id:'gold', weapon:'PHALANX', type:'weaponSkin',
+    challenge:{ event:'DAMAGE_DEALT', conditions:{ weapon:'PHALANX' }, target:30000,
+      desc:'Deal {target} damage with the Phalanx' } },
+  { id:'crimson', weapon:'PHALANX', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'PHALANX', boss:true }, target:1,
+      desc:'Kill a boss with the Phalanx' } },
+  { id:'bengal', weapon:'PHALANX', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'PHALANX', weaponLevel:true }, target:10,
+      desc:'Reach Phalanx level 10' } },
+  { id:'dark_matter', weapon:'PHALANX', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ allChallenges:true, weapon:'PHALANX' }, target:1,
+      desc:'Complete all Phalanx challenges' } },
+
+  // AEGIS
+  { id:'midnight', weapon:'AEGIS', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'AEGIS' }, target:25,
+      desc:'Kill {target} enemies with the Aegis' } },
+  { id:'desert', weapon:'AEGIS', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'AEGIS', isHeadshot:true }, target:15,
+      desc:'Get {target} headshot kills with the Aegis' } },
+  { id:'arctic', weapon:'AEGIS', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'AEGIS', playerState:'airborne' }, target:20,
+      desc:'Get {target} kills while airborne with the Aegis' } },
+  { id:'hazard', weapon:'AEGIS', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'AEGIS', targetType:'scout' }, target:25,
+      desc:'Kill {target} Scouts with the Aegis' } },
+  { id:'jungle', weapon:'AEGIS', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'AEGIS', playerState:'scoped' }, target:20,
+      desc:'Kill {target} enemies while scoped with the Aegis' } },
+  { id:'plasma_glow', weapon:'AEGIS', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'AEGIS', multiKill:true }, target:15,
+      desc:'Get {target} multi‑kills with the Aegis' } },
+  { id:'toxic', weapon:'AEGIS', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'AEGIS', targetType:'shield_bot' }, target:20,
+      desc:'Kill {target} Shield Bots with the Aegis' } },
+  { id:'gold', weapon:'AEGIS', type:'weaponSkin',
+    challenge:{ event:'DAMAGE_DEALT', conditions:{ weapon:'AEGIS' }, target:30000,
+      desc:'Deal {target} damage with the Aegis' } },
+  { id:'crimson', weapon:'AEGIS', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'AEGIS', boss:true }, target:1,
+      desc:'Kill a boss with the Aegis' } },
+  { id:'bengal', weapon:'AEGIS', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'AEGIS', weaponLevel:true }, target:10,
+      desc:'Reach Aegis level 10' } },
+  { id:'dark_matter', weapon:'AEGIS', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ allChallenges:true, weapon:'AEGIS' }, target:1,
+      desc:'Complete all Aegis challenges' } },
+
+  // COMET
+  { id:'midnight', weapon:'COMET', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'COMET' }, target:30,
+      desc:'Kill {target} enemies with the COMET' } },
+  { id:'desert', weapon:'COMET', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'COMET', isHeadshot:true }, target:15,
+      desc:'Get {target} headshot kills with the COMET' } },
+  { id:'arctic', weapon:'COMET', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'COMET', playerState:'airborne' }, target:20,
+      desc:'Get {target} kills while airborne with the COMET' } },
+  { id:'hazard', weapon:'COMET', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'COMET', targetType:'drone' }, target:25,
+      desc:'Kill {target} Drones with the COMET' } },
+  { id:'jungle', weapon:'COMET', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'COMET', playerState:'scoped' }, target:25,
+      desc:'Kill {target} enemies while scoped with the COMET' } },
+  { id:'plasma_glow', weapon:'COMET', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'COMET', multiKill:true }, target:15,
+      desc:'Get {target} multi‑kills with the COMET' } },
+  { id:'toxic', weapon:'COMET', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'COMET', targetType:'heavy' }, target:20,
+      desc:'Kill {target} Heavy robots with the COMET' } },
+  { id:'gold', weapon:'COMET', type:'weaponSkin',
+    challenge:{ event:'DAMAGE_DEALT', conditions:{ weapon:'COMET' }, target:25000,
+      desc:'Deal {target} damage with the COMET' } },
+  { id:'crimson', weapon:'COMET', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'COMET', boss:true }, target:1,
+      desc:'Kill a boss with the COMET' } },
+  { id:'bengal', weapon:'COMET', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'COMET', weaponLevel:true }, target:10,
+      desc:'Reach COMET level 10' } },
+  { id:'dark_matter', weapon:'COMET', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ allChallenges:true, weapon:'COMET' }, target:1,
+      desc:'Complete all COMET challenges' } },
+
+  // DMR
+  { id:'midnight', weapon:'DMR', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'DMR' }, target:25,
+      desc:'Kill {target} enemies with the DMR' } },
+  { id:'desert', weapon:'DMR', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'DMR', isHeadshot:true }, target:15,
+      desc:'Get {target} headshot kills with the DMR' } },
+  { id:'arctic', weapon:'DMR', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'DMR', playerState:'airborne' }, target:20,
+      desc:'Get {target} kills while airborne with the DMR' } },
+  { id:'hazard', weapon:'DMR', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'DMR', targetType:'sniper' }, target:20,
+      desc:'Kill {target} Snipers with the DMR' } },
+  { id:'jungle', weapon:'DMR', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'DMR', playerState:'scoped' }, target:25,
+      desc:'Kill {target} enemies while scoped with the DMR' } },
+  { id:'plasma_glow', weapon:'DMR', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'DMR', multiKill:true }, target:15,
+      desc:'Get {target} multi‑kills with the DMR' } },
+  { id:'toxic', weapon:'DMR', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'DMR', targetType:'electron_bot' }, target:20,
+      desc:'Kill {target} Electron Bots with the DMR' } },
+  { id:'gold', weapon:'DMR', type:'weaponSkin',
+    challenge:{ event:'DAMAGE_DEALT', conditions:{ weapon:'DMR' }, target:25000,
+      desc:'Deal {target} damage with the DMR' } },
+  { id:'crimson', weapon:'DMR', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'DMR', boss:true }, target:1,
+      desc:'Kill a boss with the DMR' } },
+  { id:'bengal', weapon:'DMR', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ weapon:'DMR', weaponLevel:true }, target:10,
+      desc:'Reach DMR level 10' } },
+  { id:'dark_matter', weapon:'DMR', type:'weaponSkin',
+    challenge:{ event:'KILL', conditions:{ allChallenges:true, weapon:'DMR' }, target:1,
+      desc:'Complete all DMR challenges' } },
+      
   { id:'ghost',     type:'playerSkin', level:10 },
   { id:'forest',    type:'playerSkin', level:15 },
   { id:'oni',       type:'playerSkin', level:25 },
   { id:'void',      type:'playerSkin', level:30 },
-  { id:'gold',       type:'playerSkin', level:40 },
-  { id:'gladiator', type:'playerSkin', challenge:{ desc:'Defeat {target} players in FFA', track:'pvpKills', target:25 } },
+  { id:'gold',      type:'playerSkin', level:40 },
+  { id:'gladiator', type:'playerSkin', challenge:{ event:'KILL', conditions:{ pvp:true }, target:25,
+      desc:'Defeat {target} players in FFA' } },
+  
+  // Tests
+/*   { id:'credits_1', weapon:'GLOBAL', type:'currency', rewardName:'100 Credits',
+    challenge: { event: 'KILL', conditions: {}, target: 100, desc: 'Defeat 100 total enemies.' } },
+  { id:'credits_2', weapon:'GLOBAL', type:'currency', rewardName:'250 Credits',
+    challenge: { event: 'KILL', conditions: { isHeadshot: true }, target: 50, desc: 'Get 50 Headshot kills.' } },
+  { id:'credits_3', weapon:'GLOBAL', type:'currency', rewardName:'500 Credits',
+    challenge: { event: 'KILL', conditions: { isExplosiveKill: true }, target: 75, desc: 'Get 75 Explosive kills.' } }, */
+  { 
+    id:'aurora', weapon:'PISTOL', type:'weaponSkin', requires: 'dark_matter',
+    challenge: { 
+      isComposite: true,
+      desc: 'Kill a boss in each map without Endless Magazine equipped.',
+      subChallenges: [
+        { event: 'KILL', conditions: { weapon: 'PISTOL', targetType: 'giantbot', map: 'scrapyard', excludeAttachment: 'endless_magazine' }, target: 1, desc: 'Scrapyard Boss'},
+        { event: 'KILL', conditions: { weapon: 'PISTOL', targetType: 'giantbot', map: 'jungle', excludeAttachment: 'endless_magazine' }, target: 1, desc: 'Jungle Boss'},
+        { event: 'KILL', conditions: { weapon: 'PISTOL', targetType: 'giantbot', map: 'city', excludeAttachment: 'endless_magazine' }, target: 1, desc: 'City Boss'},
+        { event: 'KILL', conditions: { weapon: 'PISTOL', targetType: 'giantbot', map: 'terminal', excludeAttachment: 'endless_magazine' }, target: 1, desc: 'Moon Boss'},
+      ]
+    } 
+  },
 ];
 
 // ── Profile ───────────────────────────────────────────────────
@@ -1034,8 +2371,8 @@ const STORAGE_KEY = 'botarena_profile';
 const _defaultProfile = () => ({
   name:'ANON', displayName: '',totalXp:0, level:1,
   unlocked:['default'],
-  unlockedWeaponSkins:{PISTOL:[],SMG:[],SHOTGUN:[],CHAINGUN:[],RAILGUN:[],PLASMA:[],ROCKET:[],GLAUNCHER:[],ELECTRON:[],ION:[], FLAMETHROWER:[], TESLA:[], CROSSBOW:[]},
-  unlockedAttachments:{PISTOL:['endless_magazine'],SMG:[],SHOTGUN:[],CHAINGUN:[],RAILGUN:[],PLASMA:[],ROCKET:[],GLAUNCHER:[],ELECTRON:[],ION:[], FLAMETHROWER:[], TESLA:[], CROSSBOW:[]},
+  unlockedWeaponSkins:{PISTOL:[],SMG:[],SHOTGUN:[],CHAINGUN:[],RAILGUN:[],PLASMA:[],ROCKET:[],GLAUNCHER:[],ELECTRON:[],ION:[], FLAMETHROWER:[], TESLA:[], CROSSBOW:[],RIVETER: [],PHALANX: [],AEGIS: []},
+  unlockedAttachments:{PISTOL:['endless_magazine'],SMG:[],SHOTGUN:[],CHAINGUN:[],RAILGUN:[],PLASMA:[],ROCKET:[],GLAUNCHER:[],ELECTRON:[],ION:[], FLAMETHROWER:[], TESLA:[], CROSSBOW:[],RIVETER: [],PHALANX: [],AEGIS: []},
   loadouts:{
     PISTOL:{skin:'default',attachments:{special:'endless_magazine'}},
     SMG:{skin:'default',attachments:{}},
@@ -1044,13 +2381,25 @@ const _defaultProfile = () => ({
     ROCKET:{skin:'default',attachments:{}},GLAUNCHER:{skin:'default',attachments:{}},
     ELECTRON:{skin:'default',attachments:{}},ION:{skin:'default',attachments:{}},
     FLAMETHROWER:{skin:'default',attachments:{}},TESLA:{skin:'default',attachments:{}},CROSSBOW:{skin:'default',attachments:{}},
+    RIVETER:{skin:'default',attachments:{}},PHALANX:{skin:'default',attachments:{}},AEGIS:{skin:'default',attachments:{}},
   },
   playerSkin:'default',
   firebaseUid:null,
   stats:{totalKills:0,pvpKills:0,bossWaveClears:0,maxWave:0,killsOfType:{},killsWith:{},killsWhileJumping:{},killsWhileScoped:{},energyPickups:{},bossKillsWith:{}},
   maxWaveHard: 0,
-  hardModeClears: 0
+  hardModeClears: 0,
+  wonderWeaponsCollected: [],
+  unlockedWeapons: [],
 });
+
+const EXCLUSIONS_TO_TRACK = [...new Set(
+  UNLOCK_TABLE.flatMap(u => {
+    if (u.challenge?.isComposite && u.challenge.subChallenges) {
+      return u.challenge.subChallenges.map(s => s.conditions?.excludeAttachment);
+    }
+    return [u.challenge?.conditions?.excludeAttachment];
+  }).filter(Boolean)
+)];
 
 export let profile = _defaultProfile();
 
@@ -1060,57 +2409,138 @@ let _fbReady = false;
 export function initFirebaseAuth() {
   if (typeof firebase === 'undefined') return;
   
-  // Listen for auth state changes instead of forcing a popup immediately
   firebase.auth().onAuthStateChanged(async (user) => {
     if (user) {
-      // User is already logged in from a previous session!
       _fbReady = true;
       const uid = user.uid;
+
+      // SECURITY CHECK: If the local cached profile belongs to a DIFFERENT Firebase user, wipe it immediately!
+      if (profile.firebaseUid && profile.firebaseUid !== uid) {
+          console.log('[progression] Different user detected. Wiping local profile.');
+          Object.assign(profile, _defaultProfile()); // Reset to defaults
+      }
+
       const cloudProfile = await _loadFromFirestore(uid);
-      
-      if (cloudProfile && cloudProfile.totalXp >= profile.totalXp) {
-        profile = _deepMerge(_defaultProfile(), cloudProfile);
-        profile.firebaseUid = uid;
-        _saveToLocalStorage();
-        console.log('[progression] Cross-session profile restored from cloud');
+
+      if (cloudProfile) {
+        // We have cloud data. Prefer the cloud data unless local is strictly verified as ahead for this exact UID.
+        if (profile.totalXp > cloudProfile.totalXp && profile.firebaseUid === uid) {
+            await _saveToFirestore();
+        } else {
+            profile = _deepMerge(_defaultProfile(), cloudProfile);
+            profile.firebaseUid = uid;
+            _sanitizeUnlocks();
+            _saveToLocalStorage();
+            //console.log('[progression] Cross-session profile restored from cloud');
+        }
       } else {
+        // Brand new cloud account. 
         profile.firebaseUid = uid;
         await _saveToFirestore();
+        _saveToLocalStorage();
+        //console.log('[progression] New cloud profile created');
       }
     } else {
-      // No user is logged in. 
-      // Instead of forcing a popup, we sign them in anonymously behind the scenes
-      // so their progression still saves to the cloud without interrupting gameplay.
-      try {
-        const cred = await firebase.auth().signInAnonymously();
-        profile.firebaseUid = cred.user.uid;
-        _fbReady = true;
-        await _saveToFirestore();
-      } catch (e) {
-        console.warn('[progression] Anonymous auth failed:', e.message);
-      }
+      _fbReady = false;
     }
   });
 }
-async function _loadFromFirestore(uid) {
-  try {
-    const doc = await firebase.firestore().collection('player_profiles').doc(uid).get();
-    return doc.exists ? doc.data().profile : null;
-  } catch { return null; }
-}
 
 async function _saveToFirestore() {
-  if (!_fbReady || !profile.firebaseUid) return;
+  if (!_fbReady || !profile.firebaseUid) return false;
   try {
     await firebase.firestore().collection('player_profiles').doc(profile.firebaseUid).set(
       { profile, updated_at: firebase.firestore.FieldValue.serverTimestamp() },
       { merge: true }
     );
-  } catch (e) { console.warn('[progression] Firestore save failed:', e.message); }
+    return true;
+  } catch (e) {
+      if (e.message.includes('CORS') || e.message.includes('offline') || e.message.includes('network')) {
+          return false;
+      }
+      console.warn('[progression] Firestore sync paused:', e.message);
+      return false;
+  }
+}
+
+async function _loadFromFirestore(uid) {
+  try {
+    const doc = await firebase.firestore().collection('player_profiles').doc(uid).get();
+    return doc.exists ? doc.data().profile : null;
+  } catch (e) { 
+      return null; 
+  }
 }
 
 function _saveToLocalStorage() {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(profile)); } catch {}
+}
+
+export function checkFirstTimePickup(wName) {
+  if (!profile.discoveredWeapons) profile.discoveredWeapons = [];
+  if (!profile.discoveredWeapons.includes(wName)) {
+    profile.discoveredWeapons.push(wName);
+    saveProfile();
+
+    import('./weapons.js').then(({ WDEFS }) => {
+      const def = WDEFS[wName];
+      if (!def) return;
+      const isWW = def.wonderWeapon;
+      const color = isWW ? '#cc00ff' : '#00ffff';
+      const title = isWW
+        ? `WONDER WEAPON DISCOVERED: ${def.name}`
+        : `NEW WEAPON DISCOVERED: ${def.name}`;
+
+      const html = `<div style="font-weight:bold;font-size:18px;letter-spacing:2px;text-shadow:0 0 10px ${color};">${title}</div>`;
+      const css = `
+        position:fixed;top:140px;left:50%;transform:translateX(-50%);
+        background:rgba(0,0,0,0.85);border:2px solid ${color};
+        padding:14px 28px;color:${color};font-family:monospace;
+        z-index:9999;text-align:center;box-shadow:0 0 20px ${color};
+        border-radius:4px;animation:_fadeToast 3.5s forwards;
+      `;
+      _enqueueToast(html, 3500, css);
+    });
+  }
+}
+
+// Validates local/cloud save data against the current UNLOCK_TABLE.
+// Removes attachments/skins that have been deleted or moved to other weapons in code updates.
+function _sanitizeUnlocks() {
+    // 1. Build a master dictionary of what is currently allowed per weapon
+    const validAtts = {};
+    const validSkins = {};
+    
+    for (const u of UNLOCK_TABLE) {
+        if (!u.weapon) continue;
+        if (u.type === 'attachment') {
+            if (!validAtts[u.weapon]) validAtts[u.weapon] = new Set();
+            validAtts[u.weapon].add(u.id);
+        } else if (u.type === 'weaponSkin') {
+            if (!validSkins[u.weapon]) validSkins[u.weapon] = new Set();
+            validSkins[u.weapon].add(u.id);
+        }
+    }
+
+    // 2. Scrub the player's profile data
+    for (const wName of Object.keys(profile.unlockedAttachments)) {
+        const allowedAtts = validAtts[wName] || new Set();
+        profile.unlockedAttachments[wName] = profile.unlockedAttachments[wName].filter(id => allowedAtts.has(id));
+        
+        const allowedSkins = validSkins[wName] || new Set();
+        if (profile.unlockedWeaponSkins[wName]) {
+             profile.unlockedWeaponSkins[wName] = profile.unlockedWeaponSkins[wName].filter(id => allowedSkins.has(id));
+        }
+
+        // 3. Clean up active Loadouts in case an invalid attachment is currently equipped
+        if (profile.loadouts[wName]) {
+             for (const [slot, attId] of Object.entries(profile.loadouts[wName].attachments)) {
+                 if (!allowedAtts.has(attId)) {
+                     delete profile.loadouts[wName].attachments[slot];
+                 }
+             }
+        }
+    }
 }
 
 export function loadProfile() {
@@ -1118,6 +2548,7 @@ export function loadProfile() {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) { const saved = JSON.parse(raw); profile = _deepMerge(_defaultProfile(), saved); _migrateOldWeaponSkins(); }
   } catch {}
+  _sanitizeUnlocks();
   initFirebaseAuth();
 }
 
@@ -1169,9 +2600,17 @@ export function ensureDisplayName() {
     });
 }
 
+let _cloudDirty = false;
+
 export function saveProfile() {
   _saveToLocalStorage();
-  _saveToFirestore();
+  _cloudDirty = true;
+}
+
+export async function flushProfileToCloud() {
+  if (!_cloudDirty) return;
+  const ok = await _saveToFirestore();
+  if (ok) _cloudDirty = false;
 }
 
 function _migrateOldWeaponSkins() {
@@ -1225,299 +2664,313 @@ export function awardXp(amount) {
   saveProfile(); return newUnlocks;
 }
 
-// ── Stats ─────────────────────────────────────────────────────
-export function recordKill(botType, weaponKey, { isJumping = false, isScoped = false, xpMult = 1, isHeadshot = false, isExplosiveKill = false, source = 'PLAYER' } = {}) {
-  const s = profile.stats; s.totalKills++;
-  if (botType === 'pvp') s.pvpKills++;
-  else { s.killsOfType[botType]=(s.killsOfType[botType]||0)+1; if(botType==='giantbot')s.bossWaveClears=(s.bossWaveClears||0)+1; }
-
-  // ── Combo tracking (any kill, any weapon) ──────────────────────
+// ═══════════════════════════════════════════════════════════════
+//  GENERIC EVENT DISPATCHER (replaces old record* functions)
+// ═══════════════════════════════════════════════════════════════
+export function emitEvent(eventName, payload) {
+  const s = profile.stats;
   const now = Date.now();
-  _currentCombo = (now - _lastAnyKillTime < 5000) ? _currentCombo + 1 : 1;
-  _lastAnyKillTime = now;
-  if (_currentCombo > (s.maxKillCombo || 0)) s.maxKillCombo = _currentCombo;
+  const mapId = typeof getCurrentMap === 'function' ? getCurrentMap() : 'scrapyard';
 
-  if (weaponKey) {
-    s.killsWith[weaponKey]=(s.killsWith[weaponKey]||0)+1;
-    const comboKey = botType + '_' + weaponKey;
-    if (!s.killsOfCombo) s.killsOfCombo = {};
-    s.killsOfCombo[comboKey]=(s.killsOfCombo[comboKey]||0)+1;
-    if (isJumping) { if(!s.killsWhileJumping)s.killsWhileJumping={}; s.killsWhileJumping[weaponKey]=(s.killsWhileJumping[weaponKey]||0)+1; }
-    if (isScoped)  { if(!s.killsWhileScoped) s.killsWhileScoped={};  s.killsWhileScoped[weaponKey] =(s.killsWhileScoped[weaponKey] ||0)+1; }
-    if (botType==='giantbot') { if(!s.bossKillsWith)s.bossKillsWith={}; s.bossKillsWith[weaponKey]=(s.bossKillsWith[weaponKey]||0)+1; }
-    if (isHeadshot) {
-      if (!s.headshotKills) s.headshotKills = {};
-      s.headshotKills[weaponKey] = (s.headshotKills[weaponKey] || 0) + 1;
-    }
-    if (weaponKey === 'ROCKET' || weaponKey === 'GLAUNCHER' || isExplosiveKill) {
-      s.explosiveKills = (s.explosiveKills || 0) + 1;
-    }
-    if (source === 'TESLA_CHAIN') 
-      {
-      s.killsWith[source]=(s.killsWith[source]||0)+1;  
-    }
+  switch (eventName) {
+    case 'KILL': {
+      const {
+        botType, weaponKey, isJumping = false, isScoped = false,
+        isHeadshot = false, isExplosiveKill = false,
+        source = 'PLAYER', xpMult = 1
+      } = payload;
 
-    // ── Multi-kill (within 3s window) ─────────────────────────────
-    if (!_recentKillTimes[weaponKey]) _recentKillTimes[weaponKey] = [];
-    _recentKillTimes[weaponKey] = _recentKillTimes[weaponKey].filter(t => now - t < 3000);
-    if (_recentKillTimes[weaponKey].length >= 1) {
-      if (!s.multiKillsWith) s.multiKillsWith = {};
-      s.multiKillsWith[weaponKey]=(s.multiKillsWith[weaponKey]||0)+1;
-    }
-    _recentKillTimes[weaponKey].push(now);
+      _bump(s, 'totalKills');
+      _bump(s, `totalKills_${mapId}`);
 
-    // ── Fully-equipped / bare-weapon kills ────────────────────────
-    const lo    = getLoadout(weaponKey);
-    const slots = WEAPON_ATTACHMENT_SLOTS[weaponKey] || [];
-    if (slots.length > 0 && slots.every(slot => !!lo.attachments?.[slot])) {
-      if (!s.killsFullyEquipped) s.killsFullyEquipped = {};
-      s.killsFullyEquipped[weaponKey]=(s.killsFullyEquipped[weaponKey]||0)+1;
-    }
-    if (!lo.attachments || Object.values(lo.attachments).every(v => !v)) {
-      if (!s.killsBareWeapon) s.killsBareWeapon = {};
-      s.killsBareWeapon[weaponKey]=(s.killsBareWeapon[weaponKey]||0)+1;
-    }
-    // Only award weapon XP for actual weapons — not environmental/synthetic sources
-    const PSEUDO_SOURCES = new Set(['ENVIRONMENT', 'TESLA_CHAIN']);
-    if (weaponKey && !PSEUDO_SOURCES.has(weaponKey)) {
-        const prevWepLevel = getWeaponLevel(weaponKey);
+      if (botType === 'pvp') s.pvpKills = (s.pvpKills || 0) + 1;
+      else {
+        _bump(s.killsOfType, botType);
+        if (botType === 'giantbot') s.bossWaveClears = (s.bossWaveClears || 0) + 1;
+      }
 
-        const wxp = ((WEAPON_XP_GRANTS[botType] || 8) * xpMult);
-        s.weaponXp[weaponKey] = (s.weaponXp[weaponKey] || 0) + wxp;
+      _currentCombo = (now - _lastAnyKillTime < 5000) ? _currentCombo + 1 : 1;
+      _lastAnyKillTime = now;
+      if (_currentCombo > (s.maxKillCombo || 0)) s.maxKillCombo = _currentCombo;
 
-        const newWepLevel = getWeaponLevel(weaponKey);
-        if (newWepLevel > prevWepLevel) {
-            _showWeaponLevelUpToast(weaponKey, newWepLevel);
+      if (weaponKey) {
+        _bumpPerMap(s, 'killsWith', weaponKey, mapId);
+
+        const comboKey = botType + '_' + weaponKey;
+        if (!s.killsOfCombo) s.killsOfCombo = {};
+        
+        // Base combo tracking
+        _bump(s.killsOfCombo, comboKey);
+        _bump(s.killsOfCombo, `${comboKey}_${mapId}`); // Map specific combo
+        
+        // DYNAMIC EXCLUSION TRACKING:
+        // Automatically creates stats like "giantbot_PISTOL_scrapyard_no_endless_magazine" 
+        // ONLY for attachments that the challenges actually care about.
+        const lo = getLoadout(weaponKey);
+        const equippedAtts = Object.values(lo.attachments || {});
+        
+        for (const attId of EXCLUSIONS_TO_TRACK) {
+            if (!equippedAtts.includes(attId)) {
+                _bump(s.killsOfCombo, `${comboKey}_no_${attId}`);
+                _bump(s.killsOfCombo, `${comboKey}_${mapId}_no_${attId}`);
+            }
         }
+        if (!s.killsWithAttOnMap) s.killsWithAttOnMap = {};
+        for (const [, attId] of Object.entries(lo.attachments || {})) {
+          if (attId) _bump(s.killsWithAttOnMap, `${attId}_${weaponKey}_${mapId}`);
+        }
+
+        if (isJumping)              _bumpPerMap(s, 'killsWhileJumping', weaponKey, mapId);
+        if (isScoped)                _bumpPerMap(s, 'killsWhileScoped',  weaponKey, mapId);
+        if (botType === 'giantbot')  {
+            _bumpPerMap(s, 'bossKillsWith',     weaponKey, mapId);
+        }
+        if (isHeadshot)              _bumpPerMap(s, 'headshotKills',     weaponKey, mapId);
+        if (weaponKey === 'ROCKET' || weaponKey === 'GLAUNCHER' || isExplosiveKill) {
+          s.explosiveKills = (s.explosiveKills || 0) + 1;
+        }
+        if (source === 'TESLA_CHAIN') _bumpPerMap(s, 'killsWith', source, mapId);
+
+        if (!_recentKillTimes[weaponKey]) _recentKillTimes[weaponKey] = [];
+        _recentKillTimes[weaponKey] = _recentKillTimes[weaponKey].filter(t => now - t < 3000);
+        if (_recentKillTimes[weaponKey].length >= 1) _bumpPerMap(s, 'multiKillsWith', weaponKey, mapId);
+        _recentKillTimes[weaponKey].push(now);
+
+        const slots = WEAPON_ATTACHMENT_SLOTS[weaponKey] || [];
+        if (slots.length > 0 && slots.every(slot => !!lo.attachments?.[slot])) {
+          _bumpPerMap(s, 'killsFullyEquipped', weaponKey, mapId);
+        }
+        if (!lo.attachments || Object.values(lo.attachments).every(v => !v)) {
+          _bumpPerMap(s, 'killsBareWeapon', weaponKey, mapId);
+        }
+    // Only award weapon XP for actual weapons — not environmental/synthetic sources
+        const PSEUDO_SOURCES = new Set(['ENVIRONMENT', 'TESLA_CHAIN']);
+        if (weaponKey && !PSEUDO_SOURCES.has(weaponKey)) {
+          const prevWepLevel = getWeaponLevel(weaponKey);
+
+          const wxp = ((WEAPON_XP_GRANTS[botType] || 8) * xpMult);
+          s.weaponXp[weaponKey] = (s.weaponXp[weaponKey] || 0) + wxp;
+
+          const newWepLevel = getWeaponLevel(weaponKey);
+          if (newWepLevel > prevWepLevel) {
+              _showWeaponLevelUpToast(weaponKey, newWepLevel);
+          }
+        }
+      }
+      break;
     }
+
+    case 'DAMAGE_DEALT': {
+      const { weaponKey, amount } = payload;
+      if (!weaponKey || !amount || amount <= 0) break;
+      _bumpPerMap(s, 'damageDealt', weaponKey, mapId, amount);
+      clearTimeout(_damageFlushTimer);
+      _damageFlushTimer = setTimeout(() => {
+        const n = _checkChallenges(); if (n.length) _showUnlockToasts(n);
+        checkProgressMilestones();
+        saveProfile();
+      }, 2000);
+      break;
+    }
+
+    case 'STATUS_APPLIED': {
+      if (payload.type === 'EMP_STUN') {
+        _bump(s, 'empStuns');
+        _bump(s, `empStuns_${mapId}`);
+      }
+      break;
+    }
+
+    case 'PICKUP': {
+      if (payload.type === 'energy') {
+        if (!s.energyPickups) s.energyPickups = {};
+        s.energyPickups[payload.weaponKey] = (s.energyPickups[payload.weaponKey] || 0) + 1;
+      } else if (payload.type === 'railgun') {
+        s.railgunPickups = (s.railgunPickups || 0) + 1;
+      } else if (payload.type === 'flamethrower') {
+        s.flamethrowerPickups = (s.flamethrowerPickups || 0) + 1;
+      }
+      break;
+    }
+
+    case 'BARREL_DESTROYED':
+      s.barrelDestroys = (s.barrelDestroys || 0) + 1;
+      break;
+
+    case 'WAVE_COMPLETE': {
+      const { waveNum, isBoss, mapId: waveMapId = mapId } = payload;
+      if (typeof waveNum !== 'number' || isNaN(waveNum)) break;
+      s.maxWave = Math.max(s.maxWave || 0, waveNum);
+      s[`maxWave_${waveMapId}`] = Math.max(s[`maxWave_${waveMapId}`] || 0, waveNum);
+      if (player.hardMode) {
+        s.maxWaveHard = Math.max(s.maxWaveHard || 0, waveNum);
+        s[`maxWaveHard_${waveMapId}`] = Math.max(s[`maxWaveHard_${waveMapId}`] || 0, waveNum);
+      }
+      if (isBoss) {
+        s.bossWaveClears = (s.bossWaveClears || 0) + 1;
+        s[`bossWaveClears_${waveMapId}`] = (s[`bossWaveClears_${waveMapId}`] || 0) + 1;
+      }
+      break;
+    }
+
+    case 'WONDER_WEAPON_COLLECTED':
+      recordWonderWeaponCollected(payload.wName); // keeps existing logic
+      break;
   }
 
-  const n=_checkChallenges(); if(n.length)_showUnlockToasts(n);
-  checkProgressMilestones();
-  saveProfile(); return n;
-
-}
-
-export function recordEmpStun() {
-  const s = profile.stats;
-  s.empStuns = (s.empStuns || 0) + 1;
-  const n = _checkChallenges(); if (n.length) _showUnlockToasts(n);
-  checkProgressMilestones();
-  saveProfile();
-}
-
-// Track energy weapon pickups (for energy-weapon-specific unlock challenges)
-export function recordEnergyPickup(weaponKey) {
-  const s = profile.stats;
-  if (!s.energyPickups) s.energyPickups = {};
-  s.energyPickups[weaponKey] = (s.energyPickups[weaponKey] || 0) + 1;
-  const n = _checkChallenges(); if (n.length) _showUnlockToasts(n);
-  checkProgressMilestones();
-  saveProfile(); return n;
-}
-
-export function recordBarrelDestroyed() {
-  const s = profile.stats;
-  s.barrelDestroys = (s.barrelDestroys || 0) + 1;
-  const n = _checkChallenges(); if (n.length) _showUnlockToasts(n);
-  checkProgressMilestones();
-  saveProfile();
-}
-
-export function recordRailgunPickup() {
-  const s = profile.stats;
-  s.railgunPickups = (s.railgunPickups || 0) + 1;
-  const n = _checkChallenges(); if (n.length) _showUnlockToasts(n);
-  checkProgressMilestones();
-  saveProfile();
-}
-
-// Track damage dealt per weapon (for damageDealt: challenges)
-// Debounced — damage fires every frame so we batch the expensive work.
-export function recordDamage(weaponKey, amount) {
-  if (!weaponKey || !amount || amount <= 0) return;
-  const s = profile.stats;
-  if (!s.damageDealt) s.damageDealt = {};
-  s.damageDealt[weaponKey] = (s.damageDealt[weaponKey] || 0) + amount;
-  // Batch challenge checks — no need to run them on every bullet
-  clearTimeout(_damageFlushTimer);
-  _damageFlushTimer = setTimeout(() => {
+  // Evaluate challenges immediately (except damage, which is debounced above)
+  if (eventName !== 'DAMAGE_DEALT') {
     const n = _checkChallenges(); if (n.length) _showUnlockToasts(n);
     checkProgressMilestones();
     saveProfile();
-  }, 2000);
+  }
 }
 
-export function recordWaveComplete(waveNum, isBoss) {
-  if (typeof waveNum!=='number'||isNaN(waveNum)) return;
-  profile.stats.maxWave=Math.max(profile.stats.maxWave||0, waveNum);
-
-  if (player.hardMode) {
-      profile.stats.maxWaveHard = Math.max(profile.stats.maxWaveHard||0, waveNum);
-  }
-
-  if (isBoss) profile.stats.bossWaveClears=(profile.stats.bossWaveClears||0)+1;
-  const n=_checkChallenges(); if(n.length)_showUnlockToasts(n);
-  checkProgressMilestones();
-  saveProfile();
+// ── Legacy wrappers (thin, just delegate to emitEvent) ─────────
+export function recordKill(botType, weaponKey, opts = {}) {
+  emitEvent('KILL', { botType, weaponKey, ...opts });
+}
+export function recordEmpStun() {
+  emitEvent('STATUS_APPLIED', { type: 'EMP_STUN' });
+}
+export function recordEnergyPickup(weaponKey) {
+  emitEvent('PICKUP', { type: 'energy', weaponKey });
+}
+export function recordBarrelDestroyed() {
+  emitEvent('BARREL_DESTROYED', {});
+}
+export function recordRailgunPickup() {
+  emitEvent('PICKUP', { type: 'railgun' });
+}
+export function recordDamage(weaponKey, amount) {
+  emitEvent('DAMAGE_DEALT', { weaponKey, amount });
+}
+export function recordWaveComplete(waveNum, isBoss, mapId) {
+  emitEvent('WAVE_COMPLETE', { waveNum, isBoss, mapId });
 }
 
 function _allWeaponChallengesComplete(wName) {
-  const requiredSkins = Object.keys(WEAPON_SKINS).filter(id => id !== 'dark_matter' && id !== 'default');
+  const requiredSkins = [...new Set(
+    UNLOCK_TABLE.filter(u => u.type === 'weaponSkin' && u.weapon === wName && u.id !== 'dark_matter' && !u.requires).map(u => u.id)
+  )];
   if (!requiredSkins.every(id => profile.unlockedWeaponSkins[wName]?.includes(id))) return false;
+
   const requiredAtts = [...new Set(
-    UNLOCK_TABLE.filter(u => u.type === 'attachment' && u.weapon === wName).map(u => u.id)
+    UNLOCK_TABLE.filter(u => u.type === 'attachment' && u.weapon === wName && !u.requires).map(u => u.id)
   )];
   return requiredAtts.every(id => profile.unlockedAttachments[wName]?.includes(id));
 }
 
 function _checkChallenges() {
-  const s=profile.stats; const news=[];
+  const news = [];
+  
   for (const u of UNLOCK_TABLE) {
     if (!u.challenge) continue;
-    if (u.type==='attachment'){
-      // Guard: attachment must belong to a known weapon slot in unlockedAttachments
-      if (!u.weapon) continue;
-      const w=profile.unlockedAttachments[u.weapon];
-      if(!w||w.includes(u.id))continue;
-    }
-    else if (u.type==='weaponSkin'){const w=profile.unlockedWeaponSkins[u.weapon];if(w&&w.includes(u.id))continue;}
-    else{if(profile.unlocked.includes(u.id))continue;}
-    const {track,target}=u.challenge; let val=0;
-    if(track==='pvpKills')val=s.pvpKills||0;
-    else if(track==='maxWave')val=s.maxWave||0;
-    else if(track==='bossWaveClears')val=s.bossWaveClears||0;
-    else if(track.startsWith('killsOfType:'))val=s.killsOfType[track.split(':')[1]]||0;
-    else if(track.startsWith('headshotKills:')){
-      const trackWep=track.split(':')[1];
-      val=(s.headshotKills||{})[trackWep]||0;
-    }
-    // killsWith: must match the exact weapon key in the track, not just any weapon
-    else if(track.startsWith('killsWith:')){
-      const trackWep=track.split(':')[1];
-      // Only count progress toward this challenge entry if the tracked weapon matches
-      // (prevents e.g. 'killsWith:SHOTGUN' from crediting an SMG challenge)
-      val=s.killsWith[trackWep]||0;
-    }
-    else if(track.startsWith('killsWhileJumping:')){
-      const trackWep=track.split(':')[1];
-      val=(s.killsWhileJumping||{})[trackWep]||0;
-    }
-    else if(track.startsWith('killsWhileScoped:')){
-      const trackWep=track.split(':')[1];
-      val=(s.killsWhileScoped||{})[trackWep]||0;
-    }
-    else if(track.startsWith('killsOfCombo:'))val=(s.killsOfCombo||{})[track.split(':')[1]]||0;
-    else if(track.startsWith('energyPickups:')){
-      const trackWep=track.split(':')[1];
-      val=(s.energyPickups||{})[trackWep]||0;
-    }
-    else if(track.startsWith('killedBossWith:')){
-      const trackWep=track.split(':')[1];
-      val=(s.bossKillsWith||{})[trackWep]||0;
-    }
-    else if(track.startsWith('multiKillsWith:'))      val=(s.multiKillsWith||{})[track.split(':')[1]]||0;
-    else if(track.startsWith('damageDealt:')) val=Math.floor((s.damageDealt||{})[track.split(':')[1]]||0);
-    else if(track.startsWith('killsFullyEquipped:'))   val=(s.killsFullyEquipped||{})[track.split(':')[1]]||0;
-    else if(track.startsWith('killsBareWeapon:'))      val=(s.killsBareWeapon||{})[track.split(':')[1]]||0;
-    else if(track==='maxKillCombo')                    val=s.maxKillCombo||0;
-    else if(track.startsWith('weaponLevel:'))          val=getWeaponLevel(track.split(':')[1]);
-    else if(track.startsWith('allChallengesComplete:'))val=_allWeaponChallengesComplete(track.split(':')[1])?1:0;
-    else if(track === 'barrelDestroys') val = s.barrelDestroys || 0;
-    else if(track === 'empStuns') val = s.empStuns || 0;
-    else if(track === 'allWonderWeaponsCollected') val = s.allWonderWeaponsCollected || 0;
-    if(val>=target){
-      if(u.type==='attachment')profile.unlockedAttachments[u.weapon].push(u.id);
-      else if(u.type==='weaponSkin'){if(!profile.unlockedWeaponSkins[u.weapon])profile.unlockedWeaponSkins[u.weapon]=[];profile.unlockedWeaponSkins[u.weapon].push(u.id);}
-      else profile.unlocked.push(u.id);
-      news.push({...u,reason:getChallengeDescription(u)});
+    
+    // Skip already fully unlocked items so we don't re-trigger notifications
+    if (u.type === 'attachment' && u.weapon && profile.unlockedAttachments[u.weapon]?.includes(u.id)) continue;
+    if (u.type === 'weaponSkin' && u.weapon && profile.unlockedWeaponSkins[u.weapon]?.includes(u.id)) continue;
+    if (u.type === 'weaponUnlock' && profile.unlockedWeapons?.includes(u.id)) continue;
+    if (u.type === 'playerSkin' && profile.unlocked?.includes(u.id)) continue;
+
+    // Use our newly fixed universal logic
+    const { val, target } = getChallengeProgress(u.challenge);
+    
+    if (val >= target && isPrereqUnlocked(u)) {
+      let shouldNotify = true;
+
+      if (u.type === 'attachment') {
+        if (!profile.unlockedAttachments[u.weapon]) profile.unlockedAttachments[u.weapon] = [];
+        profile.unlockedAttachments[u.weapon].push(u.id);
+      } else if (u.type === 'weaponSkin') {
+        if (!profile.unlockedWeaponSkins[u.weapon]) profile.unlockedWeaponSkins[u.weapon] = [];
+        profile.unlockedWeaponSkins[u.weapon].push(u.id);
+      } else if (u.type === 'weaponUnlock') {
+        if (!profile.unlockedWeapons) profile.unlockedWeapons = [];
+        if (!profile.unlockedWeapons.includes(u.id)) {
+          profile.unlockedWeapons.push(u.id);
+          news.push({ ...u, reason: 'Unlocked weapon!' });
+          shouldNotify = false; 
+        }
+      } else if (u.type === 'currency') {
+          if (!profile.unlocked.includes(u.id)) {
+              profile.unlocked.push(u.id); // Mark challenge as claimed
+              const amt = parseInt(u.rewardName) || 0; // Extract the number
+              profile.stats.credits = (profile.stats.credits || 0) + amt; // Deposit
+              news.push({ ...u, reason: `Awarded ${u.rewardName}` });
+              shouldNotify = false; 
+          }
+      } else {
+        profile.unlocked.push(u.id);
+      }
+
+      if (shouldNotify) {
+        news.push({ ...u, reason: getChallengeDescription(u) });
+      }
     }
   }
   return news;
 }
 
-// Returns a human-friendly description for a challenge. Accepts either a
-// challenge object or an unlock entry that contains `.challenge`. If the
-// challenge already provides a string `desc`, the first numeric substring
-// will be replaced with the `target` value so descriptions always reflect
-// the authoritative target number.
-export function getChallengeDescription(uOrCh){
+export function getChallengeDescription(uOrCh) {
   const c = uOrCh && uOrCh.challenge ? uOrCh.challenge : uOrCh;
-  if(!c) return '';
-  if(typeof c.desc === 'function') return c.desc(c);
-  if(typeof c.desc === 'string'){
-    if(c.target != null){
-      if(c.desc.indexOf('{target}') !== -1) return c.desc.replace(/\{target\}/g, String(c.target));
-      // Backwards-compat: replace first numeric substring if no {target} token
+  if (!c) return '';
+  
+  if (typeof c.desc === 'function') return c.desc(c);
+  
+  if (typeof c.desc === 'string') {
+    if (c.target != null) {
+      // Replaces the {target} token with the actual number
+      if (c.desc.includes('{target}')) return c.desc.replace(/\{target\}/g, String(c.target));
+      
+      // Fallback for descriptions that just use a raw number (e.g. "Kill 25 enemies")
       return c.desc.replace(/\d+/, String(c.target));
     }
     return c.desc;
   }
-  const track = c.track||''; const target = c.target||0;
-  if(track.startsWith('killsWith:')){
-    const wep = track.split(':')[1]; const wlabel = _WNAME?.[wep]??wep;
-    return `Kill ${target} enemies with the ${wlabel}`;
+  
+  return '???';
+}
+
+function getBaseWonderWeapons() {
+  return Object.keys(WDEFS).filter(w => WDEFS[w].wonderWeapon && !WDEFS[w].secret);
+}
+
+/**
+ * Record that the player has picked up a wonder weapon.
+ * Updates the collection array and sets allWonderWeaponsCollected = 1
+ * when all base (non‑secret) wonder weapons have been collected.
+ */
+export function recordWonderWeaponCollected(wName) {
+  if (!wName) return;
+  const s = profile.stats;
+  if (!s.wonderWeaponsCollected) s.wonderWeaponsCollected = [];
+
+  // Avoid duplicates
+  if (s.wonderWeaponsCollected.includes(wName)) return;
+  s.wonderWeaponsCollected.push(wName);
+  saveProfile();
+
+  // Check if all base wonder weapons are now collected
+  const baseWeapons = getBaseWonderWeapons();
+  const hasAllBase = baseWeapons.every(w => s.wonderWeaponsCollected.includes(w));
+  if (hasAllBase) {
+    s.allWonderWeaponsCollected = 1; // triggers the challenge
+    saveProfile();
+    // Optionally check challenges immediately
+    const news = _checkChallenges();
+    if (news.length) _showUnlockToasts(news);
   }
-  if(track.startsWith('killsOfType:')){
-    const t = track.split(':')[1].replace(/_/g,' ');
-    return `Kill ${target} ${t} (any weapon)`;
-  }
-  if(track.startsWith('killsOfCombo:')){
-    const part = track.split(':')[1] || '';
-    const [b, ...wparts] = part.split('_');
-    const bot = (b||'').replace(/_/g,' ');
-    const wep = (wparts.join('_')||'').toUpperCase();
-    const wlabel = _WNAME?.[wep]??wep;
-    return `Kill ${target} ${bot} with the ${wlabel}`;
-  }
-  if(track.startsWith('killsWhileJumping:')){
-    const wep=track.split(':')[1]; const wlabel=_WNAME?.[wep]??wep;
-    return `Kill ${target} enemies with the ${wlabel} while airborne`;
-  }
-  if(track.startsWith('killsWhileScoped:')){
-    const wep=track.split(':')[1]; const wlabel=_WNAME?.[wep]??wep;
-    return `Kill ${target} enemies with the ${wlabel} while scoped`;
-  }
-  if(track.startsWith('energyPickups:')){
-    const wep=track.split(':')[1]; const wlabel=_WNAME?.[wep]??wep;
-    return `Pick up energy from defeated enemies ${target} times with the ${wlabel}`;
-  }
-  if(track.startsWith('killedBossWith:')){
-    const wep=track.split(':')[1]; const wlabel=_WNAME?.[wep]??wep;
-    return `Kill ${target} bosses with the ${wlabel}`;
-  }
-  if(track==='pvpKills') return `Defeat ${target} players in FFA`;
-  if(track==='bossWaveClears') return `Defeat ${target} bosses`;
-  if(track.startsWith('multiKillsWith:')){
-    const wlabel=_WNAME?.[track.split(':')[1]]??track.split(':')[1];
-    return `Get ${target} multi-kills with the ${wlabel}`;
-  }
-  if(track.startsWith('damageDealt:')){
-    const wlabel=_WNAME?.[track.split(':')[1]]??track.split(':')[1];
-    return `Deal ${Number(target).toLocaleString()} damage with the ${wlabel}`;
-  }
-  if(track.startsWith('killsFullyEquipped:')){
-    const wlabel=_WNAME?.[track.split(':')[1]]??track.split(':')[1];
-    return `Kill ${target} enemies with a fully-equipped ${wlabel}`;
-  }
-  if(track.startsWith('killsBareWeapon:')){
-    const wlabel=_WNAME?.[track.split(':')[1]]??track.split(':')[1];
-    return `Kill ${target} enemies with an unmodified ${wlabel}`;
-  }
-  if(track==='maxKillCombo') return `Reach a ${target}-kill combo`;
-  if(track.startsWith('weaponLevel:')){
-    const wlabel=_WNAME?.[track.split(':')[1]]??track.split(':')[1];
-    return `Reach ${wlabel} Prestige (Level 10)`;
-  }
-  if(track.startsWith('allChallengesComplete:')){
-    const wlabel=_WNAME?.[track.split(':')[1]]??track.split(':')[1];
-    return `Complete all ${wlabel} challenges`;
-  }
-  if(track.startsWith('headshotKills:')){
-    const wlabel=_WNAME?.[track.split(':')[1]]??track.split(':')[1];
-    return `Get ${target} headshot kills with the ${wlabel}`;
-  }
-    return `${target} ${track}`;
+}
+
+/**
+ * Check if a specific wonder weapon has been unlocked (used by enemies.js)
+ */
+export function isWonderWeaponUnlocked(wName) {
+  const s = profile.stats;
+  // Check both collected (picked up) and unlocked (via challenge)
+  return (s.wonderWeaponsCollected?.includes(wName) ?? false) ||
+         (profile.unlockedWeapons?.includes(wName) ?? false);
 }
 
 // ── Progress milestones (in-game notification at 25/50/75%) ───
@@ -1576,8 +3029,44 @@ export function setAttachment(wName,slot,attachId){
   saveProfile();return true;
 }
 
-export function isAttachmentUnlocked(wName,attachId){return!!(profile.unlockedAttachments?.[wName]?.includes(attachId));}
-export function isWeaponSkinUnlocked(wName,skinId){return skinId==='default'||!!(profile.unlockedWeaponSkins?.[wName]?.includes(skinId));}
+export function isWeaponSkinUnlocked(wName, skinId) {
+  if (profile.unlockedWeaponSkins?.[wName]?.includes(skinId)) return true;
+  const entry = UNLOCK_TABLE.find(u => u.type === 'weaponSkin' && u.weapon === wName && u.id === skinId);
+  if (entry && entry.challenge) {
+    const progress = getChallengeProgress(entry.challenge);
+    if (progress.target && progress.val >= progress.target && isPrereqUnlocked(entry)) {
+      if (!profile.unlockedWeaponSkins) profile.unlockedWeaponSkins = {};
+      if (!profile.unlockedWeaponSkins[wName]) profile.unlockedWeaponSkins[wName] = [];
+      if (!profile.unlockedWeaponSkins[wName].includes(skinId)) {
+        profile.unlockedWeaponSkins[wName].push(skinId);
+        saveProfile();
+      }
+      return true;
+    }
+  }
+  return false;
+}
+
+export function isAttachmentUnlocked(wName, attId) {
+  if (profile.unlockedAttachments?.[wName]?.includes(attId)) return true;
+  const entry = UNLOCK_TABLE.find(u => u.type === 'attachment' && u.weapon === wName && u.id === attId);
+  if (entry && entry.challenge) {
+    const progress = getChallengeProgress(entry.challenge);
+    if (progress.target && progress.val >= progress.target && isPrereqUnlocked(entry)) {
+      if (!profile.unlockedAttachments) profile.unlockedAttachments = {};
+      if (!profile.unlockedAttachments[wName]) profile.unlockedAttachments[wName] = [];
+      if (!profile.unlockedAttachments[wName].includes(attId)) {
+        profile.unlockedAttachments[wName].push(attId);
+        saveProfile();
+      }
+      return true;
+    }
+  }
+  const hasChallenge = UNLOCK_TABLE.some(u => u.type === 'attachment' && u.weapon === wName && u.id === attId && u.challenge);
+  if (!hasChallenge) return true;
+  return false;
+}
+
 export function isSkinUnlocked(skinId){return skinId==='default'||profile.unlocked.includes(skinId);}
 export function setPlayerSkin(skinId){if(!isSkinUnlocked(skinId))return false;profile.playerSkin=skinId;saveProfile();return true;}
 export function getSpeedMult(wName) {
@@ -1613,17 +3102,38 @@ export function getEffectiveStats(wName, baseDefs) {
       else if (mod === 'spread') out.spread = Math.max(0, (baseDefs.spread || 0) * (1 + delta));
       else if (mod === 'range') out.range = Math.round(baseDefs.range * (1 + delta));
       else if (mod === 'cd') out.cd = Math.max(0.02, baseDefs.cd * (1 + delta));
-      else if (mod === 'speed') out.speed = Math.round((baseDefs.speed || 0) * (1 + delta));
+      else if (mod === 'speed') {
+          if (baseDefs.speed !== undefined) out.speed = baseDefs.speed * (1 + delta);
+          if (baseDefs.projSpeed !== undefined) out.projSpeed = baseDefs.projSpeed * (1 + delta);
+      }
+      else if (mod === 'splash') {
+          out.splash = (baseDefs.splash || 0) * (1 + delta);
+      }
       else if (mod === 'chainRange') out.chainRange = (baseDefs.chainRange || 8) * (1 + delta); // +1.0 = 100% increase
       else if (mod === 'adsSpeedMult') out.adsSpeedMult = (out.adsSpeedMult || 1.0) * delta;
       // Dynamic Magazine and Multiplier Handling
       else if (mod === 'magSize') out.magSize = Math.max(1, (baseDefs.magSize || 0) + delta);
+      else if (mod === 'heatMult') out.heatMult = (out.heatMult || 1.0) + delta;
       else if (mod === 'cdMult') out.cd = Math.max(0.02, baseDefs.cd * delta);
       else if (mod === 'dmgMult') out.dmg = Math.round(baseDefs.dmg * delta);
       else if (mod === 'reloadMult') out.reloadTime = Math.max(0.1, (baseDefs.reloadTime || 1.6) * delta);     
       else if (mod === 'spreadAdd') out.spread = (out.spread || baseDefs.spread || 0) + delta;
       else if (mod === 'recoilMult') out.recoilMult = (out.recoilMult || 1.0) * delta;
-    else if (mod === 'spreadAdd') out.spread = (out.spread || baseDefs.spread || 0) + delta;
+      else if (mod === 'pelletsOverride') out.pellets = delta;
+      else if (mod === 'spreadOverride') out.spread = delta;
+      else if (mod === 'dotDamage') out.dotDamage = delta;
+      else if (mod === 'dotDuration') out.dotDuration = delta;
+      else if (mod === 'bounces') out.bounces = (baseDefs.bounces || 1) + delta;
+      else if (mod === 'maxTargets')         out.maxTargets = (baseDefs.maxTargets || 3) + delta;
+      else if (mod === 'maxTargetsOverride') out.maxTargets = delta;
+      else if (mod === 'lockCone')            out.lockCone = delta;
+      else if (mod === 'burstCount') {
+        out.burstCount = (baseDefs.burstCount || 0) + delta;
+      }
+      else if (mod === 'ammoType' && delta === 'infinite') {
+          out.ammo = Infinity;
+          out.magSize = null; 
+      }
     }
   }
   // ION SNIPER RAMP-UP LOGIC
@@ -1635,8 +3145,17 @@ export function getEffectiveStats(wName, baseDefs) {
   return out;
 }
 
-export function getAdsFov(wName){const id=getLoadout(wName).attachments?.sight;return ATTACHMENTS[id]?.visual?.adsZoom??null;}
-export function getScopeShape(wName){const id=getLoadout(wName).attachments?.sight;return ATTACHMENTS[id]?.visual?.scopeShape??null;}
+export function getAdsFov(wName) {
+  const id = getLoadout(wName).attachments?.sight;
+  if (ATTACHMENTS[id]?.visual?.adsZoom) return ATTACHMENTS[id].visual.adsZoom;
+  return WDEFS[wName].baseAdsZoom ?? null; // Fallback to intrinsic zoom
+}
+
+export function getScopeShape(wName) {
+  const id = getLoadout(wName).attachments?.sight;
+  if (ATTACHMENTS[id]?.visual?.scopeShape) return ATTACHMENTS[id].visual.scopeShape;
+  return WDEFS[wName].scopeShape ?? null; // Fallback to intrinsic shape
+}
 export function isAkimbo(wName){return getLoadout(wName).attachments?.special==='akimbo';}
 export function isAutoFire(wName) {
   const lo = getLoadout(wName);
@@ -1682,30 +3201,91 @@ export function getLevelProgress(){
   const lv=profile.level;const x=profile.totalXp-totalXpForLevel(lv);const n=xpForLevel(lv);
   return{level:lv,xpThisLevel:x,xpNeeded:n,pct:x/n};
 }
-export function getChallengeProgress(ch){
-  const s=profile.stats;const{track,target}=ch;let val=0;
-  if(track==='pvpKills')val=s.pvpKills||0;
-  else if(track==='maxWave')val=s.maxWave||0;
-  else if(track==='bossWaveClears')val=s.bossWaveClears||0;
-  else if(track.startsWith('killsOfType:'))val=s.killsOfType[track.split(':')[1]]||0;
-  else if(track.startsWith('headshotKills:')) val=(s.headshotKills||{})[track.split(':')[1]]||0;
-  else if(track.startsWith('killsWith:'))val=s.killsWith[track.split(':')[1]]||0;
-  else if(track.startsWith('killsWhileJumping:'))val=(s.killsWhileJumping||{})[track.split(':')[1]]||0;
-  else if(track.startsWith('killsWhileScoped:'))val=(s.killsWhileScoped||{})[track.split(':')[1]]||0;
-  else if(track.startsWith('killsOfCombo:'))val=(s.killsOfCombo||{})[track.split(':')[1]]||0;
-  else if(track.startsWith('energyPickups:'))val=(s.energyPickups||{})[track.split(':')[1]]||0;
-  else if(track.startsWith('killedBossWith:'))val=(s.bossKillsWith||{})[track.split(':')[1]]||0;
-  else if(track.startsWith('multiKillsWith:'))      val=(s.multiKillsWith||{})[track.split(':')[1]]||0;
-  else if(track.startsWith('damageDealt:')) val=Math.floor((s.damageDealt||{})[track.split(':')[1]]||0);
-  else if(track.startsWith('killsFullyEquipped:'))   val=(s.killsFullyEquipped||{})[track.split(':')[1]]||0;
-  else if(track.startsWith('killsBareWeapon:'))      val=(s.killsBareWeapon||{})[track.split(':')[1]]||0;
-  else if(track==='maxKillCombo')                    val=s.maxKillCombo||0;
-  else if(track.startsWith('weaponLevel:'))          val=getWeaponLevel(track.split(':')[1]);
-  else if(track.startsWith('allChallengesComplete:'))val=_allWeaponChallengesComplete(track.split(':')[1])?1:0;
-  else if(track === 'barrelDestroys') val = s.barrelDestroys || 0;
-  else if(track === 'empStuns') val = s.empStuns || 0;
-  return{val,target,pct:Math.min(1,val/target)};
+// ── Generic Stat Resolvers ─────────────────────────────────────
+// Determines which condition takes precedence if multiple exist
+const STAT_PRIORITY = [
+  'weaponLevel', 'allChallenges', 'maxCombo', 'pvp', 'explosive',
+  'withAttachment', 'targetType', 'map', 'boss', 'playerState',
+  'multiKill', 'isHeadshot', 'fullyEquipped', 'bareWeapon'
+];
+
+// Maps a specific condition to its legacy location in profile.stats
+const STAT_RESOLVERS = {
+  weaponLevel:    (c) => getWeaponLevel(c.weapon),
+  allChallenges:  (c) => _allWeaponChallengesComplete(c.weapon) ? 1 : 0,
+  maxCombo:       (c, s) => s.maxKillCombo,
+  pvp:            (c, s) => s.pvpKills,
+  explosive:      (c, s) => s.explosiveKills,
+  withAttachment: (c, s) => s.killsWithAttOnMap?.[`${c.withAttachment}_${c.weapon}_${c.map}`],
+  
+  // UPGRADED targetType resolver to natively parse map and excludeAttachment
+  targetType: (c, s) => {
+      let key = c.targetType;
+      if (c.weapon) key += '_' + c.weapon;
+      if (c.map) key += '_' + c.map;
+      if (c.excludeAttachment) key += '_no_' + c.excludeAttachment;
+      return s.killsOfCombo?.[key];
+  },
+  
+  map:            (c, s) => s.killsWith?.[`${c.weapon}_${c.map}`],
+  boss:           (c, s) => s.bossKillsWith?.[c.weapon],
+  playerState:    (c, s) => c.playerState === 'airborne' ? s.killsWhileJumping?.[c.weapon] : s.killsWhileScoped?.[c.weapon],
+  multiKill:      (c, s) => s.multiKillsWith?.[c.weapon],
+  isHeadshot:     (c, s) => s.headshotKills?.[c.weapon],
+  fullyEquipped:  (c, s) => s.killsFullyEquipped?.[c.weapon],
+  bareWeapon:     (c, s) => s.killsBareWeapon?.[c.weapon]
+};
+
+export function getChallengeProgress(ch) {
+  // ── SCALABLE COMPOSITE CHALLENGES ──
+  if (ch.isComposite && ch.subChallenges) {
+    let totalPct = 0;
+    const subProgresses = [];
+    
+    // Evaluate every sub-challenge and store its individual progress
+    for (const sub of ch.subChallenges) {
+      const sp = getChallengeProgress(sub);
+      // Grab the description directly from the sub-challenge, or parse it
+      subProgresses.push({ desc: getChallengeDescription(sub), ...sp });
+      totalPct += sp.pct; 
+    }
+    
+    const avgPct = totalPct / ch.subChallenges.length;
+    
+    // Pass the subProgresses array down to the UI
+    return { val: Math.floor(avgPct * 100), target: 100, pct: avgPct, subProgresses };
+  }
+
+  // Define variables FIRST
+  const s = profile.stats;
+  const { event, conditions, target } = ch;
+  let val = 0;
+
+  // 1. Direct event resolvers (Non-KILL events)
+  if (event === 'DAMAGE_DEALT') val = s.damageDealt?.[conditions.weapon];
+  else if (event === 'BARREL_DESTROYED') val = s.barrelDestroys;
+  else if (event === 'STATUS_APPLIED') val = s.empStuns;
+  else if (event === 'PICKUP') {
+    if (conditions.pickupType === 'railgun') val = s.railgunPickups;
+    else if (conditions.pickupType === 'flamethrower') val = s.flamethrowerPickups;
+    else val = s.energyPickups?.[conditions.weapon];
+  } 
+  // 2. KILL events (Dynamic condition resolving)
+  else if (event === 'KILL') {
+    // Find the highest priority modifier present in the conditions
+    const primaryKey = STAT_PRIORITY.find(key => conditions[key] !== undefined);
+    
+    if (primaryKey && STAT_RESOLVERS[primaryKey]) {
+        val = STAT_RESOLVERS[primaryKey](conditions, s);
+    } else if (conditions.weapon) {
+        val = s.killsWith?.[conditions.weapon]; // Base weapon kill fallback
+    }
+  }
+
+  val = Math.floor(val || 0);
+  return { val, target, pct: Math.min(1, val / target) };
 }
+
 export function getUnlockHint(u){
   if(u.secret)return u.challenge?getChallengeDescription(u):'???';
   if(u.level)return`Reach Level ${u.level}`;
@@ -1793,4 +3373,31 @@ function _showWeaponLevelUpToast(wName, newLv) {
   const html = `<div style="font-size:14px;color:#d8a030;letter-spacing:3px">WEAPON LEVEL UP</div><div style="font-size:32px;font-weight:bold;color:#d8f030;margin:2px 0">${wlabel} LVL ${newLv}</div>`;
   const css = 'position:fixed;top:30%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,.85);border:1px solid rgba(216,160,48,.5);padding:15px 30px;z-index:1100;text-align:center;font-family:"Courier New",monospace;pointer-events:none;animation:_fadeToast 2.5s forwards';
   _enqueueToast(html, 2500, css);
+}
+
+// ── Sequential unlock prerequisites ─────────────────────────────
+// Add `requires: '<id>'` to any UNLOCK_TABLE entry to gate it behind another
+// unlock of the same type+weapon (e.g. a bonus skin that should only become
+// available once a prior skin is owned). This is the generic mechanism for
+// "exception" content that sits outside the normal challenge progression —
+// no per-item special-casing is needed anywhere else.
+export function isPrereqUnlocked(u) {
+  if (!u.requires) return true;
+  if (u.type === 'weaponSkin') return isWeaponSkinUnlocked(u.weapon, u.requires);
+  if (u.type === 'attachment') return isAttachmentUnlocked(u.weapon, u.requires);
+  if (u.type === 'playerSkin') return isSkinUnlocked(u.requires);
+  return true;
+}
+
+// ── Stat bump helpers ────────────────────────────────────────────
+// Centralizes "create the bucket if missing, then increment," and gives
+// any per-weapon/per-type counter automatic per-map tracking for free —
+// the Progress tab's map filter just works for anything recorded this way.
+function _bump(obj, key, amt = 1) {
+  obj[key] = (obj[key] || 0) + amt;
+}
+function _bumpPerMap(s, statName, key, mapId, amt = 1) {
+  if (!s[statName]) s[statName] = {};
+  _bump(s[statName], key, amt);
+  _bump(s[statName], `${key}_${mapId}`, amt);
 }

@@ -2,9 +2,11 @@
 let actx = null;
 export function ensureAudio() {
   if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)();
+  if (actx.state === 'suspended') actx.resume();
 }
 
 function tone({ f = 440, t = 'square', d = .15, v = .15, det = 0, f2 = null } = {}) {
+  ensureAudio(); // Guarantee context is active before scheduling
   if (!actx) return;
   const o = actx.createOscillator(), g = actx.createGain();
   o.connect(g); g.connect(actx.destination);
@@ -108,5 +110,17 @@ export const sfx = {
     tone({ f: 180 + Math.random() * 40, t:'sine',    d:.18, v: vol * 0.08 }); // low rotor hum
     tone({ f: 360 + Math.random() * 60, t:'sine',    d:.14, v: vol * 0.05 }); // first harmonic
     tone({ f: 2600 + Math.random() * 400, t:'square', d:.06, v: vol * 0.03 }); // thin electric whirr
+  },
+  matchWin: () => {
+    [440, 554, 659, 880].forEach((f, i) =>
+      setTimeout(() => tone({ f, t: 'sine', d: 0.25, v: 0.18 }), i * 120)
+    );
+    setTimeout(() => tone({ f: 880, t: 'sine', d: 0.6, v: 0.22 }), 500);
+  },
+  matchLose: () => {
+    [440, 370, 330, 262].forEach((f, i) =>
+      setTimeout(() => tone({ f, t: 'sine', d: 0.3, v: 0.15 }), i * 180)
+    );
+    setTimeout(() => tone({ f: 130, t: 'sawtooth', d: 0.5, v: 0.12 }), 750);
   },
 };

@@ -1,7 +1,7 @@
 // ui.js – HUD updates, hit marker, leaderboard name modal
 import { player } from './gameState.js';
-import { WDEFS, inventory, curWep, refreshSlotHUD } from './weapons.js';
-import { hasDualTrigger, hasEnergyConverter, getEffectiveStats } from './progression.js';
+import { WDEFS, curWep, refreshSlotHUD } from './weapons.js';
+import { getLoadout, hasEnergyConverter, getEffectiveStats } from './progression.js';
 
 export function updateHUD() {
   const hp  = document.getElementById('hpBar');
@@ -74,9 +74,9 @@ export function updateHUD() {
 
   // Add a hint near the ammo/heat counter
   let modeHint = document.getElementById('plasmaModeHint');
+  const currentLoadout = getLoadout(curWep);
 
-  // Only show the toggle if they ACTUALLY have the attachment equipped
-  if (curWep === 'PLASMA' && hasDualTrigger()) {
+  if (curWep === 'PLASMA' && currentLoadout.attachments?.special === 'dual_trigger') {
     if (!modeHint) {
         modeHint = document.createElement('div');
         modeHint.id = 'plasmaModeHint';
@@ -85,7 +85,18 @@ export function updateHUD() {
     }
     modeHint.style.display = 'block';
     modeHint.innerText = `[V] MODE: ${player.plasmaAltMode ? 'SNIPER' : 'BURST'}`;
-  } else if (modeHint) {
+  } 
+  else if (curWep === 'FLAMETHROWER' && currentLoadout.attachments?.special === 'thermal_blast') {
+    if (!modeHint) {
+        modeHint = document.createElement('div');
+        modeHint.id = 'plasmaModeHint';
+        modeHint.style.cssText = 'position:fixed;bottom:160px;left:50%;transform:translateX(-50%);color:#E85E76;font-family:monospace;font-size:14px;text-shadow:1px 1px #000;';
+        document.body.appendChild(modeHint);
+    }
+    modeHint.style.display = 'block';
+    modeHint.innerText = `[V] THERMAL BLAST`;
+  } 
+  else if (modeHint) {
       modeHint.style.display = 'none';
   }
 
@@ -137,49 +148,6 @@ export function wireDeathSubmit(onSubmit) {
     btn.disabled = true;
     btn.textContent = '✓ SUBMITTED';
   });
-}
-
-// ── FFA HUD: live scoreboard + timer ─────────────────────────
-let _ffaHudEl = null;
-
-export function updateFfaHUD(scoreRows, timeLeft, localId) {
-  if (!_ffaHudEl) {
-    _ffaHudEl = document.createElement('div');
-    _ffaHudEl.id = 'ffaHud';
-    _ffaHudEl.style.cssText = [
-      'position:fixed;top:14px;left:50%;transform:translateX(-50%)',
-      'min-width:260px;max-width:380px',
-      'background:rgba(0,0,0,.68);border:1px solid #333',
-      'padding:8px 14px;z-index:800',
-      'font-family:"Courier New",monospace;font-size:13px',
-      'pointer-events:none;user-select:none',
-    ].join(';');
-    document.body.appendChild(_ffaHudEl);
-  }
-
-  const m = Math.floor(timeLeft / 60);
-  const s = String(Math.floor(timeLeft % 60)).padStart(2, '0');
-  const timer = `<div style="text-align:center;color:#d8f030;font-weight:bold;font-size:15px;margin-bottom:6px;letter-spacing:2px">${m}:${s}</div>`;
-
-  const MEDALS = ['🥇','🥈','🥉'];
-  const rows = (scoreRows ?? []).slice(0, 8).map((r, i) => {
-    const isYou = localId ? r.id === localId : i === 0;
-    const medal = MEDALS[i] ?? `${i + 1}.`;
-    const col   = isYou ? '#d8f030' : '#aaa';
-    const bold  = isYou ? 'font-weight:bold;' : '';
-    return `<div style="display:flex;justify-content:space-between;gap:10px;color:${col};${bold}padding:2px 0">
-      <span style="min-width:22px;color:#557733">${medal}</span>
-      <span style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${_esc(r.name)}${isYou ? ' ◀' : ''}</span>
-      <span style="font-weight:bold;color:#d8f030">${r.score}</span>
-    </div>`;
-  }).join('');
-
-  _ffaHudEl.innerHTML = timer + rows;
-  _ffaHudEl.style.display = 'block';
-}
-
-export function hideFfaHUD() {
-  if (_ffaHudEl) _ffaHudEl.style.display = 'none';
 }
 
 // ── Room config banner ────────────────────────────────────────

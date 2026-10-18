@@ -3,9 +3,10 @@
 <head>
 <link rel="icon" href="data:,">
 <meta charset="UTF-8">
-<title>SCRAPPY - FPS</title>
+<title>SCRAPPY</title>
 <script src="https://cdn.babylonjs.com/recast.js"></script>
-<script src="/js/babylon.max.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/babylonjs@9.14.0/babylon.js"></script>
+<script src="https://cdn.babylonjs.com/loaders/babylonjs.loaders.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
@@ -32,48 +33,82 @@
     return bannedWords.some(word => lower.includes(word));
   }
 
-  document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", () => {
+    // 1. Force the map dropdown to reset visually to match the game logic
+    const mapDropdown = document.getElementById('mapDropdown');
+    if (mapDropdown) mapDropdown.value = 'scrapyard';
+
     const loginBtn = document.getElementById('loginBtn');
+    const logoutBtn = document.getElementById('logoutBtn'); 
     const startBtn = document.getElementById('startBtn');
-    const pvpBtn = document.getElementById('pvpBtn');
+    //const pvpBtn = document.getElementById('pvpBtn');
+    const loadoutBtn = document.getElementById('loadoutBtn'); 
     const nameModal = document.getElementById('nameModal');
     const nameInput = document.getElementById('nameInput');
     const nameSubmit = document.getElementById('nameSubmit');
     const nameError = document.getElementById('nameError');
+    const mapSelectSection = document.getElementById('mapSelectSection');
+    const leaderboardSection = document.getElementById('leaderboardSection');
 
     let currentUser = null;
 
-    // 1. Trigger Login on Click
+    // 1. Trigger Login
     loginBtn.onclick = () => {
       const provider = new firebase.auth.GoogleAuthProvider();
       firebase.auth().signInWithPopup(provider).catch(console.error);
     };
 
-    // 2. Listen for Auth State Changes
+    // 2. Trigger Logout & Wipe Local Cache
+    if (logoutBtn) {
+      logoutBtn.onclick = () => {
+        firebase.auth().signOut().then(() => {
+          // Explicitly wipe the local cache to prevent cross-account progress inheritance!
+          localStorage.removeItem('botarena_profile');
+          window.location.reload(); 
+        }).catch(console.error);
+      };
+    }
+
+    // 3. Listen for Auth State Changes
     firebase.auth().onAuthStateChanged(async (user) => {
       if (user) {
         currentUser = user;
         loginBtn.style.display = 'none';
+        logoutBtn.style.display = 'block'; // Show subtle logout
         
         // Check if user already set a display name
         const userDoc = await firebase.firestore().collection('users').doc(user.uid).get();
         if (userDoc.exists && userDoc.data().displayName) {
-           enableGame(userDoc.data().displayName);
+           const dName = userDoc.data().displayName;
+           
+           import('./js/progression.js').then(({ profile, saveProfile }) => {
+               profile.displayName = dName;
+               profile.name = dName;
+               saveProfile();
+           });
+           
+           enableGame(dName);
         } else {
            nameModal.classList.remove('hidden');
            nameModal.classList.add('visible');
         }
       } else {
+        // Logged Out State - Hide everything except login
         loginBtn.style.display = 'inline-block';
+        logoutBtn.style.display = 'none';
         startBtn.style.display = 'none';
-        pvpBtn.style.display = 'none';
+        //const pvpBtn = document.getElementById('pvpBtn');
+        //pvpBtn.style.display = 'none';
+        if (loadoutBtn) loadoutBtn.style.display = 'none';
+        mapSelectSection.style.display = 'none';
+        leaderboardSection.style.display = 'none';
       }
     });
 
-    // 3. Handle Name Submission
+    // 4. Handle Name Submission
     nameSubmit.onclick = async () => {
        const rawName = nameInput.value.trim();
-       const name = rawName.toUpperCase(); // Force uppercase for style
+       const name = rawName.toUpperCase(); 
        
        if (name.length < 3) { nameError.textContent = "Name must be at least 3 characters."; return; }
        if (!/^[A-Z0-9_]+$/.test(name)) { nameError.textContent = "Letters, numbers, and underscores only."; return; }
@@ -83,7 +118,6 @@
        nameSubmit.textContent = "CHECKING...";
 
        try {
-          // Check Uniqueness (case-insensitive)
           const snapshot = await firebase.firestore().collection('users')
             .where('displayName_lower', '==', name.toLowerCase()).get();
             
@@ -94,10 +128,15 @@
              return;
           }
 
-          // Save Name
           await firebase.firestore().collection('users').doc(currentUser.uid).set({
              displayName: name,
              displayName_lower: name.toLowerCase()
+          });
+          
+          import('./js/progression.js').then(({ profile, saveProfile }) => {
+              profile.displayName = name;
+              profile.name = name;
+              saveProfile();
           });
 
           nameModal.classList.remove('visible');
@@ -111,28 +150,33 @@
        }
     };
 
-    // 4. Unlock Game & Inject Name into UI
+    // 5. Unlock Game UI
     function enableGame(displayName) {
       startBtn.style.display = 'inline-block';
-      pvpBtn.style.display = 'inline-block';
-      document.getElementById('mapSelectSection').style.display = 'flex';
-      document.getElementById('leaderboardSection').style.display = 'block';
+      //.style.display = 'inline-block';
+      if (loadoutBtn) loadoutBtn.style.display = 'inline-block';
+      mapSelectSection.style.display = 'flex';
+      leaderboardSection.style.display = 'block';
        
-       // Pre-fill and lock the PvP Lobby input
        const pvpNameField = document.getElementById('pvpName');
        if (pvpNameField) {
            pvpNameField.value = displayName;
            pvpNameField.disabled = true;
        }
        
-       // Pre-fill and lock the Solo Death Screen input
        const deathNameField = document.getElementById('playerNameInput');
        if (deathNameField) {
            deathNameField.value = displayName;
            deathNameField.disabled = true;
        }
+       
+       // Force main.js to recheck the player's level for PvP and Hard Mode!
+       if (typeof window.refreshMenuUI === 'function') {
+           window.refreshMenuUI();
+       }
     }
   });
+  
 </script>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
@@ -234,6 +278,53 @@ body { background:#000; overflow:hidden; font-family:'Arial',sans-serif; }
 #pvpEndScreen h2 { font-size:48px; margin-bottom:10px; letter-spacing:4px; text-transform:uppercase; }
 #pvpEndResult { color:#d8f030; text-shadow:0 0 20px #99cc00; }
 #pvpEndScore  { color:#aaa; font-size:22px; margin-bottom:28px; }
+/* Mode scoreboard */
+#modeScoreboard {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1100;
+  background: rgba(10, 12, 20, 0.92);
+  border: 2px solid #5F6B6D;
+  border-radius: 8px;
+  padding: 24px 32px;
+  min-width: 500px;
+  max-width: 750px;
+  font-family: 'Courier New', monospace;
+  color: #F8FAF7;
+  display: none;
+  backdrop-filter: blur(6px);
+  pointer-events: none;
+}
+
+/* Mode death overlay */
+#modeDeathOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1050;
+  display: none;
+  pointer-events: none;
+}
+
+/* Match timer HUD */
+#_matchTimerHUD {
+  position: fixed;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 999;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  font-family: 'Courier New', monospace;
+  font-weight: bold;
+  text-shadow: 0 0 6px #000;
+  pointer-events: none;
+  user-select: none;
+}
+
 </style>
 </head>
 <body>
@@ -254,28 +345,43 @@ body { background:#000; overflow:hidden; font-family:'Arial',sans-serif; }
   <div id="loadMsg" style="color:#7a9940;font-size:13px;letter-spacing:3px;margin-bottom:10px;display:none">&#9654; LOADING LIBREQUAKE TEXTURES&hellip;</div>
   
   <button class="btn" id="loginBtn" style="background:linear-gradient(to bottom,#1a3a50,#081a2a);border-color:#3377aa;color:#aaccff;">&#128273; LOGIN WITH GOOGLE</button>
+  <button id="logoutBtn" style="display:none; position:fixed; bottom:15px; right:15px; background:rgba(0,0,0,0.5); border:1px solid #333; color:#7a9940; font-size:11px; padding:6px 12px; cursor:pointer; letter-spacing:1px; z-index:2000; text-transform:uppercase; border-radius:4px; transition:all 0.2s;">Logout</button>  
+  
   <div id="mapSelectSection" style="margin:12px 0;display:none;align-items:center;gap:10px;">
-    <span style="color:#88aa44;font-size:13px;letter-spacing:2px;">MAP:</span>
-    <select id="mapDropdown" style="background:#0d1a05;color:#d8f030;border:1px solid #557733;padding:6px 12px;font-family:'Courier New',monospace;font-size:14px;cursor:pointer;letter-spacing:1px;">
-      <option value="scrapyard">🏭 SCRAPYARD</option>
-      <option value="jungle">🌴 TEMPLE RUINS</option>
-    </select>
-    <label style="color:#E85E76; font-size:14px; font-weight:bold; cursor:pointer; margin-left: 10px; letter-spacing: 2px;">
-      <input type="checkbox" id="hardModeToggle"> ⚡ HARD
-    </label>
+      <span style="color:#88aa44;font-size:13px;letter-spacing:2px;">MAP:</span>
+      <select id="mapDropdown" style="background:#0d1a05;color:#d8f030;border:1px solid #557733;padding:6px 12px;font-family:'Courier New',monospace;font-size:14px;cursor:pointer;letter-spacing:1px;">
+        <option value="scrapyard">🏭 SCRAPYARD</option>
+        <option value="jungle">🌴 TEMPLE RUINS</option>
+        <option value="city">🏙️ ROOFTOP CITY</option>
+        <!--option value="terminal">🛫 TERMINAL</option-->
+      </select>
+      <div style="display: flex; flex-direction: column; align-items: flex-start; margin-left: 10px;">
+        <label id="hardModeLabel" style="color:#E85E76; font-size:14px; font-weight:bold; cursor:pointer; letter-spacing: 2px;">
+          <input type="checkbox" id="hardModeToggle" disabled> ⚡ HARD
+        </label>
+        <div id="hardModeDesc" style="color:#848591; font-size:10px; margin-top:2px;">Unlock by clearing a boss wave</div>
+      </div>
+    </div>
+    
+  <div style="display: flex; flex-direction: column; align-items: stretch; gap: 10px; margin: 10px auto; width: 100%; max-width: 280px;">
+    <button class="btn" id="startBtn" style="display:none; padding-left:0; padding-right:0; text-align:center;">▶ SOLO RUN</button>
+    <!--button class="btn" id="pvpBtn" style="display:none; padding-left:0; padding-right:0; text-align:center;">⚔️ PvP TDM</button-->  
+    <button class="btn" id="loadoutBtn" style="display:none; padding-left:0; padding-right:0; text-align:center;">LOADOUT</button>
   </div>
-  <button class="btn" id="startBtn" style="display:none;">&#9654; SOLO RUN</button>
-  <button class="btn" id="pvpBtn" style="display:none;background:linear-gradient(to bottom,#2a1a50,#10082a);border-color:#5533aa;color:#c8aaff;">&#9876; PvP TDM</button>  <div class="controls-hint">
+  
+  <button id="logoutBtn" style="display:none; position:fixed; bottom:20px; right:20px; background:transparent; border:none; color:#848591; font-size:12px; cursor:pointer; letter-spacing:1px; z-index:2000; text-transform:uppercase;">[ Logout ]</button>
+  
+  <div class="controls-hint">
     <b>WASD</b> Move &nbsp;|&nbsp; <b>Mouse</b> Aim &nbsp;|&nbsp; <b>LMB</b> Shoot (hold auto)<br>
     <b>Shift</b> Sprint &nbsp;|&nbsp; <b>Space</b> Jump &nbsp;|&nbsp; <b>1/2/3</b> Weapon &nbsp;|&nbsp; <b>Q</b> Quick-swap &nbsp;|&nbsp; <b>F</b> Pick up &nbsp;|&nbsp; <b>ESC</b> Pause
   </div>
   <div id="leaderboardSection" style="display:none">
-  <div style="display:flex; justify-content:center; gap:10px; margin-bottom: 8px;">
-    <button id="lbStandardBtn" class="btn-sm" style="border-color:#15CAB6; color:#15CAB6;">STANDARD</button>
-    <button id="lbHardBtn" class="btn-sm" style="border-color:#5F6B6D; color:#ADAEB5;">⚡ HARD</button>
+    <div style="display:flex; justify-content:center; gap:10px; margin-bottom: 8px;">
+      <button id="lbStandardBtn" class="btn-sm" style="border-color:#15CAB6; color:#15CAB6;">STANDARD</button>
+      <button id="lbHardBtn" class="btn-sm" style="border-color:#5F6B6D; color:#ADAEB5;">⚡ HARD</button>
+    </div>
+    <ul id="leaderboardList" style="height: 365px; overflow-y: auto; margin: 0; padding-left: 15px; list-style-position: inside;"><li style="color:#557733; list-style-type: none;">LOADING…</li></ul>
   </div>
-  <ul id="leaderboardList"><li style="color:#557733">LOADING…</li></ul>
-</div>
 
   <div id="pvpLobby">
     <h2>&#9876; PvP Lobby</h2>
@@ -343,13 +449,14 @@ body { background:#000; overflow:hidden; font-family:'Arial',sans-serif; }
     <input id="playerNameInput" maxlength="20" placeholder="ENTER NAME&#8230;" />
     <button class="btn-sm" id="submitScoreBtn">SUBMIT SCORE</button>
   </div>
-  <button class="btn" id="respawnBtn">&#8634; TRY AGAIN</button>
+  <button class="btn" id="respawnBtn">&#8634; RETURN TO MENU</button>
 </div>
 
 <div id="victoryScreen" class="screen hidden">
   <h2>&#9881; VICTORY &#9881;</h2>
   <p id="victoryStats"></p>
   <button class="btn" id="victoryBtn">&#8634; PLAY AGAIN</button>
+  <button class="btn" id="respawnBtn">&#8634; RETURN TO MENU</button>
 </div>
 
 <div id="pvpEndScreen" class="screen hidden">
@@ -360,11 +467,13 @@ body { background:#000; overflow:hidden; font-family:'Arial',sans-serif; }
 
 <div id="pauseOverlay">
   <h2>&#8212; PAUSED &#8212;</h2>
-  <p>Click the game or press ESC to resume</p>
+  <p style="margin-bottom:20px;">Click the game or press ESC to resume</p>
   
-  <button class="btn" id="resumeBtn" style="margin-bottom:15px; background:#222; border-color:#d8f030">
-    &#9654; RESUME MATCH
-  </button>
+  <div id="pauseBtnContainer" style="display: flex; flex-direction: column; align-items: stretch; gap: 10px; width: 100%; max-width: 280px;">
+    <button class="btn" id="resumeBtn" style="background:#222; border-color:#d8f030; padding-left:0; padding-right:0; text-align:center;">
+      &#9654; RESUME MATCH
+    </button>
+  </div>
 </div>
 
 <script type="module" src="js/main.js"></script>

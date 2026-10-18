@@ -1,0 +1,2270 @@
+{
+  "version": "1.0",
+  "map": "scrapyard",
+  "objects": [
+    {
+      "generator": "createWall",
+      "params": {
+        "px": 0,
+        "py": 25,
+        "pz": 48,
+        "sx": 98,
+        "sy": 50,
+        "sz": 2,
+        "mat": "steel"
+      },
+      "position": {
+        "x": 0,
+        "y": 25,
+        "z": 48
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "generator": "createWall",
+      "params": {
+        "px": 0,
+        "py": 25,
+        "pz": -48,
+        "sx": 98,
+        "sy": 50,
+        "sz": 2,
+        "mat": "steel"
+      },
+      "position": {
+        "x": 0,
+        "y": 25,
+        "z": -48
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "generator": "createWall",
+      "params": {
+        "px": 48,
+        "py": 25,
+        "pz": 0,
+        "sx": 2,
+        "sy": 50,
+        "sz": 98,
+        "mat": "rust2"
+      },
+      "position": {
+        "x": 48,
+        "y": 25,
+        "z": 0
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "generator": "createWall",
+      "params": {
+        "px": -48,
+        "py": 25,
+        "pz": 0,
+        "sx": 2,
+        "sy": 50,
+        "sz": 98,
+        "mat": "rust2"
+      },
+      "position": {
+        "x": -48,
+        "y": 25,
+        "z": 0
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "generator": "createSlab",
+      "params": {
+        "px": 0,
+        "surfY": -1.5,
+        "pz": 0,
+        "sx": 24,
+        "sz": 24,
+        "mat": "asphalt",
+        "lift": true,
+        "thickness": 0.8
+      },
+      "position": {
+        "x": 0,
+        "y": -1.9,
+        "z": 0
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "generator": "createSlab",
+      "params": {
+        "px": -30,
+        "surfY": 0,
+        "pz": 0,
+        "sx": 36,
+        "sz": 96,
+        "mat": "asphalt",
+        "lift": true,
+        "thickness": 0.8
+      },
+      "position": {
+        "x": -30,
+        "y": -0.4,
+        "z": 0
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "generator": "createSlab",
+      "params": {
+        "px": 30,
+        "surfY": 0,
+        "pz": 0,
+        "sx": 36,
+        "sz": 96,
+        "mat": "asphalt",
+        "lift": true,
+        "thickness": 0.8
+      },
+      "position": {
+        "x": 30,
+        "y": -0.4,
+        "z": 0
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "generator": "createSlab",
+      "params": {
+        "px": 0,
+        "surfY": 0,
+        "pz": 30,
+        "sx": 24,
+        "sz": 36,
+        "mat": "asphalt",
+        "lift": true,
+        "thickness": 0.8
+      },
+      "position": {
+        "x": 0,
+        "y": -0.4,
+        "z": 30
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "generator": "createSlab",
+      "params": {
+        "px": 0,
+        "surfY": 0,
+        "pz": -30,
+        "sx": 24,
+        "sz": 36,
+        "mat": "asphalt",
+        "lift": true,
+        "thickness": 0.8
+      },
+      "position": {
+        "x": 0,
+        "y": -0.4,
+        "z": -30
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "generator": "createBarrel",
+      "params": {
+        "px": -24,
+        "pz": 24,
+        "yOff": 0
+      },
+      "position": {
+        "x": -24,
+        "y": 0.46,
+        "z": 24
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "generator": "createBarrel",
+      "params": {
+        "px": -24,
+        "pz": -24,
+        "yOff": 0
+      },
+      "position": {
+        "x": -24,
+        "y": 0.46,
+        "z": -24
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "generator": "createBarrel",
+      "params": {
+        "px": 24,
+        "pz": 24,
+        "yOff": 0
+      },
+      "position": {
+        "x": 24,
+        "y": 0.46,
+        "z": 24
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "generator": "createBarrel",
+      "params": {
+        "px": 24,
+        "pz": -24,
+        "yOff": 0
+      },
+      "position": {
+        "x": 24,
+        "y": 0.46,
+        "z": -24
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "generator": "createBarrel",
+      "params": {
+        "px": -38,
+        "pz": 0,
+        "yOff": 0
+      },
+      "position": {
+        "x": -38,
+        "y": 0.46,
+        "z": 0
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "generator": "createBarrel",
+      "params": {
+        "px": 38,
+        "pz": 0,
+        "yOff": 0
+      },
+      "position": {
+        "x": 38,
+        "y": 0.46,
+        "z": 0
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "generator": "createWall",
+      "params": {
+        "px": -12,
+        "py": 2,
+        "pz": 5,
+        "sx": 2,
+        "sy": 4,
+        "sz": 17,
+        "mat": "rustwall"
+      },
+      "position": {
+        "x": -12,
+        "y": 2,
+        "z": 5
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "generator": "createWall",
+      "params": {
+        "px": -2,
+        "py": 2,
+        "pz": 13,
+        "sx": 20,
+        "sy": 4,
+        "sz": 2,
+        "mat": "rustwall"
+      },
+      "position": {
+        "x": -2,
+        "y": 2,
+        "z": 13
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "generator": "createWall",
+      "params": {
+        "px": 12,
+        "py": 2,
+        "pz": -5,
+        "sx": 2,
+        "sy": 4,
+        "sz": 17,
+        "mat": "rustwall"
+      },
+      "position": {
+        "x": 12,
+        "y": 2,
+        "z": -5
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "generator": "createWall",
+      "params": {
+        "px": 2,
+        "py": 2,
+        "pz": -13,
+        "sx": 20,
+        "sy": 4,
+        "sz": 2,
+        "mat": "rustwall"
+      },
+      "position": {
+        "x": 2,
+        "y": 2,
+        "z": -13
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "generator": "createWall",
+      "params": {
+        "px": 0,
+        "py": 2,
+        "pz": 0,
+        "sx": 2,
+        "sy": 4,
+        "sz": 18,
+        "mat": "rustwall"
+      },
+      "position": {
+        "x": 0,
+        "y": 2,
+        "z": 0
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "generator": "createSlab",
+      "params": {
+        "px": -36,
+        "surfY": 6,
+        "pz": 36,
+        "sx": 24,
+        "sz": 24,
+        "mat": "bridge",
+        "lift": true,
+        "thickness": 0.8
+      },
+      "position": {
+        "x": -36,
+        "y": 5.819999999999999,
+        "z": 36
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "generator": "createSlab",
+      "params": {
+        "px": 36,
+        "surfY": 6,
+        "pz": 36,
+        "sx": 24,
+        "sz": 24,
+        "mat": "bridge",
+        "lift": true,
+        "thickness": 0.8
+      },
+      "position": {
+        "x": 36,
+        "y": 5.819999999999999,
+        "z": 36
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "generator": "createSlab",
+      "params": {
+        "px": -36,
+        "surfY": 6,
+        "pz": -36,
+        "sx": 24,
+        "sz": 24,
+        "mat": "bridge",
+        "lift": true,
+        "thickness": 0.8
+      },
+      "position": {
+        "x": -36,
+        "y": 5.819999999999999,
+        "z": -36
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "generator": "createSlab",
+      "params": {
+        "px": 36,
+        "surfY": 6,
+        "pz": -36,
+        "sx": 24,
+        "sz": 24,
+        "mat": "bridge",
+        "lift": true,
+        "thickness": 0.8
+      },
+      "position": {
+        "x": 36,
+        "y": 5.819999999999999,
+        "z": -36
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "generator": "createWall",
+      "params": {
+        "px": -32,
+        "py": 7,
+        "pz": 25,
+        "sx": 12,
+        "sy": 2,
+        "sz": 2,
+        "mat": "rust2"
+      },
+      "position": {
+        "x": -32,
+        "y": 7,
+        "z": 25
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "generator": "createWall",
+      "params": {
+        "px": -25,
+        "py": 7,
+        "pz": 30,
+        "sx": 2,
+        "sy": 2,
+        "sz": 12,
+        "mat": "rust2"
+      },
+      "position": {
+        "x": -25,
+        "y": 7,
+        "z": 30
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "generator": "createWall",
+      "params": {
+        "px": 32,
+        "py": 7,
+        "pz": -25,
+        "sx": 12,
+        "sy": 2,
+        "sz": 2,
+        "mat": "rust2"
+      },
+      "position": {
+        "x": 32,
+        "y": 7,
+        "z": -25
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "generator": "createWall",
+      "params": {
+        "px": 25,
+        "py": 7,
+        "pz": -30,
+        "sx": 2,
+        "sy": 2,
+        "sz": 12,
+        "mat": "rust2"
+      },
+      "position": {
+        "x": 25,
+        "y": 7,
+        "z": -30
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "generator": "createBarrel",
+      "params": {
+        "px": -34,
+        "pz": 34,
+        "yOff": 6
+      },
+      "position": {
+        "x": -34,
+        "y": 6.68,
+        "z": 34
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "generator": "createBarrel",
+      "params": {
+        "px": 34,
+        "pz": 34,
+        "yOff": 6
+      },
+      "position": {
+        "x": 34,
+        "y": 6.68,
+        "z": 34
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "generator": "createBarrel",
+      "params": {
+        "px": -34,
+        "pz": -34,
+        "yOff": 6
+      },
+      "position": {
+        "x": -34,
+        "y": 6.68,
+        "z": -34
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "generator": "createBarrel",
+      "params": {
+        "px": 34,
+        "pz": -34,
+        "yOff": 6
+      },
+      "position": {
+        "x": 34,
+        "y": 6.68,
+        "z": -34
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "generator": "createSlab",
+      "params": {
+        "px": 0,
+        "surfY": 12,
+        "pz": 38,
+        "sx": 56,
+        "sz": 12,
+        "mat": "asphalt",
+        "lift": true,
+        "thickness": 0.8
+      },
+      "position": {
+        "x": 0,
+        "y": 11.82,
+        "z": 38
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "generator": "createSlab",
+      "params": {
+        "px": 0,
+        "surfY": 12,
+        "pz": -38,
+        "sx": 56,
+        "sz": 12,
+        "mat": "asphalt",
+        "lift": true,
+        "thickness": 0.8
+      },
+      "position": {
+        "x": 0,
+        "y": 11.82,
+        "z": -38
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "generator": "createSlab",
+      "params": {
+        "px": -36,
+        "surfY": 12,
+        "pz": 0,
+        "sx": 16,
+        "sz": 40,
+        "mat": "asphalt",
+        "lift": true,
+        "thickness": 0.8
+      },
+      "position": {
+        "x": -36,
+        "y": 11.82,
+        "z": 0
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "generator": "createSlab",
+      "params": {
+        "px": 36,
+        "surfY": 12,
+        "pz": 0,
+        "sx": 16,
+        "sz": 40,
+        "mat": "asphalt",
+        "lift": true,
+        "thickness": 0.8
+      },
+      "position": {
+        "x": 36,
+        "y": 11.82,
+        "z": 0
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "generator": "createWall",
+      "params": {
+        "px": 0,
+        "py": 13,
+        "pz": -33,
+        "sx": 24,
+        "sy": 2,
+        "sz": 2,
+        "mat": "rust2"
+      },
+      "position": {
+        "x": 0,
+        "y": 13,
+        "z": -33
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "generator": "createWall",
+      "params": {
+        "px": 0,
+        "py": 13,
+        "pz": 33,
+        "sx": 24,
+        "sy": 2,
+        "sz": 2,
+        "mat": "rust2"
+      },
+      "position": {
+        "x": 0,
+        "y": 13,
+        "z": 33
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "generator": "createWall",
+      "params": {
+        "px": -29,
+        "py": 13,
+        "pz": 12,
+        "sx": 2,
+        "sy": 2,
+        "sz": 16,
+        "mat": "rust2"
+      },
+      "position": {
+        "x": -29,
+        "y": 13,
+        "z": 12
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "generator": "createWall",
+      "params": {
+        "px": -29,
+        "py": 13,
+        "pz": -12,
+        "sx": 2,
+        "sy": 2,
+        "sz": 16,
+        "mat": "rust2"
+      },
+      "position": {
+        "x": -29,
+        "y": 13,
+        "z": -12
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "generator": "createWall",
+      "params": {
+        "px": 29,
+        "py": 13,
+        "pz": 12,
+        "sx": 2,
+        "sy": 2,
+        "sz": 16,
+        "mat": "rust2"
+      },
+      "position": {
+        "x": 29,
+        "y": 13,
+        "z": 12
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "generator": "createWall",
+      "params": {
+        "px": 29,
+        "py": 13,
+        "pz": -12,
+        "sx": 2,
+        "sy": 2,
+        "sz": 16,
+        "mat": "rust2"
+      },
+      "position": {
+        "x": 29,
+        "y": 13,
+        "z": -12
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "generator": "createSlab",
+      "params": {
+        "px": -45.9,
+        "surfY": 12,
+        "pz": 0,
+        "sx": 4.2,
+        "sz": 91.8,
+        "mat": "bridge",
+        "lift": true,
+        "thickness": 0.8
+      },
+      "position": {
+        "x": -45.9,
+        "y": 11.82,
+        "z": 0
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "generator": "createSlab",
+      "params": {
+        "px": 45.9,
+        "surfY": 12,
+        "pz": 0,
+        "sx": 4.2,
+        "sz": 91.8,
+        "mat": "bridge",
+        "lift": true,
+        "thickness": 0.8
+      },
+      "position": {
+        "x": 45.9,
+        "y": 11.82,
+        "z": 0
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "generator": "createSlab",
+      "params": {
+        "px": 0,
+        "surfY": 12,
+        "pz": 45.9,
+        "sx": 87.6,
+        "sz": 4.2,
+        "mat": "bridge",
+        "lift": true,
+        "thickness": 0.8
+      },
+      "position": {
+        "x": 0,
+        "y": 11.82,
+        "z": 45.9
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "generator": "createSlab",
+      "params": {
+        "px": 0,
+        "surfY": 12,
+        "pz": -45.9,
+        "sx": 87.6,
+        "sz": 4.2,
+        "mat": "bridge",
+        "lift": true,
+        "thickness": 0.8
+      },
+      "position": {
+        "x": 0,
+        "y": 11.82,
+        "z": -45.9
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "generator": "createBarrel",
+      "params": {
+        "px": -16,
+        "pz": 42,
+        "yOff": 12
+      },
+      "position": {
+        "x": -16,
+        "y": 12.680000000000001,
+        "z": 42
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "generator": "createBarrel",
+      "params": {
+        "px": 16,
+        "pz": 42,
+        "yOff": 12
+      },
+      "position": {
+        "x": 16,
+        "y": 12.680000000000001,
+        "z": 42
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "generator": "createBarrel",
+      "params": {
+        "px": -16,
+        "pz": -42,
+        "yOff": 12
+      },
+      "position": {
+        "x": -16,
+        "y": 12.680000000000001,
+        "z": -42
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "generator": "createBarrel",
+      "params": {
+        "px": 16,
+        "pz": -42,
+        "yOff": 12
+      },
+      "position": {
+        "x": 16,
+        "y": 12.680000000000001,
+        "z": -42
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "generator": "createBarrel",
+      "params": {
+        "px": -36,
+        "pz": 16,
+        "yOff": 12
+      },
+      "position": {
+        "x": -36,
+        "y": 12.680000000000001,
+        "z": 16
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "generator": "createBarrel",
+      "params": {
+        "px": -36,
+        "pz": -16,
+        "yOff": 12
+      },
+      "position": {
+        "x": -36,
+        "y": 12.680000000000001,
+        "z": -16
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "generator": "createBarrel",
+      "params": {
+        "px": 36,
+        "pz": 16,
+        "yOff": 12
+      },
+      "position": {
+        "x": 36,
+        "y": 12.680000000000001,
+        "z": 16
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "generator": "createBarrel",
+      "params": {
+        "px": 36,
+        "pz": -16,
+        "yOff": 12
+      },
+      "position": {
+        "x": 36,
+        "y": 12.680000000000001,
+        "z": -16
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "generator": "createSlab",
+      "params": {
+        "px": 0,
+        "surfY": 18,
+        "pz": 0,
+        "sx": 24,
+        "sz": 64,
+        "mat": "bridge",
+        "lift": true,
+        "thickness": 0.8
+      },
+      "position": {
+        "x": 0,
+        "y": 17.82,
+        "z": 0
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "generator": "createWall",
+      "params": {
+        "px": -13,
+        "py": 20.5,
+        "pz": 26,
+        "sx": 2,
+        "sy": 5,
+        "sz": 12,
+        "mat": "steel"
+      },
+      "position": {
+        "x": -13,
+        "y": 20.5,
+        "z": 26
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "generator": "createWall",
+      "params": {
+        "px": 13,
+        "py": 20.5,
+        "pz": 26,
+        "sx": 2,
+        "sy": 5,
+        "sz": 12,
+        "mat": "steel"
+      },
+      "position": {
+        "x": 13,
+        "y": 20.5,
+        "z": 26
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "generator": "createWall",
+      "params": {
+        "px": -13,
+        "py": 19.25,
+        "pz": 12,
+        "sx": 2,
+        "sy": 2.5,
+        "sz": 16,
+        "mat": "rust2"
+      },
+      "position": {
+        "x": -13,
+        "y": 19.25,
+        "z": 12
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "generator": "createWall",
+      "params": {
+        "px": 13,
+        "py": 19.25,
+        "pz": 12,
+        "sx": 2,
+        "sy": 2.5,
+        "sz": 16,
+        "mat": "rust2"
+      },
+      "position": {
+        "x": 13,
+        "y": 19.25,
+        "z": 12
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "generator": "createWall",
+      "params": {
+        "px": -13,
+        "py": 19.25,
+        "pz": -12,
+        "sx": 2,
+        "sy": 2.5,
+        "sz": 16,
+        "mat": "rust2"
+      },
+      "position": {
+        "x": -13,
+        "y": 19.25,
+        "z": -12
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "generator": "createWall",
+      "params": {
+        "px": 13,
+        "py": 19.25,
+        "pz": -12,
+        "sx": 2,
+        "sy": 2.5,
+        "sz": 16,
+        "mat": "rust2"
+      },
+      "position": {
+        "x": 13,
+        "y": 19.25,
+        "z": -12
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "generator": "createWall",
+      "params": {
+        "px": -13,
+        "py": 20.5,
+        "pz": -26,
+        "sx": 2,
+        "sy": 5,
+        "sz": 12,
+        "mat": "steel"
+      },
+      "position": {
+        "x": -13,
+        "y": 20.5,
+        "z": -26
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "generator": "createWall",
+      "params": {
+        "px": 13,
+        "py": 20.5,
+        "pz": -26,
+        "sx": 2,
+        "sy": 5,
+        "sz": 12,
+        "mat": "steel"
+      },
+      "position": {
+        "x": 13,
+        "y": 20.5,
+        "z": -26
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "generator": "createWall",
+      "params": {
+        "px": -11.5,
+        "py": 19,
+        "pz": 12,
+        "sx": 1,
+        "sy": 2,
+        "sz": 1,
+        "mat": "asphalt"
+      },
+      "position": {
+        "x": -11.5,
+        "y": 19,
+        "z": 12
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "generator": "createWall",
+      "params": {
+        "px": 11.5,
+        "py": 19,
+        "pz": 12,
+        "sx": 1,
+        "sy": 2,
+        "sz": 1,
+        "mat": "asphalt"
+      },
+      "position": {
+        "x": 11.5,
+        "y": 19,
+        "z": 12
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "generator": "createWall",
+      "params": {
+        "px": -6,
+        "py": 19,
+        "pz": 20,
+        "sx": 6,
+        "sy": 2,
+        "sz": 2,
+        "mat": "rust2"
+      },
+      "position": {
+        "x": -6,
+        "y": 19,
+        "z": 20
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "generator": "createWall",
+      "params": {
+        "px": 6,
+        "py": 19,
+        "pz": 10,
+        "sx": 6,
+        "sy": 2,
+        "sz": 2,
+        "mat": "rust2"
+      },
+      "position": {
+        "x": 6,
+        "y": 19,
+        "z": 10
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "generator": "createWall",
+      "params": {
+        "px": -6,
+        "py": 19,
+        "pz": 0,
+        "sx": 6,
+        "sy": 2,
+        "sz": 2,
+        "mat": "rust2"
+      },
+      "position": {
+        "x": -6,
+        "y": 19,
+        "z": 0
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "generator": "createWall",
+      "params": {
+        "px": 6,
+        "py": 19,
+        "pz": -10,
+        "sx": 6,
+        "sy": 2,
+        "sz": 2,
+        "mat": "rust2"
+      },
+      "position": {
+        "x": 6,
+        "y": 19,
+        "z": -10
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "generator": "createWall",
+      "params": {
+        "px": -6,
+        "py": 19,
+        "pz": -20,
+        "sx": 6,
+        "sy": 2,
+        "sz": 2,
+        "mat": "rust2"
+      },
+      "position": {
+        "x": -6,
+        "y": 19,
+        "z": -20
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "generator": "createBarrel",
+      "params": {
+        "px": -10,
+        "pz": 0,
+        "yOff": 18
+      },
+      "position": {
+        "x": -10,
+        "y": 18.68,
+        "z": 0
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "generator": "createBarrel",
+      "params": {
+        "px": 10,
+        "pz": 0,
+        "yOff": 18
+      },
+      "position": {
+        "x": 10,
+        "y": 18.68,
+        "z": 0
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "generator": "createSlab",
+      "params": {
+        "px": 0,
+        "surfY": 24,
+        "pz": 19,
+        "sx": 28,
+        "sz": 26,
+        "mat": "asphalt",
+        "lift": true,
+        "thickness": 0.8
+      },
+      "position": {
+        "x": 0,
+        "y": 23.82,
+        "z": 19
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "generator": "createSlab",
+      "params": {
+        "px": 0,
+        "surfY": 24,
+        "pz": -19,
+        "sx": 28,
+        "sz": 26,
+        "mat": "asphalt",
+        "lift": true,
+        "thickness": 0.8
+      },
+      "position": {
+        "x": 0,
+        "y": 23.82,
+        "z": -19
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "generator": "createSlab",
+      "params": {
+        "px": -10,
+        "surfY": 24,
+        "pz": 0,
+        "sx": 10,
+        "sz": 12,
+        "mat": "asphalt",
+        "lift": true,
+        "thickness": 0.8
+      },
+      "position": {
+        "x": -10,
+        "y": 23.82,
+        "z": 0
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "generator": "createSlab",
+      "params": {
+        "px": 10,
+        "surfY": 24,
+        "pz": 0,
+        "sx": 10,
+        "sz": 12,
+        "mat": "asphalt",
+        "lift": true,
+        "thickness": 0.8
+      },
+      "position": {
+        "x": 10,
+        "y": 23.82,
+        "z": 0
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "generator": "createCeiling",
+      "params": {
+        "px": 0,
+        "y": 36,
+        "pz": 0,
+        "sx": 48,
+        "sz": 84,
+        "mat": "ceiling",
+        "collides": true
+      },
+      "position": {
+        "x": 0,
+        "y": 36,
+        "z": 0
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "generator": "createWall",
+      "params": {
+        "px": -12,
+        "py": 30,
+        "pz": 20,
+        "sx": 1,
+        "sy": 12,
+        "sz": 24,
+        "mat": "steel"
+      },
+      "position": {
+        "x": -12,
+        "y": 30,
+        "z": 20
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "generator": "createWall",
+      "params": {
+        "px": 12,
+        "py": 30,
+        "pz": 20,
+        "sx": 1,
+        "sy": 12,
+        "sz": 24,
+        "mat": "steel"
+      },
+      "position": {
+        "x": 12,
+        "y": 30,
+        "z": 20
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "generator": "createWall",
+      "params": {
+        "px": 0,
+        "py": 30,
+        "pz": 32,
+        "sx": 24,
+        "sy": 12,
+        "sz": 1,
+        "mat": "steel"
+      },
+      "position": {
+        "x": 0,
+        "y": 30,
+        "z": 32
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "generator": "createWall",
+      "params": {
+        "px": -9.5,
+        "py": 30,
+        "pz": 8,
+        "sx": 5,
+        "sy": 12,
+        "sz": 1,
+        "mat": "steel"
+      },
+      "position": {
+        "x": -9.5,
+        "y": 30,
+        "z": 8
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "generator": "createWall",
+      "params": {
+        "px": 9.5,
+        "py": 30,
+        "pz": 8,
+        "sx": 5,
+        "sy": 12,
+        "sz": 1,
+        "mat": "steel"
+      },
+      "position": {
+        "x": 9.5,
+        "y": 30,
+        "z": 8
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "generator": "createWall",
+      "params": {
+        "px": 0,
+        "py": 26,
+        "pz": 8,
+        "sx": 14,
+        "sy": 4,
+        "sz": 1,
+        "mat": "rust2"
+      },
+      "position": {
+        "x": 0,
+        "y": 26,
+        "z": 8
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "generator": "createWall",
+      "params": {
+        "px": -12,
+        "py": 30,
+        "pz": -14,
+        "sx": 1,
+        "sy": 12,
+        "sz": 28,
+        "mat": "steel"
+      },
+      "position": {
+        "x": -12,
+        "y": 30,
+        "z": -14
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "generator": "createWall",
+      "params": {
+        "px": 12,
+        "py": 30,
+        "pz": -14,
+        "sx": 1,
+        "sy": 12,
+        "sz": 28,
+        "mat": "steel"
+      },
+      "position": {
+        "x": 12,
+        "y": 30,
+        "z": -14
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "generator": "createWall",
+      "params": {
+        "px": 0,
+        "py": 30,
+        "pz": -28,
+        "sx": 24,
+        "sy": 12,
+        "sz": 1,
+        "mat": "steel"
+      },
+      "position": {
+        "x": 0,
+        "y": 30,
+        "z": -28
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    }
+  ]
+}

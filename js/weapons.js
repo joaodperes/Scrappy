@@ -8,33 +8,38 @@ import { isScoped } from './player.js'
 
 export const WDEFS = {
   PISTOL:   { name:'PISTOL', desc:'A reliable semi-auto sidearm. Low recoil and high accuracy make it deadly at range — and a headshot specialist in the right hands.', dmg:20, range:60, cd:.18, hitscan:true, ammo:24, aps:1, spread:.0, pellets:1, startAmmo:24, falloff:0.30, magSize:12, currentMag:12, reloadTime:1.2, headshotMult: 1.5 },
-  SMG:      { name:'SMG', desc:'High fire rate with tight hip-fire spread. Built for aggressive close-quarters play and corridor clearing.', dmg:11, range:40, cd:.09, hitscan:true, ammo:0, aps:1, spread:.025, pellets:1, startAmmo:45, falloff:0.65, magSize: 30, currentMag: 30, reloadTime: 1.5 },
+  SMG:      { name:'SMG', desc:'High fire rate with tight hip-fire spread. Built for aggressive close-quarters play and corridor clearing.', dmg:11, range:40, cd:.09, hitscan:true, ammo:0, aps:1, spread:.025, pellets:1, startAmmo:45, falloff:0.50, magSize: 30, currentMag: 30, reloadTime: 1.5 },
   SHOTGUN:  { name:'SHOTGUN', desc:'Ten-pellet devastation at close range. Each trigger pull delivers a wall of lead that few targets survive.', dmg:32, range:25, cd:.22, hitscan:true, ammo:0, aps:1, spread:0.10, pellets:10, startAmmo:16, falloff:0.80, magSize: 8, currentMag: 8, reloadTime: 1.8 },
   CHAINGUN: { name:'CHAINGUN', desc:'The DPS king. Spins up slowly but rewards patience — sustained fire shreds armoured targets and crowds alike.', dmg:16, range:30, cd:.08, hitscan:true, ammo:0, aps:1, spread:.055, pellets:1, startAmmo:150, falloff:0.55, magSize: 100, currentMag: 100, reloadTime: 2.8 },
   RAILGUN:  { name:'RAILGUN', desc:'One-shot precision that penetrates multiple enemies in a line. Slow but unmatched stopping power at any range.', dmg:110, range:130, cd:1.8, hitscan:true, ammo:0, aps:1, spread:.0, pellets:1, startAmmo:6, falloff:0.00, magSize: 6, currentMag: 6, reloadTime: 2.4, pvpDmgMult:0.75 },
   ROCKET:   { name:'ROCKET LAUNCHER', desc:'High-damage area denial. Splash radius punishes grouped enemies and enables rocket-jumping to unreachable heights.', dmg:95, range:80, cd:1.2, hitscan:false, ammo:0, aps:1, pellets:1, startAmmo:6, speed:16, splash:4.5, falloff:0.00, magSize: 8, currentMag: 8, reloadTime: 2.2, headshotMult: 1.0, pvpDmgMult:0.80 },
   GLAUNCHER: { name:'LAUNCHER', desc:'Lobs bouncing explosive rounds that detonate on impact or after a short fuse. Excellent for clearing corners and entrenched cover.', dmg:95, range:60, cd:0.8, hitscan:false, ammo:0, aps:1, spread:0.02, pellets:1, startAmmo:12, falloff:0, projSpeed: 30, splash: 7.0, magSize: 8, currentMag: 8, reloadTime: 2.0, headshotMult: 1.0 },
-
   // Energy
   ELECTRON: { name:'ELECTRON', desc:'Heat-based beam weapon. Continuous fire overheats quickly but deals exceptional headshot multipliers.', dmg:25, range:60, cd:.12, hitscan:true, ammo:Infinity, aps:1, spread:.0, pellets:1, startAmmo:Infinity, falloff:0.40, heat: 0, maxHeat: 100, coolRate: 35, useHeat: true, heatPerShot: 0.09, headshotMult: 2.0 },
-  ION:      { name:'ION', desc:'Charged plasma sniper. Massive single-shot damage with brutal heat build-up — one miss is costly.', dmg:85, range:120, cd:1.2, hitscan:true, ammo:Infinity, aps:1, spread:.0, pellets:1, startAmmo:Infinity, falloff:0.10, heat: 0, maxHeat: 100, coolRate: 20, useHeat: true, heatPerShot: 0.40, pvpDmgMult:0.60 },
-
+  ION:      { name:'ION', desc:'Charged plasma sniper. Massive single-shot damage with brutal heat build-up — one miss is costly.', dmg:85, range:120, cd:1.2, hitscan:true, ammo:Infinity, aps:1, spread:.0, pellets:1, startAmmo:Infinity, falloff:0.10, heat: 0, maxHeat: 100, coolRate: 20, useHeat: true, heatPerShot: 0.30, pvpDmgMult:0.60 },
   // Plasma defaults to Ballistic until 'Energy Converter' is equipped
-  PLASMA:   { name:'PLASMA', desc:'Rapid-fire energy bolts with a dual heat/magazine system. Unlock the Dual Trigger to switch between burst and sniper modes.', dmg:25, range:60, cd:.22, hitscan:false, ammo:0, aps:1, spread:.02, pellets:1, startAmmo:60, falloff:0.20, magSize: 30, currentMag: 30, reloadTime: 1.8, heat: 0, maxHeat: 100, coolRate: 40, heatPerShot: 0.20, headshotMult: 1.5 },
+  PLASMA:   { name:'PLASMA', desc:'Rapid-fire energy bolts with a dual heat/magazine system. Unlock the Dual Trigger to switch between burst and sniper modes.', dmg:25, range:60, cd:.22, hitscan:false, ammo:0, aps:1, spread:.02, pellets:1, startAmmo:36, falloff:0.20, magSize: 18, currentMag: 18, reloadTime: 1.8, heat: 0, maxHeat: 100, coolRate: 40, heatPerShot: 0.20, headshotMult: 1.5 },
+
+  COMET: { name:'COMET', desc:'Fires a crisp 3-round burst. Highly accurate at mid-range.', dmg:22, range:70, cd:0.45, hitscan:true, ammo:0, aps:1, spread:.01, pellets:1, startAmmo:36, falloff:0.25, magSize: 24, currentMag: 24, reloadTime: 1.6, headshotMult: 1.5, burstCount: 3, burstDelay: 0.08 },
+  DMR: { name:'DMR', desc:'Semi-automatic marksman rifle. Excels at mid-to-long range engagements.', dmg:45, range:100, cd:.35, hitscan:true, ammo:0, aps:1, spread:.005, pellets:1, startAmmo:24, falloff:0.15, magSize:8, currentMag:8, reloadTime:2.0, headshotMult: 2.0, baseAdsZoom: 0.55, scopeShape: 'circle' },
 
   // ── Jungle Map Weapons ───────────────────────────────────────
   // Flamethrower: energy weapon — heatPerShot lowered for ~3.8s spray window
-  FLAMETHROWER: { name:'FLAMETHROWER', desc:'Short-range fire stream applying a burn-over-time effect. Devastating in tight corridors. Jungle map exclusive.', dmg:8, range:15, cd:.05, hitscan:true, ammo:Infinity, aps:1, spread:.15, pellets:1, startAmmo:Infinity, falloff:0.90, mapExclusive:'jungle', useHeat:true, heatPerShot:0.045, maxHeat:100, coolRate:30, dotDamage:8, dotDuration:4, headshotMult: 1.0 },
+  FLAMETHROWER: { name:'FLAMETHROWER', desc:'Short-range fire stream applying a burn-over-time effect, it is devastating in tight corridors.', dmg:20, range:35, cd:.05, hitscan:true, ammo:Infinity, aps:1, spread:.10, pellets:1, startAmmo:Infinity, falloff:0.50, useHeat:true, heatPerShot:0.035, maxHeat:100, coolRate:30, dotDamage:8, dotDuration:4, headshotMult: 1.0 },
   // Tesla: energy weapon — chain hops reduce heat; exponential chain falloff
-  TESLA:    { name:'TESLA CANNON', desc:'Arc-lightning cannon that chains electricity between nearby enemies. The Amplifier Coil pushes chain count from 3 to 5 targets.', dmg:40, range:50, cd:.75, hitscan:true, ammo:Infinity, aps:1, spread:.02, pellets:1, startAmmo:Infinity, falloff:0.25, mapExclusive:'jungle', useHeat:true, heat:0, maxHeat:100, heatPerShot:0.32, coolRate:18, chainTargets:3, chainRange:10, chainHeatReduce:0.10 },
+  TESLA:    { name:'TESLA CANNON', desc:'Arc-lightning cannon that chains electricity between nearby enemies.', dmg:50, range:50, cd:.75, hitscan:true, ammo:Infinity, aps:1, spread:.02, pellets:1, startAmmo:Infinity, falloff:0.25, useHeat:true, heat:0, maxHeat:100, heatPerShot:0.32, coolRate:18, chainTargets:3, chainRange:10, chainHeatReduce:0.10 },
   // Crossbow: reduced base dmg — headshot still lethal, body shots need follow-up
-  CROSSBOW: { name:'CROSSBOW', desc:'Silent, high-damage bolt with an extreme headshot multiplier. Bolts can be retrieved from downed enemies. Jungle map exclusive.', dmg:55, range:80, cd:1.5, hitscan:true, ammo:12, aps:1, spread:.0, pellets:1, startAmmo:12, falloff:0.10, magSize:1, currentMag:1, reloadTime:0.9, mapExclusive:'jungle', retrievable:true, projSpeed:60, headshotMult: 2.0, pvpDmgMult:0.85 },
+  CROSSBOW: { name:'CROSSBOW', desc:'Silent, high-damage bolt with an extreme headshot multiplier. Bolts can be retrieved from downed enemies.', dmg:55, range:80, cd:1.5, hitscan:true, ammo:18, aps:1, spread:.0, pellets:1, startAmmo:18, falloff:0.10, magSize:1, currentMag:1, reloadTime:0.7, retrievable:true, projSpeed:60, headshotMult: 2.0, pvpDmgMult:0.85 },
 
+  //  ── City Map Weapons
+  RIVETER: { name:'RIVETER', desc:'Heavy nailgun. Projectiles bounce off walls once. Excels in tight alleys.', dmg:45, range:50, cd:0.2, hitscan:false, ammo:0, aps:1, spread:.02, pellets:1, startAmmo:40, projSpeed: 45, magSize: 10, currentMag: 10, reloadTime: 2.0, bounces: 1 },
+  PHALANX: { name:'PHALANX', desc:'Sonic crowd control. Low damage, massive knockback force.', dmg:15, range:25, cd:0.5, hitscan:false, ammo:0, aps:1, spread:.35, pellets:1, startAmmo:30, magSize: 6, currentMag: 6, reloadTime: 2.5 },
+  AEGIS: { name:'AEGIS', desc:'Smart pistol. Aim down sights to paint targets for guaranteed hits.', dmg:30, range:80, cd:0.3, hitscan:true, ammo:0, aps:1, spread:.0, pellets:1, startAmmo:36, magSize: 12, currentMag: 12, reloadTime: 1.5, maxTargets: 3, lockCone: 0.95 },
   // ── Wonder Weapons (boss drops only — wonderWeapon:true prevents loadout/ammo pickup) ──
-  THUNDERBOLT: { name:'THUNDERBOLT', desc:'Instant AOE lightning — chains to ALL enemies within 20m simultaneously. Full damage, no falloff. Only 2 shots.', dmg:120, range:20, cd:1.5, hitscan:true, ammo:2, aps:1, spread:.0, pellets:1, startAmmo:2, falloff:0, wonderWeapon:true, useHeat:false, magSize:2, currentMag:2, reloadTime:2.0, splash:20, headshotMult:1.0 },
-  SINGULARITY: { name:'SINGULARITY', desc:'Fires a gravity well that pulls all enemies within 12m for 3 seconds, then implodes for 200 damage. 3 shots.', dmg:200, range:90, cd:2.0, hitscan:false, ammo:3, aps:1, pellets:1, startAmmo:3, speed:18, splash:12, falloff:0, wonderWeapon:true, magSize:3, currentMag:3, reloadTime:2.5, headshotMult:1.0 },
-  PYROCLAST:  { name:'PYROCLAST', desc:'Fires 6 simultaneous flame streams in a wide cone. DoT 20/s for 5 seconds. 4 shots.', dmg:40, range:18, cd:1.2, hitscan:true, ammo:4, aps:1, spread:.35, pellets:6, startAmmo:4, falloff:0.85, wonderWeapon:true, useHeat:false, magSize:4, currentMag:4, reloadTime:2.0, dotDamage:20, dotDuration:5, headshotMult:1.0 },
-  OMEGA_STORM: { name:'OMEGA STORM', desc:'SECRET WONDER WEAPON. Fires a perpetual storm of all three effects simultaneously. 1 shot.', dmg:150, range:25, cd:3.0, hitscan:true, ammo:1, aps:1, spread:.2, pellets:8, startAmmo:1, falloff:0, wonderWeapon:true, secret:true, magSize:1, currentMag:1, reloadTime:3.0, splash:15, dotDamage:25, dotDuration:6, headshotMult:1.0 },
+  THUNDERBOLT: { name:'THUNDERBOLT', desc:'Instant AOE lightning — chains to ALL enemies within 20m simultaneously. Full damage, no falloff.', dmg:120, range:20, cd:1.5, hitscan:true, ammo:2, aps:1, spread:.0, pellets:1, startAmmo:2, falloff:0, wonderWeapon:true, useHeat:false, magSize:2, currentMag:2, reloadTime:2.0, splash:20, headshotMult:1.0 },
+  SINGULARITY: { name:'SINGULARITY', desc:'Fires a gravity well that pulls all enemies within 12m for 3 seconds, then implodes for 200 damage.', dmg:200, range:90, cd:2.0, hitscan:true, ammo:3, aps:1, pellets:1, startAmmo:3, speed:18, splash:12, falloff:0, wonderWeapon:true, magSize:3, currentMag:3, reloadTime:2.5, headshotMult:1.0 },
+  PYROCLAST:  { name:'PYROCLAST', desc:'Fires 6 simultaneous flame streams in a wide cone. DoT 20/s for 5 seconds.', dmg:40, range:18, cd:1.2, hitscan:true, ammo:4, aps:1, spread:.35, pellets:6, startAmmo:4, falloff:0.85, wonderWeapon:true, useHeat:false, magSize:4, currentMag:4, reloadTime:2.0, dotDamage:20, dotDuration:5, headshotMult:1.0 },
+  OMEGA_STORM: { name:'OMEGA STORM', desc:'SECRET WONDER WEAPON. Fires a perpetual storm of all three effects simultaneously.', dmg:150, range:25, cd:3.0, hitscan:true, ammo:1, aps:1, spread:.2, pellets:8, startAmmo:1, falloff:0, wonderWeapon:true, secret:true, magSize:1, currentMag:1, reloadTime:3.0, splash:15, dotDamage:25, dotDuration:6, headshotMult:1.0 },
 };
 
 export const WCOLORS = {
@@ -43,6 +48,9 @@ export const WCOLORS = {
   GLAUNCHER:0x44cc44, ELECTRON:0x00ccff, ION:0xaa44ff,
   FLAMETHROWER:0xff4400, TESLA:0x8844ff, CROSSBOW:0x88aa44,
   THUNDERBOLT:0xffee00, SINGULARITY:0xcc00ff, PYROCLAST:0xff2200, OMEGA_STORM:0xffffff,
+  RIVETER:0xaa5522, PHALANX:0xdddddd, AEGIS:0xffffff,
+  COMET: 0xdd8833, // distinct orange/brown
+  DMR: 0x557766,
 };
 
 export const ROBOT_DROPS = {
@@ -61,10 +69,21 @@ export const ROBOT_DROPS = {
   medic_bot: 'FLAMETHROWER',
   shield_bot: 'TESLA',
   teleport_bot: 'CROSSBOW',
-  swarm_host: 'PLASMA',
+  // Swarm Host
+  rivet_bot: 'RIVETER',
+  enforcer:  'PHALANX',
+  tactician: 'AEGIS',
+  burst_bot: 'COMET',
+  dmr_bot:   'DMR',
 };
 
-export const AUTO_WEAPONS = new Set(['SMG', 'CHAINGUN', 'ELECTRON', 'PLASMA', 'FLAMETHROWER']);
+export const AUTO_WEAPONS = new Set(['SMG', 'CHAINGUN', 'ELECTRON', 'PLASMA', 'FLAMETHROWER', 'RIVETER']);
+
+// ── COSMIC SKIN PULSE STATE ──
+let cosmicGlowPulse = 0;
+export function triggerCosmicGlow() {
+  cosmicGlowPulse = 1.0; // Reset pulse to full intensity
+}
 
 export const inventory = [null, null, 'PISTOL']; 
 export let activeSlot = 2;
@@ -80,21 +99,71 @@ export function setCurWepVar(v)   { curWep = v; }
 const _darkMatterMats = new Set();
 let _dmObserverRegistered = false;
 
+let _lastPulseTime = Date.now();
 function _ensureDarkMatterAnimation() {
   if (_dmObserverRegistered) return;
   _dmObserverRegistered = true;
+  
   scene.onBeforeRenderObservable.add(() => {
     if (_darkMatterMats.size === 0) return;
-    const t = Date.now() * 0.001;
-    const pulse  = Math.sin(t * 1.4) * 0.5 + 0.5;   // 0–1, slow breathe
-    const swirl  = Math.sin(t * 0.7 + 1.2) * 0.5 + 0.5; // offset phase
-    for (const mat of _darkMatterMats) {
-      mat.emissiveColor.r = 0.18 * swirl;
-      mat.emissiveColor.g = 0.0;
-      mat.emissiveColor.b = 0.40 * pulse + 0.18;
+    
+    // Track delta time for smooth pulse decay
+    const now = Date.now();
+    const dt = (now - _lastPulseTime) / 1000;
+    _lastPulseTime = now;
+    const t = now * 0.001;
+
+    // Decay the glow trigger slower
+    if (cosmicGlowPulse > 0) {
+        cosmicGlowPulse = Math.max(0, cosmicGlowPulse - dt * 1.5); 
+    }
+    
+    for (const item of _darkMatterMats) {
+      const { mat, zOffset, r, g, b, isCosmic } = item;
+      const pulse  = Math.sin(t * 1.4 + zOffset * 3.0) * 0.5 + 0.5; 
+      const swirl  = Math.sin(t * 0.7 + 1.2 + zOffset * 2.0) * 0.5 + 0.5; 
+      
+      if (isCosmic) {
+          // Base idle state: Deep neon purple/blue
+          const idleR = 0.2 * swirl;
+          const idleG = 0.4 * pulse;
+          const idleB = 0.9 * pulse + 0.2;
+          
+          if (cosmicGlowPulse > 0) {
+              // Flare up massively on kill
+              mat.emissiveColor.r = idleR + (cosmicGlowPulse * 20.0);
+              mat.emissiveColor.g = idleG + (cosmicGlowPulse * 40.0);
+              mat.emissiveColor.b = idleB + (cosmicGlowPulse * 60.0);
+          } else {
+              mat.emissiveColor.r = idleR;
+              mat.emissiveColor.g = idleG;
+              mat.emissiveColor.b = idleB;
+          }
+      } else {
+      
       mat.specularColor.r = 0.5 * pulse;
       mat.specularColor.b = 1.0;
-    }
+      }
+    };
+  })
+}
+
+let _auroraObserver = null;
+function _ensureAuroraAnimation(scene) {
+  // Only bind one global observer for the scene loop
+  if (_auroraObserver) return;
+
+  _auroraObserver = scene.onBeforeRenderObservable.add(() => {
+    // High frequency frequency multiplier (0.0055 vs dark matter's standard slower rate)
+    const t = Date.now() * 0.0055;
+    scene.materials.forEach(mat => {
+      if (mat && mat.metadata && mat.metadata.isAurora && mat.emissiveColor) {
+          // Pin colors strictly to a dark green/emerald spectrum with a slight teal shift
+          mat.emissiveColor.r = 0.0;
+          mat.emissiveColor.g = 0.22 + (Math.sin(t) * 0.18);       // Ranges from 0.04 to 0.40
+          mat.emissiveColor.b = 0.06 + (Math.cos(t * 0.8) * 0.05); // Asynchronous subtle cyan/emerald bleed
+      }
+    });
   });
 }
 
@@ -227,14 +296,37 @@ function _buildCrossbow(p) {
   _box(p,'grip', .06, .16, .09, M.gunBrown, 0, -.08, -.08, .18);
 }
 
+function _buildRiveter(p) { _box(p,'body',.1,.15,.7,M.gunBrown,0,.02,.2); _cyl(p,'bbl',.05,.4,M.gunMetal,0,.02,.6,Math.PI/2); _box(p,'grip',.08,.2,.1,M.gunBrown,0,-.1,-.1,.2); }
+function _buildPhalanx(p) { _box(p,'body',.12,.12,.6,M.grey,0,.02,.1); _cyl(p,'dish',.18,.1,M.gunMetal,0,.02,.45,Math.PI/2); _box(p,'grip',.08,.2,.1,M.black,0,-.1,-.1,.2); }
+function _buildAegis(p)   { _box(p,'body',.07,.1,.5,M.gunMetal,0,.04,.1); _box(p,'grip',.06,.2,.12,M.black,0,-.1,-.1,.2); _box(p,'lens',.04,.04,.02,M.ledCyan,0,.08,.35); }
+function _buildDmr(p) {
+  _box(p,'body', .06, .11, .80, M.gunMetal, 0, .02, .15);
+  _cyl(p,'bbl',  .028, .50, M.grey, 0, .02, .65, Math.PI/2);
+  _box(p,'grip', .06, .20, .10, M.gunBrown, 0, -.14, -.10, .15);
+  _box(p,'stck', .05, .12, .30, M.gunBrown, 0, .02, -.40, -.05);
+  _box(p,'mag',  .04, .15, .08, M.black, 0, -.12, .08, -.1);
+}
+function _buildBurstRifle(p) {
+  _box(p,'body',.07,.11,.65,M.gunMetal,0,.02, .15);
+  _cyl(p,'bbl', .03,.40,M.grey,0,.02, .50,Math.PI/2);
+  _box(p,'grip',.06,.18,.1,M.gunBrown,0,-.1,-.08,.2);
+  _box(p,'mag', .05,.16,.07,M.black,0,-.1,.08, -.15); // Angled magazine
+}
+function _buildThunderbolt(p) { _box(p,'body',.1,.15,.6,M.orange,0,.02,.1); _cyl(p,'bbl',.05,.4,M.gunMetal,0,.02,.5,Math.PI/2); _box(p,'grip',.08,.2,.1,M.gunBrown,0,-.1,-.1,.2); }
+function _buildSingularity(p) { _box(p,'body',.1,.15,.5,M.plasmaMat,0,.02,.1); _cyl(p,'bbl',.08,.3,M.ledCyan,0,.02,.4,Math.PI/2); _box(p,'grip',.08,.2,.1,M.black,0,-.1,-.1,.2); }
+function _buildPyroclast(p) { _box(p,'body',.15,.15,.5,M.ledRed,0,.02,.1); _cyl(p,'bbl1',.04,.3,M.gunMetal,.05,.02,.4,Math.PI/2); _cyl(p,'bbl2',.04,.3,M.gunMetal,-.05,.02,.4,Math.PI/2); _box(p,'grip',.08,.2,.1,M.black,0,-.1,-.1,.2); }
+function _buildOmegaStorm(p) { _box(p,'body',.12,.18,.6,M.white,0,.02,.1); _cyl(p,'bbl',.1,.4,M.ledCyan,0,.02,.5,Math.PI/2); _box(p,'grip',.08,.2,.1,M.white,0,-.1,-.1,.2); }
+
 const _modelBuilders = {
   PISTOL: _buildPistol, SMG: _buildSmg, SHOTGUN: _buildShotgun,
   CHAINGUN: _buildChaingun, RAILGUN: _buildRailgun,
   PLASMA: _buildPlasma, ROCKET: _buildRocket, GLAUNCHER: _buildGlauncher,
   ELECTRON: _buildElectron, ION: _buildIon,
-  FLAMETHROWER: _buildFlamethrower,
-  TESLA: _buildTesla,
-  CROSSBOW: _buildCrossbow,
+  FLAMETHROWER: _buildFlamethrower, TESLA: _buildTesla, CROSSBOW: _buildCrossbow,
+  RIVETER: _buildRiveter, PHALANX: _buildPhalanx, AEGIS: _buildAegis,
+  DMR: _buildDmr,COMET: _buildBurstRifle,
+  THUNDERBOLT: _buildThunderbolt, SINGULARITY: _buildSingularity, 
+  PYROCLAST: _buildPyroclast, OMEGA_STORM: _buildOmegaStorm,
 };
 
 export function makeScaledWeaponModel(wName, sc) {
@@ -250,7 +342,7 @@ for (const [k, fn] of Object.entries(_modelBuilders)) {
   const node = new BABYLON.TransformNode('wep_' + k, scene);
   fn(node);
   node.parent = wepGroup;
-  // FIX: Don't disable children. Disable the parent node!
+  // Don't disable children. Disable the parent node
   node.getChildMeshes().forEach(m => { m.isPickable = false; });
   node.setEnabled(false); 
   wepModels[k] = node;
@@ -456,6 +548,72 @@ function _makeSightThermal(parent, wName) {
   return sightRoot;
 }
 
+function _makeSightNVG(parent, wName) {
+  const sz = SIGHT_Z[wName] ?? 0.10;
+  const ty = TOP_Y[wName] ?? 0.09;
+  
+  const sightRoot = new BABYLON.TransformNode('sightRoot', scene);
+  sightRoot.parent = parent;
+  
+  // Make a very small, flat base that sits on the rail (eliminates the floating circle)
+  const base = BABYLON.MeshBuilder.CreateBox('att_nvg_base', { width:0.03, height:0.01, depth:0.05 }, scene);
+  base.position.set(0, ty + 0.005, sz);
+  base.material = _attMats.black();
+  base.parent = sightRoot;
+  base.isPickable = false;
+
+  // Put a tiny lens flush on the front of the flat base, so it looks like a small camera module
+  const lens = BABYLON.MeshBuilder.CreateCylinder('att_nvg_lens', { diameter:0.015, height:0.005 }, scene);
+  lens.rotation.x = Math.PI / 2;
+  lens.position.set(0, ty + 0.005, sz + 0.025);
+
+  const greenGlass = new BABYLON.StandardMaterial('greenGlass', scene);
+  greenGlass.emissiveColor = new BABYLON.Color3(0.1, 0.9, 0.1);
+  greenGlass.disableLighting = true; 
+  lens.material = greenGlass;
+  lens.parent = sightRoot;
+  lens.isPickable = false;
+  
+  // Return an array so the engine cleans up all pieces properly
+  return [sightRoot, base, lens];
+}
+
+function _makeSightLantern(parent, wName) {
+  const mz = MUZZLE_Z[wName] ?? 0.40;
+  const ty = TOP_Y[wName] ?? 0.09;
+  
+  const sightRoot = new BABYLON.TransformNode('sightRoot', scene);
+  sightRoot.parent = parent;
+  
+  const underBarrelY = ty - 0.09; 
+  const placementZ = mz - 0.12; 
+  
+  const body = BABYLON.MeshBuilder.CreateCylinder('att_lantern_under', { diameter: 0.034, height: 0.09, tessellation: 8 }, scene);
+  body.rotation.x = Math.PI / 2;
+  body.position.set(0, underBarrelY, placementZ);
+  body.material = _attMats.black(); 
+  body.parent = sightRoot; 
+  body.isPickable = false;
+
+  const spotLight = new BABYLON.SpotLight("lanternLight", 
+    new BABYLON.Vector3(0, -0.15, 0.2), // Offset slightly so it doesn't clip the camera/player
+    new BABYLON.Vector3(0, 0, 1),       // Shoot straight down the Z axis
+    Math.PI / 2.5, 
+    25, scene);
+  spotLight.priority = -1; // Force engine to prioritize this light over explosions
+  import('./scene.js').then(({ camera }) => {
+      spotLight.parent = camera;
+  });
+  
+  spotLight.diffuse = new BABYLON.Color3(1.0, 0.95, 0.8);
+  spotLight.specular = new BABYLON.Color3(1, 1, 1);
+  spotLight.intensity = 15; 
+  spotLight.range = 75;
+  spotLight.weaponOwner = wName;
+  
+  return [sightRoot, body, spotLight];
+}
+
 function _makeStockRecoilPad(parent, wName) {
     const black = _attMats.black();
     const pad = BABYLON.MeshBuilder.CreateBox('att_recpad', { width:0.055, height:0.065, depth:0.025 }, scene);
@@ -525,6 +683,25 @@ function _makeBarrelExtended(parent, wName) {
   crown.rotation.x = Math.PI/2; crown.position.set(0, 0.02, mz + 0.20);
   crown.material = steel; crown.parent = parent; crown.isPickable = false;
   return [ext, crown];
+}
+
+function _makeBarrelPorted(parent, wName) {
+  const mz = MUZZLE_Z[wName] ?? 0.40;
+  const steel = _attMats.steel(); const black = _attMats.black();
+  
+  // Thick compensator base
+  const body = BABYLON.MeshBuilder.CreateCylinder('att_port_body', { diameter:0.055, height:0.08, tessellation:12 }, scene);
+  body.rotation.x = Math.PI/2; body.position.set(0, 0.02, mz + 0.04);
+  body.material = steel; body.parent = parent; body.isPickable = false;
+  
+  // Cutout side ports
+  for (let i = 0; i < 4; i++) {
+    const port = BABYLON.MeshBuilder.CreateBox('att_port_hole' + i, { width:0.06, height:0.015, depth:0.015 }, scene);
+    port.rotation.z = (Math.PI / 4) + (i * Math.PI / 2);
+    port.position.set(0, 0.02, mz + 0.04);
+    port.material = black; port.parent = parent; port.isPickable = false;
+  }
+  return [body];
 }
 
 function _makeMagExtended(parent, wName) {
@@ -599,7 +776,7 @@ function _makeStockHeavy(parent, wName) {
 
 function _makeStockFolded(parent, wName) {
   const black = _attMats.black();
-  // ── FIX: Centered the bars so they align with the back of the SMG ──
+  // ── Centered the bars so they align with the back of the SMG ──
   const bar = BABYLON.MeshBuilder.CreateBox('att_fstock_bar', { width:0.006, height:0.006, depth:0.18 }, scene);
   bar.position.set(0.015, 0.0, -0.26);
   bar.material = black; bar.parent = parent; bar.isPickable = false;
@@ -619,12 +796,15 @@ const _attVisualBuilders = {
     holo:      _makeSightHolo,
     acog:      _makeSightAcog,
     thermal:   _makeSightThermal,
+    lantern:   _makeSightLantern,
+    night_vision: _makeSightNVG,
   },
   barrel: {
     suppressor:     _makeBarrelSuppressor,
     heavy:          _makeBarrelHeavy,
     compensator:    _makeBarrelCompensator,
     extended:       _makeBarrelExtended,
+    ported:        _makeBarrelPorted,
   },
   magazine: {
     extended: _makeMagExtended,
@@ -685,11 +865,14 @@ function _rebuildAttachmentVisuals(wName) {
       if (!builder) continue;
 
       const built = builder(modelNode, wName);
-      if (Array.isArray(built)) newMeshes.push(...built);
+      if (Array.isArray(built)) {
+        newMeshes.push(...built);
+      } else if (built) {
+        newMeshes.push(built); // Safely track individual sight root TransformNodes!
+      }
     }
     _attachmentMeshes[wName] = newMeshes;
 
-    // Show/hide depending on whether this is the active weapon
     const show = (wName === curWep);
     for (const m of newMeshes) m.setEnabled(show);
   });
@@ -713,6 +896,11 @@ const WPOS = {
   SINGULARITY: new BABYLON.Vector3(.30,-.33, .62),
   PYROCLAST:   new BABYLON.Vector3(.30,-.34, .60),
   OMEGA_STORM: new BABYLON.Vector3(.32,-.34, .64),
+  RIVETER:  new BABYLON.Vector3(.30,-.34, .62),
+  PHALANX: new BABYLON.Vector3(.34,-.34, .62),
+  AEGIS:    new BABYLON.Vector3(.38,-.36, .66),
+  COMET: new BABYLON.Vector3(.34,-.34, .64),
+  DMR: new BABYLON.Vector3(.34,-.35, .66),
 };
 const WROT = {
   PISTOL:    new BABYLON.Vector3(.06,-.08,0),
@@ -732,6 +920,11 @@ const WROT = {
   SINGULARITY: new BABYLON.Vector3(.05,-.11,0),
   PYROCLAST:   new BABYLON.Vector3(.05,-.11,0),
   OMEGA_STORM: new BABYLON.Vector3(.05,-.10,0),
+  RIVETER:  new BABYLON.Vector3(.05,-.10,0),
+  PHALANX: new BABYLON.Vector3(.05,-.10,0),
+  AEGIS:    new BABYLON.Vector3(.05,-.10,0),
+  COMET: new BABYLON.Vector3(.05,-.10,0),
+  DMR: new BABYLON.Vector3(.04,-.10,0),
 };
 
 export function refreshSlotHUD() {
@@ -753,18 +946,30 @@ export function refreshSlotHUD() {
         if (getLoadout(wep).attachments?.magazine === 'mag_50_cal') EW.magSize = 6;
         
         const isEnergy = W.useHeat || (wep === 'PLASMA' && hasEnergyConverter());
+        const isEndless = getLoadout(wep).attachments?.special === 'endless_magazine';
         
-        // Revert ammo state if toggling converter
-        if (isEnergy && W.ammo !== Infinity) W.ammo = Infinity;
-        if (!isEnergy && W.ammo === Infinity) W.ammo = W.startAmmo || 60;
+        // Correctly handle ammo state based on energy converters and endless magazine
+        if (isEnergy) {
+            if (W.ammo !== Infinity) W.ammo = Infinity;
+        } else {
+            // Force infinite reserve if endless mag is equipped, otherwise revert if it was infinite
+            if (isEndless) {
+                W.ammo = Infinity;
+            } else if (W.ammo === Infinity) {
+                W.ammo = W.startAmmo || 60;
+            }
+        }
         
         if (isEnergy) {
             ammoEl.textContent = 'HEAT';
         } else if (EW.magSize) {
             if (W.currentMag > EW.magSize) W.currentMag = EW.magSize; // clamp if over filled
-            ammoEl.textContent = W.currentMag + ' / ' + (W.ammo === Infinity ? '∞' : W.ammo);
+            // Ensure we still display the clip size alongside the infinite reserve
+            ammoEl.textContent = W.currentMag + ' / ' + ((W.ammo === Infinity || isEndless) ? '∞' : W.ammo);
+        } else if (EW.ammo === Infinity || isEndless) {
+            ammoEl.textContent = '∞';
         } else {
-            ammoEl.textContent = (W.ammo === Infinity) ? '∞' : W.ammo + ' RDS';
+            ammoEl.textContent = W.ammo + ' RDS';
         }
     } else {
         nameEl.textContent = 'EMPTY';
@@ -809,12 +1014,23 @@ export function setWeapon(name) {
       node.setEnabled(k === name);
   }
 
+  // Search the scene for tactical lantern lights and disable them if they don't belong to the active weapon
+  scene.lights.forEach(l => {
+      if (l.name === 'lanternLight' && l.weaponOwner) {
+          l.setEnabled(l.weaponOwner === name);
+      }
+  });
+
   wepGroup.position.copyFrom(WPOS[name]);
   wepGroup.rotation.copyFromFloats(WROT[name].x, WROT[name].y, WROT[name].z);
   
   // This call now handles building/destroying the left hand (Akimbo)
   applyLoadoutToScene(name);
   refreshSlotHUD();
+  // Trigger weapon discovery toast
+  import('./progression.js').then(({ checkFirstTimePickup }) => {
+      checkFirstTimePickup(name);
+  });
 }
 
 export function setActiveSlot(i) {
@@ -844,20 +1060,77 @@ export function applyLoadoutToScene(wName) {
       const mat = new BABYLON.StandardMaterial('skin_' + m.name + '_' + wName, scene);
       mat.disableLighting = false;
 
-      // ── Dark Matter — animated cosmic material ─────────────────
-      if (skin.id === 'dark_matter') {
-        mat.diffuseColor  = new BABYLON.Color3(0.04, 0.01, 0.12);
-        mat.emissiveColor = new BABYLON.Color3(0.0,  0.0,  0.30);
-        mat.specularColor = new BABYLON.Color3(0.5,  0.1,  1.0);
-        mat.specularPower = 96;
-        _darkMatterMats.add(mat);
-        mat.onDisposeObservable.add(() => _darkMatterMats.delete(mat));
-        _ensureDarkMatterAnimation();
-        m.material = mat;
+      // ── Animated Skins (Dark Matter & Cosmic) ─────────────────
+      if (skin.id === 'dark_matter' || skin.id === 'cosmic') {
+        const isBody = n.includes('body') || n.includes('recv') || n.includes('hous') || n.includes('mag');
+        
+        if (isBody) {
+            mat.diffuseColor = skin.id === 'cosmic' ? new BABYLON.Color3(0.01, 0.03, 0.06) : new BABYLON.Color3(0.05, 0.05, 0.05);
+            m.material = mat;
+        } else {
+            mat.diffuseColor  = new BABYLON.Color3(0.04, 0.01, 0.12);
+            mat.specularPower = 96;
+
+            if (skin.id === 'cosmic') {
+                // Generate static constellations on a texture
+                const tex = new BABYLON.DynamicTexture("cosmicTex", {width: 256, height: 256}, scene, false);
+                const ctx = tex.getContext();
+                ctx.fillStyle = "rgba(0, 0, 0, 1)"; // Solid background to allow glow to work
+                ctx.fillRect(0,0,256,256);
+                ctx.fillStyle = "#ffffff";
+                ctx.strokeStyle = "rgba(255, 255, 255, 0.3)";
+                
+                // Draw constellations
+                const points = [];
+                for(let i=0; i<18; i++) points.push({x: Math.random()*256, y: Math.random()*256});
+                for(let i=0; i<points.length; i++) {
+                    ctx.beginPath(); ctx.arc(points[i].x, points[i].y, Math.random()*2+1, 0, Math.PI*2); ctx.fill();
+                    if(i>0 && Math.random()>0.3) {
+                        ctx.beginPath(); ctx.moveTo(points[i].x, points[i].y); 
+                        ctx.lineTo(points[Math.floor(Math.random()*i)].x, points[Math.floor(Math.random()*i)].y); 
+                        ctx.stroke();
+                    }
+                }
+                tex.update();
+                mat.diffuseTexture = tex;
+                mat.emissiveTexture = tex; // Stars will glow white alongside the pulsing color
+            }
+
+            // Push to animation loop with custom color targets
+            _darkMatterMats.add({ 
+                mat: mat, 
+                zOffset: m.position.z,
+                r: skin.id === 'cosmic' ? 0.0 : 0.18,  // Cosmic has no red pulse
+                g: skin.id === 'cosmic' ? 0.35 : 0.0,  // Cosmic pulses Teal/Green
+                b: skin.id === 'cosmic' ? 0.50 : 0.40,  // Cosmic pulses deep Blue
+                isCosmic: skin.id === 'cosmic'
+            });
+            
+            mat.onDisposeObservable.add(() => {
+                for (const item of _darkMatterMats) { if (item.mat === mat) _darkMatterMats.delete(item); }
+            });
+            _ensureDarkMatterAnimation();
+            m.material = mat;
+        }
         return;
+      } else if (skin.id === 'aurora') {
+        // Target any child mesh materials on the weapon model
+        parentMesh.getChildMeshes().forEach(mesh => {
+          if (mesh.material) {
+            // Re-use standard material or your specific base material setup
+            const mat = mesh.material;
+            mat.diffuseColor = new BABYLON.Color3(0.01, 0.04, 0.01); // Deep obsidian green base
+            mat.emissiveColor = new BABYLON.Color3(0.0, 0.15, 0.02); // Initial green glow
+            
+            // Mark it with metadata so the render loop identifier catches it
+            mat.metadata = mat.metadata || {};
+            mat.metadata.isAurora = true;
+          }
+        });
+        _ensureAuroraAnimation(scene);
       }
 
-      // ── Bengal — alternating stripe using body/accent by mesh index ──
+      // ── Bengal — Procedural Canvas Stripes ──────────────────────
       const [br, bg, bb] = skin.body;
       const [ar, ag, ab] = skin.accent;
       const [gr, gg, gb] = skin.grip;
@@ -867,10 +1140,29 @@ export function applyLoadoutToScene(wName) {
         if (isGrip) {
           mat.diffuseColor = new BABYLON.Color3(gr, gg, gb);
         } else {
-          // Stripe: alternate body (orange) and accent (black) by mesh index
-          mat.diffuseColor = (meshIdx % 2 === 0)
-            ? new BABYLON.Color3(br, bg, bb)
-            : new BABYLON.Color3(ar, ag, ab);
+          // Generate an actual striped texture
+          const tex = new BABYLON.DynamicTexture("bengalTex", {width: 256, height: 256}, scene, false);
+          const ctx = tex.getContext();
+          
+          // Orange Base
+          ctx.fillStyle = `rgb(${br*255},${bg*255},${bb*255})`;
+          ctx.fillRect(0,0,256,256);
+          
+          // Black Wavy Stripes
+          ctx.fillStyle = `rgb(${ar*255},${ag*255},${ab*255})`;
+          for(let i = -30; i < 256; i += 45) {
+             ctx.beginPath();
+             ctx.moveTo(i, 0);
+             // Curve down the right side
+             ctx.bezierCurveTo(i + 40, 85, i - 15, 170, i + 35, 256);
+             // Bottom edge
+             ctx.lineTo(i + 15, 256);
+             // Curve back up the left side
+             ctx.bezierCurveTo(i - 35, 170, i + 20, 85, i - 20, 0);
+             ctx.fill();
+          }
+          tex.update();
+          mat.diffuseTexture = tex;
         }
         m.material = mat;
         return;
@@ -943,7 +1235,7 @@ export function applyLoadoutToScene(wName) {
 }
 
 // Energy weapons don't physically recoil a muzzle — suppress the z-kick swing for them
-const _NO_SWING_WEAPONS = new Set(['ELECTRON', 'ION', 'PLASMA']);
+const _NO_SWING_WEAPONS = new Set(['ELECTRON', 'ION', 'PLASMA', 'DMR', 'RAILGUN']);
 
 // Dynamically calculates the highest Y point of the base gun mesh perfectly
 function getDynamicTopY(wName) {
@@ -1003,16 +1295,25 @@ export function animWeapon(dt) {
       reloadTilt = Math.sin((player.reloadTimer / 1.6) * Math.PI) * -0.55; 
   }
 
+  // Extract effective recoil
+  let recoilMult = 1.0;
+  import('./progression.js').then(({ getEffectiveStats }) => {
+      const EW = getEffectiveStats(curWep, WDEFS[curWep]);
+      recoilMult = EW.recoilMult || 1.0;
+  });
+
   if (swingT > 0 && !_NO_SWING_WEAPONS.has(curWep)) {
     swingT = Math.max(0, swingT - dt * 7.5);
     const k = Math.sin(swingT * Math.PI);
-    wepGroup.position.z = WPOS[curWep].z - k * .09;
-    wepGroup.rotation.x = WROT[curWep].x - (k * 0.15) + reloadTilt;
+    // Multiply the physical Z kick and X rotation tilt by the recoil multiplier
+    wepGroup.position.z = WPOS[curWep].z - (k * .09 * recoilMult);
+    wepGroup.rotation.x = WROT[curWep].x - (k * 0.15 * recoilMult) + reloadTilt;
   } else {
     if (_NO_SWING_WEAPONS.has(curWep)) swingT = 0; 
     wepGroup.position.z = WPOS[curWep].z;
     wepGroup.rotation.x = WROT[curWep].x + reloadTilt;
   }
+
 }
 
 /** Called once at startup to init all attachment visual slots */
