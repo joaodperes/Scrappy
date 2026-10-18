@@ -57,12 +57,13 @@ function wireSocket(ws) {
 }
 // Transfer an already authenticated/validated room socket from roomFlow
 // without leaving and recreating its room (which would orphan the lobby).
-export function adoptConnection(ws,welcome) {
+export function adoptConnection(ws,welcome,buffered=[]) {
   if(_ws && _ws!==ws)disconnect();
   _ws=ws;_connected=ws.readyState===WebSocket.OPEN;
   ws.onmessage=null;ws.onclose=null;ws.onerror=null;
   wireSocket(ws);
   deliver({...welcome,type:'welcome'});
+  for(const packet of buffered) deliver(packet);
 }
 
 export function disconnect() {
