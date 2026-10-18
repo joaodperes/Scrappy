@@ -1,37 +1,24 @@
-// node scripts/validate-map-data.cjs
+// Validate four built-in maps against the exact schema used by the browser.
+// Usage: node scripts/validate-map-data.cjs
 const fs=require('node:fs');
 const path=require('node:path');
 const assert=require('node:assert/strict');
 const root=path.resolve(__dirname,'..');
-const allowed=new Set([
-  'createWall','createSlab','createPillar','createColumn','createGlass',
-  'createRamp','createRampBox','createCeiling','createBarrel','createCrate',
-  'createLava','createSpikeTrap','createDestructibleWall','createJumpPad',
-  'createMovingPlatform','createPowerSwitch',
-]);
-for(const name of ['scrapyard','jungle','city','terminal']){
-  const layout=JSON.parse(fs.readFileSync(path.join(root,'assets/maps',name+'.json'),'utf8'));
-  assert.ok(Array.isArray(layout.objects),name+' objects must be an array');
-  const ids=new Set(),lookup=new Map();
-  for(const [index,entry] of layout.objects.entries()){
-    assert.ok(allowed.has(entry.generator),name+' invalid generator at '+index);
-    assert.ok(entry.params && typeof entry.params==='object',name+' missing params '+index);
-    if(entry.id){
-      assert.ok(!ids.has(entry.id),name+' duplicate ID '+entry.id);
-      ids.add(entry.id);lookup.set(entry.id,entry);
-    }
-    for(const field of ['position','rotation','scaling']){
-      if(!entry[field])continue;
-      for(const axis of ['x','y','z']){
-        assert.ok(Number.isFinite(entry[field][axis]),name+' invalid '+field+'.'+axis+' at '+index);
-      }
-    }
+async function main(){
+  // mapSchema.js is a browser ESM module, whereas Node's test scripts are CJS.
+  // Loading via a data URL uses the SAME validation implementation in both.
+  const moduleSource=fs.readFileSync(path.join(root,'js/mapSchema.js'),'utf8');
+  const uri='data:text/javascript;base64,'+Buffer.from(moduleSource).toString('base64');
+  const {validateMapDocument,MAP_SCHEMA_VERSION}=await import(uri);
+  let total=0;
+  for(const name of ['scrapyard','jungle','city','terminal']){
+    const layout=JSON.parse(fs.readFileSync(path.join(root,'assets/maps',name+'.json'),'utf8'));
+    assert.equal(Number(layout.version),MAP_SCHEMA_VERSION,name+' must be v2');
+    const result=validateMapDocument(layout,{expectedMap:name,strictIds:true});
+    assert.ok(result.valid,name+' failed schema validation:\n'+result.errors.map(e=>'  - '+e).join('\n'));
+    total+=result.document.objects.length;
+    console.log(name+': '+layout.objects.length+' entities, '+layout.markers.length+' markers validated');
   }
-  for(const entry of layout.objects){
-    if(entry.generator!=='createPowerSwitch')continue;
-    for(const id of entry.params.targetPlatformIds||[]){
-      assert.equal(lookup.get(id)?.generator,'createMovingPlatform',name+' bad switch link '+id);
-    }
-  }
-  console.log(name+': '+layout.objects.length+' validated objects');
+  console.log('Validated '+total+' entities across 4 built-in maps.');
 }
+main().catch(err=>{console.error(err);process.exitCode=1});
