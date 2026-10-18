@@ -161,50 +161,36 @@ wss.on('connection', ws => {
       p.z=Math.max(-250,Math.min(250,msg.z));p.yaw=msg.yaw;
     }
 
-    // ── HIT REGISTRATION ─────────────────────────────────────
-    else if (msg.type === 'hit') {
-      const room = rooms.get(roomId); if (!room) return;
-      if (!room.started) return;   // no damage before game starts
-      const target = room.players.get(msg.targetId); if (!target) return;
-      target.hp = Math.max(0, (target.hp || 100) - (msg.dmg || 0));
-      target.ws.send(JSON.stringify({ type: 'hit', targetId: msg.targetId, dmg: msg.dmg }));
-
-      if (target.hp <= 0) {
-        const killer = room.players.get(id);
-        if (killer) killer.score++;
-        target.hp = 100;
-        const sp = _randSpawn();
-        _broadcastAll(room, {
-          type:        'killed',
-          victimId:    msg.targetId,
-          killerId:    id,
-          killerName:  room.players.get(id)?.name,
-          killerScore: killer?.score ?? 0,
-        });
-
-        // Check score limit
-        const scoreLimit = room.config?.scoreLimit ?? 0;
-        if (scoreLimit > 0 && (killer?.score ?? 0) >= scoreLimit) {
-          room.started = false;
-          _broadcastAll(room, {
-            type:   'roundEnd',
-            winner: room.players.get(id)?.name ?? 'Unknown',
-            scores: [...room.players.values()].map(p => ({ id: p.id, name: p.name, score: p.score })),
-          });
-        }
-
-        // Respawn victim
-        const respawnDelay = (room.config?.respawnDelay ?? 5) * 1000;
-        setTimeout(() => {
-          if (!room.players.has(msg.targetId)) return;
-          target.ws.send(JSON.stringify({
-            type: 'respawn', playerId: msg.targetId, x: sp[0], z: sp[2],
-          }));
-          _broadcastAll(room, {
-            type: 'respawn', playerId: msg.targetId, x: sp[0], z: sp[2],
-          });
-        }, respawnDelay);
-      }
+    // ── SERVER-ENFORCED DAMAGE / SCORING ──────────────────────
+    else if(msg.type==='hit'){
+      const room=rooms.get(roomId);if(!room?.started)return;
+      const shooter=room.players.get(id),victim=room.players.get(String(msg.targetId));
+      if(!shooter||!victim||shooter===victim)return;
+      if(victim.deadUntil>Date.now()||shooter.deadUntil>Date.now())return;
+      if(room.config?.mode==='tdm' && shooter.team===victim.team)return;
+      const dmg=Number(msg.dmg),time=Date.now();
+      if(!Number.isFinite(dmg)||dmg<=0||dmg>160)return;
+      if(time-shooter.lastHitAt<35)return;
+      if(Math.hypot(shooter.x-victim.x,shooter.y-victim.y,shooter.z-victim.z)>140)return;
+      shooter.lastHitAt=time;
+      victim.hp=Math.max(0,victim.hp-dmg);
+      victim.ws.send(JSON.stringify({type:'hit',targetId:victim.id,dmg}));
+      if(victim.hp>0)return;
+      shooter.score++;
+      const delay=Math.max(1000,Math.min(15000,(Number(room.config?.respawnDelay)||5)*1000));
+      victim.deadUntil=time+delay;
+      _broadcastAll(room,{type:'killed',victimId:victim.id,killerId:id,
+        killerName:shooter.name,killerScore:shooter.score,team:shooter.team,teams:scoreByTeam(room)});
+      const limit=Math.max(0,Math.min(500,Number(room.config?.scoreLimit)||0));
+      if(limit>0 && (room.config?.mode==='tdm'
+        ? Math.max(...Object.values(scoreByTeam(room)))>=limit
+        : shooter.score>=limit)){finishMatch(room);return;}
+      setTimeout(()=>{
+        if(!room.started||!room.players.has(victim.id))return;
+        victim.hp=100;victim.deadUntil=0;
+        const sp=_randSpawn();
+        _broadcastAll(room,{type:'respawn',playerId:victim.id,x:sp[0],y:sp[1],z:sp[2]});
+      },delay);
     }
 
     else if (msg.type === 'ready') { /* acknowledged */ }
