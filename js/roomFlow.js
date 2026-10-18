@@ -1,6 +1,6 @@
 // Room configuration/lobby foundation. Multiplayer match runtimes are not
 // enabled until team replication, bot controllers and authoritative scoring exist.
-import { MAPS, getRoomCapacity, isModeSupported, getCurrentMap } from './mapManager.js';
+import { MAPS, getRoomCapacity, isModeSupported, getCurrentMap, isHardModeUnlocked } from './mapManager.js';
 import { profile } from './progression.js';
 
 const MODES = [
@@ -175,7 +175,8 @@ function createPage() {
     if(!isModeSupported(map.value,mode.value))mode.value='survival';
     const survival=mode.value==='survival';
     bots.disabled=survival;bots.checked=survival?false:bots.checked;
-    hard.disabled=!survival;if(!survival)hard.checked=false;
+    hard.disabled=!survival || !isHardModeUnlocked(map.value);
+    if(hard.disabled)hard.checked=false;
     info.textContent='Capacity: '+getRoomCapacity(map.value,mode.value)+
       (survival?' players (co-op planned; solo runtime available)':' players (lobby-only; match runtime pending)');
   }
@@ -188,7 +189,7 @@ function createPage() {
   buttons.appendChild(button('CREATE ROOM',()=>{
     const cfg={directoryRoom:true,mode:mode.value,mapId:map.value,
       maxPlayers:getRoomCapacity(map.value,mode.value),fillBots:bots.checked,
-      hardMode:mode.value==='survival'&&hard.checked,name:name.value||'Room'};
+      hardMode:mode.value==='survival'&&!hard.disabled&&hard.checked,name:name.value||'Room'};
     const code=randCode();
     message(status,'Connecting to room server…');
     wsConnect(url.value,()=>send({type:'join',room:code,name:profile.displayName||profile.name||'Player',
