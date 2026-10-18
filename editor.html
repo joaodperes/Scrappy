@@ -135,7 +135,7 @@
     <div id="info">🛠️ Standalone Editor – press F4 to start</div>
 
     <!-- Load Babylon from local file (same as index.html) -->
-    <script src="/js/babylon.max.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/babylonjs@9.14.0/babylon.js"></script>
     <!-- Recast for navmesh (level builder might use it) -->
     <script src="https://cdn.babylonjs.com/recast.js"></script>
 
@@ -230,7 +230,8 @@
                     this.scene.onPointerObservable.add((pointerInfo) => {
                         if (!this.enabled) return;
                         if (pointerInfo.type !== BABYLON.PointerEventTypes.POINTERPICK) return;
-                        const mesh = pointerInfo.pickInfo?.pickedMesh;
+                        const mesh = this.scene.pick(this.scene.pointerX, this.scene.pointerY,
+                            m => m.isEnabled() && !!m.metadata?.editable)?.pickedMesh;
                         if (!mesh || !mesh.metadata?.editable) return;
                         this.selectedMesh = mesh;
                         this.gizmoManager.attachToMesh(mesh);
