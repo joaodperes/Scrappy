@@ -139,7 +139,7 @@ export async function buildJungleLevel(customScene = null) {
   // hurt the player or take damage, since those systems read from these
   // arrays, not from scene.meshes directly.
   const override = await loadMapOverride('jungle');
-  if (override) applyEditableLayout(override, { hazardZones, destructibleWalls });
+  if (override) applyEditableLayout(override, { hazardZones, destructibleWalls, movingPlatforms, powerSwitches });
 
   // ---- Build NavMesh (if navPlugin is available) ----
   walkableMeshes.forEach(m => m.computeWorldMatrix(true));
