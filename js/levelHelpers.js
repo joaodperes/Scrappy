@@ -330,20 +330,20 @@ export function createCrate(px, py, pz, sx, sy, sz, mat = matConcrete, opts = {}
 // hardcoded placement where you're pushing yourself) and they won't.
 
 export function createLava(cx, cz, sx, sz, opts = {}) {
-  const { editable = true, navmesh = true, extraMeta = null, hazardZones = null } = opts;
+  const { editable = true, navmesh = true, extraMeta = null, hazardZones = null, surfY = 0 } = opts;
   const scene = getScene();
   const mat = new BABYLON.StandardMaterial('jLv', scene);
   mat.emissiveColor = new BABYLON.Color3(.95, .22, .02);
   mat.disableLighting = true;
 
   const m = BABYLON.MeshBuilder.CreateBox('lava', { width: sx, height: .28, depth: sz }, scene);
-  m.position.set(cx, -.06, cz);
+  m.position.set(cx, liftY(surfY) - .06, cz);
   m.material = mat;
   m.checkCollisions = true;
   m.isPickable = false;
 
-  _tagMeta(m, 'lava', 'createLava', { cx, cz, sx, sz }, editable, {
-    hazard: true, dps: 10, hazardType: 'LAVA', halfWidth: sx / 2, halfDepth: sz / 2, solid: true,
+  _tagMeta(m, 'lava', 'createLava', { cx, cz, sx, sz, surfY }, editable, {
+    hazard: true, dps: 10, hazardType: 'LAVA', halfWidth: sx / 2, halfDepth: sz / 2, halfHeight: .55, solid: true,
     ...(extraMeta || {}),
   });
 
@@ -513,7 +513,7 @@ const _generators = {
   // primitives" section above for why these take no per-map material.
   // hazardTargets/destructibleTargets are threaded in from applyEditableLayout
   // below, not part of the exported params themselves.
-  createLava:             (p, t) => createLava(p.cx, p.cz, p.sx, p.sz, { hazardZones: t?.hazardZones }),
+  createLava:             (p, t) => createLava(p.cx, p.cz, p.sx, p.sz, { hazardZones: t?.hazardZones, surfY: p.surfY ?? 0 }),
   createDestructibleWall: (p, t) => createDestructibleWall(p.px, p.surfY, p.pz, p.sx, p.sh, p.sz, p.hp, { destructibleWalls: t?.destructibleWalls }),
   createSpikeTrap:        (p, t) => createSpikeTrap(p.cx, p.cz, p.sx, p.sz, p.surfY, { hazardZones: t?.hazardZones }),
   createJumpPad:          p => createJumpPad(p.px,p.floorY,p.pz,p.force,p.rotY),
