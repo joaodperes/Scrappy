@@ -23,6 +23,8 @@
 const BABYLON = window.BABYLON;
 import { walkableMeshes, explosiveBarrels, jumpPads } from './level.js';
 import { M } from './textures.js';
+import { validateMapDocument } from './mapSchema.js';
+import { registerMapDocument } from './mapLayoutStore.js';
 
 export const LIFT_Y = 0.22;
 export const liftY = y => (y > 0.05 ? y + LIFT_Y : y);
@@ -657,16 +659,27 @@ export function applyEditableLayout(objects, targets = null) {
  * unreachable, or malformed (treated as "no override" — callers should
  * just keep their hardcoded default layout in that case).
  */
+export async function loadMapDocument(mapId) {
+  // Validation and stable IDs must happen before we alter the scene.
+  const path='assets/maps/'+encodeURIComponent(mapId)+'.json';
+  let res;
+  try{res=await fetch(path,{cache:'no-cache'})}
+  catch(e){throw new Error('[map] Failed to fetch '+path+': '+e.message)}
+  if(!res.ok)throw new Error('[map] '+path+' returned HTTP '+res.status);
+  let data;
+  try{data=await res.json()}
+  catch(e){throw new Error('[map] Invalid JSON in '+path+': '+e.message)}
+  const checked=validateMapDocument(data,{expectedMap:mapId,strictIds:false});
+  if(!checked.valid)throw new Error('[map] Invalid '+path+':\\n'+checked.errors.join('\\n'));
+  registerMapDocument(mapId,checked.document);
+  return checked.document;
+}
+// Kept for level builders relying on the original array-only interface.
+// Full document (including markers and version) is available via
+// loadMapDocument() and getLoadedMapDocument().
 export async function loadMapOverride(mapId) {
-  try {
-    const res = await fetch(`assets/maps/${mapId}.json`, { cache: 'no-cache' });
-    if (!res.ok) return null;
-    const data = await res.json();
-    if (!data || !Array.isArray(data.objects)) return null;
-    return data.objects;
-  } catch (e) {
-    return null;
-  }
+  const document=await loadMapDocument(mapId);
+  return document.objects;
 }
 
 // ── Structural (non-editable) composite helper ──────────────────
