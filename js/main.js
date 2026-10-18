@@ -237,6 +237,7 @@ function openFfaLobby() {
       _clearEntities();
       resetBarrels();
       rebuildMeshMap();
+      const currentMap = getCurrentMap();
       const meta = getMapMeta(currentMap);
       resetPlayer(meta.spawn.x, PH + meta.spawn.yOffset, meta.spawn.z);
 
@@ -513,12 +514,14 @@ if (!texturesReady) {
 // ── Button bindings ────────────────────────────────────────────
 document.getElementById('startBtn')    ?.addEventListener('click', () => startGame(0));
 document.getElementById('victoryBtn')  ?.addEventListener('click', () => startGame(0));
-document.getElementById('respawnBtn')?.addEventListener('click', () => {
+const _returnToMenu = () => {
   document.getElementById('deathScreen').className  = 'screen hidden';
   document.getElementById('menuScreen').className   = 'screen visible';
   renderLeaderboard();
   refreshMenuUI();
-});
+};
+document.getElementById('respawnBtn')?.addEventListener('click', _returnToMenu);
+document.getElementById('victoryMenuBtn')?.addEventListener('click', _returnToMenu);
 document.getElementById('loadoutBtn')  ?.addEventListener('click', () => openLoadout(false));
 document.getElementById('pvpBtn')      ?.addEventListener('click', openFfaLobby);
 
