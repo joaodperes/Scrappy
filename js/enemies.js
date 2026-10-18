@@ -8,6 +8,7 @@ import { spawnSparks } from './particles.js';
 import { fireEnemyShot, createYellowEMPStunArc } from './projectiles.js';
 import { sfx } from './audio.js';
 import { jumpPads } from './level.js';
+import { botTravelTarget, botNavPath } from './botNavigation.js';
 import { getCurrentMap, getWalkableSpawns } from './mapManager.js';
 import { recordDamage, isWonderWeaponUnlocked  } from './progression.js';
 import { getBossPoolForCurrentMap } from './waves.js';
@@ -1089,6 +1090,11 @@ export function updateEnemies(dt) {
     e._hopY = e._hopY || 0;
     e._yVel = e._yVel || 0;
     e._stuckTimer = e._stuckTimer || 0;
+    if (e._onPlatform?._frameDelta) {
+      const delta = e._onPlatform._frameDelta;
+      e.group.position.addInPlace(delta);
+      e._floorY += delta.y;
+    }
 
     let bob = (e.flyH > 0) ? (e.flyH + Math.sin(e.animT * 1.9) * .18) : (Math.abs(Math.sin(e.animT * 5.8)) * .04);
     
@@ -1392,9 +1398,34 @@ export function updateEnemies(dt) {
         const onWrongFloor = verticalDiff > 2.0; // More than 2 units of height difference
 
         // Always move if: angry mode, no LOS, wrong floor, or outside preferred range
-        const shouldMove = _angryMode || !hasLOS || onWrongFloor || (dist2D > targetDist + 1.0 || dist2D < targetDist - 2.0);
+        const shouldMove = !!e._navTransition || _angryMode || !hasLOS || onWrongFloor || (dist2D > targetDist + 1.0 || dist2D < targetDist - 2.0);
+        if (e._hopY > 0 && (e._airVX || e._airVZ)) {
+          e.group.position.x += e._airVX * dt;
+          e.group.position.z += e._airVZ * dt;
+          const drag=Math.max(0,1-0.55*dt);
+          e._airVX *= drag;e._airVZ *= drag;
+        }
 
         if (shouldMove) {
+          const botFeet = new BABYLON.Vector3(e.group.position.x,e._floorY,e.group.position.z);
+          const playerFeet = new BABYLON.Vector3(_ePP.x,_ePP.y-1.72,_ePP.z);
+          const target = botTravelTarget(e,playerFeet,navPlugin,jumpPads,window._movingPlatforms||[],dt);
+          const route = target && botNavPath(navPlugin,botFeet,target);
+          let nextWaypoint = null;
+          _eDir.setAll(0);
+          if(route && route.points.length > 1){
+            nextWaypoint=route.points[1];
+            for(const p of route.points.slice(1)){
+              if(Math.hypot(p.x-botFeet.x,p.z-botFeet.z)>0.5){nextWaypoint=p;break}
+            }
+            _eDir.copyFrom(nextWaypoint).subtractInPlace(botFeet);
+          }else if(target && Math.abs(target.y-botFeet.y)<2){
+            _eDir.copyFrom(target).subtractInPlace(botFeet);
+          }
+          _eDir.y=0;
+          if(_eDir.length()>0.001)_eDir.normalize();
+          // Hazard avoidance blends with the actual route direction, rather
+          // than with the previous bot's shared steering vector.
           // ── Hazard avoidance: steer away from lava / hazard zones ──────────
           if (window._hazardZones) {
             for (const haz of window._hazardZones) {
@@ -1413,30 +1444,9 @@ export function updateEnemies(dt) {
             }
             if (_eDir.length() > 0.001) _eDir.normalize();
           }
-          const botFeet   = new BABYLON.Vector3(e.group.position.x, e._floorY + 0.5, e.group.position.z);
-          const playerFeet = new BABYLON.Vector3(_ePP.x, _ePP.y - 0.72, _ePP.z);
 
-          const startPt = navPlugin.getClosestPoint(botFeet);
-          let endPt     = navPlugin.getClosestPoint(playerFeet);
-          let hasPath   = false;
-          let nextWaypoint = null; // full 3D waypoint from navmesh
-
-          if (startPt && endPt) {
-              const path = navPlugin.computePath(startPt, endPt);
-              if (path && path.length > 1) {
-                  nextWaypoint = path[1];
-                  _eDir.copyFrom(nextWaypoint).subtractInPlace(startPt);
-                  hasPath = true;
-              }
-          }
-
-            // Fallback: direct vector toward player feet
-            if (!hasPath) _eDir.copyFrom(playerFeet).subtractInPlace(botFeet);
-
-                  // (stair detection moved to per-frame floor-follow below)
-
-            _eDir.y = 0;
-            if (_eDir.length() > 0.001) _eDir.normalize();
+          _eDir.y=0;
+          if(_eDir.length()>0.001)_eDir.normalize();
 
             // --- NINJA DODGE MECHANIC ---
             // 2% chance per frame to violently strafe sideways when close
@@ -1451,18 +1461,20 @@ export function updateEnemies(dt) {
 
             // ── Jump pad detection ─────────────────────────────────────────
             // Check whether the bot is close enough to a jump pad and trigger it.
-            if (e._hopY <= 0) {
+            if (e._hopY <= 0 && (e._padCooldown || 0) <= 0) {
                 for (const pad of jumpPads) {
                     const dx = e.group.position.x - pad.pos.x;
                     const dz = e.group.position.z - pad.pos.z;
                     const onPad = (dx*dx + dz*dz) < 1.6 * 1.6;
                     const nearFloor = Math.abs(e._floorY - pad.pos.y) < 1.5;
                     if (onPad && nearFloor) {
-                        e._yVel = pad.force * 0.7;
+                        e._yVel = pad.force;
                         e._hopY = 0.01;
-                        // Apply horizontal thrust from pad direction
-                        e.group.position.x += pad.thrustX * 0.05;
-                        e.group.position.z += pad.thrustZ * 0.05;
+                        e._airVX = pad.thrustX;
+                        e._airVZ = pad.thrustZ;
+                        e._padCooldown = 2;
+                        e._navTransition = null;
+                        e._navRepath = 0;
                         break;
                     }
                 }
@@ -1521,7 +1533,7 @@ export function updateEnemies(dt) {
                 e._cryoTinted = false;
             }
             
-            const speed = currentSpeed * dt;
+            const speed = (e._onPlatform ? 0 : currentSpeed) * dt;
 
             // MID-AIR MOVEMENT (The Hop / Fall)
             if (e._hopY > 0) {
@@ -1536,7 +1548,7 @@ export function updateEnemies(dt) {
                 const downRay = new BABYLON.Ray(new BABYLON.Vector3(e.group.position.x, e._floorY + e._hopY + 2.0, e.group.position.z), new BABYLON.Vector3(0, -1, 0), 100);
                 const dHit = scene.pickWithRay(downRay, m => m.checkCollisions && !m.metadata?.enemy && m.isEnabled());                if (dHit?.hit) {
                     const groundY = dHit.pickedPoint.y;
-                    if (Math.abs(e._floorY - groundY) > 0.1) {
+                    if (groundY <= e._floorY + e._hopY + 0.2 && Math.abs(e._floorY - groundY) > 0.1) {
                         e._hopY += (e._floorY - groundY);
                         e._floorY = groundY;
                     }
@@ -1599,8 +1611,11 @@ export function updateEnemies(dt) {
                     e._stuckTimer += dt; 
                 }
 
-                if (e._stuckTimer > 0.4) {
-                    e._yVel = 12.0; 
+                if (e._stuckTimer > 0.8) {
+                    e._yVel = 12.0;
+                    e._hopY = 0.05;
+                    e._navTransition = null;
+                    e._navRepath = 0;
                     e._stuckTimer = 0;
                 }
             }
@@ -1642,6 +1657,7 @@ export function updateEnemies(dt) {
             if (e._hopY <= 0) {
                 e._hopY = 0;
                 e._yVel = 0;
+                e._airVX = 0; e._airVZ = 0;
                 // Landing thud — slightly louder/lower than a walking step
                 const lDist = BABYLON.Vector3.Distance(camera.position, e.group.position);
                 if (lDist < 20) sfx.step(Math.max(0, (1 - lDist / 20) * 0.9), e.type);
