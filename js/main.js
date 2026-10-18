@@ -733,7 +733,7 @@ engine.runRenderLoop(() => {
     }
 
     // Hazard zones
-    if (window._hazardZones && window._hazardZones.length > 0) {
+    if (!isFfaActive() && window._hazardZones && window._hazardZones.length > 0) {
       for (const haz of window._hazardZones) {
         const px = camera.position.x;
         const pz = camera.position.z;
