@@ -105,19 +105,30 @@ wss.on('connection', ws => {
       }
     }
 
-    // ── HOST STARTS THE GAME ──────────────────────────────────
+    // All participants receive one server-clock countdown.
     else if (msg.type === 'hostStartGame') {
-      const room = rooms.get(roomId);
-      if (!room || room.hostId !== id) return;   // only host can start
-      if (room.started) return;                   // don't double-start
-      room.started = true;
-
-      const roundDuration = room.config?.roundDuration ?? 600;
-      // Broadcast to ALL players including the host
-      _broadcastAll(room, {
-        type:     'roundStart',
-        duration: roundDuration,
-      });
+      const room=rooms.get(roomId);
+      if (!room || room.hostId !== id || room.started || room.preparing) return;
+      if (room.config?.directoryRoom && room.players.size < 2) {
+        ws.send(JSON.stringify({type:'roomError',message:'Two players are required'}));
+        return;
+      }
+      room.preparing=true;
+      _broadcastAll(room,{type:'roundCountdown',startsAt:Date.now()+5000});
+      room.countdownTimer=setTimeout(()=>{
+        room.preparing=false;
+        if (room.config?.directoryRoom && room.players.size<2) return;
+        room.started=true;
+        const duration=Math.max(60,Math.min(1800,Number(room.config?.roundDuration)||600));
+        _broadcastAll(room,{type:'roundStart',duration});
+        room.roundTimer=setTimeout(()=>{
+          if(!room.started)return;
+          room.started=false;
+          const scores=[...room.players.values()].map(p=>({id:p.id,name:p.name,score:p.score}));
+          scores.sort((a,b)=>b.score-a.score);
+          _broadcastAll(room,{type:'roundEnd',winner:scores[0]?.name||'DRAW',scores});
+        },duration*1000);
+      },5000);
     }
 
     // ── POSITION UPDATE ───────────────────────────────────────
