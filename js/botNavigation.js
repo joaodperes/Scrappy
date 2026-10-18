@@ -134,6 +134,7 @@ export function botTravelTarget(bot, goal, nav, pads, platforms, dt) {
         bot._hopY = 0;
         bot._yVel = 0;
         bot._onPlatform = plat;
+        bot._lastPlatformPos = plat.position.clone();
         bot._navTransition = { kind: 'ride', plat, toEnd: !state.fromEnd, age: 0 };
         return null;
       }
