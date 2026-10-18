@@ -21,4 +21,6 @@ jobs:
       - name: Validate all four map layouts
         run: node scripts/validate-map-data.cjs
       - name: Run room and match lifecycle tests
-        run: node --test server/*.test.js
+        run: |
+          node --test server/*.test.js
+          node --test scripts/*.test.cjs
