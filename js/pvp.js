@@ -92,7 +92,7 @@ function makeRemotePlayerMesh(id, name) {
 }
 
 // When building the lobby name input:
-if (nameInput && profile.displayName) nameInput.value = profile.displayName;
+// Callsign belongs to the legacy lobby DOM, not module initialization.
 
 function _makeNameTag(name, col3) {
   const W = 256, H = 64;
