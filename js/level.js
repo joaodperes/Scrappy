@@ -206,9 +206,7 @@ export function updateBarrels(dt) {
         b.respawnTimer = 0;
         b.pos.copyFrom(b.originalPos);
         for (const m of b.meshes) {
-          m.position.x = b.pos.x;
-          m.position.y = b.pos.y;
-          m.position.z = b.pos.z;
+          if (m === b.mesh) m.position.copyFrom(b.originalPos);
           m.setEnabled(true);
           m.checkCollisions = true;
         }
