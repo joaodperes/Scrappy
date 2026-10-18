@@ -151,6 +151,10 @@ export function hitscan(meshToEnemy, spread = 0, dmg = 20, range = 90, falloff =
                         flashColor = new BABYLON.Color3(1, 0.9, 0.4),
                         hitSparkColor = 0xffcc44,
                         missSparkColor = 0x886655) {
+  if(cb.isPvpActive?.()){
+    const hit=cb.pvpHitscan?.(dmg,range,spread) || false;
+    return {hit,target:null};
+  }
   camera.getForwardRay(1).direction.normalizeToRef(_rcDir);
   // Muzzle flash: bright sphere 0.5m in front
   const flashPos = camera.position.clone().addInPlace(_rcDir.scale(0.5));
