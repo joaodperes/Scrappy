@@ -338,17 +338,16 @@ function _populateMapDropdown() {
     const mapSelectSection = document.getElementById('mapSelectSection');
     if (mapSelectSection) mapSelectSection.style.display = 'none';
     startBtn.style.display = 'none';
-    if (!document.getElementById('playBtn')) {
-      const playBtn = document.createElement('button');
-      playBtn.id = 'playBtn';
-      playBtn.textContent = '▶ PLAY';
-      playBtn.className = startBtn.className;
-      playBtn.style.display = 'none'; // Authentication gate; enableGame unhides.
+    // The button is in index.html so Firebase can reveal it even when
+    // authentication finishes before this module completes initialization.
+    const playBtn = document.getElementById('playBtn');
+    if (playBtn) {
+      playBtn.style.display = window.__scrappyAuthenticated ? 'inline-block' : 'none';
       playBtn.onclick = () => {
+        if (!window.__scrappyAuthenticated) return;
         document.getElementById('menuScreen').className = 'screen hidden';
         showPlayPage();
       };
-      container.insertBefore(playBtn, startBtn);
     }
 
     // ── Leaderboard moves to its own subpage. #leaderboardSection (the
@@ -362,6 +361,7 @@ function _populateMapDropdown() {
       lbBtn.textContent = '🏆 LEADERBOARDS';
       lbBtn.className = 'btn-sm';
       lbBtn.style.marginTop = '8px';
+      lbBtn.style.display = window.__scrappyAuthenticated ? 'inline-block' : 'none';
       lbBtn.onclick = () => {
         document.getElementById('menuScreen').className = 'screen hidden';
         showLeaderboardPage();
