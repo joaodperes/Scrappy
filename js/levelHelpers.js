@@ -21,7 +21,7 @@
 //
 // Uses window.__levelScene for the current scene (set by host).
 const BABYLON = window.BABYLON;
-import { walkableMeshes, explosiveBarrels } from './level.js';
+import { walkableMeshes, explosiveBarrels, jumpPads } from './level.js';
 import { M } from './textures.js';
 
 export const LIFT_Y = 0.22;
@@ -424,6 +424,61 @@ export function createSpikeTrap(cx, cz, sx, sz, surfY, opts = {}) {
   return f;
 }
 
+// ── Editable gameplay entities ───────────────────────────────────
+// Single editable root meshes, with runtime state reconstructed from JSON.
+// Unlike static geometry these NEVER participate in the baked NavMesh.
+export function createJumpPad(px, floorY, pz, force = 24, rotY = 0) {
+  const scene = getScene(), y = liftY(floorY);
+  const mesh = BABYLON.MeshBuilder.CreateCylinder('jumpPad', {diameter:2.2,height:0.1,tessellation:16},scene);
+  mesh.position.set(px,y,pz);
+  mesh.rotation.y = rotY;
+  mesh.material = M.jumpPad || M.ledGreen;
+  mesh.checkCollisions = false;
+  _tagMeta(mesh,'jump_pad','createJumpPad',{px,floorY,pz,force,rotY},true,null);
+  const pad = {pos:mesh.position.clone(),force,thrustX:Math.sin(rotY)*force*0.45,
+    thrustZ:Math.cos(rotY)*force*0.45,mesh};
+  jumpPads.push(pad);
+  return mesh;
+}
+
+export function createMovingPlatform(startX,startY,startZ,endX,endY,endZ,
+  sx=5,sz=5,speed=0.25,waitTime=1.5,opts={}) {
+  const scene=getScene();
+  const mesh=BABYLON.MeshBuilder.CreateBox('movingPlatform',{width:sx,height:0.5,depth:sz},scene);
+  mesh.position.set(startX,startY,startZ);
+  mesh.checkCollisions=true;
+  mesh.material=matSteel || matConcrete;
+  _tagMeta(mesh,'moving_platform','createMovingPlatform',
+    {startX,startY,startZ,endX,endY,endZ,sx,sz,speed,waitTime},true,null);
+  const start=mesh.position.clone(),end=new BABYLON.Vector3(endX,endY,endZ);
+  mesh._moveData={start,end,speed,t:0,dir:1,waitTime,waitTimer:0,paused:true};
+  mesh.setEnabled(!!window.__levelEditorMode);
+  opts.movingPlatforms?.push(mesh);
+  return mesh;
+}
+
+export function createPowerSwitch(px,py,pz,targetPlatformIds=[],opts={}) {
+  const scene=getScene();
+  const mesh=BABYLON.MeshBuilder.CreateBox('powerSwitch',{width:0.8,height:1.3,depth:0.4},scene);
+  mesh.position.set(px,py,pz);
+  const mat=new BABYLON.StandardMaterial('switchMat',scene);
+  mat.diffuseColor=new BABYLON.Color3(0.13,0.4,0.28);
+  mat.emissiveColor=new BABYLON.Color3(0,0.8,0.2);
+  mesh.material=mat;
+  mesh.checkCollisions=false;
+  _tagMeta(mesh,'power_switch','createPowerSwitch',
+    {px,py,pz,targetPlatformIds},true,{interactive:true,activated:false,targetPlatforms:[]});
+  const ring=BABYLON.MeshBuilder.CreateTorus('switchRing',{diameter:0.75,thickness:0.1},scene);
+  ring.parent=mesh;
+  ring.position.set(0,0,0.28);
+  ring.isPickable=false;
+  ring.checkCollisions=false;
+  ring.material=M.ledGreen || mat;
+  mesh.metadata.ring=ring;
+  opts.powerSwitches?.push(mesh);
+  return mesh;
+}
+
 // ── JSON layout pipeline ─────────────────────────────────────────
 // This is the single source of truth for turning a JSON "objects" array
 // (the exact shape editor.html's "Export JSON" produces) back into real
@@ -461,6 +516,11 @@ const _generators = {
   createLava:             (p, t) => createLava(p.cx, p.cz, p.sx, p.sz, { hazardZones: t?.hazardZones }),
   createDestructibleWall: (p, t) => createDestructibleWall(p.px, p.surfY, p.pz, p.sx, p.sh, p.sz, p.hp, { destructibleWalls: t?.destructibleWalls }),
   createSpikeTrap:        (p, t) => createSpikeTrap(p.cx, p.cz, p.sx, p.sz, p.surfY, { hazardZones: t?.hazardZones }),
+  createJumpPad:          p => createJumpPad(p.px,p.floorY,p.pz,p.force,p.rotY),
+  createMovingPlatform:   (p,t) => createMovingPlatform(p.startX,p.startY,p.startZ,p.endX,p.endY,p.endZ,
+                                   p.sx,p.sz,p.speed,p.waitTime,{movingPlatforms:t?.movingPlatforms}),
+  createPowerSwitch:      (p,t) => createPowerSwitch(p.px,p.py,p.pz,p.targetPlatformIds||[],
+                                   {powerSwitches:t?.powerSwitches}),
 };
 
 /** Re-creates one editable prop from its generator name + params. `targets`
@@ -507,6 +567,17 @@ export function clearEditableMeshes(targets = null) {
       if (toRemove.has(targets.hazardZones[i])) targets.hazardZones.splice(i, 1);
     }
   }
+  for (let i=jumpPads.length-1;i>=0;i--) {
+    if (toRemove.has(jumpPads[i].mesh)) jumpPads.splice(i,1);
+  }
+  if (targets?.movingPlatforms) {
+    for (let i=targets.movingPlatforms.length-1;i>=0;i--)
+      if (toRemove.has(targets.movingPlatforms[i])) targets.movingPlatforms.splice(i,1);
+  }
+  if (targets?.powerSwitches) {
+    for (let i=targets.powerSwitches.length-1;i>=0;i--)
+      if (toRemove.has(targets.powerSwitches[i])) targets.powerSwitches.splice(i,1);
+  }
   if (targets?.destructibleWalls) {
     for (let i = targets.destructibleWalls.length - 1; i >= 0; i--) {
       if (toRemove.has(targets.destructibleWalls[i])) targets.destructibleWalls.splice(i, 1);
@@ -539,6 +610,7 @@ export function clearEditableMeshes(targets = null) {
  */
 export function applyEditableLayout(objects, targets = null) {
   clearEditableMeshes(targets);
+  const idMeshes = new Map();
   for (const obj of (objects || [])) {
     const mesh = instantiateFromParams(obj.generator, obj.params || {}, targets);
     if (!mesh) continue;
@@ -546,11 +618,36 @@ export function applyEditableLayout(objects, targets = null) {
     if (obj.rotation) mesh.rotation.set(obj.rotation.x, obj.rotation.y, obj.rotation.z);
     if (obj.scaling)  mesh.scaling.set(obj.scaling.x, obj.scaling.y, obj.scaling.z);
     mesh.computeWorldMatrix(true);
+    if (mesh.metadata?.editable) {
+      mesh.metadata.editorId = obj.id || mesh.metadata.editorId ||
+        ('entity_' + Math.random().toString(36).slice(2));
+      idMeshes.set(mesh.metadata.editorId, mesh);
+    }
+    if (mesh.metadata?.generator === 'createJumpPad') {
+      const pad = jumpPads.find(p=>p.mesh===mesh);
+      if (pad) {
+        pad.pos.copyFrom(mesh.position);
+        pad.thrustX = Math.sin(mesh.rotation.y) * pad.force * 0.45;
+        pad.thrustZ = Math.cos(mesh.rotation.y) * pad.force * 0.45;
+      }
+    }
+    if (mesh._moveData) {
+      const offset = mesh.position.subtract(mesh._moveData.start);
+      mesh._moveData.start.addInPlace(offset);
+      mesh._moveData.end.addInPlace(offset);
+    }
     if (mesh.metadata?.hazard) {
       const p = mesh.metadata.params;
       if (typeof p?.sx === 'number') mesh.metadata.halfWidth = p.sx * Math.abs(mesh.scaling.x) / 2;
       if (typeof p?.sz === 'number') mesh.metadata.halfDepth = p.sz * Math.abs(mesh.scaling.z) / 2;
     }
+  }
+  // Resolve switch links only after all referenced platform entities exist.
+  for (const m of idMeshes.values()) {
+    if (m.metadata?.generator !== 'createPowerSwitch') continue;
+    const ids = m.metadata.params.targetPlatformIds || [];
+    m.metadata.targetPlatforms = ids.map(id=>idMeshes.get(id))
+      .filter(p=>p?._moveData);
   }
 }
 
