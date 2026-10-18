@@ -70,6 +70,10 @@ wss.on('connection', ws => {
       // Use existing config if room already had one set by host
       const roomCfg = room.config ?? msg.config ?? {};
 
+      // For TDM, put each arriving human on the smaller team.
+      const tally={RED:0,BLUE:0};
+      for(const p of room.players.values())if(p.team)tally[p.team]++;
+      const team=roomCfg.mode==='tdm'?(tally.RED<=tally.BLUE?'RED':'BLUE'):null;
       // Send welcome with list of existing players + room details
       const existingPlayers = [...room.players.values()].map(p => ({
         id: p.id, name: p.name, x: p.x, y: p.y, z: p.z, yaw: p.yaw, hp: p.hp, score: p.score,
@@ -82,19 +86,20 @@ wss.on('connection', ws => {
         config:  roomCfg,
         isHost:  room.hostId === id,
         started: room.started,
+        team,
       }));
 
       // Add this player to the room
       room.players.set(id, {
         id, ws, name,
         x: 0, y: 1.72, z: 0, yaw: 0,
-        hp: 100, score: 0,
+        hp: 100, score: 0, team, deadUntil: 0, lastHitAt: 0,
         config: roomCfg,
       });
 
       // Notify existing players
-      _broadcast(room, id, { type: 'playerJoined', id, name });
-      _broadcastAll(room, {type:'roomUpdated',players:[...room.players.values()].map(p=>({id:p.id,name:p.name}))});
+      _broadcast(room, id, { type: 'playerJoined', id, name, team });
+      _broadcastAll(room, {type:'roomUpdated',players:[...room.players.values()].map(p=>({id:p.id,name:p.name,team:p.team}))});
 
       // If game already started (late joiner), send roundStart immediately
       if (room.started) {
