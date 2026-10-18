@@ -4,7 +4,7 @@ import { M, rwCache1, rwCache2 } from './textures.js';
 import { applyExplosionImpulse } from './player.js';
 import { TIER_1, TIER_2, TIER_3, TIER_4, TIER_5, TIER_6 } from './constants.js';
 import {
-  buildStaircase, setLevelMaterials, registerMaterial, liftY,
+  buildStaircase, createJumpPad, setLevelMaterials, registerMaterial, liftY,
   loadMapOverride, applyEditableLayout,
 } from './levelHelpers.js';
 
@@ -159,24 +159,6 @@ export async function buildLevel(customScene = null) {
   stairs(-27, TIER_3, 0, 8, 15, 13, 1, 0);
   stairs( 27, TIER_3, 0, 8, 15, 13, -1, 0);
 
-  // ── Jump pads ────────────────────────────────────────────────
-  // Not part of the editable/JSON object system — makeJumpPad() pushes raw
-  // gameplay data (position/force/thrust) into the shared jumpPads array,
-  // not a tagged mesh, so there's nothing for editor.html/JSON to capture.
-  // These stay hardcoded, same as every other map's jump pads.
-  makeJumpPad(-28, TIER_2,  28, 22, Math.PI/4);
-  makeJumpPad( 28, TIER_2,  28, 22, 7*Math.PI/4);
-  makeJumpPad(-28, TIER_2, -28, 22, 3*Math.PI/4);
-  makeJumpPad( 28, TIER_2, -28, 22, 5*Math.PI/4);
-  makeJumpPad( 0, TIER_3,  38, 22, Math.PI);
-  makeJumpPad( 0, TIER_3, -38, 22, 0);
-  makeJumpPad(-36, TIER_3,  12, 24, Math.PI/2);
-  makeJumpPad(-36, TIER_3, -12, 24, Math.PI/2);
-  makeJumpPad( 36, TIER_3,  12, 24, -Math.PI/2);
-  makeJumpPad( 36, TIER_3, -12, 24, -Math.PI/2);
-  makeJumpPad(0, TIER_4, 0, 28, Math.PI);
-  makeJumpPad(0, TIER_5, 28, 22, Math.PI);
-
   // Ambient light near the secret summit — cosmetic, not an editable object.
   const secretGlow = new BABYLON.PointLight('secretGlow', new BABYLON.Vector3(0, TIER_5+3, 20), scene);
   secretGlow.diffuse = new BABYLON.Color3(0, 1, 1); secretGlow.intensity = 2.0; secretGlow.range = 20;
@@ -191,6 +173,23 @@ export async function buildLevel(customScene = null) {
   // fetch ever fails.
   const override = await loadMapOverride('scrapyard');
   if (override) applyEditableLayout(override, { hazardZones, destructibleWalls, movingPlatforms, powerSwitches });
+  // Backward compatibility: the existing scrapyard JSON predates pad entities.
+  // The fallback pads are editable and exported, but do not duplicate any
+  // serialized pads on the next JSON roundtrip.
+  if (!override?.some(o => o.generator === 'createJumpPad')) {
+    createJumpPad(-28, TIER_2,  28, 22, Math.PI/4);
+    createJumpPad( 28, TIER_2,  28, 22, 7*Math.PI/4);
+    createJumpPad(-28, TIER_2, -28, 22, 3*Math.PI/4);
+    createJumpPad( 28, TIER_2, -28, 22, 5*Math.PI/4);
+    createJumpPad( 0, TIER_3,  38, 22, Math.PI);
+    createJumpPad( 0, TIER_3, -38, 22, 0);
+    createJumpPad(-36, TIER_3,  12, 24, Math.PI/2);
+    createJumpPad(-36, TIER_3, -12, 24, Math.PI/2);
+    createJumpPad( 36, TIER_3,  12, 24, -Math.PI/2);
+    createJumpPad( 36, TIER_3, -12, 24, -Math.PI/2);
+    createJumpPad(0, TIER_4, 0, 28, Math.PI);
+    createJumpPad(0, TIER_5, 28, 22, Math.PI);
+  }
 
   // ── Build NavMesh ──────────────────────────────────────────
   walkableMeshes.forEach(mesh => mesh.computeWorldMatrix(true));
