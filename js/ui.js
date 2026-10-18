@@ -203,6 +203,48 @@ function _esc(s) {
   return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 
+// FFA/TDM score overlay used by pvp.js. Separate from the legacy TDM HUD.
+let _ffaHud = null;
+export function updateFfaHUD(rows = [], timeLeft = 0, myId = null) {
+  if (!_ffaHud || !_ffaHud.isConnected) {
+    _ffaHud = document.getElementById('ffaHud');
+    if (!_ffaHud) {
+      _ffaHud = document.createElement('div');
+      _ffaHud.id = 'ffaHud';
+      _ffaHud.style.cssText = [
+        'position:fixed;top:12px;right:12px;z-index:700',
+        'background:rgba(9,12,16,.85);border:1px solid #557733',
+        'color:#d8f030;min-width:190px;padding:8px 11px',
+        'font:12px "Courier New",monospace;pointer-events:none',
+      ].join(';');
+      document.body.appendChild(_ffaHud);
+    }
+  }
+  _ffaHud.style.display = 'block';
+  _ffaHud.replaceChildren();
+  const sec = Math.max(0, Math.floor(Number(timeLeft) || 0));
+  const header = document.createElement('div');
+  header.textContent = 'MATCH  ' + Math.floor(sec / 60) + ':' + String(sec % 60).padStart(2, '0');
+  header.style.cssText = 'font-weight:bold;margin-bottom:6px;border-bottom:1px solid #557733;padding-bottom:5px';
+  _ffaHud.appendChild(header);
+  for (const [i, row] of rows.slice(0, 8).entries()) {
+    const line = document.createElement('div');
+    line.style.cssText = 'display:flex;justify-content:space-between;gap:15px;margin:3px 0';
+    if (row.id === myId) line.style.color = '#15cab6';
+    const name = document.createElement('span');
+    name.textContent = (i + 1) + '. ' + String(row.name || 'PLAYER').slice(0, 24);
+    const score = document.createElement('span');
+    score.textContent = String(Number(row.score) || 0);
+    line.append(name, score);
+    _ffaHud.appendChild(line);
+  }
+}
+export function hideFfaHUD() {
+  const el = _ffaHud || document.getElementById('ffaHud');
+  if (el) el.style.display = 'none';
+  hideRoomConfigBanner();
+}
+
 export function updatePvpHUD(redScore, blueScore, timeLeft) {
   const el = document.getElementById('pvpHud');
   if (!el) return;
