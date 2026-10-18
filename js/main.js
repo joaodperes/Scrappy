@@ -15,7 +15,7 @@ import { updateWaves, setCurWave, setWaveOn, setWaveDly, curWave, launchWave, ge
 import { updatePlayer, setupInput, hurtPlayer, PH, resetPlayer, resetWeaponHeat, keys, movePlayerBody } from './player.js';
 import { updateHUD, tickHitMarker, wireDeathSubmit, showHitMarker, hideFfaHUD } from './ui.js';
 import { submitScore, renderLeaderboard } from './leaderboard.js';
-import { startFfa, stopFfa, updateFfa, isFfaActive, isFfaInPreLobby, showFfaLobby, isLocalDead, togglePvpScoreboard } from './pvp.js';
+import { startFfa, stopFfa, updateFfa, isFfaActive, isFfaInPreLobby, showFfaLobby, isLocalDead, togglePvpScoreboard, checkFfaHitScan } from './pvp.js';
 import { loadProfile, getLevelProgress, levelFromTotalXp } from './progression.js';
 import { showLoadout } from './loadout.js';
 import { getCurrentMap, setCurrentMap, MAPS, getMapMeta, buildMap, isHardModeUnlocked, isMapUnlocked } from './mapManager.js';
@@ -39,6 +39,7 @@ cb.showHitMarker = showHitMarker;
 cb.isGameRunning = () => gameRunning;
 cb.isPvpActive = isFfaActive;
 cb.isPvpDead = isLocalDead;
+cb.pvpHitscan = checkFfaHitScan;
 cb.resetWeaponHeat = resetWeaponHeat;
 
 // ── Input ──────────────────────────────────────────────────────
