@@ -37,6 +37,16 @@
         <button data-action="addJumpPad">+ Jump Pad</button>
         <button data-action="addMovingPlatform">+ Moving Platform</button>
         <button data-action="addPowerSwitch">+ Power Switch</button>
+        <button data-action="addCeiling">+ Ceiling</button>
+        <hr>
+        <div style="font-size:12px;font-weight:bold;color:#aaf">GAMEPLAY MARKERS</div>
+        <button data-marker="playerSpawn">+ Player Spawn</button>
+        <button data-marker="enemySpawn">+ Enemy Spawn</button>
+        <button data-marker="pvpSpawn">+ PvP Spawn</button>
+        <button data-marker="weaponPickup">+ Weapon</button>
+        <button data-marker="healthPickup">+ Health</button>
+        <button data-marker="armorPickup">+ Armor</button>
+        <button data-marker="ammoPickup">+ Ammo</button>
         <div id="editorInspector" style="margin:12px 0;font-size:11px;color:#ddd"></div>
         <hr>
         <button data-action="delete" class="danger">🗑 Delete</button>
@@ -44,6 +54,9 @@
         <button data-action="import" class="warning">📂 Import JSON</button>
         <button data-action="loadLive" class="live">📡 Load Live (assets/maps/)</button>
         <button id="navRebuildBtn" class="warning" style="background:#4a6a2a;">🔄 Rebuild NavMesh</button>
+        <button id="navDebugBtn">Show NavMesh</button>
+        <div id="editorStatus" role="status" style="margin:8px 0;font-size:11px;color:#aaf"></div>
+        <a href="docs/MAP_AUTHORING.md" target="_blank" rel="noopener">Map authoring guide ↗</a>
     </div>
     <div id="info">🛠️ Standalone Editor – press F4 to start</div>
 
@@ -94,8 +107,10 @@
             // ---- Set globals for the level builder ----
             window.__levelScene = scene;
             window.__levelEditorMode = true;
-            // Provide a no-op navPlugin for the editor (we don't need navmesh)
-            window.__levelNavPlugin = { createNavMesh: () => {} };
+            if(typeof window.Recast!=='function')throw Error('Recast did not load');
+            const recast=await window.Recast();
+            const navPlugin=new BABYLON.RecastJSPlugin(recast);
+            window.__levelNavPlugin = navPlugin;
 
             // ---- Dynamically import the chosen level module + shared helpers ----
             const levelMod = await import(levelPath);
@@ -103,10 +118,13 @@
             const {
                 createSlab, createWall, createPillar, createColumn, createGlass,
                 createRampBox, createRamp, createLava, createDestructibleWall, createSpikeTrap,
-                createBarrel, createCrate, createJumpPad, createMovingPlatform, createPowerSwitch,
-                applyEditableLayout, loadMapOverride,
+                createBarrel, createCrate, createCeiling, createJumpPad, createMovingPlatform, createPowerSwitch,
+                applyEditableLayout, loadMapDocument,
             } = await import('/js/levelHelpers.js');
             const { walkableMeshes, explosiveBarrels, jumpPads } = await import('/js/level.js');
+            const { MAP_SCHEMA_VERSION, validateMapDocument, serializeEditableMesh,
+                ENTITY_DEFINITIONS, MARKER_DEFINITIONS } = await import('/js/mapSchema.js');
+            const { getLoadedMapDocument } = await import('/js/mapLayoutStore.js');
             // hazardZones/destructibleWalls are declared PER MAP (each level*.js
             // owns its own array, same as walkableMeshes is shared/global but
             // these aren't) — pull whichever ones this specific map exports.
@@ -131,6 +149,9 @@
                     this.canvas = canvas;
                     this.enabled = false;
                     this.selectedMesh = null;
+                    this.markerMeshes = [];
+                    this.baseDocument = getLoadedMapDocument(mapId);
+                    this.navDebugMesh = null;
                     this.gizmoManager = new BABYLON.GizmoManager(scene);
                     this.gizmoManager.positionGizmoEnabled = true;
                     this.gizmoManager.rotationGizmoEnabled = true;
@@ -140,6 +161,7 @@
                     this.setupPicking();
                     this.setupKeys();
                     this.setupUI();
+                    this.loadMarkers(this.baseDocument?.markers || []);
                 }
 
                 setupPicking() {
@@ -164,6 +186,7 @@
                             return;
                         }
                         if (!this.enabled) return;
+                        if(['INPUT','TEXTAREA','SELECT'].includes(e.target?.tagName))return;
 
                         if (e.key === 'g') {
                             this.gizmoManager.positionGizmoEnabled = true;
@@ -219,16 +242,25 @@
                             else if (action === 'addJumpPad') this.addObject('jumpPad');
                             else if (action === 'addMovingPlatform') this.addObject('movingPlatform');
                             else if (action === 'addPowerSwitch') this.addObject('powerSwitch');
+                            else if (action === 'addCeiling') this.addObject('ceiling');
                             else if (action === 'delete') this.deleteSelected();
                             else if (action === 'export') this.exportLevel();
                             else if (action === 'import') this.importLevel();
                             else if (action === 'loadLive') this.loadLiveLayout();
                         });
                     });
-                    // NavMesh rebuild button
-                    document.getElementById('navRebuildBtn').addEventListener('click', () => {
-                        this.rebuildNavMesh();
+                    panel.querySelectorAll('button[data-marker]').forEach(btn=>{
+                        btn.onclick=()=>this.addMarker(btn.dataset.marker);
                     });
+                    document.getElementById('navRebuildBtn').onclick=()=>this.rebuildNavMesh();
+                    document.getElementById('navDebugBtn').onclick=()=>{
+                        if(!this.navDebugMesh)this.rebuildNavMesh();
+                        if(this.navDebugMesh){
+                            this.navDebugMesh.setEnabled(!this.navDebugMesh.isEnabled());
+                            document.getElementById('navDebugBtn').textContent=
+                                this.navDebugMesh.isEnabled()?'Hide NavMesh':'Show NavMesh';
+                        }
+                    };
                 }
 
                 toggle() {
@@ -294,6 +326,7 @@
                         case 'movingPlatform': mesh=createMovingPlatform(pos.x,y,pos.z,pos.x,y+8,pos.z,
                           5,5,0.25,1.5,{movingPlatforms});break;
                         case 'powerSwitch': mesh=createPowerSwitch(pos.x,y,pos.z,[],{powerSwitches});break;
+                        case 'ceiling': mesh=createCeiling(pos.x,y,pos.z,5,5);break;
                     }
                     if (mesh) {
                         this.selectedMesh = mesh;
