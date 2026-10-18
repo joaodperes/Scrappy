@@ -9,7 +9,7 @@ import { hurtPlayer } from './player.js';
 import { spawnBot, updateEnemies } from './enemies.js';
 import { enemies } from './gameState.js';
 import { profile, emitEvent, awardXp } from './progression.js';
-import { curWep } from './weapons.js';
+import { curWep, inventory, setWeapon, setActiveSlot } from './weapons.js';
 import { getCurrentMap, getWalkableSpawns } from './mapManager.js';
 
 
@@ -27,6 +27,7 @@ let _inPreLobby   = false;
 let _isHost       = false;
 let _externalRoom = false;
 let _scoreboardShown = false;
+let _gunOrder = null;
 let _prelobbyOnStart = null;   // callback when host clicks "START GAME"
 
 // Scoreboard: id → { name, score }
@@ -363,6 +364,7 @@ function _wireEvents(onRoundEnd, onGameStart) {
 
   on('roundStart', msg => {
     roundActive = true;
+    _gunOrder=msg.gunOrder||_gunOrder;
     timeLeft = msg.duration ?? roomConfig.roundDuration ?? 600;
     myScore = 0; _scores.forEach(s => { s.score = 0; });
 
@@ -376,7 +378,17 @@ function _wireEvents(onRoundEnd, onGameStart) {
     _announce('FIGHT!', 2200);
   });
 
-  on('roundCountdown', () => { roundActive = false; });
+  on('weaponProgress',msg=>{
+    if(msg.playerId!==getMyId() || !WDEFS_GUN_ALLOWED(msg.weapon))return;
+    inventory[0]=msg.weapon;
+    setActiveSlot(0);
+    setWeapon(msg.weapon);
+    _announce('WEAPON UP: '+msg.weapon,1750);
+  });
+  on('roundCountdown',msg=>{
+    roundActive=false;
+    _gunOrder=msg.gunOrder||null;
+  });
   on('roundEnd',    msg => _handleRoundEnd(msg, onRoundEnd));
   on('disconnected', ()  => stopFfa());
 }
@@ -387,6 +399,10 @@ function _handleRoundEnd(msg, onRoundEnd) {
   onRoundEnd?.(msg.winner ?? 'Nobody', _buildScoreRows());
 }
 
+function WDEFS_GUN_ALLOWED(name){
+  return !!(name && ['PISTOL','SMG','SHOTGUN','CHAINGUN','DMR','COMET','RAILGUN',
+    'TESLA','CROSSBOW','ELECTRON','ION','KNIFE'].includes(name));
+}
 function drawMatchScoreboard(){
   const root=document.getElementById('_matchScoreboard');
   if(!root||!_scoreboardShown)return;
@@ -395,7 +411,7 @@ function drawMatchScoreboard(){
   list.replaceChildren();
   const rows=_buildScoreRows();
   const heading=document.createElement('div');
-  heading.textContent=(roomConfig.mode==='tdm'?'TEAM DEATHMATCH':'FREE FOR ALL')+' · '+Math.ceil(timeLeft)+'s';
+  heading.textContent=(roomConfig.mode==='tdm'?'TEAM DEATHMATCH':roomConfig.mode==='gunGame'?'GUN GAME':'FREE FOR ALL')+' · '+Math.ceil(timeLeft)+'s';
   heading.style.cssText='font-weight:bold;color:#15cab6;margin-bottom:14px';
   list.appendChild(heading);
   for(const [i,r] of rows.entries()){
@@ -479,7 +495,7 @@ export function stopFfa() {
   _clearRemotePlayers();
   _hidePreLobbyOverlay();
   ['welcome','playerJoined','playerLeft','state','hit','killed','damageConfirmed',
-   'respawn','roundCountdown','roundStart','roundEnd','disconnected'].forEach(t => off(t));
+   'respawn','weaponProgress','roundCountdown','roundStart','roundEnd','disconnected'].forEach(t => off(t));
   for (const e of enemies) {
     if (!e.alive) continue;
     e.group.getChildMeshes().forEach(m => m.dispose());
