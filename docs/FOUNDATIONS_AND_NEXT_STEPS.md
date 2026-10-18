@@ -1,70 +1,101 @@
-# Scrappy implementation status (2026-10-18)
+# Scrappy implementation status — October 18, 2026
 
-This branch is a **foundations** pass against current `main`, not completion of the entire
-TODO. Keep the original `fix/bot-map-traversal` PR separate until this branch is tested.
+Consolidated work on Draft PR #2 (`fix/foundations-room-flow-20261018`).
+PR #1 was closed **without merging** after its navigation approach was integrated
+and adapted to the current AI. Main has not been altered.
 
-## Implemented in this branch
+## Implemented (source-level; browser QA still required)
 
-- Recast navigation (no straight-line placeholder) and unified `#c` rendering/input canvas.
-- Editable mesh picking, Babylon version alignment, mutable hazards, composite barrel movement.
-- Version-one JSON gameplay entities: `createJumpPad`, `createMovingPlatform`,
-  `createPowerSwitch`, with platform IDs resolved on map import.
-- Scrapyard's existing pads become editable fallback objects, avoiding JSON duplicates.
-- CSS extracted from `index.html` and `editor.html` into `css/`.
-- `roomFlow.js`: create, browse, join, lobby roster, password prompt, room capacity,
-  mode/maps, auth-gated Play button, solo Survival startup countdown.
-- Room-directory server messages, server-enforced room capacity/password, host ownership
-  protection, and tests (`cd server && npm test`).
-- Basic bot off-mesh navigation links re-integrated against the *current* enemy AI.
+- Actual Recast navigation, single Babylon gameplay canvas, editor mesh picking,
+  mutable composite/skin hazards, editor/runtime Babylon.js version alignment.
+- Extracted `css/game.css` and `css/editor.css` and fixed duplicate DOM IDs.
+- Four maps load through shared JSON primitive/entity system.
+- Editor can author/serialize `createJumpPad`, `createMovingPlatform` and
+  `createPowerSwitch`, including target IDs. Existing Scrapyard jump pads
+  become editor-exportable entities. Bot off-mesh navigation was ported from PR #1.
+- Jungle's 83-object current JSON was **extended**, not overwritten, with 29
+  editable gameplay objects (boundary, ramps, pads, lava/spikes, destructibles,
+  platforms and switches). Historical Jungle geometry provided *design guidance*
+  but is not geometrically identical to the newer mine-centric JSON layout.
+- Repaired formerly fatal top-level `pvp.js` undeclared reference.
+- New room flow: Play -> Create/Browse -> password/capacity/host/team lobby;
+  map-defined team sizes; disabled Hard Mode outside Survival.
+- Solo Survival room can launch locally. Human FFA/TDM/Gun Game matches now
+  connect new lobbies to the existing multiplayer client over one socket.
+- Server 5-second pre-match countdown, finite match timer, team allocation,
+  TDM friendly-fire protection, team/FFA scores, individual death/respawn,
+  per-map respawn locations, and Gun Game randomized unique weapon sequence
+  starting Pistol and ending Knife.
+- Simple Knife melee weapon + model (not the full secondary/melee/skin system).
+- PvP scoreboard on Escape, death grayscale, two-gun loadout selector for
+  FFA/TDM, Gun Game weapon-progress notification; PvP hitscan vs remote-player
+  meshes with local occlusion, server-bounded damage and challenge/XP events.
+- Simulated-client TDM and Gun Game lifecycle checks performed. Automated
+  room directory, match lifecycle and Gun Game test files added.
+- CI workflow checks JS syntax, JSON map schemas and Node protocol tests.
 
-## Not implemented: do not advertise as playable
+## Important limits (NOT DONE)
 
-- Co-op Survival over WebSocket; TDM, FFA, and Gun Game runtime/teams/scoring/respawn.
-  Non-Survival rooms are lobby-only; solo Survival can start from a room.
-- Server-side ready acknowledgments and synchronized pre-match freeze for multiplayer.
-- Bot fill with real player-model controllers / AI presets; late joiner bot replacement;
-  team selection and authoritative scoring; actual 5-second multiplayer respawns.
-- All historic Jungle gameplay features: the current `jungle.json` contains static
-  geometry only, and does **not** define pads/platforms/switches. Rebuild through
-  the editor or explicitly author those objects based on the current layout.
-- Legacy hardcoded complex objects (e.g. City ziplines and some stair composites)
-  are not yet independently editable in the JSON inspector.
-- End-to-end browser/Firefox renderer and multiplayer testing.
+- **Competitive network security:** shots, damage, weapon selection and
+  movement still originate on clients. Server bounds/rate limits are not
+  authoritative line-of-sight/hit validation. Do not use this as a
+  cheat-resistant public PvP ranking system.
+- Browser end-to-end QA in Firefox/Chromium, WebGL warnings, connection/reconnect
+  behavior, map passability, device performance and network jitter.
+- Projectile weapons in PvP still need dedicated remote-hit handling; current
+  direct PvP hit integration primarily covers hitscan + knife.
+- The restored Jungle geometry is *not* confirmed passable or balanced in 3D;
+  ramps/platform dock alignment, hazard heights and terrain connections
+  require a full navigation and collision test.
+- `Fill with bots` is UI placeholder only. Server-managed player-model AI
+  controllers, configurable JSON bot personas, bot replacement on late join,
+  team selection, loadout skins on remote players remain to be developed.
+- Survival co-op needs authoritative PvE world replication; only solo Survival
+  is enabled from the new flow.
+- Multiplayer-specific loadout/account validation, reconnect, seamless room
+  migrations, server readiness acknowledgments and true input freeze during
+  the countdown need hardening.
+- The full weapon-category/melee/skins system, rotating daily/weekly quests,
+  Collector rewards, server-authoritative Scraps shop/XP packs, Hard Mode
+  Elite/modifier rewrite and earned PvE equipment progression are not part
+  of the current implementation.
 
-## Required verification before merge
+## Test commands
 
-1. `cd server && npm test`, then `npm start`; open the game over HTTP (not file://).
-2. Confirm Google login -> Play -> Create Room -> lobby -> solo countdown -> Survival.
-3. Open a second browser to Browse Rooms; confirm password rejection, correct join,
-   capacity 2 for Survival, and room removal when everyone leaves.
-4. Load Scrapyard, Jungle, City, and Terminal in normal gameplay; verify first
-   spawn, navmesh building, gameplay rendering and FPS mouse/pointer lock.
-5. For each map open `editor.html?map=<id>`. Select/move/export/import static props.
-   Add and export a pad, moving platform and power switch; set a switch's
-   `targetPlatformIds` to the platform's exported `id`; verify on reimport.
-6. Test bots reaching the player across stair tiers and using pads/activated platforms.
-   Confirm no ceiling/floor snapping, stuck loops, or fall-through.
-7. Confirm old FFA network flow still works (it is not the new room runtime).
-8. Check Firefox/WebGL2 warnings after unified Babylon version; no GPU warning
-   can be considered fixed solely by a source review.
+```bash
+cd server && npm test
+cd .. && node scripts/validate-map-data.cjs
+```
 
-## Remaining implementation order
+To test multiplayer, run the WebSocket server (`cd server && npm start`) and
+serve the root game over HTTP. Open two authenticated game clients on the same
+reachable WebSocket server, create a room in one, browse/join it in the other,
+and start FFA/TDM/Gun Game. Verify end-of-match, opposite TDM teams, respawns,
+Gun Game order (Pistol first, Knife last), challenges and rejoin behavior.
 
-1. Stabilize/test the above; restore lost Jungle gameplay entities to the JSON map.
-2. Build an authoritative, centrally hosted WebSocket match protocol:
-   join/ready/5-second synchronized freeze, map/mode limits, teams,
-   player-model bots, bot replacement, scoreboards, death/respawn and rewards.
-3. Deliver Survival co-op, TDM, FFA, then Gun Game. Share mode-independent match
-   state, damage events and progression; Gun Game uses unique weapon order with
-   Pistol first and Knife last.
-4. Implement secondary/melee weapon categories and loadout equipment.
-5. Implement rotating quests and the Scraps economy server-authoritatively.
-6. Add Hard Mode Elite/modifiers and independent player progression/equipment.
+To test Jungle, visit `editor.html?map=jungle` and inspect the 29 added
+entity roots. Test both the new mine and the upper ruins, switch activation,
+lava and spikes, collision, ramps, and moving-platform routes. The historical
+map and the newest layout are different; remaining historical features must
+be adapted, not pasted at conflicting coordinates.
 
-### Economy decision (overrides ambiguous older TODO language)
+## Recommended next engineering order
 
-**Scraps buy cosmetics and weapon XP packs only.** Do not sell damage, armor,
-speed, equipment bonuses, or other stat upgrades for Scraps. If PvE equipment
-progression is added, it must be earned separately and disabled/normalized in
-competitive PvP. Track Scrap awards centrally so duplicate Collector rewards
-and maxed-weapon conversion cannot be claimed twice.
+1. Run CI and browser QA, fix regressions and correct map geometry.
+2. Make PvP authoritative and complete projectile hits, loadout validation and
+   readiness/reconnect behavior; implement actual player-model bots and
+   server-controlled bot replacement.
+3. Build replicated co-op Survival on the same room protocol, with per-map
+   NPC waves and shared state.
+4. Extend Knife into full Primary/Secondary/Wonder system and reusable melee
+   weapons/attachments/skins.
+5. Add daily and weekly quests, Collector rewards and the Scraps economy with
+   server-enforced balances and transaction IDs.
+6. Add Elite/Hard Mode modifiers and separately earned PvE equipment.
+
+### Currency rule
+
+**Scraps are exclusively for cosmetics and weapon XP packs.** Never sell
+player/weapon damage, mobility, durability, armor, or equipment power for
+Scraps. Earnable PvE equipment must have its own separate progression path and
+be normalized/disabled for competitive PvP.
