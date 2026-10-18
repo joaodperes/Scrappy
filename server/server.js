@@ -7,6 +7,23 @@ const wss  = new WebSocketServer({ port });
 const rooms = new Map();
 // rooms: Map<roomId, { players: Map<id, player>, config, started, hostId }>
 let _nextId = 1;
+function scoreByTeam(room){
+  const teams={RED:0,BLUE:0};
+  for(const p of room.players.values())if(p.team)teams[p.team]+=p.score;
+  return teams;
+}
+function finishMatch(room){
+  if(!room.started)return;
+  room.started=false;
+  if(room.roundTimer)clearTimeout(room.roundTimer);
+  const scores=[...room.players.values()].map(p=>({id:p.id,name:p.name,score:p.score,team:p.team}));
+  scores.sort((a,b)=>b.score-a.score);
+  const teams=scoreByTeam(room);
+  const winner=room.config?.mode==='tdm'
+    ? (teams.RED===teams.BLUE?'DRAW':teams.RED>teams.BLUE?'RED':'BLUE')
+    : (scores.length>1 && scores[0].score===scores[1].score?'DRAW':scores[0]?.name||'DRAW');
+  _broadcastAll(room,{type:'roundEnd',winner,scores,teams});
+}
 
 wss.on('connection', ws => {
   const id = String(_nextId++);
@@ -124,15 +141,12 @@ wss.on('connection', ws => {
         room.preparing=false;
         if (room.config?.directoryRoom && room.players.size<2) return;
         room.started=true;
+        for(const p of room.players.values()){
+          p.score=0;p.hp=100;p.deadUntil=0;p.lastHitAt=0;
+        }
         const duration=Math.max(60,Math.min(1800,Number(room.config?.roundDuration)||600));
         _broadcastAll(room,{type:'roundStart',duration});
-        room.roundTimer=setTimeout(()=>{
-          if(!room.started)return;
-          room.started=false;
-          const scores=[...room.players.values()].map(p=>({id:p.id,name:p.name,score:p.score}));
-          scores.sort((a,b)=>b.score-a.score);
-          _broadcastAll(room,{type:'roundEnd',winner:scores[0]?.name||'DRAW',scores});
-        },duration*1000);
+        room.roundTimer=setTimeout(()=>finishMatch(room),duration*1000);
       },5000);
     }
 
@@ -140,7 +154,11 @@ wss.on('connection', ws => {
     else if (msg.type === 'move') {
       const room = rooms.get(roomId); if (!room) return;
       const p = room.players.get(id); if (!p) return;
-      p.x = msg.x; p.y = msg.y; p.z = msg.z; p.yaw = msg.yaw;
+      if(!room.started||p.deadUntil>Date.now())return;
+      if(!['x','y','z','yaw'].every(k=>Number.isFinite(msg[k])))return;
+      p.x=Math.max(-250,Math.min(250,msg.x));
+      p.y=Math.max(-100,Math.min(200,msg.y));
+      p.z=Math.max(-250,Math.min(250,msg.z));p.yaw=msg.yaw;
     }
 
     // ── HIT REGISTRATION ─────────────────────────────────────
@@ -207,7 +225,14 @@ wss.on('connection', ws => {
       }
     }
 
-    if (room.players.size === 0) rooms.delete(roomId);
+    if(room.preparing && room.players.size<2){
+      clearTimeout(room.countdownTimer);room.preparing=false;
+    }
+    if (room.players.size === 0){
+      clearTimeout(room.countdownTimer);
+      clearTimeout(room.roundTimer);
+      rooms.delete(roomId);
+    }
   });
 
   // Push state 20×/sec
