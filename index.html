@@ -152,7 +152,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // 5. Unlock Game UI
     function enableGame(displayName) {
-      startBtn.style.display = 'inline-block';
+      startBtn.style.display = 'none';
+      const playBtn = document.getElementById('playBtn');
+      if (playBtn) playBtn.style.display = 'inline-block';
       //.style.display = 'inline-block';
       if (loadoutBtn) loadoutBtn.style.display = 'inline-block';
       mapSelectSection.style.display = 'flex';
