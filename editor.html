@@ -464,34 +464,21 @@
                 // serializes generator+params+transform. Re-creating uses
                 // applyEditableLayout() from levelHelpers.js — same function
                 // the live game calls when it loads assets/maps/<mapId>.json.
-                exportLevel() {
-                    const editableMeshes = [];
-                    this.scene.meshes.forEach(m => {
-                        if (m.metadata?.editable && m.metadata?.generator) {
-                            if(!m.metadata.editorId)m.metadata.editorId='ent_'+Math.random().toString(36).slice(2);
-                            editableMeshes.push({
-                                id: m.metadata.editorId,
-                                generator: m.metadata.generator,
-                                params: m.metadata.params,
-                                position: { x: m.position.x, y: m.position.y, z: m.position.z },
-                                rotation: { x: m.rotation.x, y: m.rotation.y, z: m.rotation.z },
-                                scaling: { x: m.scaling.x, y: m.scaling.y, z: m.scaling.z }
-                            });
-                        }
-                    });
-                    const data = { version: '1.0', map: mapId, objects: editableMeshes };
-                    const json = JSON.stringify(data, null, 2);
-                    const blob = new Blob([json], { type: 'application/json' });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = mapId + '.json';
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
+                exportLevel(){
+                    const data=this.snapshot();
+                    const checked=validateMapDocument(data,{expectedMap:mapId});
+                    if(!checked.valid){
+                        this.status('Export blocked: '+checked.errors.slice(0,8).join(' | '),true);
+                        return;
+                    }
+                    const json=JSON.stringify(checked.document,null,2);
+                    const url=URL.createObjectURL(new Blob([json],{type:'application/json'}));
+                    const a=document.createElement('a');
+                    a.href=url;a.download=mapId+'.json';
+                    document.body.appendChild(a);a.click();a.remove();
                     URL.revokeObjectURL(url);
-                    console.log(`[Editor] Exported ${editableMeshes.length} objects as "${mapId}.json".`);
-                    console.log(`[Editor] Place it at assets/maps/${mapId}.json to make it live — the game fetches that path automatically on load.`);
+                    this.status('Exported '+data.objects.length+' entities and '+
+                        data.markers.length+' markers as '+mapId+'.json');
                 }
 
                 importLevel() {
@@ -515,37 +502,53 @@
                     input.click();
                 }
 
-                importFromData(data) {
-                    const objects = data?.objects || [];
-                    applyEditableLayout(objects, { hazardZones, destructibleWalls, movingPlatforms, powerSwitches }); // clears + rebuilds the editable layer
-                    console.log('[Editor] Imported', objects.length, 'objects');
+                importFromData(data,selectedId=null){
+                    const checked=validateMapDocument(data,{expectedMap:mapId,strictIds:false});
+                    if(!checked.valid)throw Error(checked.errors.slice(0,15).join(' | '));
+                    this.gizmoManager.attachToMesh(null);
+                    this.selectedMesh=null;
+                    applyEditableLayout(checked.document.objects,
+                        {hazardZones,destructibleWalls,movingPlatforms,powerSwitches});
+                    this.baseDocument=checked.document;
+                    this.loadMarkers(checked.document.markers);
+                    if(selectedId){
+                        this.selectedMesh=this.scene.meshes.find(m=>m.metadata?.editorId===selectedId)||null;
+                        this.gizmoManager.attachToMesh(this.selectedMesh);
+                    }
+                    this.showInspector();
                     this.rebuildNavMesh();
+                    this.status('Imported '+checked.document.objects.length+' entities and '+
+                        checked.document.markers.length+' markers');
                 }
 
-                // Fetches the map's CURRENTLY LIVE layout straight from
-                // assets/maps/<mapId>.json — handy for pulling down whatever
-                // is actually deployed right now to keep tweaking it, instead
-                // of having to track down the last exported file on disk.
-                async loadLiveLayout() {
-                    const objects = await loadMapOverride(mapId);
-                    if (!objects) {
-                        console.warn(`[Editor] No live layout found at assets/maps/${mapId}.json — nothing to load.`);
-                        return;
-                    }
-                    applyEditableLayout(objects, { hazardZones, destructibleWalls, movingPlatforms, powerSwitches });
-                    this.rebuildNavMesh();
-                    console.log(`[Editor] Loaded live layout from assets/maps/${mapId}.json (${objects.length} objects).`);
+                async loadLiveLayout(){
+                    try{
+                        const doc=await loadMapDocument(mapId);
+                        this.importFromData(doc);
+                    }catch(e){this.status(e.message,true)}
                 }
 
-                rebuildNavMesh() {
-                    const navPlugin = window.__levelNavPlugin;
-                    if (navPlugin && navPlugin.createNavMesh) {
-                        walkableMeshes.forEach(m => m.computeWorldMatrix(true));
-                        navPlugin.createNavMesh(walkableMeshes, NAVMESH_PARAMS);
-                        console.log('[Editor] NavMesh rebuilt');
-                    } else {
-                        console.warn('[Editor] NavMesh plugin not available');
-                    }
+                rebuildNavMesh(){
+                    try{
+                        if(this.navDebugMesh){this.navDebugMesh.dispose();this.navDebugMesh=null}
+                        const plugin=window.__levelNavPlugin;
+                        if(!plugin?.createNavMesh)throw Error('Recast plugin unavailable');
+                        const surfaces=walkableMeshes.filter(m=>m.isEnabled());
+                        surfaces.forEach(m=>m.computeWorldMatrix(true));
+                        plugin.createNavMesh(surfaces,NAVMESH_PARAMS);
+                        this.navDebugMesh=plugin.createDebugNavMesh(this.scene);
+                        if(this.navDebugMesh){
+                            this.navDebugMesh.name='_navDebugOnly';
+                            this.navDebugMesh.isPickable=false;
+                            this.navDebugMesh.checkCollisions=false;
+                            const mat=new BABYLON.StandardMaterial('navDebugMat',this.scene);
+                            mat.diffuseColor=new BABYLON.Color3(0.15,0.92,0.6);
+                            mat.alpha=0.4;mat.wireframe=true;
+                            this.navDebugMesh.material=mat;this.navDebugMesh.setEnabled(false);
+                        }
+                        document.getElementById('navDebugBtn').textContent='Show NavMesh';
+                        this.status('Recast NavMesh rebuilt from '+surfaces.length+' meshes');
+                    }catch(e){this.status('NavMesh failed: '+e.message,true)}
                 }
 
                 printSelected() {
