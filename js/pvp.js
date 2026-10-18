@@ -8,7 +8,8 @@ import { updateFfaHUD, showRoomConfigBanner, hideFfaHUD } from './ui.js';
 import { hurtPlayer } from './player.js';
 import { spawnBot, updateEnemies } from './enemies.js';
 import { enemies } from './gameState.js';
-import { profile } from './progression.js';
+import { profile, emitEvent, awardXp } from './progression.js';
+import { curWep } from './weapons.js';
 import { getCurrentMap, getWalkableSpawns } from './mapManager.js';
 
 
@@ -329,12 +330,20 @@ function _wireEvents(onRoundEnd, onGameStart) {
     if (msg.killerId) {
       const sc = _scores.get(msg.killerId);
       if (sc) sc.score++;
-      if (msg.killerId === getMyId()) myScore++;
+      if (msg.killerId === getMyId()) {
+        myScore++;
+        emitEvent('KILL',{botType:'pvp',weaponKey:msg.weapon||curWep,source:'PVP'});
+        awardXp(50);
+      }
       updateFfaHUD(_buildScoreRows(), timeLeft, getMyId());
       if (roomConfig.scoreLimit > 0 && (msg.killerScore ?? 0) >= roomConfig.scoreLimit) {
         _handleRoundEnd({ winner: msg.killerName ?? 'Someone', scores: msg.scores }, onRoundEnd);
       }
     }
+  });
+
+  on('damageConfirmed',msg=>{
+    if(Number(msg.damage)>0) emitEvent('DAMAGE_DEALT',{weaponKey:msg.weapon||curWep,amount:msg.damage});
   });
 
   on('respawn', msg => {
@@ -469,7 +478,7 @@ export function stopFfa() {
   disconnect();
   _clearRemotePlayers();
   _hidePreLobbyOverlay();
-  ['welcome','playerJoined','playerLeft','state','hit','killed',
+  ['welcome','playerJoined','playerLeft','state','hit','killed','damageConfirmed',
    'respawn','roundCountdown','roundStart','roundEnd','disconnected'].forEach(t => off(t));
   for (const e of enemies) {
     if (!e.alive) continue;
@@ -544,7 +553,7 @@ export function checkFfaHitScan(dmg, range, spread = 0) {
     const entry = _remoteMeshMap.get(hit.pickedMesh);
     if(entry){
       const realDmg=Math.min(160,(roomConfig.instagib?150:dmg)*(roomConfig.damageMult??1));
-      sendHit(entry.id,realDmg,'hitscan');
+      sendHit(entry.id,realDmg,curWep);
       return true;
     }
   }
