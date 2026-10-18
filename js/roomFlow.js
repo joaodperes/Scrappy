@@ -108,6 +108,13 @@ function lobby() {
   const roster=dom('div','margin:22px 0');box.appendChild(roster);
   const status=dom('p','margin:16px 0;color:#adaeb5');box.appendChild(status);
   const buttons=dom('div',CSS.row);box.appendChild(buttons);
+  if(config?.mode !== 'survival'){
+    buttons.appendChild(button('SELECT TWO WEAPONS',()=>{
+      actions.onSelectLoadout?.(config,slots=>{
+        if(slots)message(status,'Loadout selected: '+slots.primary+' + '+slots.secondary);
+      });
+    },true));
+  }
   if(host) {
     const start=button('START MATCH',()=>{
       if(config.mode !== 'survival') {
@@ -163,8 +170,13 @@ function onRoomPacket(data,status,joinData){
     if(!actions.onStartMatch) return message(root?._status||status,'Match runtime unavailable',true);
     const matchSocket=socket;
     socket=null; // preserve the live room; gameplay takes ownership
+    const buffered=[];
+    matchSocket.onmessage=event=>{
+      try{buffered.push(JSON.parse(event.data))}catch{}
+    };
     const session={
       socket:matchSocket,welcome:welcomePacket,startsAt:data.startsAt,
+      buffered,
       closeLobby:()=>{
         if(countdown){clearInterval(countdown);countdown=null}
         root?.remove();root=null;
