@@ -29,31 +29,40 @@ export function connect(serverUrl, playerName, roomId, meta = {}) {
     console.log('[net] Connected to', serverUrl);
   });
 
-  _ws.addEventListener('message', evt => {
-    let msg;
-    try { msg = JSON.parse(evt.data); } catch { return; }
-    if (msg.type === 'welcome') {
-      _id   = msg.id;
-      _team = msg.team;
-    }
-    const handler = _handlers.get(msg.type);
-    if (handler) handler(msg);
-    else {
-      const any = _handlers.get('*');
-      if (any) any(msg);
-    }
-  });
-
-  _ws.addEventListener('close', () => {
-    _connected = false;
-    console.log('[net] Disconnected');
-    const onDisc = _handlers.get('disconnected');
-    if (onDisc) onDisc();
-  });
+  wireSocket(_ws);
 
   _ws.addEventListener('error', err => {
     console.error('[net] WS error', err);
   });
+}
+
+function deliver(msg) {
+  if (msg.type === 'welcome') {
+    _id=msg.id;_team=msg.team;
+  }
+  const handler=_handlers.get(msg.type);
+  if (handler) handler(msg);
+  else _handlers.get('*')?.(msg);
+}
+function wireSocket(ws) {
+  ws.addEventListener('message',evt=>{
+    let msg;try{msg=JSON.parse(evt.data)}catch{return}
+    if(_ws===ws)deliver(msg);
+  });
+  ws.addEventListener('close',()=>{
+    if(_ws!==ws)return;
+    _connected=false;
+    _handlers.get('disconnected')?.();
+  });
+}
+// Transfer an already authenticated/validated room socket from roomFlow
+// without leaving and recreating its room (which would orphan the lobby).
+export function adoptConnection(ws,welcome) {
+  if(_ws && _ws!==ws)disconnect();
+  _ws=ws;_connected=ws.readyState===WebSocket.OPEN;
+  ws.onmessage=null;ws.onclose=null;ws.onerror=null;
+  wireSocket(ws);
+  deliver({...welcome,type:'welcome'});
 }
 
 export function disconnect() {
