@@ -108,7 +108,7 @@ function lobby() {
   const roster=dom('div','margin:22px 0');box.appendChild(roster);
   const status=dom('p','margin:16px 0;color:#adaeb5');box.appendChild(status);
   const buttons=dom('div',CSS.row);box.appendChild(buttons);
-  if(config?.mode !== 'survival'){
+  if(config?.mode === 'ffa' || config?.mode === 'tdm'){
     buttons.appendChild(button('SELECT TWO WEAPONS',()=>{
       actions.onSelectLoadout?.(config,slots=>{
         if(slots)message(status,'Loadout selected: '+slots.primary+' + '+slots.secondary);
@@ -118,8 +118,6 @@ function lobby() {
   if(host) {
     const start=button('START MATCH',()=>{
       if(config.mode !== 'survival') {
-        if(!['ffa','tdm'].includes(config.mode))
-          return message(status,'Gun Game requires the weapon progression runtime.',true);
         if(participants.length < 2)
           return message(status,'At least two connected humans are required until AI player bots are available.',true);
         start.disabled=true;
@@ -143,9 +141,7 @@ function lobby() {
     buttons.appendChild(start);
     message(status,config.mode==='survival'
       ? 'Solo Survival can launch. Co-op requires the multiplayer runtime.'
-      : ['ffa','tdm'].includes(config.mode)
-        ? 'Multiplayer match ready with 2+ connected humans. Bot fill is not active yet.'
-        : 'Gun Game weapon progression is still being implemented.',false);
+      : 'Human multiplayer requires 2+ connected players. Bot fill and co-op are not yet active.',false);
   } else {
     message(status,'Waiting for the host. Match runtimes will be enabled in a later phase.');
   }
@@ -287,7 +283,7 @@ export function showPlayPage(){
   clearSocket();shell('PLAY SCRAPPY');
   const box=dom('section',CSS.box);root.appendChild(box);
   box.appendChild(dom('p','line-height:1.6;color:#adaeb5;margin-bottom:18px',
-    'Create or join a shared-server room. Solo Survival and human FFA/TDM are supported; AI bot fill, co-op and Gun Game remain in development.'));
+    'Create or join a shared-server room. Solo Survival, human FFA/TDM and Gun Game are available for testing; AI player bots and co-op are not yet active.'));
   const buttons=dom('div',CSS.row);box.appendChild(buttons);
   buttons.appendChild(button('CREATE ROOM',createPage));
   buttons.appendChild(button('BROWSE ROOMS',browsePage));
