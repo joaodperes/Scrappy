@@ -139,6 +139,13 @@ export function shoot() {
   // Synchronous burst cooldown block prevents full-auto bypass
   if (wepCooldown > 0 || player.isReloading || _burstCooldown > 0) return;
   const W = WDEFS[curWep];
+  if(W?.melee){
+    setWepCooldown(W.cd);
+    setSwingT(1);
+    hitscan(_meshToEnemy,0,W.dmg,W.range,0);
+    refreshSlotHUD();
+    return;
+  }
   const EW = getEffectiveStats(curWep, W); // Grab effective stats immediately
 
   const hasInfiniteAmmo = player.buffs['infinite_ammo'] > 0 || EW.ammo === Infinity;
