@@ -277,31 +277,107 @@
                     }
                 }
 
-                showInspector() {
-                  const host=document.getElementById('editorInspector');
-                  if (!host) return;
-                  host.replaceChildren();
-                  const mesh=this.selectedMesh;
-                  if (!mesh?.metadata?.editable) return;
-                  if (!mesh.metadata.editorId) mesh.metadata.editorId='ent_'+Math.random().toString(36).slice(2);
-                  const caption=document.createElement('p');
-                  caption.textContent=mesh.metadata.generator+' · ID: '+mesh.metadata.editorId;
-                  host.appendChild(caption);
-                  const box=document.createElement('textarea');
-                  box.style.cssText='width:100%;min-height:85px;background:#111;color:#fff;font:10px monospace';
-                  box.value=JSON.stringify(mesh.metadata.params,null,2);
-                  host.appendChild(box);
-                  const save=document.createElement('button');
-                  save.textContent='SAVE PARAMETERS';
-                  save.onclick=()=>{
-                    try {
-                      const parsed=JSON.parse(box.value);
-                      if(!parsed || Array.isArray(parsed) || typeof parsed!=='object')throw Error('Expected object');
-                      mesh.metadata.params=parsed;
-                      caption.textContent='Saved for next JSON export · '+mesh.metadata.editorId;
-                    } catch(e) {caption.textContent='Invalid JSON: '+e.message}
-                  };
-                  host.appendChild(save);
+                status(message,failed=false){
+                    const el=document.getElementById('editorStatus');
+                    if(el){el.textContent=message;el.style.color=failed?'#f77':'#8be9db'}
+                    (failed?console.error:console.log)('[Editor]',message);
+                }
+
+                markerFromMesh(mesh){
+                    return {...mesh.metadata.markerData,
+                        position:{x:mesh.position.x,y:mesh.position.y,z:mesh.position.z}};
+                }
+
+                loadMarkers(markers){
+                    for(const mesh of this.markerMeshes)if(!mesh.isDisposed())mesh.dispose();
+                    this.markerMeshes=[];
+                    for(const data of markers){
+                        const mesh=BABYLON.MeshBuilder.CreateSphere('marker_'+data.type,
+                            {diameter:1.7,segments:8},this.scene);
+                        mesh.position.set(data.position.x,data.position.y,data.position.z);
+                        mesh.checkCollisions=false;
+                        mesh.isPickable=true;
+                        const mat=new BABYLON.StandardMaterial('markerMat',this.scene);
+                        mat.emissiveColor=data.type.includes('Spawn')?
+                            new BABYLON.Color3(0,0.9,0.8):new BABYLON.Color3(0.9,0.7,0.1);
+                        mat.alpha=0.65;mesh.material=mat;
+                        mesh.metadata={editable:true,isMarker:true,editorId:data.id,markerData:{...data}};
+                        this.markerMeshes.push(mesh);
+                    }
+                }
+
+                addMarker(type){
+                    if(!MARKER_DEFINITIONS[type])return;
+                    const pos=camera.position.add(camera.getForwardRay().direction.scale(6));
+                    const data={id:'m_'+crypto.randomUUID(),type,
+                        position:{x:pos.x,y:pos.y,z:pos.z}};
+                    if(type==='weaponPickup')data.weapon='PISTOL';
+                    this.loadMarkers([...this.markerMeshes.map(m=>this.markerFromMesh(m)),data]);
+                    this.selectedMesh=this.markerMeshes.at(-1);
+                    this.gizmoManager.attachToMesh(this.selectedMesh);
+                    this.showInspector();
+                }
+
+                snapshot(){
+                    const objects=this.scene.meshes.filter(m=>m.metadata?.editable&&m.metadata.generator)
+                        .map(m=>{
+                            if(!m.metadata.editorId)m.metadata.editorId='e_'+crypto.randomUUID();
+                            return serializeEditableMesh(m);
+                        });
+                    const markers=this.markerMeshes.filter(m=>!m.isDisposed())
+                        .map(m=>this.markerFromMesh(m));
+                    return {...(this.baseDocument||{}),version:MAP_SCHEMA_VERSION,
+                        map:mapId,objects,markers};
+                }
+
+                showInspector(){
+                    const host=document.getElementById('editorInspector');
+                    if(!host)return;
+                    host.replaceChildren();
+                    const mesh=this.selectedMesh;
+                    if(!mesh?.metadata?.editable)return;
+                    if(!mesh.metadata.editorId)mesh.metadata.editorId='e_'+crypto.randomUUID();
+                    const isMarker=!!mesh.metadata.isMarker;
+                    const id=mesh.metadata.editorId;
+                    const name=isMarker?mesh.metadata.markerData.type:mesh.metadata.generator;
+                    const caption=document.createElement('p');
+                    caption.textContent=(isMarker?(MARKER_DEFINITIONS[name]?.label||name)
+                        :(ENTITY_DEFINITIONS[name]?.label||name))+' · ID: '+id;
+                    host.appendChild(caption);
+                    const help=document.createElement('p');
+                    help.style.cssText='font-size:10px;color:#aaa';
+                    help.textContent=isMarker?'Move the sphere with gizmo; edit marker options below.'
+                      :'Edit generator parameters; Save rebuilds geometry. Move with gizmo.';
+                    host.appendChild(help);
+                    const box=document.createElement('textarea');
+                    box.style.cssText='width:100%;min-height:95px;background:#111;color:#fff;font:10px monospace';
+                    const raw=isMarker?
+                        (()=>{const {position,id,...props}=mesh.metadata.markerData;return props})()
+                        :mesh.metadata.params;
+                    box.value=JSON.stringify(raw,null,2);
+                    host.appendChild(box);
+                    const save=document.createElement('button');
+                    save.textContent='APPLY & VALIDATE';
+                    save.onclick=()=>{
+                        try{
+                            const parsed=JSON.parse(box.value);
+                            if(!parsed||Array.isArray(parsed)||typeof parsed!=='object')throw Error('Expected JSON object');
+                            const doc=this.snapshot();
+                            if(isMarker){
+                                const marker=doc.markers.find(m=>m.id===id);
+                                if(!marker)throw Error('Marker not found');
+                                Object.assign(marker,parsed);
+                                marker.id=id;marker.position=this.markerFromMesh(mesh).position;
+                            }else{
+                                const object=doc.objects.find(o=>o.id===id);
+                                if(!object)throw Error('Object not found');
+                                object.params=parsed;
+                            }
+                            this.importFromData(doc,id);
+                            this.status('Parameters applied and scene rebuilt: '+id);
+                        }catch(e){this.status(e.message,true)}
+                    };
+                    host.appendChild(save);
                 }
 
                 addObject(type) {
@@ -339,6 +415,11 @@
                 deleteSelected() {
                     if (!this.selectedMesh) return;
                     const m = this.selectedMesh;
+                    if(m.metadata?.isMarker){
+                        this.markerMeshes=this.markerMeshes.filter(x=>x!==m);
+                        m.dispose();this.selectedMesh=null;
+                        this.gizmoManager.attachToMesh(null);this.showInspector();return;
+                    }
                     const idx = walkableMeshes.indexOf(m);
                     if (idx !== -1) walkableMeshes.splice(idx, 1);
 
