@@ -93,6 +93,7 @@ function _tagMeta(m, type, generator, params, editable, extraMeta) {
   m.metadata = editable
     ? { editable: true, type, generator, params, ...(extraMeta || {}) }
     : { editable: false, type, ...(extraMeta || {}) };
+  m.isPickable = !!editable; // Required for editor picking.
   return m;
 }
 
@@ -276,9 +277,10 @@ export function createBarrel(px, pz, yOff = 0, opts = {}) {
     const h = BABYLON.MeshBuilder.CreateCylinder('barrelHoop', {
       diameterTop: 1.22, diameterBottom: 1.24, height: 0.15, tessellation: 12,
     }, scene);
-    h.position.set(px, yPos, pz);
+    h.parent = bm;
+    h.position.set(0, yPos - baseY, 0);
     h.material = M.barrelHoop || M.grey;
-    h.isPickable = true;
+    h.isPickable = false;
     h.metadata = { editable: false, type: 'barrelHoop' };
     return h;
   };
@@ -347,7 +349,7 @@ export function createLava(cx, cz, sx, sz, opts = {}) {
 
   if (navmesh) walkableMeshes.push(m);
   if (hazardZones) hazardZones.push(m);
-  m.freezeWorldMatrix();
+  // Mutable: editor can move or scale this hazard.
   return m;
 }
 
@@ -399,7 +401,7 @@ export function createSpikeTrap(cx, cz, sx, sz, surfY, opts = {}) {
   // Note: spike traps deliberately don't join walkableMeshes (matches the
   // original — they're a floor decal you walk ONTO, not a solid obstacle).
   if (hazardZones) hazardZones.push(f);
-  f.freezeWorldMatrix();
+  // Mutable: editor can move or scale this hazard.
 
   // Visual spikes (child objects, not editable independently — deleting or
   // re-exporting the parent floor is enough; these ride along for free).
@@ -413,7 +415,7 @@ export function createSpikeTrap(cx, cz, sx, sz, surfY, opts = {}) {
       const ox = (sx / cr) * c - sx / 2 + sx / (cr * 2);
       const oz = (sz / rw) * r - sz / 2 + sz / (rw * 2);
       const sp = BABYLON.MeshBuilder.CreateCylinder('jSp', { diameterTop: 0, diameterBottom: .18, height: .52, tessellation: 5 }, scene);
-      sp.position.set(cx + ox, liftY(surfY) + .26, cz + oz);
+      sp.position.set(ox, 0.32, oz);
       sp.material = sm;
       sp.isPickable = false;
       sp.parent = f;
@@ -543,6 +545,12 @@ export function applyEditableLayout(objects, targets = null) {
     if (obj.position) mesh.position.set(obj.position.x, obj.position.y, obj.position.z);
     if (obj.rotation) mesh.rotation.set(obj.rotation.x, obj.rotation.y, obj.rotation.z);
     if (obj.scaling)  mesh.scaling.set(obj.scaling.x, obj.scaling.y, obj.scaling.z);
+    mesh.computeWorldMatrix(true);
+    if (mesh.metadata?.hazard) {
+      const p = mesh.metadata.params;
+      if (typeof p?.sx === 'number') mesh.metadata.halfWidth = p.sx * Math.abs(mesh.scaling.x) / 2;
+      if (typeof p?.sz === 'number') mesh.metadata.halfDepth = p.sz * Math.abs(mesh.scaling.z) / 2;
+    }
   }
 }
 
