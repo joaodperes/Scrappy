@@ -51,6 +51,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const leaderboardSection = document.getElementById('leaderboardSection');
 
     let currentUser = null;
+    window.__scrappyAuthenticated = false;
 
     // 1. Trigger Login
     loginBtn.onclick = () => {
@@ -93,6 +94,9 @@ document.addEventListener("DOMContentLoaded", () => {
            nameModal.classList.add('visible');
         }
       } else {
+        window.__scrappyAuthenticated = false;
+        document.getElementById('playBtn')?.style.setProperty('display', 'none');
+        document.getElementById('leaderboardsBtn')?.style.setProperty('display', 'none');
         // Logged Out State - Hide everything except login
         loginBtn.style.display = 'inline-block';
         logoutBtn.style.display = 'none';
@@ -152,13 +156,17 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // 5. Unlock Game UI
     function enableGame(displayName) {
+      window.__scrappyAuthenticated = true;
       startBtn.style.display = 'none';
       const playBtn = document.getElementById('playBtn');
       if (playBtn) playBtn.style.display = 'inline-block';
       //.style.display = 'inline-block';
       if (loadoutBtn) loadoutBtn.style.display = 'inline-block';
       mapSelectSection.style.display = 'flex';
-      leaderboardSection.style.display = 'block';
+      // The leaderboard belongs to its own page; do not show the hidden section in the menu.
+      leaderboardSection.style.display = 'none';
+      const leaderboardsBtn = document.getElementById('leaderboardsBtn');
+      if (leaderboardsBtn) leaderboardsBtn.style.display = 'inline-block';
        
        const pvpNameField = document.getElementById('pvpName');
        if (pvpNameField) {
@@ -219,6 +227,7 @@ document.addEventListener("DOMContentLoaded", () => {
     </div>
     
   <div style="display: flex; flex-direction: column; align-items: stretch; gap: 10px; margin: 10px auto; width: 100%; max-width: 280px;">
+    <button class="btn" id="playBtn" style="display:none; padding-left:0; padding-right:0; text-align:center;">▶ PLAY</button>
     <button class="btn" id="startBtn" style="display:none; padding-left:0; padding-right:0; text-align:center;">▶ SOLO RUN</button>
     <!--button class="btn" id="pvpBtn" style="display:none; padding-left:0; padding-right:0; text-align:center;">⚔️ PvP TDM</button-->  
     <button class="btn" id="loadoutBtn" style="display:none; padding-left:0; padding-right:0; text-align:center;">LOADOUT</button>
