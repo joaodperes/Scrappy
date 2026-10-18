@@ -7,6 +7,8 @@ const BABYLON = window.BABYLON;
 
 // ── Helper to warn about missing entries ──
 const _warnedMissingMapData = new Set();
+import { getMapMarkers } from './mapLayoutStore.js';
+
 export function resolveMapData(table, mapId, fallbackId = 'scrapyard', tableName = 'map data') {
   if (table[mapId] !== undefined) return table[mapId];
   const warnKey = tableName + ':' + mapId;
@@ -280,10 +282,14 @@ export const MAP_CONFIG = {
 
 // ── Helper getters ────────────────────────────────────────────
 export function getMapMeta(mapId) {
-  return resolveMapData(MAP_CONFIG, mapId, 'scrapyard', 'map meta').meta;
+  const meta=resolveMapData(MAP_CONFIG,mapId,'scrapyard','map meta').meta;
+  const sp=getMapMarkers(mapId,'playerSpawn')[0];
+  return sp?{...meta,spawn:{x:sp.position.x,yOffset:sp.position.y,z:sp.position.z}}:meta;
 }
 export function getWaveConfig(mapId) {
-  return resolveMapData(MAP_CONFIG, mapId, 'scrapyard', 'wave config').wave;
+  const wave=resolveMapData(MAP_CONFIG,mapId,'scrapyard','wave config').wave;
+  const markers=getMapMarkers(mapId,'enemySpawn','survival');
+  return markers.length?{...wave,spawns:markers.map(m=>[m.position.x,m.position.y,m.position.z])}:wave;
 }
 export function getSecretKits(mapId) {
   const cfg = resolveMapData(MAP_CONFIG, mapId, 'scrapyard', 'secret kits');
@@ -291,7 +297,8 @@ export function getSecretKits(mapId) {
 }
 export function getWeaponSpawns(mapId) {
   const cfg = resolveMapData(MAP_CONFIG, mapId, 'scrapyard', 'weapon spawns');
-  return (cfg.weaponSpawns || (() => []))();
+  const markers=getMapMarkers(mapId,'weaponPickup','survival');
+  return markers.length?markers.map(m=>({wName:m.weapon,x:m.position.x,y:m.position.y,z:m.position.z})):(cfg.weaponSpawns || (() => []))();
 }
 export function isModeSupported(mapId, mode) {
   const meta = getMapMeta(mapId);
@@ -303,7 +310,9 @@ export function getRoomCapacity(mapId, mode) {
   return Math.max(2, Math.min(24, (meta?.teamSize || 4) * 2));
 }
 export function getWalkableSpawns(mapId) {
-  return resolveMapData(MAP_CONFIG, mapId, 'scrapyard', 'walkable spawns').walkableSpawns || [];
+  const markers=getMapMarkers(mapId,'pvpSpawn');
+  return markers.length?markers.map(m=>[m.position.x,m.position.y,m.position.z]):
+    resolveMapData(MAP_CONFIG,mapId,'scrapyard','walkable spawns').walkableSpawns || [];
 }
 
 // ── Unlock logic ───────────────────────────────────────────────
