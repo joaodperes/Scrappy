@@ -338,6 +338,7 @@ function _populateMapDropdown() {
       playBtn.id = 'playBtn';
       playBtn.textContent = '▶ PLAY';
       playBtn.className = startBtn.className;
+      playBtn.style.display = 'none'; // Authentication gate; enableGame unhides.
       playBtn.onclick = () => {
         document.getElementById('menuScreen').className = 'screen hidden';
         showPlayPage();
