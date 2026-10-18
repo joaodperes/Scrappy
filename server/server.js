@@ -188,7 +188,7 @@ wss.on('connection', ws => {
       setTimeout(()=>{
         if(!room.started||!room.players.has(victim.id))return;
         victim.hp=100;victim.deadUntil=0;
-        const sp=_randSpawn();
+        const sp=_randSpawn(room);
         _broadcastAll(room,{type:'respawn',playerId:victim.id,x:sp[0],y:sp[1],z:sp[2]});
       },delay);
     }
@@ -245,10 +245,16 @@ function _broadcastAll(room, msg) {
     if (p.ws.readyState === 1) p.ws.send(json);
 }
 
-const SPAWNS = [
-  [-20,0,20],[20,0,20],[-20,0,-20],[20,0,-20],
-  [0,0,28],[0,0,-28],[-28,0,0],[28,0,0],
-];
-function _randSpawn() { return SPAWNS[Math.floor(Math.random() * SPAWNS.length)]; }
+// Map-specific fallback spawn sets. Match clients also validate level geometry.
+const SPAWNS_BY_MAP={
+  scrapyard:[[-24,0,24],[24,0,24],[-24,0,-24],[24,0,-24],[0,0,30],[0,0,-30]],
+  jungle:[[-50,0,0],[50,0,0],[-45,0,45],[45,0,-45],[0,0,52],[0,0,-52]],
+  city:[[-18,0,-10],[18,0,10],[-50,0,-10],[50,0,10],[-70,0,0],[70,0,0]],
+  terminal:[[-20,0,-20],[20,0,20],[-35,0,0],[35,0,0],[0,0,-30],[0,0,30]],
+};
+function _randSpawn(room){
+  const options=SPAWNS_BY_MAP[room.config?.mapId]||SPAWNS_BY_MAP.scrapyard;
+  return options[Math.floor(Math.random()*options.length)];
+}
 
 console.log(`BotArena WS server running on port ${port}`);
