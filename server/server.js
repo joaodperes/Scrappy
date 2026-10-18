@@ -7,6 +7,13 @@ const wss  = new WebSocketServer({ port });
 const rooms = new Map();
 // rooms: Map<roomId, { players: Map<id, player>, config, started, hostId }>
 let _nextId = 1;
+const GUN_POOL=['SMG','SHOTGUN','CHAINGUN','DMR','COMET','RAILGUN','TESLA','CROSSBOW','ELECTRON','ION'];
+function randomizedGunOrder(){
+  const others=GUN_POOL.slice();
+  for(let i=others.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[others[i],others[j]]=[others[j],others[i]]}
+  return ['PISTOL',...others,'KNIFE'];
+}
+
 function scoreByTeam(room){
   const teams={RED:0,BLUE:0};
   for(const p of room.players.values())if(p.team)teams[p.team]+=p.score;
@@ -65,6 +72,7 @@ wss.on('connection', ws => {
           started: false,
           hostId:  null,
           password: typeof msg.password === 'string' ? msg.password.slice(0,100) : '',
+          gunOrder:null, preparing:false,
         });
       }
       const room = rooms.get(requestedId);
@@ -103,14 +111,14 @@ wss.on('connection', ws => {
         config:  roomCfg,
         isHost:  room.hostId === id,
         started: room.started,
-        team,
+        team,gunOrder:room.gunOrder,
       }));
 
       // Add this player to the room
       room.players.set(id, {
         id, ws, name,
         x: 0, y: 1.72, z: 0, yaw: 0,
-        hp: 100, score: 0, team, deadUntil: 0, lastHitAt: 0,
+        hp: 100, score: 0, team, weaponIndex:0, deadUntil: 0, lastHitAt: 0,
         config: roomCfg,
       });
 
@@ -136,16 +144,17 @@ wss.on('connection', ws => {
         return;
       }
       room.preparing=true;
-      _broadcastAll(room,{type:'roundCountdown',startsAt:Date.now()+5000});
+      room.gunOrder=room.config?.mode==='gunGame'?randomizedGunOrder():null;
+      _broadcastAll(room,{type:'roundCountdown',startsAt:Date.now()+5000,gunOrder:room.gunOrder});
       room.countdownTimer=setTimeout(()=>{
         room.preparing=false;
         if (room.config?.directoryRoom && room.players.size<2) return;
         room.started=true;
         for(const p of room.players.values()){
-          p.score=0;p.hp=100;p.deadUntil=0;p.lastHitAt=0;
+          p.score=0;p.hp=100;p.deadUntil=0;p.lastHitAt=0;p.weaponIndex=0;
         }
         const duration=Math.max(60,Math.min(1800,Number(room.config?.roundDuration)||600));
-        _broadcastAll(room,{type:'roundStart',duration});
+        _broadcastAll(room,{type:'roundStart',duration,mode:room.config?.mode,gunOrder:room.gunOrder});
         room.roundTimer=setTimeout(()=>finishMatch(room),duration*1000);
       },5000);
     }
@@ -168,6 +177,10 @@ wss.on('connection', ws => {
       if(!shooter||!victim||shooter===victim)return;
       if(victim.deadUntil>Date.now()||shooter.deadUntil>Date.now())return;
       if(room.config?.mode==='tdm' && shooter.team===victim.team)return;
+      if(room.config?.mode==='gunGame'){
+        const expected=room.gunOrder?.[shooter.weaponIndex||0];
+        if(!expected || msg.weapon!==expected)return;
+      }
       const dmg=Number(msg.dmg),time=Date.now();
       if(!Number.isFinite(dmg)||dmg<=0||dmg>160)return;
       if(time-shooter.lastHitAt<35)return;
@@ -179,15 +192,22 @@ wss.on('connection', ws => {
       victim.ws.send(JSON.stringify({type:'hit',targetId:victim.id,dmg:applied}));
       shooter.ws.send(JSON.stringify({type:'damageConfirmed',targetId:victim.id,damage:applied,weapon:String(msg.weapon||'PISTOL').slice(0,28)}));
       if(victim.hp>0)return;
+      const finalKnife=room.config?.mode==='gunGame' &&
+        shooter.weaponIndex===room.gunOrder.length-1 && msg.weapon==='KNIFE';
       shooter.score++;
+      if(room.config?.mode==='gunGame' && !finalKnife) {
+        shooter.weaponIndex=Math.min(room.gunOrder.length-1,shooter.weaponIndex+1);
+        _broadcastAll(room,{type:'weaponProgress',playerId:id,
+          weaponIndex:shooter.weaponIndex,weapon:room.gunOrder[shooter.weaponIndex]});
+      }
       const delay=Math.max(1000,Math.min(15000,(Number(room.config?.respawnDelay)||5)*1000));
       victim.deadUntil=time+delay;
       _broadcastAll(room,{type:'killed',victimId:victim.id,killerId:id,
         killerName:shooter.name,killerScore:shooter.score,team:shooter.team,weapon:String(msg.weapon||'PISTOL').slice(0,28),teams:scoreByTeam(room)});
       const limit=Math.max(0,Math.min(500,Number(room.config?.scoreLimit)||0));
-      if(limit>0 && (room.config?.mode==='tdm'
+      if(finalKnife || (limit>0 && (room.config?.mode==='tdm'
         ? Math.max(...Object.values(scoreByTeam(room)))>=limit
-        : shooter.score>=limit)){finishMatch(room);return;}
+        : shooter.score>=limit))){finishMatch(room);return;}
       setTimeout(()=>{
         if(!room.started||!room.players.has(victim.id))return;
         victim.hp=100;victim.deadUntil=0;
