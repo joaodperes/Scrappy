@@ -14,6 +14,19 @@ wss.on('connection', ws => {
 
   ws.on('message', raw => {
     let msg; try { msg = JSON.parse(raw); } catch { return; }
+    if (msg.type === 'listRooms') {
+      const list = [];
+      for (const [rid, r] of rooms) {
+        if (r.started || !r.config?.directoryRoom) continue;
+        const cap = Math.max(2, Math.min(24, Number(r.config.maxPlayers)||2));
+        if (r.players.size >= cap) continue;
+        list.push({id:rid,name:r.config.name||rid,mapId:r.config.mapId||'scrapyard',
+          mode:r.config.mode||'survival',humans:r.players.size,maxPlayers:cap,
+          hasPassword:!!r.password});
+      }
+      ws.send(JSON.stringify({type:'roomList',rooms:list}));
+      return;
+    }
 
     // ── JOIN ──────────────────────────────────────────────────
     if (msg.type === 'join') {
@@ -21,18 +34,34 @@ wss.on('connection', ws => {
       roomId = (msg.room || 'default').slice(0, 20);
       const isHost = !!msg.isHost;
 
+      if (!rooms.has(roomId) && msg.requireExisting) {
+        ws.send(JSON.stringify({type:'roomError',message:'Room no longer exists'}));
+        return;
+      }
       if (!rooms.has(roomId)) {
         rooms.set(roomId, {
           players: new Map(),
           config:  msg.config ?? null,
           started: false,
           hostId:  null,
+          password: typeof msg.password === 'string' ? msg.password.slice(0,100) : '',
         });
       }
       const room = rooms.get(roomId);
 
-      // First joiner or explicit host flag sets the host
-      if (isHost || room.players.size === 0) room.hostId = id;
+      // Never allow a new joiner to usurp an existing host.
+      if (!room.hostId) room.hostId = id;
+      if (room.config?.directoryRoom) {
+        const capacity = Math.max(2, Math.min(24, Number(room.config.maxPlayers) || 2));
+        if (room.started || room.players.size >= capacity) {
+          ws.send(JSON.stringify({type:'roomError',message:'Room is full or already started'}));
+          return;
+        }
+        if (room.password && room.password !== String(msg.password||'')) {
+          ws.send(JSON.stringify({type:'roomError',message:'Incorrect room password'}));
+          return;
+        }
+      }
 
       // Use existing config if room already had one set by host
       const roomCfg = room.config ?? msg.config ?? {};
@@ -61,6 +90,7 @@ wss.on('connection', ws => {
 
       // Notify existing players
       _broadcast(room, id, { type: 'playerJoined', id, name });
+      _broadcastAll(room, {type:'roomUpdated',players:[...room.players.values()].map(p=>({id:p.id,name:p.name}))});
 
       // If game already started (late joiner), send roundStart immediately
       if (room.started) {
@@ -146,6 +176,7 @@ wss.on('connection', ws => {
     const room = rooms.get(roomId); if (!room) return;
     room.players.delete(id);
     _broadcast(room, id, { type: 'playerLeft', id });
+    _broadcastAll(room, {type:'roomUpdated',players:[...room.players.values()].map(p=>({id:p.id,name:p.name}))});
 
     // If host left, reassign to first remaining player
     if (room.hostId === id && room.players.size > 0) {
