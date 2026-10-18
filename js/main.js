@@ -15,7 +15,7 @@ import { updateWaves, setCurWave, setWaveOn, setWaveDly, curWave, launchWave, ge
 import { updatePlayer, setupInput, hurtPlayer, PH, resetPlayer, resetWeaponHeat, keys, movePlayerBody } from './player.js';
 import { updateHUD, tickHitMarker, wireDeathSubmit, showHitMarker, hideFfaHUD } from './ui.js';
 import { submitScore, renderLeaderboard } from './leaderboard.js';
-import { startFfa, updateFfa, isFfaActive, isFfaInPreLobby, showFfaLobby } from './pvp.js';;
+import { startFfa, stopFfa, updateFfa, isFfaActive, isFfaInPreLobby, showFfaLobby } from './pvp.js';
 import { loadProfile, getLevelProgress, levelFromTotalXp } from './progression.js';
 import { showLoadout } from './loadout.js';
 import { getCurrentMap, setCurrentMap, MAPS, getMapMeta, buildMap, isHardModeUnlocked, isMapUnlocked } from './mapManager.js';
@@ -91,6 +91,7 @@ function _hideAllScreens() {
 
 // ── Solo PvE ───────────────────────────────────────────────────
 function startGame(startWave = 0) {
+  if (isFfaActive()) stopFfa();
   // Capture Hard Mode state BEFORE resetting everything
   player.hardMode = document.getElementById('hardModeToggle')?.checked || false;
   ensureAudio();
@@ -527,6 +528,7 @@ document.getElementById('loadoutBtn')  ?.addEventListener('click', () => openLoa
 document.getElementById('pvpBtn')      ?.addEventListener('click', openFfaLobby);
 
 document.getElementById('pvpEndPlayAgain')?.addEventListener('click', () => {
+  if(isFfaActive())stopFfa();
   document.getElementById('pvpEndScreen').className = 'screen hidden';
   document.getElementById('menuScreen').className   = 'screen visible';
   renderLeaderboard();
@@ -560,12 +562,94 @@ engine.resize();
 refreshMenuUI();
 window.addEventListener('resize', () => engine.resize());
 
+// Competitive room runtime, using the EXISTING WebSocket and FFA renderer.
+// All map work must finish before network handlers replay queued start events.
+let selectedMatchLoadout={primary:'SMG',secondary:'SHOTGUN'};
+async function launchCompetitiveRoom(cfg,session) {
+  try {
+    ensureAudio();
+    gameRunning=false;paused=false;
+    player.hardMode=false;
+    player.hp=100;player.armor=0;player.score=0;
+    player.onGround=true;player.yVel=0;player.buffs={};
+    setCurrentMap(cfg.mapId);
+    _clearEntities();
+    const weaponMeshes=new Set();
+    for(const node of Object.values(wepModels))node.getChildMeshes().forEach(m=>weaponMeshes.add(m));
+    scene.meshes.slice().forEach(m=>{
+      if(m.name==='_playerBody'||m.name.startsWith('wep_')||m.name.startsWith('wm_')||weaponMeshes.has(m))return;
+      m.dispose();
+    });
+    scene.lights.slice().forEach(l=>{
+      if(!l.name.startsWith('hemi')&&!l.name.startsWith('fill')&&l.name!=='lanternLight'&&!l.name.startsWith('burnLight'))l.dispose();
+    });
+    window.__levelScene=scene;window.__levelNavPlugin=navPlugin;
+    const map=await buildMap(cfg.mapId);
+    window._hazardZones=map.hazardZones;
+    window._movingPlatforms=map.movingPlatforms;
+    window._powerSwitches=map.powerSwitches;
+    rebuildMeshMap();
+    const meta=getMapMeta(cfg.mapId);
+    resetPlayer(meta.spawn.x,PH+meta.spawn.yOffset,meta.spawn.z);
+    for(const def of Object.values(WDEFS)){
+      if(def.useHeat){def.heat=0;def.isOverheated=false}
+      if(def.magSize)def.currentMag=def.magSize;
+      def.ammo=def.startAmmo||0;
+    }
+    inventory[0]=selectedMatchLoadout.primary||'SMG';
+    inventory[1]=selectedMatchLoadout.secondary||'SHOTGUN';
+    inventory[2]='PISTOL';
+    setActiveSlot(0);
+    const name=profileDisplayName();
+    const onGameStart=()=>{
+      session.closeLobby();
+      _hideAllScreens();
+      gameRunning=true;paused=false;
+      setWeapon(inventory[0]);
+      wepGroup.setEnabled(true);
+      document.getElementById('hud').style.display='block';
+      updateHUD();
+      document.getElementById('c').requestPointerLock().catch(()=>{});
+    };
+    const onRoundEnd=(winner,rows)=>{
+      gameRunning=false;
+      document.exitPointerLock();
+      hideFfaHUD();
+      document.getElementById('hud').style.display='none';
+      const screen=document.getElementById('pvpEndScreen');
+      if(screen)screen.className='screen visible';
+      const result=document.getElementById('pvpEndResult');
+      if(result)result.textContent=(winner||'DRAW')+' WINS';
+      const score=document.getElementById('pvpEndScore');
+      if(score)score.textContent=(rows||[]).map((p,i)=>`${i+1}. ${p.name}: ${p.score}`).join('   ');
+    };
+    // Bot fill remains disabled until it is driven by server-side player AI.
+    startFfa('',name,session.welcome.roomId,{...cfg,addBots:false,weaponSpawns:false},
+      !!session.welcome.isHost,onGameStart,onRoundEnd,session);
+  } catch(error) {
+    console.error('[match] Could not initialize network match:',error);
+    session.socket?.close();
+    session.closeLobby();
+    document.getElementById('menuScreen').className='screen visible';
+  }
+}
+function profileDisplayName(){
+  return document.getElementById('playerNameInput')?.value||'PLAYER';
+}
+
 // Survival is the only mode with a real match behind it right now — the
 // Create Room screen hands off a plain {mapId, hardMode} config here, and
 // this just routes it into the existing solo flow. TDM/FFA/Gun Game don't
 // have a hookup yet (their match runtime is a later phase); roomFlow.js
 // tells the player that plainly instead of pretending Start works.
 initRoomFlow({
+  onSelectLoadout: (cfg,onChosen)=>{
+    showLoadout(slots=>{
+      selectedMatchLoadout=slots;
+      onChosen?.(slots);
+    },cfg.mode);
+  },
+  onStartMatch: launchCompetitiveRoom,
   onStartSurvival: (cfg) => {
     setCurrentMap(cfg.mapId);
     const hmToggle = document.getElementById('hardModeToggle');
