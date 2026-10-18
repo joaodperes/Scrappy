@@ -189,10 +189,9 @@ topBar.appendChild(deployBtn);
       '← BACK'
     );
     backBtn.onclick = () => {
+      // Return to the multiplayer room without abandoning the connected lobby.
       _currentMode = null;
       hideLoadout();
-      document.getElementById('menuScreen').className = 'screen visible';
-      renderLeaderboard();
     };
     topBar.appendChild(backBtn);
 
