@@ -2,7 +2,7 @@
 const BABYLON = window.BABYLON;
 import { scene, camera } from './scene.js';
 import { remotePlayers, player, roomConfig, setRoomConfig, DEFAULT_ROOM_CONFIG } from './gameState.js';
-import { connect, disconnect, adoptConnection, send, on, off, sendMoveThrottled, sendHit, sendReady, getMyId } from './network.js';
+import { connect, disconnect, adoptConnection, send, on, off, sendMoveThrottled, sendHit, sendReady, getMyId, getMyTeam } from './network.js';
 import { sfx } from './audio.js';
 import { updateFfaHUD, showRoomConfigBanner, hideFfaHUD } from './ui.js';
 import { hurtPlayer } from './player.js';
@@ -260,7 +260,7 @@ function _wireEvents(onRoundEnd, onGameStart) {
       if (pd.id === msg.id) continue;
       const g = makeRemotePlayerMesh(pd.id, pd.name ?? '?');
       remotePlayers.set(pd.id, { group: g, hp: player.maxHp, name: pd.name ?? '?', alive: true, score: 0 });
-      _scores.set(pd.id, { name: pd.name ?? '?', score: 0 });
+      _scores.set(pd.id, { name: pd.name ?? '?', score: 0, team: pd.team });
     }
     _rebuildMeshMap();
     sendReady();
@@ -275,7 +275,7 @@ function _wireEvents(onRoundEnd, onGameStart) {
     if (msg.id === getMyId()) return;
     const g = makeRemotePlayerMesh(msg.id, msg.name ?? '?');
     remotePlayers.set(msg.id, { group: g, hp: player.maxHp, name: msg.name ?? '?', alive: true, score: 0 });
-    _scores.set(msg.id, { name: msg.name ?? '?', score: 0 });
+    _scores.set(msg.id, { name: msg.name ?? '?', score: 0,team:msg.team });
     _rebuildMeshMap();
     _updatePreLobbyList();
     if (_inPreLobby) updateFfaHUD(_buildScoreRows(), timeLeft, getMyId());
@@ -305,8 +305,8 @@ function _wireEvents(onRoundEnd, onGameStart) {
       rp.alive = (pd.hp ?? 1) > 0;
       rp.score = pd.score ?? rp.score;
       rp.group.getChildMeshes().forEach(m => { if (m.name !== 'nameTag') m.setEnabled(rp.alive); });
-      const sc = _scores.get(pd.id) ?? { name: rp.name, score: 0 };
-      sc.score = rp.score; _scores.set(pd.id, sc);
+      const sc = _scores.get(pd.id) ?? { name: rp.name, score: 0,team:pd.team };
+      sc.score = rp.score;sc.team=pd.team||sc.team; _scores.set(pd.id, sc);
     }
     if (!_inPreLobby) updateFfaHUD(_buildScoreRows(), timeLeft, getMyId());
   });
@@ -339,8 +339,8 @@ function _wireEvents(onRoundEnd, onGameStart) {
   on('respawn', msg => {
     if (msg.playerId === getMyId()) {
       player.hp = player.maxHp; player.armor = 0;
-      const sp = _chooseFarSpawn();
-      camera.position.set(sp[0], 1.72, sp[2]);
+      const sp = [msg.x ?? _chooseFarSpawn()[0],msg.y ?? 0,msg.z ?? _chooseFarSpawn()[2]];
+      camera.position.set(sp[0], sp[1] + 1.72, sp[2]);
       localDead = false;
       _hideRespawnOverlay();
       document.getElementById('c')?.requestPointerLock();
@@ -378,9 +378,10 @@ function _handleRoundEnd(msg, onRoundEnd) {
 }
 
 function _buildScoreRows() {
-  const rows = [{ id: getMyId() ?? 'me', name: myName, score: myScore }];
+  const tm = roomConfig.mode === 'tdm';
+  const rows = [{ id: getMyId() ?? 'me', name: tm ? '['+(getMyTeam()||'?')+'] '+myName : myName, score: myScore }];
   for (const [id, sc] of _scores) {
-    if (id !== getMyId()) rows.push({ id, name: sc.name, score: sc.score });
+    if (id !== getMyId()) rows.push({ id, name: tm && sc.team ? '['+sc.team+'] '+sc.name : sc.name, score: sc.score });
   }
   return rows.sort((a, b) => b.score - a.score);
 }
