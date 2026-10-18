@@ -739,7 +739,7 @@ export async function buildCityLevel(customScene = null) {
 
   // JSON LAYOUT OVERRIDE (assets/maps/city.json — see levelHelpers.js)
   const override = await loadMapOverride('city');
-  if (override) applyEditableLayout(override, { hazardZones, destructibleWalls });
+  if (override) applyEditableLayout(override, { hazardZones, destructibleWalls, movingPlatforms, powerSwitches });
 
   // NAVMESH
   walkableMeshes.forEach(m=>m.computeWorldMatrix(true));
