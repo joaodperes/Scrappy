@@ -2220,8 +2220,8 @@
         "cz": 39,
         "dir": "N",
         "width": 4,
-        "fromY": 0,
-        "toY": 4.5,
+        "fromY": 4.5,
+        "toY": 0,
         "length": 12,
         "mat": "concrete"
       }
@@ -2234,8 +2234,8 @@
         "cz": 39,
         "dir": "N",
         "width": 4,
-        "fromY": 0,
-        "toY": 4.5,
+        "fromY": 4.5,
+        "toY": 0,
         "length": 12,
         "mat": "concrete"
       }
@@ -2248,8 +2248,8 @@
         "cz": -39,
         "dir": "S",
         "width": 4,
-        "fromY": 0,
-        "toY": 4.5,
+        "fromY": 4.5,
+        "toY": 0,
         "length": 12,
         "mat": "concrete"
       }
@@ -2262,8 +2262,8 @@
         "cz": -39,
         "dir": "S",
         "width": 4,
-        "fromY": 0,
-        "toY": 4.5,
+        "fromY": 4.5,
+        "toY": 0,
         "length": 12,
         "mat": "concrete"
       }
