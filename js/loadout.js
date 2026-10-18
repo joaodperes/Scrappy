@@ -275,6 +275,17 @@ topBar.appendChild(deployBtn);
       `<span style="font-size:15px">${_wIcon(wName)}</span>` +
       `<span style="margin-left:8px">${_esc(title)}</span>`;
 
+    btn.onclick=()=>{
+      _activeWeapon=wName;
+      if(_currentMode){
+        _modeSlots[_modeSlotTarget]=wName;
+        // The two deployment weapons must be distinct.
+        const other=_modeSlotTarget==='primary'?'secondary':'primary';
+        if(_modeSlots[other]===wName)_modeSlots[other]=null;
+        _refreshSlotBoxes();
+      }
+      _renderContent();
+    };
     sidebar.appendChild(btn);
   });
   body.appendChild(sidebar);
