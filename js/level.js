@@ -190,7 +190,7 @@ export async function buildLevel(customScene = null) {
   // silently drifting apart, at the cost of an empty floor plan if the
   // fetch ever fails.
   const override = await loadMapOverride('scrapyard');
-  if (override) applyEditableLayout(override, { hazardZones, destructibleWalls });
+  if (override) applyEditableLayout(override, { hazardZones, destructibleWalls, movingPlatforms, powerSwitches });
 
   // ── Build NavMesh ──────────────────────────────────────────
   walkableMeshes.forEach(mesh => mesh.computeWorldMatrix(true));
