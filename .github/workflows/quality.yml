@@ -1,0 +1,22 @@
+name: Scrappy checks
+on:
+  pull_request:
+  push:
+    branches: [main]
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check JavaScript syntax
+        run: |
+          find js -name '*.js' ! -name 'babylon.max.js' -print0 | xargs -0 -n1 node --check
+          node --check server/server.js
+          node --check scripts/validate-map-data.cjs
+      - name: Validate all four map layouts
+        run: node scripts/validate-map-data.cjs
+      - name: Run room and match lifecycle tests
+        run: node --test server/*.test.js
