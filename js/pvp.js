@@ -2,13 +2,14 @@
 const BABYLON = window.BABYLON;
 import { scene, camera } from './scene.js';
 import { remotePlayers, player, roomConfig, setRoomConfig, DEFAULT_ROOM_CONFIG } from './gameState.js';
-import { connect, disconnect, send, on, off, sendMoveThrottled, sendHit, sendReady, getMyId } from './network.js';
+import { connect, disconnect, adoptConnection, send, on, off, sendMoveThrottled, sendHit, sendReady, getMyId } from './network.js';
 import { sfx } from './audio.js';
 import { updateFfaHUD, showRoomConfigBanner, hideFfaHUD } from './ui.js';
 import { hurtPlayer } from './player.js';
 import { spawnBot, updateEnemies } from './enemies.js';
 import { enemies } from './gameState.js';
 import { profile } from './progression.js';
+import { getCurrentMap, getWalkableSpawns } from './mapManager.js';
 
 
 // ── FFA state ─────────────────────────────────────────────────
@@ -23,6 +24,7 @@ let myScore       = 0;
 // Pre-game lobby state
 let _inPreLobby   = false;
 let _isHost       = false;
+let _externalRoom = false;
 let _prelobbyOnStart = null;   // callback when host clicks "START GAME"
 
 // Scoreboard: id → { name, score }
@@ -47,7 +49,8 @@ function _chooseFarSpawn() {
     if (rp.alive) occupied.push(rp.group.position);
   }
   let best = FFA_SPAWNS[0], bestDist = -1;
-  for (const sp of FFA_SPAWNS) {
+  const choices = getWalkableSpawns(getCurrentMap());
+  for (const sp of (choices.length ? choices : FFA_SPAWNS)) {
     const sv = new BABYLON.Vector3(sp[0], sp[1], sp[2]);
     const minD = Math.min(...occupied.map(p => BABYLON.Vector3.Distance(sv, p)));
     if (minD > bestDist) { bestDist = minD; best = sp; }
@@ -264,7 +267,7 @@ function _wireEvents(onRoundEnd, onGameStart) {
 
     // Show pre-game lobby (not straight into gameplay)
     _inPreLobby = true;
-    _showPreLobbyOverlay(msg.roomId ?? '??????', _isHost, null);
+    if (!_externalRoom) _showPreLobbyOverlay(msg.roomId ?? '??????', _isHost, null);
     showRoomConfigBanner(roomConfig);
   });
 
@@ -363,6 +366,7 @@ function _wireEvents(onRoundEnd, onGameStart) {
     _announce('FIGHT!', 2200);
   });
 
+  on('roundCountdown', () => { roundActive = false; });
   on('roundEnd',    msg => _handleRoundEnd(msg, onRoundEnd));
   on('disconnected', ()  => stopFfa());
 }
@@ -391,10 +395,11 @@ function _buildScoreRows() {
  * @param onGameStart  Called when server sends roundStart (game actually begins)
  * @param onRoundEnd   Called when round finishes
  */
-export function startFfa(serverUrl, name, roomId, config, isHost, onGameStart, onRoundEnd) {
+export function startFfa(serverUrl, name, roomId, config, isHost, onGameStart, onRoundEnd, existingSession = null) {
   ffaActive   = true;
   localDead   = false;
   _isHost     = isHost;
+  _externalRoom = !!existingSession;
   _inPreLobby = true;
   myName      = name ?? 'ANON';
   myScore     = 0;
@@ -403,7 +408,8 @@ export function startFfa(serverUrl, name, roomId, config, isHost, onGameStart, o
   _clearRemotePlayers();
   setRoomConfig({ ...DEFAULT_ROOM_CONFIG, ...(config ?? {}) });
   _wireEvents(onRoundEnd, onGameStart);
-  connect(serverUrl, name, roomId, { type: 'ffa', config: roomConfig, isHost });
+  if (existingSession) adoptConnection(existingSession.socket, existingSession.welcome);
+  else connect(serverUrl, name, roomId, { type: 'ffa', config: roomConfig, isHost });
   _botSpawnTimer = BOT_SPAWN_INTERVAL;
 }
 
@@ -412,11 +418,12 @@ export function stopFfa() {
   roundActive = false;
   _inPreLobby = false;
   _isHost     = false;
+  _externalRoom = false;
   disconnect();
   _clearRemotePlayers();
   _hidePreLobbyOverlay();
   ['welcome','playerJoined','playerLeft','state','hit','killed',
-   'respawn','roundStart','roundEnd','disconnected'].forEach(t => off(t));
+   'respawn','roundCountdown','roundStart','roundEnd','disconnected'].forEach(t => off(t));
   for (const e of enemies) {
     if (!e.alive) continue;
     e.group.getChildMeshes().forEach(m => m.dispose());
