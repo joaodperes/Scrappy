@@ -7,6 +7,8 @@ import { hasLaserDot, isAkimbo, hasEnergyConverter, getEffectiveStats, getLoadou
 import { isScoped } from './player.js'
 
 export const WDEFS = {
+  KNIFE: {name:'KNIFE',desc:'Close-range backup blade. Final weapon in Gun Game.',dmg:70,range:2.8,
+    cd:0.55,hitscan:true,melee:true,ammo:Infinity,startAmmo:Infinity,aps:0,pellets:1,spread:0,secondary:true},
   PISTOL:   { name:'PISTOL', desc:'A reliable semi-auto sidearm. Low recoil and high accuracy make it deadly at range — and a headshot specialist in the right hands.', dmg:20, range:60, cd:.18, hitscan:true, ammo:24, aps:1, spread:.0, pellets:1, startAmmo:24, falloff:0.30, magSize:12, currentMag:12, reloadTime:1.2, headshotMult: 1.5 },
   SMG:      { name:'SMG', desc:'High fire rate with tight hip-fire spread. Built for aggressive close-quarters play and corridor clearing.', dmg:11, range:40, cd:.09, hitscan:true, ammo:0, aps:1, spread:.025, pellets:1, startAmmo:45, falloff:0.50, magSize: 30, currentMag: 30, reloadTime: 1.5 },
   SHOTGUN:  { name:'SHOTGUN', desc:'Ten-pellet devastation at close range. Each trigger pull delivers a wall of lead that few targets survive.', dmg:32, range:25, cd:.22, hitscan:true, ammo:0, aps:1, spread:0.10, pellets:10, startAmmo:16, falloff:0.80, magSize: 8, currentMag: 8, reloadTime: 1.8 },
@@ -43,6 +45,7 @@ export const WDEFS = {
 };
 
 export const WCOLORS = {
+  KNIFE:0xa5a5a5,
   PISTOL:0x999999, SMG:0xff8800, SHOTGUN:0x885533,
   CHAINGUN:0xff3300, RAILGUN:0x00ffcc, PLASMA:0x4488ff, ROCKET:0xcc3300,
   GLAUNCHER:0x44cc44, ELECTRON:0x00ccff, ION:0xaa44ff,
@@ -317,7 +320,12 @@ function _buildSingularity(p) { _box(p,'body',.1,.15,.5,M.plasmaMat,0,.02,.1); _
 function _buildPyroclast(p) { _box(p,'body',.15,.15,.5,M.ledRed,0,.02,.1); _cyl(p,'bbl1',.04,.3,M.gunMetal,.05,.02,.4,Math.PI/2); _cyl(p,'bbl2',.04,.3,M.gunMetal,-.05,.02,.4,Math.PI/2); _box(p,'grip',.08,.2,.1,M.black,0,-.1,-.1,.2); }
 function _buildOmegaStorm(p) { _box(p,'body',.12,.18,.6,M.white,0,.02,.1); _cyl(p,'bbl',.1,.4,M.ledCyan,0,.02,.5,Math.PI/2); _box(p,'grip',.08,.2,.1,M.white,0,-.1,-.1,.2); }
 
+function _buildKnife(p) {
+  _box(p,'hilt',.08,.10,.18,M.gunBrown,0,-.08,-.05);
+  _box(p,'blade',.035,.025,.42,M.grey,0,.02,.25);
+}
 const _modelBuilders = {
+  KNIFE:_buildKnife,
   PISTOL: _buildPistol, SMG: _buildSmg, SHOTGUN: _buildShotgun,
   CHAINGUN: _buildChaingun, RAILGUN: _buildRailgun,
   PLASMA: _buildPlasma, ROCKET: _buildRocket, GLAUNCHER: _buildGlauncher,
@@ -879,6 +887,7 @@ function _rebuildAttachmentVisuals(wName) {
 }
 
 const WPOS = {
+  KNIFE: new BABYLON.Vector3(.32,-.40,.52),
   PISTOL:    new BABYLON.Vector3(.38,-.36, .66),
   SHOTGUN:   new BABYLON.Vector3(.32,-.38, .60),
   ROCKET:    new BABYLON.Vector3(.28,-.32, .63),
@@ -903,6 +912,7 @@ const WPOS = {
   DMR: new BABYLON.Vector3(.34,-.35, .66),
 };
 const WROT = {
+  KNIFE: new BABYLON.Vector3(.10,-.08,0),
   PISTOL:    new BABYLON.Vector3(.06,-.08,0),
   SHOTGUN:   new BABYLON.Vector3(.04,-.10,0),
   ROCKET:    new BABYLON.Vector3(.05,-.12,0),
