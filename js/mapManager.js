@@ -22,6 +22,7 @@ export const MAP_CONFIG = {
   scrapyard: {
     meta: {
       id: 'scrapyard',
+      teamSize: 4, supportedModes: ['survival','tdm','ffa','gunGame'],
       name: 'SCRAPYARD', icon: '🏭',
       desc: 'Multi-tiered industrial arena. Vertical combat across 5 floors.',
       levelModule: './level.js', buildFn: 'buildLevel',
@@ -98,7 +99,8 @@ export const MAP_CONFIG = {
   },
   jungle: {
     meta: {
-      id: 'jungle', name: 'TEMPLE RUINS', icon: '🌴',
+      id: 'jungle',
+      teamSize: 4, supportedModes: ['survival','tdm','ffa','gunGame'], name: 'TEMPLE RUINS', icon: '🌴',
       desc: 'Ancient jungle temple. Lava rivers, moving platforms, and destructible ruins.',
       levelModule: './levelJungle.js', buildFn: 'buildJungleLevel',
       spawn: { x: 15, yOffset: 1, z: -55 },
@@ -156,7 +158,8 @@ export const MAP_CONFIG = {
   },
   city: {
     meta: {
-      id: 'city', name: 'ROOFTOP CITY', icon: '🏙️',
+      id: 'city',
+      teamSize: 6, supportedModes: ['survival','tdm','ffa','gunGame'], name: 'ROOFTOP CITY', icon: '🏙️',
       desc: 'Glass skyscrapers and ziplines. Fight from street to penthouse.',
       levelModule: './levelCity.js', buildFn: 'buildCityLevel',
       spawn: { x: -18, yOffset: 0, z: -10 },
@@ -232,7 +235,8 @@ export const MAP_CONFIG = {
   },
   terminal: {
     meta: {
-      id: 'terminal', name: 'MOON BASE', icon: '🌙',
+      id: 'terminal',
+      teamSize: 4, supportedModes: ['survival','tdm','ffa','gunGame'], name: 'MOON BASE', icon: '🌙',
       desc: 'Futuristic space arena.',
       levelModule: './levelTerminal.js', buildFn: 'buildTerminalLevel',
       spawn: { x: -19, yOffset: 0, z: -12 },
@@ -288,6 +292,15 @@ export function getSecretKits(mapId) {
 export function getWeaponSpawns(mapId) {
   const cfg = resolveMapData(MAP_CONFIG, mapId, 'scrapyard', 'weapon spawns');
   return (cfg.weaponSpawns || (() => []))();
+}
+export function isModeSupported(mapId, mode) {
+  const meta = getMapMeta(mapId);
+  return !!meta?.supportedModes?.includes(mode);
+}
+export function getRoomCapacity(mapId, mode) {
+  if (mode === 'survival') return 2;
+  const meta = getMapMeta(mapId);
+  return Math.max(2, Math.min(24, (meta?.teamSize || 4) * 2));
 }
 export function getWalkableSpawns(mapId) {
   return resolveMapData(MAP_CONFIG, mapId, 'scrapyard', 'walkable spawns').walkableSpawns || [];
