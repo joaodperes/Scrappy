@@ -1,14 +1,14 @@
 // projectiles.js – rockets, plasma balls, enemy shots, collision  (Babylon.js port)
 const BABYLON = window.BABYLON;
-import { scene, camera } from './scene.js';
+import { scene, camera, navPlugin } from './scene.js';
 import { M, fireTex } from './textures.js';
-import { explosiveBarrels, isBarrelMesh, detonateBarrelByMesh } from './level.js';
+import { explosiveBarrels, walkableMeshes, isBarrelMesh, detonateBarrelByMesh } from './level.js';
 import { WDEFS, curWep } from './weapons.js';
 import { projs, enemies, cb } from './gameState.js';
 import { spawnSparks } from './particles.js';
 import { sfx } from './audio.js';
 import { applyExplosionImpulse } from './player.js';
-import { getCurrentMap } from './mapManager.js';
+import { getCurrentMap, getMapMeta } from './mapManager.js';
 import { getLoadout } from './progression.js';
 
 // ── Player projectiles ────────────────────────────────────────
@@ -121,13 +121,11 @@ export async function boom(pos, splashR, baseDmg, hurtBots) {
         spawnSparks(mesh.getAbsolutePosition(), 0xaaaaaa, 3);
         if (mesh.metadata.hp <= 0) {
             mesh.dispose();
-            const map = getCurrentMap();  // import getCurrentMap from mapManager
-            const levelModule = map === 'jungle'
-                ? await import('./levelJungle.js')
-                : await import('./level.js');
-            const idx = levelModule.walkableMeshes.indexOf(mesh);
-            if (idx !== -1) levelModule.walkableMeshes.splice(idx, 1);
-            navPlugin.createNavMesh(levelModule.walkableMeshes, levelModule.NAVMESH_PARAMS);
+            const mod=await import(getMapMeta(getCurrentMap()).levelModule);
+            const idx=walkableMeshes.indexOf(mesh);
+            if(idx!==-1)walkableMeshes.splice(idx,1);
+            walkableMeshes.forEach(m=>m.computeWorldMatrix(true));
+            navPlugin.createNavMesh(walkableMeshes,mod.NAVMESH_PARAMS);
         }
       }
   }
