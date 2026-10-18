@@ -173,14 +173,17 @@ wss.on('connection', ws => {
       if(time-shooter.lastHitAt<35)return;
       if(Math.hypot(shooter.x-victim.x,shooter.y-victim.y,shooter.z-victim.z)>140)return;
       shooter.lastHitAt=time;
+      const beforeHp=victim.hp;
       victim.hp=Math.max(0,victim.hp-dmg);
-      victim.ws.send(JSON.stringify({type:'hit',targetId:victim.id,dmg}));
+      const applied=Math.max(0,beforeHp-victim.hp);
+      victim.ws.send(JSON.stringify({type:'hit',targetId:victim.id,dmg:applied}));
+      shooter.ws.send(JSON.stringify({type:'damageConfirmed',targetId:victim.id,damage:applied,weapon:String(msg.weapon||'PISTOL').slice(0,28)}));
       if(victim.hp>0)return;
       shooter.score++;
       const delay=Math.max(1000,Math.min(15000,(Number(room.config?.respawnDelay)||5)*1000));
       victim.deadUntil=time+delay;
       _broadcastAll(room,{type:'killed',victimId:victim.id,killerId:id,
-        killerName:shooter.name,killerScore:shooter.score,team:shooter.team,teams:scoreByTeam(room)});
+        killerName:shooter.name,killerScore:shooter.score,team:shooter.team,weapon:String(msg.weapon||'PISTOL').slice(0,28),teams:scoreByTeam(room)});
       const limit=Math.max(0,Math.min(500,Number(room.config?.scoreLimit)||0));
       if(limit>0 && (room.config?.mode==='tdm'
         ? Math.max(...Object.values(scoreByTeam(room)))>=limit
