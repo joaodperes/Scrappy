@@ -30,16 +30,19 @@ wss.on('connection', ws => {
 
     // ── JOIN ──────────────────────────────────────────────────
     if (msg.type === 'join') {
-      name   = (msg.name || 'ANON').slice(0, 20);
-      roomId = (msg.room || 'default').slice(0, 20);
-      const isHost = !!msg.isHost;
+      if (roomId !== null) {
+        ws.send(JSON.stringify({type:'roomError',message:'Already in a room'}));
+        return;
+      }
+      name = String(msg.name || 'ANON').slice(0,20);
+      const requestedId = String(msg.room || 'default').slice(0,20);
 
-      if (!rooms.has(roomId) && msg.requireExisting) {
+      if (!rooms.has(requestedId) && msg.requireExisting) {
         ws.send(JSON.stringify({type:'roomError',message:'Room no longer exists'}));
         return;
       }
-      if (!rooms.has(roomId)) {
-        rooms.set(roomId, {
+      if (!rooms.has(requestedId)) {
+        rooms.set(requestedId, {
           players: new Map(),
           config:  msg.config ?? null,
           started: false,
@@ -47,10 +50,9 @@ wss.on('connection', ws => {
           password: typeof msg.password === 'string' ? msg.password.slice(0,100) : '',
         });
       }
-      const room = rooms.get(roomId);
+      const room = rooms.get(requestedId);
 
       // Never allow a new joiner to usurp an existing host.
-      if (!room.hostId) room.hostId = id;
       if (room.config?.directoryRoom) {
         const capacity = Math.max(2, Math.min(24, Number(room.config.maxPlayers) || 2));
         if (room.started || room.players.size >= capacity) {
@@ -63,6 +65,8 @@ wss.on('connection', ws => {
         }
       }
 
+      roomId = requestedId;
+      if (!room.hostId) room.hostId = id;
       // Use existing config if room already had one set by host
       const roomCfg = room.config ?? msg.config ?? {};
 
