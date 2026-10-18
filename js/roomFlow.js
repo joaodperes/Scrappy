@@ -203,6 +203,43 @@ function onRoomPacket(data,status,joinData){
     host=true;lobby();
   }
 }
+// Offline Survival uses the existing solo game flow. Do not construct a
+// WebSocket or create a lobby: no room server is needed for local map testing.
+function soloPage() {
+  clearSocket();
+  shell('SINGLE PLAYER — SURVIVAL');
+  const box=dom('section',CSS.box);
+  root.appendChild(box);
+  box.appendChild(dom('p','color:#adaeb5;line-height:1.6',
+    'Choose a map and start a local Survival run. No room or multiplayer server is required.'));
+  const map=selector(Object.values(MAPS).map(m=>[m.id,m.icon+' '+m.name]),getCurrentMap());
+  const hard=input('checkbox');
+  const hardHint=dom('p','color:#adaeb5;font-size:12px');
+  row(box,'Map',map);
+  row(box,'Hard mode',hard);
+  box.appendChild(hardHint);
+  function refresh(){
+    const unlocked=isHardModeUnlocked(map.value);
+    hard.disabled=!unlocked;
+    if(!unlocked)hard.checked=false;
+    hardHint.textContent=unlocked
+      ? 'Hard Mode unlocked for this map.'
+      : 'Defeat a boss wave on this map to unlock Hard Mode.';
+  }
+  map.onchange=refresh;
+  refresh();
+  const actionsRow=dom('div',CSS.row);
+  box.appendChild(actionsRow);
+  const start=button('START SOLO SURVIVAL',()=>{
+    start.disabled=true;
+    const cfg={mapId:map.value,hardMode:!hard.disabled&&hard.checked};
+    closePage();
+    actions.onStartSurvival?.(cfg);
+  });
+  actionsRow.appendChild(start);
+  actionsRow.appendChild(button('BACK',showPlayPage,true));
+}
+
 function createPage() {
   shell('CREATE ROOM');
   const box=dom('section',CSS.box);root.appendChild(box);
@@ -283,8 +320,9 @@ export function showPlayPage(){
   clearSocket();shell('PLAY SCRAPPY');
   const box=dom('section',CSS.box);root.appendChild(box);
   box.appendChild(dom('p','line-height:1.6;color:#adaeb5;margin-bottom:18px',
-    'Create or join a shared-server room. Solo Survival, human FFA/TDM and Gun Game are available for testing; AI player bots and co-op are not yet active.'));
+    'Single Player starts local Survival without networking. Create Room and Browse Rooms use the separate multiplayer server.'));
   const buttons=dom('div',CSS.row);box.appendChild(buttons);
+  buttons.appendChild(button('SINGLE PLAYER',soloPage));
   buttons.appendChild(button('CREATE ROOM',createPage));
   buttons.appendChild(button('BROWSE ROOMS',browsePage));
   buttons.appendChild(button('BACK TO MENU',back,true));
