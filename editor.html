@@ -125,6 +125,10 @@
         <button data-action="addLava" class="warning">+ Lava</button>
         <button data-action="addDestWall">+ Dest. Wall</button>
         <button data-action="addSpike" class="warning">+ Spikes</button>
+        <button data-action="addJumpPad">+ Jump Pad</button>
+        <button data-action="addMovingPlatform">+ Moving Platform</button>
+        <button data-action="addPowerSwitch">+ Power Switch</button>
+        <div id="editorInspector" style="margin:12px 0;font-size:11px;color:#ddd"></div>
         <hr>
         <button data-action="delete" class="danger">🗑 Delete</button>
         <button data-action="export" class="success">📦 Export JSON</button>
@@ -180,6 +184,7 @@
 
             // ---- Set globals for the level builder ----
             window.__levelScene = scene;
+            window.__levelEditorMode = true;
             // Provide a no-op navPlugin for the editor (we don't need navmesh)
             window.__levelNavPlugin = { createNavMesh: () => {} };
 
@@ -189,10 +194,10 @@
             const {
                 createSlab, createWall, createPillar, createColumn, createGlass,
                 createRampBox, createRamp, createLava, createDestructibleWall, createSpikeTrap,
-                createBarrel, createCrate,
+                createBarrel, createCrate, createJumpPad, createMovingPlatform, createPowerSwitch,
                 applyEditableLayout, loadMapOverride,
             } = await import('/js/levelHelpers.js');
-            const { walkableMeshes, explosiveBarrels } = await import('/js/level.js');
+            const { walkableMeshes, explosiveBarrels, jumpPads } = await import('/js/level.js');
             // hazardZones/destructibleWalls are declared PER MAP (each level*.js
             // owns its own array, same as walkableMeshes is shared/global but
             // these aren't) — pull whichever ones this specific map exports.
@@ -200,6 +205,8 @@
             // module that doesn't happen to export them.
             const hazardZones       = levelMod.hazardZones       || [];
             const destructibleWalls = levelMod.destructibleWalls || [];
+            const movingPlatforms = levelMod.movingPlatforms || [];
+            const powerSwitches = levelMod.powerSwitches || [];
 
             console.log('[Editor] All modules loaded for map:', mapId);
 
@@ -235,6 +242,7 @@
                         if (!mesh || !mesh.metadata?.editable) return;
                         this.selectedMesh = mesh;
                         this.gizmoManager.attachToMesh(mesh);
+                        this.showInspector();
                         console.log(`[Editor] Selected: ${mesh.name}`);
                     });
                 }
@@ -299,6 +307,9 @@
                             else if (action === 'addLava') this.addObject('lava');
                             else if (action === 'addDestWall') this.addObject('destWall');
                             else if (action === 'addSpike') this.addObject('spike');
+                            else if (action === 'addJumpPad') this.addObject('jumpPad');
+                            else if (action === 'addMovingPlatform') this.addObject('movingPlatform');
+                            else if (action === 'addPowerSwitch') this.addObject('powerSwitch');
                             else if (action === 'delete') this.deleteSelected();
                             else if (action === 'export') this.exportLevel();
                             else if (action === 'import') this.importLevel();
@@ -321,7 +332,35 @@
                     if (!this.enabled) {
                         this.gizmoManager.attachToMesh(null);
                         this.selectedMesh = null;
+                        this.showInspector();
                     }
+                }
+
+                showInspector() {
+                  const host=document.getElementById('editorInspector');
+                  if (!host) return;
+                  host.replaceChildren();
+                  const mesh=this.selectedMesh;
+                  if (!mesh?.metadata?.editable) return;
+                  if (!mesh.metadata.editorId) mesh.metadata.editorId='ent_'+Math.random().toString(36).slice(2);
+                  const caption=document.createElement('p');
+                  caption.textContent=mesh.metadata.generator+' · ID: '+mesh.metadata.editorId;
+                  host.appendChild(caption);
+                  const box=document.createElement('textarea');
+                  box.style.cssText='width:100%;min-height:85px;background:#111;color:#fff;font:10px monospace';
+                  box.value=JSON.stringify(mesh.metadata.params,null,2);
+                  host.appendChild(box);
+                  const save=document.createElement('button');
+                  save.textContent='SAVE PARAMETERS';
+                  save.onclick=()=>{
+                    try {
+                      const parsed=JSON.parse(box.value);
+                      if(!parsed || Array.isArray(parsed) || typeof parsed!=='object')throw Error('Expected object');
+                      mesh.metadata.params=parsed;
+                      caption.textContent='Saved for next JSON export · '+mesh.metadata.editorId;
+                    } catch(e) {caption.textContent='Invalid JSON: '+e.message}
+                  };
+                  host.appendChild(save);
                 }
 
                 addObject(type) {
@@ -342,10 +381,15 @@
                         case 'lava':   mesh = createLava(pos.x, pos.z, 6, 6, { hazardZones }); break;
                         case 'destWall': mesh = createDestructibleWall(pos.x, y, pos.z, 4, 4, 1, 140, { destructibleWalls }); break;
                         case 'spike':  mesh = createSpikeTrap(pos.x, pos.z, 4, 4, y, { hazardZones }); break;
+                        case 'jumpPad': mesh=createJumpPad(pos.x,y,pos.z,24,0);break;
+                        case 'movingPlatform': mesh=createMovingPlatform(pos.x,y,pos.z,pos.x,y+8,pos.z,
+                          5,5,0.25,1.5,{movingPlatforms});break;
+                        case 'powerSwitch': mesh=createPowerSwitch(pos.x,y,pos.z,[],{powerSwitches});break;
                     }
                     if (mesh) {
                         this.selectedMesh = mesh;
                         this.gizmoManager.attachToMesh(mesh);
+                        this.showInspector();
                         console.log(`[Editor] Added ${type}`);
                     }
                 }
@@ -377,6 +421,10 @@
                     // nothing stale is left pointing at a disposed mesh.
                     const hzIdx = hazardZones.indexOf(m);
                     if (hzIdx !== -1) hazardZones.splice(hzIdx, 1);
+                    for(let i=jumpPads.length-1;i>=0;i--)if(jumpPads[i].mesh===m)jumpPads.splice(i,1);
+                    for(const a of [movingPlatforms,powerSwitches]){
+                      const ix=a.indexOf(m);if(ix!==-1)a.splice(ix,1);
+                    }
                     const dwIdx = destructibleWalls.indexOf(m);
                     if (dwIdx !== -1) destructibleWalls.splice(dwIdx, 1);
 
@@ -397,7 +445,9 @@
                     const editableMeshes = [];
                     this.scene.meshes.forEach(m => {
                         if (m.metadata?.editable && m.metadata?.generator) {
+                            if(!m.metadata.editorId)m.metadata.editorId='ent_'+Math.random().toString(36).slice(2);
                             editableMeshes.push({
+                                id: m.metadata.editorId,
                                 generator: m.metadata.generator,
                                 params: m.metadata.params,
                                 position: { x: m.position.x, y: m.position.y, z: m.position.z },
@@ -444,7 +494,7 @@
 
                 importFromData(data) {
                     const objects = data?.objects || [];
-                    applyEditableLayout(objects, { hazardZones, destructibleWalls }); // clears + rebuilds the editable layer
+                    applyEditableLayout(objects, { hazardZones, destructibleWalls, movingPlatforms, powerSwitches }); // clears + rebuilds the editable layer
                     console.log('[Editor] Imported', objects.length, 'objects');
                     this.rebuildNavMesh();
                 }
@@ -459,7 +509,7 @@
                         console.warn(`[Editor] No live layout found at assets/maps/${mapId}.json — nothing to load.`);
                         return;
                     }
-                    applyEditableLayout(objects, { hazardZones, destructibleWalls });
+                    applyEditableLayout(objects, { hazardZones, destructibleWalls, movingPlatforms, powerSwitches });
                     this.rebuildNavMesh();
                     console.log(`[Editor] Loaded live layout from assets/maps/${mapId}.json (${objects.length} objects).`);
                 }
