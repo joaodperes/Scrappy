@@ -19,6 +19,7 @@ const CSS = {
 };
 let root = null, socket = null, config = null, participants = [], host = false, roomId = '';
 let actions = {};
+let welcomePacket = null;
 let countdown = null;
 
 function dom(tag, css, txt) {
@@ -96,7 +97,7 @@ function lobbyRoster(target){
   for(const p of participants){target.appendChild(dom('div','padding:7px 0',p.name + (p.id==='self'?' (YOU)':'')))}
   const bots = config?.fillBots && config?.mode !== 'survival'
     ? Math.max(0,(config.maxPlayers||2)-participants.length) : 0;
-  if(bots) target.appendChild(dom('p','color:#adaeb5',bots+' bot slots reserved (match AI not implemented yet)'));
+  if(bots) target.appendChild(dom('p','color:#adaeb5',bots+' potential bot slots (AI players not active yet)'));
   target.appendChild(dom('p','color:#adaeb5;font-size:12px;margin-top:14px',participants.length+'/'+(config?.maxPlayers||2)+' human participants; ' + (config?.mode||'survival')));
 }
 function lobby() {
@@ -109,7 +110,16 @@ function lobby() {
   const buttons=dom('div',CSS.row);box.appendChild(buttons);
   if(host) {
     const start=button('START MATCH',()=>{
-      if(config.mode !== 'survival') return message(status,'Match runtime not implemented yet. The lobby is available for testing.',true);
+      if(config.mode !== 'survival') {
+        if(!['ffa','tdm'].includes(config.mode))
+          return message(status,'Gun Game requires the weapon progression runtime.',true);
+        if(participants.length < 2)
+          return message(status,'At least two connected humans are required until AI player bots are available.',true);
+        start.disabled=true;
+        message(status,'Starting synchronized match…');
+        send({type:'hostStartGame'});
+        return;
+      }
       if(participants.length !== 1) return message(status,'Co-op replication is not implemented yet; solo only for now.',true);
       start.disabled=true;
       let sec=5;
@@ -125,24 +135,51 @@ function lobby() {
     });
     buttons.appendChild(start);
     message(status,config.mode==='survival'
-      ? 'Solo Survival can launch. Co-op becomes available with the multiplayer runtime.'
-      : 'Lobby-only foundation; runtime for this mode is next.',false);
+      ? 'Solo Survival can launch. Co-op requires the multiplayer runtime.'
+      : ['ffa','tdm'].includes(config.mode)
+        ? 'Multiplayer match ready with 2+ connected humans. Bot fill is not active yet.'
+        : 'Gun Game weapon progression is still being implemented.',false);
   } else {
     message(status,'Waiting for the host. Match runtimes will be enabled in a later phase.');
   }
   buttons.appendChild(button('LEAVE ROOM',()=>showPlayPage(),true));
   lobbyRoster(roster);
   root._refreshRoster=()=>lobbyRoster(roster);
+  root._status=status;
 }
 function onRoomPacket(data,status,joinData){
   if(data.type==='error' || data.type==='roomError'){
-    return message(status,data.message||'Room request rejected',true);
+    root?.querySelectorAll('button').forEach(b=>{if(b.textContent==='START MATCH')b.disabled=false});
+    return message(root?._status||status,data.message||'Room request rejected',true);
   }
   if(data.type==='welcome'){
+    welcomePacket=data;
     roomId=data.roomId;config=data.config||joinData.config||{};
     host=!!data.isHost;
     participants=[...data.players.map(p=>({id:p.id,name:p.name})),{id:'self',name:profile.displayName||profile.name||'YOU'}];
     lobby();return;
+  }
+  if(data.type==='roundCountdown' && config?.mode !== 'survival') {
+    if(!actions.onStartMatch) return message(root?._status||status,'Match runtime unavailable',true);
+    const matchSocket=socket;
+    socket=null; // preserve the live room; gameplay takes ownership
+    const session={
+      socket:matchSocket,welcome:welcomePacket,startsAt:data.startsAt,
+      closeLobby:()=>{
+        if(countdown){clearInterval(countdown);countdown=null}
+        root?.remove();root=null;
+      },
+    };
+    const target=root?._status||status;
+    message(target,'Starting match in 5…');
+    if(countdown)clearInterval(countdown);
+    countdown=setInterval(()=>{
+      const seconds=Math.max(0,Math.ceil((data.startsAt-Date.now())/1000));
+      message(target,'Match begins in '+seconds+'…');
+      if(seconds===0){clearInterval(countdown);countdown=null}
+    },100);
+    actions.onStartMatch({...config},session);
+    return;
   }
   if(data.type==='roomUpdated'){
     participants=data.players.map(p=>({id:p.id,name:p.name}));
@@ -238,7 +275,7 @@ export function showPlayPage(){
   clearSocket();shell('PLAY SCRAPPY');
   const box=dom('section',CSS.box);root.appendChild(box);
   box.appendChild(dom('p','line-height:1.6;color:#adaeb5;margin-bottom:18px',
-    'Create a room or browse sessions on a shared WebSocket server. Solo Survival works; networked co-op and competitive matches need their gameplay runtimes.'));
+    'Create or join a shared-server room. Solo Survival and human FFA/TDM are supported; AI bot fill, co-op and Gun Game remain in development.'));
   const buttons=dom('div',CSS.row);box.appendChild(buttons);
   buttons.appendChild(button('CREATE ROOM',createPage));
   buttons.appendChild(button('BROWSE ROOMS',browsePage));
