@@ -93,7 +93,7 @@ wss.on('connection', ws => {
       const team=roomCfg.mode==='tdm'?(tally.RED<=tally.BLUE?'RED':'BLUE'):null;
       // Send welcome with list of existing players + room details
       const existingPlayers = [...room.players.values()].map(p => ({
-        id: p.id, name: p.name, x: p.x, y: p.y, z: p.z, yaw: p.yaw, hp: p.hp, score: p.score,
+        id: p.id, name: p.name, x: p.x, y: p.y, z: p.z, yaw: p.yaw, hp: p.hp, score: p.score, team:p.team,
       }));
       ws.send(JSON.stringify({
         type:    'welcome',
@@ -225,7 +225,7 @@ wss.on('connection', ws => {
   const stateTick = setInterval(() => {
     const room = rooms.get(roomId); if (!room) return;
     const players = [...room.players.values()].map(p => ({
-      id: p.id, name: p.name, x: p.x, y: p.y, z: p.z, yaw: p.yaw, hp: p.hp, score: p.score,
+      id: p.id, name: p.name, x: p.x, y: p.y, z: p.z, yaw: p.yaw, hp: p.hp, score: p.score, team:p.team,
     }));
     if (ws.readyState === 1) ws.send(JSON.stringify({ type: 'state', players }));
   }, 50);
