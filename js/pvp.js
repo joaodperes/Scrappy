@@ -408,7 +408,7 @@ export function startFfa(serverUrl, name, roomId, config, isHost, onGameStart, o
   _clearRemotePlayers();
   setRoomConfig({ ...DEFAULT_ROOM_CONFIG, ...(config ?? {}) });
   _wireEvents(onRoundEnd, onGameStart);
-  if (existingSession) adoptConnection(existingSession.socket, existingSession.welcome);
+  if (existingSession) adoptConnection(existingSession.socket, existingSession.welcome, existingSession.buffered || []);
   else connect(serverUrl, name, roomId, { type: 'ffa', config: roomConfig, isHost });
   _botSpawnTimer = BOT_SPAWN_INTERVAL;
 }
