@@ -1,5 +1,5 @@
 {
-  "version": "1.0",
+  "version": 2,
   "map": "terminal",
   "objects": [
     {
@@ -27,7 +27,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "terminal-entity-0001"
     },
     {
       "generator": "createWall",
@@ -54,7 +55,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "terminal-entity-0002"
     },
     {
       "generator": "createWall",
@@ -81,7 +83,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "terminal-entity-0003"
     },
     {
       "generator": "createWall",
@@ -108,7 +111,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "terminal-entity-0004"
     },
     {
       "generator": "createSlab",
@@ -136,7 +140,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "terminal-entity-0005"
     },
     {
       "generator": "createWall",
@@ -163,7 +168,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "terminal-entity-0006"
     },
     {
       "generator": "createWall",
@@ -190,7 +196,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "terminal-entity-0007"
     },
     {
       "generator": "createSlab",
@@ -218,7 +225,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "terminal-entity-0008"
     },
     {
       "generator": "createWall",
@@ -245,7 +253,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "terminal-entity-0009"
     },
     {
       "generator": "createWall",
@@ -272,7 +281,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "terminal-entity-0010"
     },
     {
       "generator": "createWall",
@@ -299,7 +309,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "terminal-entity-0011"
     },
     {
       "generator": "createSlab",
@@ -327,7 +338,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "terminal-entity-0012"
     },
     {
       "generator": "createWall",
@@ -354,7 +366,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "terminal-entity-0013"
     },
     {
       "generator": "createWall",
@@ -381,7 +394,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "terminal-entity-0014"
     },
     {
       "generator": "createWall",
@@ -408,7 +422,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "terminal-entity-0015"
     },
     {
       "generator": "createSlab",
@@ -436,7 +451,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "terminal-entity-0016"
     },
     {
       "generator": "createWall",
@@ -463,7 +479,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "terminal-entity-0017"
     },
     {
       "generator": "createWall",
@@ -490,7 +507,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "terminal-entity-0018"
     },
     {
       "generator": "createWall",
@@ -517,7 +535,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "terminal-entity-0019"
     },
     {
       "generator": "createSlab",
@@ -545,7 +564,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "terminal-entity-0020"
     },
     {
       "generator": "createWall",
@@ -572,7 +592,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "terminal-entity-0021"
     },
     {
       "generator": "createWall",
@@ -599,7 +620,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "terminal-entity-0022"
     },
     {
       "generator": "createWall",
@@ -626,7 +648,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "terminal-entity-0023"
     },
     {
       "generator": "createSlab",
@@ -654,7 +677,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "terminal-entity-0024"
     },
     {
       "generator": "createSlab",
@@ -682,7 +706,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "terminal-entity-0025"
     },
     {
       "generator": "createSlab",
@@ -710,7 +735,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "terminal-entity-0026"
     },
     {
       "generator": "createSlab",
@@ -738,7 +764,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "terminal-entity-0027"
     },
     {
       "generator": "createRampBox",
@@ -767,7 +794,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "terminal-entity-0028"
     },
     {
       "generator": "createRampBox",
@@ -796,7 +824,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "terminal-entity-0029"
     },
     {
       "generator": "createRampBox",
@@ -825,7 +854,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "terminal-entity-0030"
     },
     {
       "generator": "createRampBox",
@@ -854,7 +884,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "terminal-entity-0031"
     },
     {
       "generator": "createSlab",
@@ -882,7 +913,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "terminal-entity-0032"
     },
     {
       "generator": "createSlab",
@@ -910,7 +942,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "terminal-entity-0033"
     },
     {
       "generator": "createSlab",
@@ -938,7 +971,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "terminal-entity-0034"
     },
     {
       "generator": "createSlab",
@@ -966,7 +1000,9 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "terminal-entity-0035"
     }
-  ]
+  ],
+  "markers": []
 }
