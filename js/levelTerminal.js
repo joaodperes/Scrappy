@@ -147,7 +147,7 @@ export async function buildTerminalLevel(customScene = null) {
 
   // ── JSON layout override (assets/maps/terminal.json — see levelHelpers.js) ──
   const override = await loadMapOverride('terminal');
-  if (override) applyEditableLayout(override, { hazardZones, destructibleWalls });
+  if (override) applyEditableLayout(override, { hazardZones, destructibleWalls, movingPlatforms, powerSwitches });
 
   // ── NavMesh ──────────────────────────────────────────────
   walkableMeshes.forEach(m => m.computeWorldMatrix(true));
