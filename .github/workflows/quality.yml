@@ -16,6 +16,7 @@ jobs:
           find js -name '*.js' ! -name 'babylon.max.js' -print0 | xargs -0 -n1 node --check
           node --check server/server.js
           node --check scripts/validate-map-data.cjs
+          node scripts/check-inline-modules.cjs
       - name: Check local ES-module dependencies and exports
         run: node scripts/check-module-imports.cjs
       - name: Validate all four map layouts
