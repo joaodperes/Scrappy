@@ -129,12 +129,13 @@ export function hurtPlayer(rawDmg, { hazardType = null} = {}) {
   const fl = document.getElementById('damageFlash');
   if (fl) { fl.classList.add('flash'); setTimeout(() => fl.classList.remove('flash'), 170); }
   markHudDirty();
-  if (player.hp <= 0) {
+  if (player.hp <= 0 && !cb.isPvpActive?.()) {
     cb.endGame?.();
   }
 }
 
 export function shoot() {
+  if (cb.isPvpDead?.()) return;
   // Synchronous burst cooldown block prevents full-auto bypass
   if (wepCooldown > 0 || player.isReloading || _burstCooldown > 0) return;
   const W = WDEFS[curWep];
