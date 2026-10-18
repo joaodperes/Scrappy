@@ -538,12 +538,13 @@ export function checkFfaHitScan(dmg, range, spread = 0) {
     fwd.normalize();
   }
   const ray  = new BABYLON.Ray(camera.position.clone(), fwd, range);
-  const hits = scene.multiPickWithRay(ray, m => _remoteMeshMap.has(m));
-  if (hits?.length > 0) {
-    const entry = _remoteMeshMap.get(hits[0].pickedMesh);
-    if (entry) {
-      const realDmg = (roomConfig.instagib ? 9999 : dmg) * (roomConfig.damageMult ?? 1);
-      sendHit(entry.id, realDmg, 'hitscan');
+  const hit = scene.pickWithRay(ray,m => m.isEnabled() &&
+    (_remoteMeshMap.has(m) || (m.checkCollisions && m.isPickable && !m.metadata?.enemy)));
+  if (hit?.hit) {
+    const entry = _remoteMeshMap.get(hit.pickedMesh);
+    if(entry){
+      const realDmg=Math.min(160,(roomConfig.instagib?150:dmg)*(roomConfig.damageMult??1));
+      sendHit(entry.id,realDmg,'hitscan');
       return true;
     }
   }
