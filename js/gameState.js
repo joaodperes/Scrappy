@@ -34,6 +34,8 @@ export const cb = {
   markHudDirty: null,
   endGame: null,
   isGameRunning: null,
+  isPvpActive: null,
+  isPvpDead: null,
   /** @type {(() => void)|null} */
   showHitMarker: null,
   /** @type {((wName: string) => void)|null} */
