@@ -1,5 +1,5 @@
 {
-  "version": "1.0",
+  "version": "2.0",
   "objects": [
     {
       "generator": "createSlab",
@@ -2159,6 +2159,374 @@
         "y": 1,
         "z": 1
       }
+    },
+    {
+      "id": "j-border-n",
+      "generator": "createWall",
+      "params": {
+        "px": 0,
+        "py": 20,
+        "pz": -69,
+        "sx": 138,
+        "sy": 80,
+        "sz": 1.5,
+        "mat": "jungleBoundary"
+      }
+    },
+    {
+      "id": "j-border-s",
+      "generator": "createWall",
+      "params": {
+        "px": 0,
+        "py": 20,
+        "pz": 69,
+        "sx": 138,
+        "sy": 80,
+        "sz": 1.5,
+        "mat": "jungleBoundary"
+      }
+    },
+    {
+      "id": "j-border-w",
+      "generator": "createWall",
+      "params": {
+        "px": -69,
+        "py": 20,
+        "pz": 0,
+        "sx": 1.5,
+        "sy": 80,
+        "sz": 138,
+        "mat": "jungleBoundary"
+      }
+    },
+    {
+      "id": "j-border-e",
+      "generator": "createWall",
+      "params": {
+        "px": 69,
+        "py": 20,
+        "pz": 0,
+        "sx": 1.5,
+        "sy": 80,
+        "sz": 138,
+        "mat": "jungleBoundary"
+      }
+    },
+    {
+      "id": "j-ruin-ramp-nw",
+      "generator": "createRamp",
+      "params": {
+        "cx": -20,
+        "cz": 39,
+        "dir": "N",
+        "width": 4,
+        "fromY": 0,
+        "toY": 4.5,
+        "length": 12,
+        "mat": "concrete"
+      }
+    },
+    {
+      "id": "j-ruin-ramp-ne",
+      "generator": "createRamp",
+      "params": {
+        "cx": 20,
+        "cz": 39,
+        "dir": "N",
+        "width": 4,
+        "fromY": 0,
+        "toY": 4.5,
+        "length": 12,
+        "mat": "concrete"
+      }
+    },
+    {
+      "id": "j-ruin-ramp-sw",
+      "generator": "createRamp",
+      "params": {
+        "cx": -20,
+        "cz": -39,
+        "dir": "S",
+        "width": 4,
+        "fromY": 0,
+        "toY": 4.5,
+        "length": 12,
+        "mat": "concrete"
+      }
+    },
+    {
+      "id": "j-ruin-ramp-se",
+      "generator": "createRamp",
+      "params": {
+        "cx": 20,
+        "cz": -39,
+        "dir": "S",
+        "width": 4,
+        "fromY": 0,
+        "toY": 4.5,
+        "length": 12,
+        "mat": "concrete"
+      }
+    },
+    {
+      "id": "j-pad-nw",
+      "generator": "createJumpPad",
+      "params": {
+        "px": -37,
+        "pz": 37,
+        "floorY": 0,
+        "force": 28,
+        "rotY": 2.356194490192345
+      }
+    },
+    {
+      "id": "j-pad-ne",
+      "generator": "createJumpPad",
+      "params": {
+        "px": 37,
+        "pz": 37,
+        "floorY": 0,
+        "force": 28,
+        "rotY": -2.356194490192345
+      }
+    },
+    {
+      "id": "j-pad-sw",
+      "generator": "createJumpPad",
+      "params": {
+        "px": -37,
+        "pz": -37,
+        "floorY": 0,
+        "force": 28,
+        "rotY": 0.7853981633974483
+      }
+    },
+    {
+      "id": "j-pad-se",
+      "generator": "createJumpPad",
+      "params": {
+        "px": 37,
+        "pz": -37,
+        "floorY": 0,
+        "force": 28,
+        "rotY": -0.7853981633974483
+      }
+    },
+    {
+      "id": "j-pad-central-west",
+      "generator": "createJumpPad",
+      "params": {
+        "px": -15,
+        "pz": 0,
+        "floorY": 0,
+        "force": 22,
+        "rotY": 1.5707963267948966
+      }
+    },
+    {
+      "id": "j-pad-central-east",
+      "generator": "createJumpPad",
+      "params": {
+        "px": 15,
+        "pz": 0,
+        "floorY": 0,
+        "force": 22,
+        "rotY": -1.5707963267948966
+      }
+    },
+    {
+      "id": "j-mine-lava-west",
+      "generator": "createLava",
+      "params": {
+        "cx": -40,
+        "cz": 43,
+        "sx": 8,
+        "sz": 8,
+        "surfY": -7.5
+      }
+    },
+    {
+      "id": "j-mine-lava-east",
+      "generator": "createLava",
+      "params": {
+        "cx": 40,
+        "cz": -43,
+        "sx": 8,
+        "sz": 8,
+        "surfY": -7.5
+      }
+    },
+    {
+      "id": "j-mine-lava-north",
+      "generator": "createLava",
+      "params": {
+        "cx": 0,
+        "cz": 56,
+        "sx": 8,
+        "sz": 6,
+        "surfY": -7.5
+      }
+    },
+    {
+      "id": "j-spikes-nw",
+      "generator": "createSpikeTrap",
+      "params": {
+        "cx": -42,
+        "cz": 35,
+        "sx": 5,
+        "sz": 4,
+        "surfY": 0
+      }
+    },
+    {
+      "id": "j-spikes-se",
+      "generator": "createSpikeTrap",
+      "params": {
+        "cx": 42,
+        "cz": -35,
+        "sx": 5,
+        "sz": 4,
+        "surfY": 0
+      }
+    },
+    {
+      "id": "j-spikes-mine",
+      "generator": "createSpikeTrap",
+      "params": {
+        "cx": -38,
+        "cz": -40,
+        "sx": 5,
+        "sz": 5,
+        "surfY": -7.5
+      }
+    },
+    {
+      "id": "j-gate-north",
+      "generator": "createDestructibleWall",
+      "params": {
+        "px": 0,
+        "surfY": 0,
+        "pz": 51,
+        "sx": 7,
+        "sh": 3,
+        "sz": 0.8,
+        "hp": 160
+      }
+    },
+    {
+      "id": "j-gate-south",
+      "generator": "createDestructibleWall",
+      "params": {
+        "px": 0,
+        "surfY": 0,
+        "pz": -51,
+        "sx": 7,
+        "sh": 3,
+        "sz": 0.8,
+        "hp": 160
+      }
+    },
+    {
+      "id": "j-lift-west",
+      "generator": "createMovingPlatform",
+      "params": {
+        "startX": -21,
+        "startY": -7.1,
+        "startZ": 0,
+        "endX": -21,
+        "endY": 0.2,
+        "endZ": 0,
+        "sx": 5,
+        "sz": 5,
+        "speed": 0.3,
+        "waitTime": 1.8
+      }
+    },
+    {
+      "id": "j-lift-east",
+      "generator": "createMovingPlatform",
+      "params": {
+        "startX": 21,
+        "startY": -7.1,
+        "startZ": 0,
+        "endX": 21,
+        "endY": 0.2,
+        "endZ": 0,
+        "sx": 5,
+        "sz": 5,
+        "speed": 0.3,
+        "waitTime": 1.8
+      }
+    },
+    {
+      "id": "j-bridge-north",
+      "generator": "createMovingPlatform",
+      "params": {
+        "startX": -18,
+        "startY": 4.5,
+        "startZ": 24,
+        "endX": 18,
+        "endY": 4.5,
+        "endZ": 24,
+        "sx": 5,
+        "sz": 5,
+        "speed": 0.3,
+        "waitTime": 1.8
+      }
+    },
+    {
+      "id": "j-bridge-south",
+      "generator": "createMovingPlatform",
+      "params": {
+        "startX": -18,
+        "startY": 4.5,
+        "startZ": -24,
+        "endX": 18,
+        "endY": 4.5,
+        "endZ": -24,
+        "sx": 5,
+        "sz": 5,
+        "speed": 0.3,
+        "waitTime": 1.8
+      }
+    },
+    {
+      "id": "j-switch-lifts",
+      "generator": "createPowerSwitch",
+      "params": {
+        "px": -15,
+        "py": 0.8,
+        "pz": 3,
+        "targetPlatformIds": [
+          "j-lift-west",
+          "j-lift-east"
+        ]
+      }
+    },
+    {
+      "id": "j-switch-north",
+      "generator": "createPowerSwitch",
+      "params": {
+        "px": -24,
+        "py": 5.3,
+        "pz": 24,
+        "targetPlatformIds": [
+          "j-bridge-north"
+        ]
+      }
+    },
+    {
+      "id": "j-switch-south",
+      "generator": "createPowerSwitch",
+      "params": {
+        "px": -24,
+        "py": 5.3,
+        "pz": -24,
+        "targetPlatformIds": [
+          "j-bridge-south"
+        ]
+      }
     }
-  ]
+  ],
+  "map": "jungle"
 }
