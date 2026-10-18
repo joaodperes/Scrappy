@@ -7,8 +7,6 @@ import { hasLaserDot, isAkimbo, hasEnergyConverter, getEffectiveStats, getLoadou
 import { isScoped } from './player.js'
 
 export const WDEFS = {
-  KNIFE: {name:'KNIFE',desc:'Close-range backup blade. Final weapon in Gun Game.',dmg:70,range:2.8,
-    cd:0.55,hitscan:true,melee:true,ammo:Infinity,startAmmo:Infinity,aps:0,pellets:1,spread:0,secondary:true},
   PISTOL:   { name:'PISTOL', desc:'A reliable semi-auto sidearm. Low recoil and high accuracy make it deadly at range — and a headshot specialist in the right hands.', dmg:20, range:60, cd:.18, hitscan:true, ammo:24, aps:1, spread:.0, pellets:1, startAmmo:24, falloff:0.30, magSize:12, currentMag:12, reloadTime:1.2, headshotMult: 1.5 },
   SMG:      { name:'SMG', desc:'High fire rate with tight hip-fire spread. Built for aggressive close-quarters play and corridor clearing.', dmg:11, range:40, cd:.09, hitscan:true, ammo:0, aps:1, spread:.025, pellets:1, startAmmo:45, falloff:0.50, magSize: 30, currentMag: 30, reloadTime: 1.5 },
   SHOTGUN:  { name:'SHOTGUN', desc:'Ten-pellet devastation at close range. Each trigger pull delivers a wall of lead that few targets survive.', dmg:32, range:25, cd:.22, hitscan:true, ammo:0, aps:1, spread:0.10, pellets:10, startAmmo:16, falloff:0.80, magSize: 8, currentMag: 8, reloadTime: 1.8 },
@@ -37,6 +35,9 @@ export const WDEFS = {
   RIVETER: { name:'RIVETER', desc:'Heavy nailgun. Projectiles bounce off walls once. Excels in tight alleys.', dmg:45, range:50, cd:0.2, hitscan:false, ammo:0, aps:1, spread:.02, pellets:1, startAmmo:40, projSpeed: 45, magSize: 10, currentMag: 10, reloadTime: 2.0, bounces: 1 },
   PHALANX: { name:'PHALANX', desc:'Sonic crowd control. Low damage, massive knockback force.', dmg:15, range:25, cd:0.5, hitscan:false, ammo:0, aps:1, spread:.35, pellets:1, startAmmo:30, magSize: 6, currentMag: 6, reloadTime: 2.5 },
   AEGIS: { name:'AEGIS', desc:'Smart pistol. Aim down sights to paint targets for guaranteed hits.', dmg:30, range:80, cd:0.3, hitscan:true, ammo:0, aps:1, spread:.0, pellets:1, startAmmo:36, magSize: 12, currentMag: 12, reloadTime: 1.5, maxTargets: 3, lockCone: 0.95 },
+  // Secondary/melee weapon unlocked after the normal firearm progression.
+  KNIFE: {name:'KNIFE',desc:'Close-range backup blade. Final weapon in Gun Game.',dmg:70,range:2.8,
+    cd:0.55,hitscan:true,melee:true,ammo:Infinity,startAmmo:Infinity,aps:0,pellets:1,spread:0,secondary:true},
   // ── Wonder Weapons (boss drops only — wonderWeapon:true prevents loadout/ammo pickup) ──
   THUNDERBOLT: { name:'THUNDERBOLT', desc:'Instant AOE lightning — chains to ALL enemies within 20m simultaneously. Full damage, no falloff.', dmg:120, range:20, cd:1.5, hitscan:true, ammo:2, aps:1, spread:.0, pellets:1, startAmmo:2, falloff:0, wonderWeapon:true, useHeat:false, magSize:2, currentMag:2, reloadTime:2.0, splash:20, headshotMult:1.0 },
   SINGULARITY: { name:'SINGULARITY', desc:'Fires a gravity well that pulls all enemies within 12m for 3 seconds, then implodes for 200 damage.', dmg:200, range:90, cd:2.0, hitscan:true, ammo:3, aps:1, pellets:1, startAmmo:3, speed:18, splash:12, falloff:0, wonderWeapon:true, magSize:3, currentMag:3, reloadTime:2.5, headshotMult:1.0 },
