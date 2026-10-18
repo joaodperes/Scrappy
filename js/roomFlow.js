@@ -233,6 +233,7 @@ function browsePage() {
 }
 export function initRoomFlow(callbacks={}){actions=callbacks}
 export function showPlayPage(){
+  if(countdown){clearInterval(countdown);countdown=null;}
   clearSocket();shell('PLAY SCRAPPY');
   const box=dom('section',CSS.box);root.appendChild(box);
   box.appendChild(dom('p','line-height:1.6;color:#adaeb5;margin-bottom:18px',
