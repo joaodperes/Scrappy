@@ -15,7 +15,7 @@ import { updateWaves, setCurWave, setWaveOn, setWaveDly, curWave, launchWave, ge
 import { updatePlayer, setupInput, hurtPlayer, PH, resetPlayer, resetWeaponHeat, keys, movePlayerBody } from './player.js';
 import { updateHUD, tickHitMarker, wireDeathSubmit, showHitMarker, hideFfaHUD } from './ui.js';
 import { submitScore, renderLeaderboard } from './leaderboard.js';
-import { startFfa, stopFfa, updateFfa, isFfaActive, isFfaInPreLobby, showFfaLobby } from './pvp.js';
+import { startFfa, stopFfa, updateFfa, isFfaActive, isFfaInPreLobby, showFfaLobby, isLocalDead } from './pvp.js';
 import { loadProfile, getLevelProgress, levelFromTotalXp } from './progression.js';
 import { showLoadout } from './loadout.js';
 import { getCurrentMap, setCurrentMap, MAPS, getMapMeta, buildMap, isHardModeUnlocked, isMapUnlocked } from './mapManager.js';
@@ -37,6 +37,8 @@ cb.markHudDirty  = () => updateHUD();
 cb.endGame       = endGame;
 cb.showHitMarker = showHitMarker;
 cb.isGameRunning = () => gameRunning;
+cb.isPvpActive = isFfaActive;
+cb.isPvpDead = isLocalDead;
 cb.resetWeaponHeat = resetWeaponHeat;
 
 // ── Input ──────────────────────────────────────────────────────
@@ -667,6 +669,12 @@ engine.runRenderLoop(() => {
 
   // FFA pre-lobby: only network updates, skip game logic
   if (isFfaInPreLobby()) {
+    updateFfa(dt);
+    scene.render();
+    return;
+  }
+
+  if (isFfaActive() && isLocalDead()) {
     updateFfa(dt);
     scene.render();
     return;
