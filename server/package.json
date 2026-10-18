@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "test": "node --test roomDirectory.test.js"
+    "test": "node --test *.test.js"
   },
   "dependencies": {
     "ws": "^8.16.0"
