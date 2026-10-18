@@ -600,9 +600,9 @@ async function launchCompetitiveRoom(cfg,session) {
       if(def.magSize)def.currentMag=def.magSize;
       def.ammo=def.startAmmo||0;
     }
-    inventory[0]=selectedMatchLoadout.primary||'SMG';
-    inventory[1]=selectedMatchLoadout.secondary||'SHOTGUN';
-    inventory[2]='PISTOL';
+    inventory[0]=cfg.mode==='gunGame'?'PISTOL':(selectedMatchLoadout.primary||'SMG');
+    inventory[1]=cfg.mode==='gunGame'?null:(selectedMatchLoadout.secondary||'SHOTGUN');
+    inventory[2]=cfg.mode==='gunGame'?null:'PISTOL';
     setActiveSlot(0);
     const name=profileDisplayName();
     const onGameStart=()=>{
