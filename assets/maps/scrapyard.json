@@ -1,5 +1,5 @@
 {
-  "version": "1.0",
+  "version": 2,
   "map": "scrapyard",
   "objects": [
     {
@@ -27,7 +27,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "scrapyard-entity-0001"
     },
     {
       "generator": "createWall",
@@ -54,7 +55,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "scrapyard-entity-0002"
     },
     {
       "generator": "createWall",
@@ -81,7 +83,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "scrapyard-entity-0003"
     },
     {
       "generator": "createWall",
@@ -108,7 +111,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "scrapyard-entity-0004"
     },
     {
       "generator": "createSlab",
@@ -136,7 +140,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "scrapyard-entity-0005"
     },
     {
       "generator": "createSlab",
@@ -164,7 +169,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "scrapyard-entity-0006"
     },
     {
       "generator": "createSlab",
@@ -192,7 +198,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "scrapyard-entity-0007"
     },
     {
       "generator": "createSlab",
@@ -220,7 +227,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "scrapyard-entity-0008"
     },
     {
       "generator": "createSlab",
@@ -248,7 +256,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "scrapyard-entity-0009"
     },
     {
       "generator": "createBarrel",
@@ -271,7 +280,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "scrapyard-entity-0010"
     },
     {
       "generator": "createBarrel",
@@ -294,7 +304,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "scrapyard-entity-0011"
     },
     {
       "generator": "createBarrel",
@@ -317,7 +328,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "scrapyard-entity-0012"
     },
     {
       "generator": "createBarrel",
@@ -340,7 +352,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "scrapyard-entity-0013"
     },
     {
       "generator": "createBarrel",
@@ -363,7 +376,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "scrapyard-entity-0014"
     },
     {
       "generator": "createBarrel",
@@ -386,7 +400,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "scrapyard-entity-0015"
     },
     {
       "generator": "createWall",
@@ -413,7 +428,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "scrapyard-entity-0016"
     },
     {
       "generator": "createWall",
@@ -440,7 +456,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "scrapyard-entity-0017"
     },
     {
       "generator": "createWall",
@@ -467,7 +484,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "scrapyard-entity-0018"
     },
     {
       "generator": "createWall",
@@ -494,7 +512,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "scrapyard-entity-0019"
     },
     {
       "generator": "createWall",
@@ -521,7 +540,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "scrapyard-entity-0020"
     },
     {
       "generator": "createSlab",
@@ -549,7 +569,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "scrapyard-entity-0021"
     },
     {
       "generator": "createSlab",
@@ -577,7 +598,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "scrapyard-entity-0022"
     },
     {
       "generator": "createSlab",
@@ -605,7 +627,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "scrapyard-entity-0023"
     },
     {
       "generator": "createSlab",
@@ -633,7 +656,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "scrapyard-entity-0024"
     },
     {
       "generator": "createWall",
@@ -660,7 +684,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "scrapyard-entity-0025"
     },
     {
       "generator": "createWall",
@@ -687,7 +712,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "scrapyard-entity-0026"
     },
     {
       "generator": "createWall",
@@ -714,7 +740,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "scrapyard-entity-0027"
     },
     {
       "generator": "createWall",
@@ -741,7 +768,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "scrapyard-entity-0028"
     },
     {
       "generator": "createBarrel",
@@ -764,7 +792,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "scrapyard-entity-0029"
     },
     {
       "generator": "createBarrel",
@@ -787,7 +816,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "scrapyard-entity-0030"
     },
     {
       "generator": "createBarrel",
@@ -810,7 +840,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "scrapyard-entity-0031"
     },
     {
       "generator": "createBarrel",
@@ -833,7 +864,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "scrapyard-entity-0032"
     },
     {
       "generator": "createSlab",
@@ -861,7 +893,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "scrapyard-entity-0033"
     },
     {
       "generator": "createSlab",
@@ -889,7 +922,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "scrapyard-entity-0034"
     },
     {
       "generator": "createSlab",
@@ -917,7 +951,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "scrapyard-entity-0035"
     },
     {
       "generator": "createSlab",
@@ -945,7 +980,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "scrapyard-entity-0036"
     },
     {
       "generator": "createWall",
@@ -972,7 +1008,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "scrapyard-entity-0037"
     },
     {
       "generator": "createWall",
@@ -999,7 +1036,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "scrapyard-entity-0038"
     },
     {
       "generator": "createWall",
@@ -1026,7 +1064,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "scrapyard-entity-0039"
     },
     {
       "generator": "createWall",
@@ -1053,7 +1092,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "scrapyard-entity-0040"
     },
     {
       "generator": "createWall",
@@ -1080,7 +1120,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "scrapyard-entity-0041"
     },
     {
       "generator": "createWall",
@@ -1107,7 +1148,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "scrapyard-entity-0042"
     },
     {
       "generator": "createSlab",
@@ -1135,7 +1177,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "scrapyard-entity-0043"
     },
     {
       "generator": "createSlab",
@@ -1163,7 +1206,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "scrapyard-entity-0044"
     },
     {
       "generator": "createSlab",
@@ -1191,7 +1235,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "scrapyard-entity-0045"
     },
     {
       "generator": "createSlab",
@@ -1219,7 +1264,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "scrapyard-entity-0046"
     },
     {
       "generator": "createBarrel",
@@ -1242,7 +1288,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "scrapyard-entity-0047"
     },
     {
       "generator": "createBarrel",
@@ -1265,7 +1312,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "scrapyard-entity-0048"
     },
     {
       "generator": "createBarrel",
@@ -1288,7 +1336,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "scrapyard-entity-0049"
     },
     {
       "generator": "createBarrel",
@@ -1311,7 +1360,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "scrapyard-entity-0050"
     },
     {
       "generator": "createBarrel",
@@ -1334,7 +1384,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "scrapyard-entity-0051"
     },
     {
       "generator": "createBarrel",
@@ -1357,7 +1408,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "scrapyard-entity-0052"
     },
     {
       "generator": "createBarrel",
@@ -1380,7 +1432,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "scrapyard-entity-0053"
     },
     {
       "generator": "createBarrel",
@@ -1403,7 +1456,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "scrapyard-entity-0054"
     },
     {
       "generator": "createSlab",
@@ -1431,7 +1485,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "scrapyard-entity-0055"
     },
     {
       "generator": "createWall",
@@ -1458,7 +1513,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "scrapyard-entity-0056"
     },
     {
       "generator": "createWall",
@@ -1485,7 +1541,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "scrapyard-entity-0057"
     },
     {
       "generator": "createWall",
@@ -1512,7 +1569,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "scrapyard-entity-0058"
     },
     {
       "generator": "createWall",
@@ -1539,7 +1597,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "scrapyard-entity-0059"
     },
     {
       "generator": "createWall",
@@ -1566,7 +1625,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "scrapyard-entity-0060"
     },
     {
       "generator": "createWall",
@@ -1593,7 +1653,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "scrapyard-entity-0061"
     },
     {
       "generator": "createWall",
@@ -1620,7 +1681,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "scrapyard-entity-0062"
     },
     {
       "generator": "createWall",
@@ -1647,7 +1709,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "scrapyard-entity-0063"
     },
     {
       "generator": "createWall",
@@ -1674,7 +1737,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "scrapyard-entity-0064"
     },
     {
       "generator": "createWall",
@@ -1701,7 +1765,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "scrapyard-entity-0065"
     },
     {
       "generator": "createWall",
@@ -1728,7 +1793,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "scrapyard-entity-0066"
     },
     {
       "generator": "createWall",
@@ -1755,7 +1821,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "scrapyard-entity-0067"
     },
     {
       "generator": "createWall",
@@ -1782,7 +1849,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "scrapyard-entity-0068"
     },
     {
       "generator": "createWall",
@@ -1809,7 +1877,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "scrapyard-entity-0069"
     },
     {
       "generator": "createWall",
@@ -1836,7 +1905,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "scrapyard-entity-0070"
     },
     {
       "generator": "createBarrel",
@@ -1859,7 +1929,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "scrapyard-entity-0071"
     },
     {
       "generator": "createBarrel",
@@ -1882,7 +1953,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "scrapyard-entity-0072"
     },
     {
       "generator": "createSlab",
@@ -1910,7 +1982,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "scrapyard-entity-0073"
     },
     {
       "generator": "createSlab",
@@ -1938,7 +2011,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "scrapyard-entity-0074"
     },
     {
       "generator": "createSlab",
@@ -1966,7 +2040,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "scrapyard-entity-0075"
     },
     {
       "generator": "createSlab",
@@ -1994,7 +2069,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "scrapyard-entity-0076"
     },
     {
       "generator": "createCeiling",
@@ -2021,7 +2097,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "scrapyard-entity-0077"
     },
     {
       "generator": "createWall",
@@ -2048,7 +2125,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "scrapyard-entity-0078"
     },
     {
       "generator": "createWall",
@@ -2075,7 +2153,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "scrapyard-entity-0079"
     },
     {
       "generator": "createWall",
@@ -2102,7 +2181,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "scrapyard-entity-0080"
     },
     {
       "generator": "createWall",
@@ -2129,7 +2209,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "scrapyard-entity-0081"
     },
     {
       "generator": "createWall",
@@ -2156,7 +2237,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "scrapyard-entity-0082"
     },
     {
       "generator": "createWall",
@@ -2183,7 +2265,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "scrapyard-entity-0083"
     },
     {
       "generator": "createWall",
@@ -2210,7 +2293,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "scrapyard-entity-0084"
     },
     {
       "generator": "createWall",
@@ -2237,7 +2321,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "scrapyard-entity-0085"
     },
     {
       "generator": "createWall",
@@ -2264,7 +2349,9 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "scrapyard-entity-0086"
     }
-  ]
+  ],
+  "markers": []
 }
