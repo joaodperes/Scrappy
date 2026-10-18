@@ -95,6 +95,7 @@ function _pill(label, n, d, col) {
 function _wIcon(w) {
   return {
     PISTOL:       '🔫',
+    KNIFE:        '🔪',
     SMG:          '💨',
     SHOTGUN:      '💥',
     CHAINGUN:     '⛓️',
