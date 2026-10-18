@@ -1,0 +1,90 @@
+body { margin: 0; overflow: hidden; background: #111; }
+        #editorPanel {
+            position: fixed; top: 20px; right: 20px;
+            background: rgba(20,20,30,0.92);
+            color: #ddd;
+            padding: 14px;
+            border-radius: 10px;
+            font-family: monospace;
+            display: none;
+            flex-direction: column;
+            gap: 6px;
+            z-index: 9999;
+            min-width: 170px;
+            border: 1px solid #666;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+            pointer-events: none;
+        }
+        #editorPanel > * { pointer-events: auto; }
+        #editorPanel button {
+            background: #2a4a6a;
+            border: none;
+            color: white;
+            padding: 6px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: inherit;
+        }
+        #editorPanel button:hover { background: #3a6a8a; }
+        #editorPanel .danger { color: #ff6666; }
+        #editorPanel .success { color: #66ff66; }
+        #editorPanel .warning { color: #ffcc66; }
+        #editorPanel .live { color: #66ccff; }
+        #editorPanel kbd {
+            background: #333;
+            padding: 1px 6px;
+            border-radius: 3px;
+            font-size: 11px;
+        }
+        #editorPanel hr {
+            border-color: #555;
+            width: 100%;
+            margin: 4px 0;
+        }
+        #info {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            color: #888;
+            font-family: monospace;
+            font-size: 12px;
+            pointer-events: none;
+            text-shadow: 0 0 10px rgba(0,0,0,0.8);
+        }
+        #mapSwitcher {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            font-family: monospace;
+            font-size: 11px;
+            color: #888;
+            background: rgba(20,20,30,0.7);
+            padding: 8px 10px;
+            border-radius: 6px;
+            z-index: 9999;
+        }
+        #mapSwitcher a {
+            color: #6af;
+            text-decoration: none;
+            margin-right: 8px;
+        }
+        #mapSwitcher a.active { color: #9f6; font-weight: bold; }
+        #error {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #ff6666;
+            font-family: monospace;
+            background: rgba(0,0,0,0.8);
+            padding: 10px 20px;
+            border-radius: 8px;
+            display: none;
+            z-index: 10000;
+        }
+        #navRebuildBtn {
+            background: #4a6a2a;
+        }
+        #navRebuildBtn:hover {
+            background: #6a8a4a;
+        }
