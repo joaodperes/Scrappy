@@ -16,6 +16,21 @@ Then open `http://localhost:3000` and sign in with Google. The **Play**, **Loado
 and **Leaderboards** controls are intentionally hidden until authentication and
 the player's display name are available.
 
+### Local single-player gameplay (no WebSocket server)
+
+After signing in, select **Play → Single Player**, choose a map, optionally enable
+Hard Mode when unlocked, and press **Start Solo Survival**. This calls the existing
+local `startGame(0)` flow directly. It does not open `ws://localhost:8080`,
+does not create a room, and can be used to test all four maps while multiplayer
+features are still in development.
+
+**Create Room** and **Browse Rooms** are online/multiplayer actions and require
+the separate WebSocket server; use Single Player when only the static frontend
+is running. Browser messages about `WEBGL_debug_renderer_info` deprecation
+and missing Recast WebAssembly source maps are development-tool warnings,
+not the reason the multiplayer connection fails.
+
+
 For networked rooms, start the separate WebSocket server in a second terminal:
 
 ```sh
