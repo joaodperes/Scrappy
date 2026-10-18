@@ -1090,11 +1090,16 @@ export function updateEnemies(dt) {
     e._hopY = e._hopY || 0;
     e._yVel = e._yVel || 0;
     e._stuckTimer = e._stuckTimer || 0;
-    if (e._onPlatform?._frameDelta) {
-      const delta = e._onPlatform._frameDelta;
+    if (e._onPlatform) {
+      // Carry bots by the platform's actual displacement; the platform tick
+      // runs after enemy AI, so frameDelta is not guaranteed to exist here.
+      const platPos = e._onPlatform.position;
+      const prev = e._lastPlatformPos || platPos;
+      const delta = platPos.subtract(prev);
       e.group.position.addInPlace(delta);
       e._floorY += delta.y;
-    }
+      e._lastPlatformPos = platPos.clone();
+    } else e._lastPlatformPos = null;
 
     let bob = (e.flyH > 0) ? (e.flyH + Math.sin(e.animT * 1.9) * .18) : (Math.abs(Math.sin(e.animT * 5.8)) * .04);
     
