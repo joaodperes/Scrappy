@@ -30,6 +30,44 @@ Map geometry lives in `assets/maps/jungle.json`, through the same generic `insta
 - The formerly misplaced southern destructible gate is restored to `z=−51`, not the middle of the surface.
 - The misplaced mine barrel at `(9,−6.9,10)` is returned to its own `(−10,−7.04,10)` configured position.
 
+## Texture pass — owner feedback 19 October 2026
+
+The owner confirmed that the rebuilt Jungle plays **better** but needed
+recognizable textures. The source now assigns **10 distinct material recipes**
+instead of the former four extremely dark static procedural-noise materials.
+All 161 entity IDs and their geometry, markers, shafts, collisions and
+navigation metadata remain unchanged.
+
+| Surface / structure | Material key | Bundled source texture |
+|---|---|---|
+| Ground around the temple | `jungleSoil` | `med_bigdirt.png` |
+| Mossy central excavation | `jungleMossFloor` | `gravel1.png` |
+| Ruin platforms, columns and parapets | `jungleRuinStone` | `conc1_1.png` |
+| Mine levels −1 and −2 floors | `jungleMineFloor` | `gravel1.png` |
+| Mine levels −3 and −4 floors | `jungleDeepFloor` | `darkrock.png` |
+| Upper mine walls / partitions | `jungleMineWall` | `darkrock.png` |
+| Deeper mine walls / partitions | `jungleDeepWall` | `darkrock.png` |
+| Rock ceilings | `jungleMineCeiling` | `darkrock.png` |
+| Ramps and trench decking | `jungleRamp` | `met_brn_grate.png` |
+| Rails and low protective cover | `jungleIron` | `met_brn_block.png` |
+
+`js/jungleMaterials.js` owns the texture recipes, UV repeat counts and
+diffuse tint; `js/levelJungle.js` registers the keys before applying the
+existing JSON layout. These are **bundled local image textures**, not remote
+assets or a new heavyweight shader. They reuse the already-shipped Quake-style
+texture library. The legacy `mossy`, `concrete`, `steel` aliases still
+work for old editor exports, preserving backward compatibility.
+
+Automated gate: `node --test scripts/jungle-textures.test.cjs`. It
+checks recipe references, required files, representative material assignments,
+stable IDs and maintained hazard and ramp counts. An isolated Babylon material
+constructor test was also exercised during development.
+
+**Pending visual QA:** check image loading, UV repetition/stretching, texture
+brightness under Lantern/NVG, obvious seams on rotated ramps, readability of
+spikes and lava, editor export/reimport, and performance in Firefox/Chromium.
+The textured build has not yet been visually accepted.
+
 ## Lighting and visibility
 
 The mine now has 12 warm point-light positions spanning all four strata (in `js/levelJungle.js`). These are Babylon light instances, not editor props. The existing Pistol/Plasma/etc. Lantern attachment is a camera-mounted spotlight defined in `js/weapons.js`; NVG is a sight-based post-process defined in `js/player.js`. No new special-case lighting disable rules are introduced for lava, spikes or borders.
