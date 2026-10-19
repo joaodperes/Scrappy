@@ -454,7 +454,7 @@ export const ATTACHMENTS = {
   superheated_rivets: { id:'superheated_rivets', name:'Superheated Rivets', slot:'special', weapon:'RIVETER', desc:'Replaces raw damage with a severe burn effect.', icon:'🔥', mods:{ damage: -0.80 } },
   resonance_cascade: { id:'resonance_cascade', name:'Resonance Cascade', slot:'special', weapon:'PHALANX', desc:'Enemies knocked into walls take massive shatter damage.', icon:'💥', mods:{} },
   emp_frequency: { id:'emp_frequency', name:'EMP Frequency', slot:'special', weapon:'PHALANX', desc:'Converts knockback into a 1.5s EMP stun.', icon:'⚡', mods:{} },
-  multi_thread: { id:'multi_thread', name:'Multi-Thread Processor', slot:'special', weapon:'AEGIS', desc:'Increases maximum painted targets from 3 to 6.', icon:'🎯', mods:{ maxTargets: 3 } },
+  multi_thread: { id:'multi_thread', name:'Multi-Thread Processor', slot:'special', weapon:'AEGIS', desc:'Increases maximum painted targets from 3 to 6, but reduces damage per target to 66% of normal.', icon:'🎯', mods:{ maxTargets: 3, dmgMult: 0.66 } },
   bypass_algorithms: { id:'bypass_algorithms', name:'Bypass Algorithms', slot:'special', weapon:'AEGIS', desc:'Smart rounds bypass enemy armor and shields.', icon:'🔓', mods:{} },
   sonic_amplifier: {
     id:'sonic_amplifier', name:'Sonic Amplifier', slot:'barrel',
@@ -480,8 +480,8 @@ export const ATTACHMENTS = {
   },
   single_thread: {
     id:'single_thread', name:'Single-Thread Override', slot:'special', weapon:'AEGIS',
-    desc:'Focuses targeting. Limits max painted targets to 1, but increases smart round damage by 150%.',
-    icon:'🎯', mods:{ maxTargetsOverride: 1, dmgMult: 2.5 },
+    desc:'Focuses targeting. Limits max painted targets to 1, but increases smart round damage to 3.5× normal.',
+    icon:'🎯', mods:{ maxTargetsOverride: 1, dmgMult: 3.5 },
     incompatibleWith:['multi_thread']
   },
   slug_rounds: {
