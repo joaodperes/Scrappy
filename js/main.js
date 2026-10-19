@@ -107,7 +107,7 @@ function startGame(startWave = 0, difficulty = 'normal', localMode = null) {
   // Capture Hard Mode state BEFORE resetting everything
   player.hardMode = difficulty !== 'normal';
   ensureAudio();
-  player.hp = 100; player.armor = 0; player.score = 0;
+  player.maxHp = 100;player.hp = 100; player.armor = 0; player.score = 0;
   player.yVel = 0; player.onGround = true; player.buffs = {};
 
   import('./progression.js').then(({ getLoadout }) => {
