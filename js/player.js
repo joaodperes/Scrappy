@@ -1185,7 +1185,8 @@ export function updatePlayer(dt, gameRunning, paused) {
   }
   _lastStuckPos.copyFrom(_playerBody.position);
 
-  if (camera.position.y < -27) resetPlayer(-19, PH, -12);
+  // Fall recovery is handled above using map metadata; a second hardcoded
+  // y=-27 reset would eject players from Jungle's -30/-45 mine floors.
 
   if (mLen2 > 0.01 && player.onGround) {
     camera.position.y += Math.sin(Date.now() * .001 * (sprint ? 11 : 6.5)) * .042;
