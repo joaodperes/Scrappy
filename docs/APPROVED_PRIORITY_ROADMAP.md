@@ -101,7 +101,7 @@ Moon Base is a distinct low-gravity/jetpack game experience.
 - **Owner confirmation:** Elite behavior has been tested and works as expected.
   Accepted for now; reopen only for specific observed regressions.
 
-### October 19 owner-test regression fixes — applied before further rollout
+### October 19 owner-test regression fixes — Survival launch confirmed by owner
 
 - Owner reported all-map play startup failure: `js/main.js` referenced an
   unimported `profile` in the now-reverted Survival Secondary initialization.
@@ -114,6 +114,10 @@ Moon Base is a distinct low-gravity/jetpack game experience.
   moved Quests to Home, and queued completion/reward toasts.
 - Fixed Collector Aurora's undefined `parentMesh` branch and implemented
   distinct animated emissive palettes for all four Collector finishes.
+- **Owner confirmation:** game launching again and Jungle layout is better. This
+  confirms the previously reported all-map startup blocker was resolved.
+  Further PvP Loadout, Collector visuals, Jungle texture and other browser QA
+  are still outstanding.
 - **Open gate:** owner must verify actual Firefox/Chromium gameplay and
   browser Console diagnostics. The supplied Firefox Browser Console dump
   consists largely of browser/extension service messages rather than a
