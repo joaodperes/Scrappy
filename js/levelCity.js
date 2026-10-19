@@ -295,7 +295,7 @@ export async function buildCityLevel(customScene = null) {
   // -- Street ground ---------------------------------------------
   const street=BABYLON.MeshBuilder.CreateGround('street',{width:202,height:202},scene);
   street.position.y=-0.05; street.material=_ASPHALT;
-  street.checkCollisions=true; street.isPickable=false; walkableMeshes.push(street);
+  street.checkCollisions=true; street.isPickable=true; // Solid road blocks bullets walkableMeshes.push(street);
 
   // Pavement kerbs at all building bases
   const allBldgPos=[[-36,-36],[36,-36],[36,36],[-36,36],[0,0],[-60,0],[60,0],[0,-60],[0,60],
