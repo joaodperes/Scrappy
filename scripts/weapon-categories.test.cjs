@@ -30,3 +30,34 @@ test('Solo Survival starts with Pistol; startup script imports profile before Pv
  assert.doesNotMatch(main,/selectedSecondary\(WDEFS,profile\)/);
  assert.doesNotMatch(loadout,/SURVIVAL SECONDARY/);
 });
+
+test('FFA/TDM firearm selections reject Knife/Wonder, resolve invalid saved pairs',async()=>{
+ const {isCompetitiveFirearm,normalizeCompetitiveLoadout}=await mod;
+ const defs={
+   PISTOL:{},SMG:{},SHOTGUN:{},AEGIS:{},
+   KNIFE:{melee:true},THUNDERBOLT:{wonderWeapon:true},
+ };
+ assert.equal(isCompetitiveFirearm('AEGIS',defs),true);
+ assert.equal(isCompetitiveFirearm('KNIFE',defs),false);
+ assert.equal(isCompetitiveFirearm('THUNDERBOLT',defs),false);
+ assert.deepEqual(normalizeCompetitiveLoadout(
+   {primary:'KNIFE',secondary:'THUNDERBOLT'},defs),
+   {primary:'SMG',secondary:'SHOTGUN'});
+ assert.deepEqual(normalizeCompetitiveLoadout(
+   {primary:'SHOTGUN',secondary:'SHOTGUN'},defs),
+   {primary:'SHOTGUN',secondary:'PISTOL'});
+ assert.deepEqual(normalizeCompetitiveLoadout(
+   {primary:'SMG',secondary:'AEGIS'},defs),
+   {primary:'SMG',secondary:'AEGIS'});
+ assert.deepEqual(normalizeCompetitiveLoadout(null,defs),
+   {primary:'SMG',secondary:'SHOTGUN'});
+});
+test('Gun Game progression continues to end in Knife without using standard PvP slots',()=>{
+ const server=fs.readFileSync(path.join(__dirname,'../server/server.js'),'utf8');
+ const main=fs.readFileSync(path.join(__dirname,'../js/main.js'),'utf8');
+ assert.match(server,/return \['PISTOL',\.\.\.others,'KNIFE'\]/);
+ assert.match(main,/cfg\.mode==='gunGame'\?'PISTOL':mainSlot/);
+ assert.match(main,/normalizeCompetitiveLoadout\(/);
+ const loadout=fs.readFileSync(path.join(__dirname,'../js/loadout.js'),'utf8');
+ assert.match(loadout,/isCompetitiveFirearm\(wName,WDEFS\)/);
+});
