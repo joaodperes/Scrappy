@@ -5,13 +5,13 @@ export const HARD_MODE_BASE=Object.freeze({
   hp:1.2,damage:1.15,speed:1.12,score:2,budget:1.15,
 });
 export const HARD_MODE_MODIFIERS=Object.freeze([
-  Object.freeze({id:'reinforced',label:'REINFORCED',desc:'Enemies have heavier armor.',
+  Object.freeze({id:'reinforced',label:'REINFORCED',desc:'Enemies have +25% HP.',
     hp:1.25,damage:1,speed:1,count:1}),
-  Object.freeze({id:'overclocked',label:'OVERCLOCKED',desc:'Enemies advance more quickly.',
+  Object.freeze({id:'overclocked',label:'OVERCLOCKED',desc:'Enemies move +20% faster.',
     hp:1,damage:1,speed:1.2,count:1}),
-  Object.freeze({id:'ferocious',label:'FEROCIOUS',desc:'Enemy attacks are more dangerous.',
+  Object.freeze({id:'ferocious',label:'FEROCIOUS',desc:'Enemies deal +22% damage.',
     hp:1,damage:1.22,speed:1,count:1}),
-  Object.freeze({id:'swarm',label:'SWARM',desc:'More enemies appear each wave.',
+  Object.freeze({id:'swarm',label:'SWARM',desc:'Enemy counts increase by 30%.',
     hp:1,damage:1,speed:1,count:1.3}),
 ]);
 // Existing Hard Wave 10+ completion records are accepted for backwards
