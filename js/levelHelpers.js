@@ -876,18 +876,20 @@ export function buildStaircase(px, py, pz, width, depth, steps, dirX, dirZ, mat 
     const x = px + dirX * i * stepDepth;
     const y = py + i * stepHeight;
     const z = pz + dirZ * i * stepDepth;
+    // Bake first/last-step flare into the mesh dimensions instead of
+    // scaling a step. Step 0 is the composite parent: non-unit scale on
+    // that parent compresses every child's offset when JSON resets it to 1.
+    const flared = flareEnds && (i === 0 || i === steps - 1);
+    const span = (stepDepth + 0.2) * (flared ? 1.5 : 1);
     const s = BABYLON.MeshBuilder.CreateBox('step', {
-      width:  dirZ ? width : stepDepth + 0.2,
+      width:  dirZ ? width : span,
       height: stepHeight,
-      depth:  dirX ? width : stepDepth + 0.2,
+      depth:  dirX ? width : span,
     }, scene);
     s.position.set(x, y + stepHeight / 2, z);
     s.material = mat;
     s.checkCollisions = true;
     s.isPickable = false;
-    if (flareEnds && (i === 0 || i === steps - 1)) {
-      s.scaling[dirX ? 'x' : 'z'] = 1.5;
-    }
     s.metadata = { editable: false, type: 'stair_step' };
     if (editable && i > 0) {
       // setParent preserves the step's world-space position while making
