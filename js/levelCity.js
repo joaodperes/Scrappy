@@ -209,16 +209,8 @@ function _mkGarden() {
 // load from city.json through the shared editable entity factories.
 // Remaining procedural content: decorative cars with their roof jump pads,
 // rooftop/relay pads, city lighting and minor environmental dressing.
-function _jp(px,floorY,pz,force=22,rotY=0) {
-  force *= 1.5; // city map is larger than the others — pads hit noticeably harder across the board
-  const y=liftY(floorY), pg=new BABYLON.TransformNode('jpGroup',scene);
-  pg.position.set(px,y,pz); pg.rotation.y=rotY;
-  const base=BABYLON.MeshBuilder.CreateCylinder('jpBase',{diameter:2.2,height:0.1,tessellation:16},scene);
-  base.position.set(0,0.05,0);
-  base.material=M.jumpPad || M.ledGreen; // same shared pad material the other maps use
-  base.parent=pg; base.isPickable=false; base.checkCollisions=false;
-  jumpPads.push({pos:new BABYLON.Vector3(px,y,pz),force,thrustX:Math.sin(rotY)*(force*0.45),thrustZ:Math.cos(rotY)*(force*0.45)});
-}
+// All City jump pads, including car roofs and rooftop relays, are
+// authored in city.json using createCarWreck/createJumpPad.
 // Ziplines are now data-driven createZipline entities in city.json.
 // Bridge orientation and its selectable rails are handled by createSkybridge.
 
@@ -246,31 +238,7 @@ function _buildingLight(cx, cz, topSurfY, roofType, label) {
 
 // Skybridge geometry now loads from city.json as createSkybridge composites.
 
-// Car wreck — body/cabin still go through createWall (consistent collision
-// + walkableMeshes bookkeeping) but stay editable:false since they're
-// parented sub-meshes of a decorative composite, not standalone props.
-function _car(cx,cz,rotY=0) {
-  const g=new BABYLON.TransformNode('car',scene);
-  g.position.set(cx,0.5,cz); g.rotation.y=rotY;
-  const bmat=new BABYLON.StandardMaterial('cBM_'+Math.random().toFixed(4),scene);
-  const h=Math.random();
-  bmat.diffuseColor=new BABYLON.Color3(0.1+h*0.5,0.08+h*0.25,0.06+h*0.18);
-  bmat.specularColor=new BABYLON.Color3(0.05,0.05,0.05);
-  const body = createWall(0, 0, 0, 2, 0.9, 4.4, bmat, { editable: false });
-  body.parent=g; body.isPickable=false;
-  const cabin = createWall(0, 0.78, 0, 1.8, 0.7, 2.2, bmat, { editable: false });
-  cabin.parent=g; cabin.isPickable=false;
-  const wmat=new BABYLON.StandardMaterial('wM',scene);
-  wmat.diffuseColor=new BABYLON.Color3(0.08,0.08,0.08);
-  [[-1.1,-1.4],[-1.1,1.4],[1.1,-1.4],[1.1,1.4]].forEach(([wx,wz])=>{
-    const w=BABYLON.MeshBuilder.CreateCylinder('wh',{diameter:0.7,height:0.25,tessellation:10},scene);
-    w.rotation.z=Math.PI/2; w.parent=g; w.position.set(wx,-0.3,wz);
-    w.material=wmat; w.isPickable=false;
-  });
-  // Roof jump pad — cabin roof sits at world Y=1.63; lets players hop on/off
-  // cars for a quick street-level boost (same _jp design as every other pad).
-  _jp(cx,1.63,cz,16,rotY);
-}
+// Car wreck geometry and roof pads load as composite createCarWreck entities.
 
 // -- Level builder ---------------------------------------------
 export async function buildCityLevel(customScene = null) {
@@ -356,26 +324,25 @@ export async function buildCityLevel(customScene = null) {
 
   // -- Cars ------------------------------------------------------
   // Inner zone
-  _car(-14,-8,0.2);_car(14,-8,-0.1);_car(-14,8,Math.PI+0.15);_car(14,8,Math.PI-0.2);
-  _car(0,-22,Math.PI/2);_car(0,22,-Math.PI/2+0.1);
-  _car(-22,0,0.05);_car(22,0,Math.PI/6);
-  _car(-6,-16,Math.PI/4);_car(6,16,-Math.PI/3);
+
+
+
+
   // Mid zone
-  _car(-48,8,0.3);_car(48,-8,-0.25);
-  _car(-22,-50,Math.PI/2+0.1);_car(22,50,-Math.PI/2-0.1);
-  _car(-50,22,0.4);_car(50,-22,-0.35);
-  _car(0,-42,0.1);_car(0,42,-0.1);
-  _car(-42,0,Math.PI/2+0.2);_car(42,0,-Math.PI/2-0.2);
+
+
+
+
+
   // Outer zone (new)
-  _car(-68,-20,0.25);_car(68,20,-0.25);_car(-68,20,Math.PI+0.1);_car(68,-20,Math.PI-0.1);
-  _car(-20,-68,Math.PI/2+0.2);_car(20,68,-Math.PI/2-0.2);
-  _car(-20,68,Math.PI/3);_car(20,-68,-Math.PI/3);
-  _car(-90,0,Math.PI/2);_car(90,0,-Math.PI/2);
-  _car(0,-90,0.05);_car(0,90,-0.05);
-  _car(-68,-68,Math.PI/4);_car(68,68,-Math.PI/4);
-  _car(68,-68,-Math.PI/4+Math.PI);_car(-68,68,Math.PI/4+Math.PI);
-  _car(-85,-30,0.3);_car(85,30,-0.3);_car(-30,-85,Math.PI/2+0.15);_car(30,85,-Math.PI/2-0.15);
-  _car(-85,30,Math.PI-0.2);_car(85,-30,0.2);_car(30,-85,Math.PI/2-0.1);_car(-30,85,-Math.PI/2+0.1);
+
+
+
+
+
+
+
+
 
   // Jersey barriers — the material is still created/registered here since
   // city.json's Jersey-barrier wall entries reference it by the 'jersey'
@@ -393,100 +360,73 @@ export async function buildCityLevel(customScene = null) {
   // RING 1 BUILDINGS
   _buildingLight(-36,-36,F5_Y,'open','A');
 
-  _jp(-36,F5_Y,-36,24,Math.PI*5/4);
 
   _buildingLight(36,-36,F4_Y,'garden','B');
 
-  _jp(36,F4_Y,-36,22,Math.PI+Math.PI/4);
 
   _buildingLight(36,36,F4_Y,'open','C');
 
-  _jp(36,F4_Y,36,22,-Math.PI/4);
 
   _buildingLight(-36,36,F3_Y,'garden','D');
 
-  _jp(-36,F3_Y,36,22,Math.PI/4);
 
   _buildingLight(0,0,F2_Y,'open','E');
 
-  _jp(0,F2_Y,0,22,0);
 
   // RING 2 - wall-adjacent towers
   _buildingLight(-60,0,F3_Y,'open','F');
 
-  _jp(-60,F3_Y,0,20,Math.PI/2);
 
   _buildingLight(60,0,F3_Y,'garden','G');
 
-  _jp(60,F3_Y,0,20,-Math.PI/2);
 
   _buildingLight(0,-60,F4_Y,'open','H');
 
-  _jp(0,F4_Y,-60,22,Math.PI);
 
   _buildingLight(0,60,F3_Y,'garden','I');
 
-  _jp(0,F3_Y,60,20,0);
 
   // RING 3 - expanded outer buildings
   _buildingLight(-80,-80,F5_Y,'open','J');
 
-  _jp(-80,F5_Y,-80,24,Math.PI*5/4);
 
   _buildingLight(80,-80,F4_Y,'garden','K');
 
-  _jp(80,F4_Y,-80,22,Math.PI+Math.PI/4);
 
   _buildingLight(80,80,F3_Y,'open','L');
 
-  _jp(80,F3_Y,80,20,-Math.PI/4);
 
   _buildingLight(-80,80,F4_Y,'garden','M');
 
-  _jp(-80,F4_Y,80,22,Math.PI/4);
 
   _buildingLight(-80,0,F3_Y,'open','N');
 
-  _jp(-80,F3_Y,0,20,Math.PI/2);
 
   _buildingLight(80,0,F3_Y,'garden','O');
 
-  _jp(80,F3_Y,0,20,-Math.PI/2);
 
   _buildingLight(0,-80,F4_Y,'open','P');
 
-  _jp(0,F4_Y,-80,22,Math.PI);
 
   _buildingLight(0,80,F3_Y,'garden','Q');
 
-  _jp(0,F3_Y,80,20,0);
 
   // JSON bridge entities connect rooftops; no duplicate hardcoded decks.
 
   // -- Ring3 corners <-> Ring3 mid (J,K,L,M <-> N,O,P,Q via relay pads)
   // These are aerial jump-pad hops between rooftops via a floating midpoint
   // platform, not walkable bridges — gaps are too wide (60u) for a deck/ramp.
-  // Each relay pad's floor + 4 low railing walls now come from
-  // assets/maps/city.json (createSlab/createWall respectively); only the
-  // jump pad itself stays hardcoded here.
-  const RELAY_Y = F3_Y;
-  _jp(-74,RELAY_Y,-40,18,Math.PI/2);   // J<->N relay
-  _jp(-40,RELAY_Y,-74,18,Math.PI);     // J<->P relay
-  _jp(40,RELAY_Y,-74,18,Math.PI);      // K<->P relay
-  _jp(74,RELAY_Y,-40,18,-Math.PI/2);   // K<->O relay
-  _jp(74,RELAY_Y,40,18,-Math.PI/2);    // L<->O relay
-  _jp(40,RELAY_Y,74,18,0);             // L<->Q relay
-  _jp(-40,RELAY_Y,74,18,0);            // M<->Q relay
-  _jp(-74,RELAY_Y,40,18,Math.PI/2);    // M<->N relay
+  // Relay pad floors, railings and pads all come from city.json.
 
-  // Ring1 diagonal relay pads (AH and CG nudged off the zip_HA / zip_GC cables)
-  [[-15,F3_Y,-45,'AH',-Math.PI*3/4],[18,F3_Y,-48,'BH',-Math.PI*5/4],
-   [-18,F2_Y,48,'DI',Math.PI/4],[18,F2_Y,48,'CI',-Math.PI/4],
-   [-48,F2_Y,-18,'AF',0.25],[48,F2_Y,-18,'BG',Math.PI-0.25],
-   [-48,F2_Y,18,'DF',Math.PI/5],[45,F2_Y,15,'CG',-Math.PI/5],
-  ].forEach(([px,py,pz,,rot])=>{
-    _jp(px,py,pz,18,rot);
-  });
+
+
+
+
+
+
+
+
+  // Eight diagonal relay pads now load from city.json.
 
   // Cable-car routes are authored in assets/maps/city.json and constructed
   // by the shared createZipline generator when the JSON layout loads.
