@@ -17,8 +17,16 @@ import { getBossPoolForCurrentMap } from './waves.js';
 
 // ── Mesh→enemy lookup ─────────────────────────────────────────
 export const _meshToEnemy = new Map();
+// Separate local arena player-shaped actors are targetable by normal PvE
+// weapons without running the Survival robot AI/drops/progression pipeline.
+const arenaTargets = new Set();
+export function registerArenaTarget(actor){arenaTargets.add(actor);rebuildMeshMap()}
+export function unregisterArenaTarget(actor){arenaTargets.delete(actor);rebuildMeshMap()}
 export function rebuildMeshMap() {
   _meshToEnemy.clear();
+  for(const actor of arenaTargets){
+    if(actor.alive)actor.group.getChildMeshes().forEach(m=>{if(m.isPickable)_meshToEnemy.set(m,actor)});
+  }
   for (const e of enemies) {
     if (!e.alive) continue;
     e.group.getChildMeshes().forEach(m => _meshToEnemy.set(m, e));
@@ -641,6 +649,7 @@ export function spawnBot(type, _x, _spawnY, _z, scale = 1.0, eliteTraits = null)
 
 export function hitRobot(e, dmg, isHeadshot = false, isExplosive = false, source = 'PLAYER') {
   if (!e.alive) return;
+  if(e.arenaActor){cb.onArenaActorHit?.(e,dmg,source);return;}
 
   // Railgun fires 9999 – cap it for boss-tier enemies so they need multiple shots - currently capped at 20% HP
   if (BOSS_TYPES.has(e.type) && dmg > e.maxHp * 0.20) {
