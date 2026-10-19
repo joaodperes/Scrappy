@@ -6,6 +6,7 @@ const source=fs.readFileSync(path.join(__dirname,'../js/localArenaActors.js'),'u
  .replace(/^export\s+/gm,'')
  .replace(/import\.meta\.url/g,"'http://localhost/js/localArenaActors.js'");
 class Vec {
+ static Distance(a,b){return Math.hypot(a.x-b.x,a.y-b.y,a.z-b.z)}
  constructor(x=0,y=0,z=0){this.x=x;this.y=y;this.z=z}
  clone(){return new Vec(this.x,this.y,this.z)}
  add(b){return new Vec(this.x+b.x,this.y+b.y,this.z+b.z)}
