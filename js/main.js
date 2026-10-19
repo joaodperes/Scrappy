@@ -659,12 +659,16 @@ async function launchCompetitiveRoom(cfg,session) {
     const onRoundEnd=(winner,rows)=>{
       gameRunning=false;
       document.exitPointerLock();
+      if(winner==='CANCELLED'){
+        session.closeLobby();
+        stopFfa();
+      }
       hideFfaHUD();
       document.getElementById('hud').style.display='none';
       const screen=document.getElementById('pvpEndScreen');
       if(screen)screen.className='screen visible';
       const result=document.getElementById('pvpEndResult');
-      if(result)result.textContent=(winner||'DRAW')+' WINS';
+      if(result)result.textContent=winner==='CANCELLED'?'MATCH CANCELLED':(winner||'DRAW')+' WINS';
       const score=document.getElementById('pvpEndScore');
       if(score)score.textContent=(rows||[]).map((p,i)=>`${i+1}. ${p.name}: ${p.score}`).join('   ');
     };
