@@ -28,7 +28,7 @@ function harness(){
   id:'persona'+i,name:'P'+i,loadout:{primary:'SMG',secondary:'PISTOL'}
  }));
  const context={
-  BABYLON:B,document,camera,scene:{},inventory:[],WDEFS:{PISTOL:{},SMG:{},SHOTGUN:{},KNIFE:{}},
+  window:{BABYLON:B},BABYLON:B,document,camera,scene:{},inventory:[],WDEFS:{PISTOL:{},SMG:{},SHOTGUN:{},KNIFE:{}},
   curWep:'PISTOL',setActiveSlot(){},setWeapon(w){this.curWep=w;guns.push(['human',w])},
   fetchArenaPersonas:()=>Promise.resolve(profiles),
   chooseArenaSpawn:()=>vec(10+idx*3,0,0),
