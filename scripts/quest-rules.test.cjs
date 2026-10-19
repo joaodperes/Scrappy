@@ -57,3 +57,19 @@ test('daily resets independently of weekly; expired claims cannot be replayed',a
  assert.equal(claimQuest(p,'daily-pve-kills',tue).scraps,40);
  assert.equal(p.scraps,80);
 });
+
+test('surplus maximum-level PvE weapon XP converts at 25:1 and carries remainder',async()=>{
+ const {convertMaxedWeaponXp}=await mod;
+ const p={scraps:0,stats:{weaponXp:{SMG:17990}}};
+ assert.equal(convertMaxedWeaponXp(p,'SMG',19),0);
+ assert.equal(p.stats.weaponXp.SMG,18000);
+ assert.equal(p.weaponScrapRemainders.SMG,9);
+ assert.equal(convertMaxedWeaponXp(p,'SMG',16),1);
+ assert.equal(p.stats.weaponXp.SMG,18000);
+ assert.equal(p.weaponScrapRemainders.SMG,0);
+ assert.equal(p.scraps,1);
+ assert.equal(convertMaxedWeaponXp(p,'SMG',50),2);
+ assert.equal(p.scraps,3);
+ assert.equal(convertMaxedWeaponXp(p,'KNIFE',-5),0);
+ assert.equal(p.scraps,3);
+});
