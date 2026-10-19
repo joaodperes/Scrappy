@@ -205,15 +205,10 @@ function _mkGarden() {
   return mat;
 }
 
-// City's editable geometry (floors, walls, glass, columns, barrels, relay
-// railings) now comes exclusively from assets/maps/city.json — see the
-// "-- Level builder --" section below. The thin wrapper functions that used
-// to produce that content directly (_floor/_wall/_glass/_col/_hw/_barrel)
-// have been removed since nothing calls them anymore; only the genuinely
-// non-editable/systemic builders remain: _jp (jump pads — raw gameplay
-// data, never part of the JSON system), _zipline/_lift/_bridge (carry
-// _moveData a flat JSON prop can't represent), and _car (decorative
-// composite with its own jump pad).
+// City static geometry, 13 cable routes, 17 rooftop lifts and 8 bridges now
+// load from city.json through the shared editable entity factories.
+// Remaining procedural content: decorative cars with their roof jump pads,
+// rooftop/relay pads, city lighting and minor environmental dressing.
 function _jp(px,floorY,pz,force=22,rotY=0) {
   force *= 1.5; // city map is larger than the others — pads hit noticeably harder across the board
   const y=liftY(floorY), pg=new BABYLON.TransformNode('jpGroup',scene);
