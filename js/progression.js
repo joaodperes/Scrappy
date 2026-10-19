@@ -2390,7 +2390,6 @@ const _defaultProfile = () => ({
   },
   playerSkin:'default',
   pvpLoadout:{primary:'SMG',secondary:'SHOTGUN'},
-  pveSecondary:'PISTOL',
   scraps:0,
   questProgress:{},
   weaponScrapRemainders:{},
