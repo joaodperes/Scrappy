@@ -110,8 +110,11 @@ function botThink(brain,world,nowMs){
   // and with no LOS, hold position until the controller can route around.
   let towards=horizontal;
   if(!visible){
-    const waypoint=typeof world.nextWaypoint==='function'
-      ?world.nextWaypoint(state.position,q,brain.id):null;
+    let waypoint=null;
+    if(typeof world.nextWaypoint==='function'){
+      try{waypoint=world.nextWaypoint(state.position,q,brain.id)}
+      catch{waypoint=null} // transient Recast/path adapter failure => safe hold
+    }
     if(validPosition(waypoint))towards=directionTo(state.position,waypoint);
     else towards={x:0,z:0,distance:0};
   }
