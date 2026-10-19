@@ -36,7 +36,7 @@ export function questDefinitions(date=new Date()){
 }
 const fresh=(key)=>({key,metrics:{pveKills:0,damage:0,waves:0},claimed:[]});
 export function ensureQuestState(profile,date=new Date()){
-  if(!profile.questProgress || typeof profile.questProgress!=='object')profile.questProgress={};
+  if(!profile.questProgress || typeof profile.questProgress!=='object' || Array.isArray(profile.questProgress))profile.questProgress={};
   const {day,week}=questPeriods(date);
   if(profile.questProgress.daily?.key!==day)profile.questProgress.daily=fresh(day);
   if(profile.questProgress.weekly?.key!==week)profile.questProgress.weekly=fresh(week);
@@ -46,11 +46,11 @@ export function ensureQuestState(profile,date=new Date()){
 export function trackQuestEvent(profile,event,payload={},date=new Date()){
   const state=ensureQuestState(profile,date);
   let metric=null,amount=0;
-  if(event==='KILL' && payload.botType && payload.botType!=='pvp' && payload.source!=='ENVIRONMENT'){
+  if(event==='KILL' && payload.botType && payload.botType!=='pvp' && payload.source!=='ENVIRONMENT' && payload.source!=='PVP'){
     metric='pveKills';amount=1;
-  } else if(event==='DAMAGE_DEALT'){
+  } else if(event==='DAMAGE_DEALT' && payload.source!=='PVP' && payload.source!=='ENVIRONMENT'){
     metric='damage';amount=Math.max(0,Math.floor(Number(payload.amount)||0));
-  } else if(event==='WAVE_COMPLETE' && Number.isFinite(payload.waveNum)){
+  } else if(event==='WAVE_COMPLETE' && Number.isFinite(payload.waveNum) && payload.source!=='PVP'){
     metric='waves';amount=1;
   }
   if(!metric||!amount)return state;
