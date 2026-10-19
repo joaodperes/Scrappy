@@ -1,3 +1,52 @@
+# Approved development roadmap — offline-first revision, October 19, 2026
+
+## Current owner decision (supersedes October 18 priority order)
+
+**Offline game modes are not PvP.** This PR now focuses on single-player
+Survival and local matches against game-controlled opponents: Gun Game,
+Kill Confirmed, FFA and TDM. Multiplayer accounts, network room hosting,
+human-versus-human combat and 2-human co-op have moved **below the PR
+acceptance boundary**, to a later discussion/PR after the owner has playtested
+and accepted the offline game. Keep the old networking implementation in place
+for later; do not gate local modes on WebSockets or Firebase paid services.
+
+### Revised order for current PR #2
+
+| Phase | Work | Acceptance |
+|---|---|---|
+| A | Retain already-accepted map/editor, Hard/Nightmare and Elite milestones | Regression only; avoid redesigning Scrapyard/City |
+| B | Finish Jungle and Moon Base source QA corrections; weapon categories/Knife/melee | Firefox/Chromium walkthrough, geometry, combat and editor tests |
+| C | Finish offline daily/weekly quests/Scraps, Firebase Spark transaction-safe cosmetic shop, earned PvE stats/equipment | Friends-only profile compatibility, no paid services, duplicate-purchase/claim tests |
+| D | **Local robot match modes**: Gun Game, Kill Confirmed, FFA and TDM, with bot personas/team AI | Real bot-versus-bot fights required to call FFA/TDM complete; currently the visible menu labels these **PRACTICE** because existing PvE robots only target the player |
+| E | **Documentation cleanup in this PR**: replace stale Three.js README, reconcile local developer instructions and roadmap, audit references/assets | Run complete tests; only do safe source moves/deletions after working browser smoke checks |
+| F | Owner validates the [offline QA checklist](OWNER_VALIDATION_TODO.md), then reviews draft PR #2 | Close/merge the branch only on owner's instruction, never automatically |
+| LATER | **Separate multiplayer scope**: network rooms, PvP/FFA/TDM/Gun Game against humans, authoritative net hits, networked bots, 2-player co-op, reconnect, deployment | Do not block current offline milestones or provision paid hosting |
+
+### Local modes implemented in this development slice
+
+- `js/localArenaRules.js` has seeded Gun Game Pistol→Knife progression,
+  Kill Confirmed tag accounting, score/time goals and death/restart rules.
+- `js/localArenaRuntime.js` reuses existing single-player robot AI, local
+  map geometry and combat; spawns replacement robots, provides match HUD,
+  local Gun Game weapon switching and collectable Kill Confirmed tags.
+- `js/main.js`, `js/enemies.js` and `js/roomFlow.js` now route local
+  matches without connecting to a room server.
+- **Known limitation**: present robot models target only the human, not one
+  another. As a result FFA/TDM use explicit **Practice** labels and are **not
+  accepted full game modes**. Add bot factions/team combat, kill attribution,
+  AI loadouts/player-like skins and friendly-fire rules before dropping
+  that label. Gun Game and Kill Confirmed likewise await human browser
+  testing before owner acceptance.
+- The pre-existing Node server prototypes and their tests stay versioned,
+  but new network features and hardening must not compete with offline work.
+- The owner has also approved Firebase Spark/friends-only persistence and
+  accepted client-reported PvE progression as a pragmatic compromise.
+  See [Firebase decision](FIREBASE_SPARK_DECISION.md).
+
+---
+
+## Historic October 18 plan and implementation notes (reference only)
+
 # Approved development order — October 18, 2026
 
 This replaces the previous ordering in FOUNDATIONS_AND_NEXT_STEPS.md.
