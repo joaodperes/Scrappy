@@ -3,6 +3,9 @@
 export function blocksBullet(mesh){
   if(!mesh || mesh.isEnabled?.()===false || !mesh.checkCollisions)return false;
   const data=mesh.metadata||{};
+  // The invisible collision controller sits exactly at the camera origin.
+  // Ray predicates must never count it as a bullet-blocking world obstacle.
+  if(mesh.name==='_playerBody' || mesh.name?.startsWith('wep_') || mesh.name?.startsWith('wm_'))return false;
   if(data.type==='glass'||data.generator==='createGlass')return false;
   if(data.enemy||data.remotePlayer)return false;
   return true;
