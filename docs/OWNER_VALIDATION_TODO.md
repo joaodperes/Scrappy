@@ -1,5 +1,24 @@
 # Owner playtest and acceptance to-do — 19 October 2026
 
+**Scope revision:** this PR is now **offline-first**. The owner explicitly
+postponed human multiplayer, network co-op and networked-bot features until
+a separate later PR. The local game modes below must work without running a
+Node WebSocket service. FFA/TDM are *bot practice*, not full team AI yet.
+
+## First-pass offline game modes (new)
+
+- [ ] **Local Play navigation:** Home → Play opens LOCAL PLAY; select Local Modes; online controls are clearly marked experimental and not a prerequisite.
+- [ ] **Gun Game start:** choose a map, duration and score setting, launch with **no** Node server running. First weapon is Pistol; each valid robot kill equips the next weapon in one shared deterministic ladder. Swapping to an unintended gun must not advance the ladder.
+- [ ] **Gun Game finish:** after progressing through all guns, a Knife elimination shows VICTORY; reaching a generic point target early must not finish the ladder.
+- [ ] **Kill Confirmed:** kills drop bright golden collectable tags; counter only increases by collecting them. Walk away from a tag until it expires and confirm no phantom points or collectible remains.
+- [ ] **FFA Practice / TDM Practice:** local bots spawn, attack and replenish without a WebSocket service; UI says PRACTICE (bots currently only target you). Score/time conditions and results behave sensibly; don't classify these as full FFA/TDM bot-vs-bot matches.
+- [ ] **Local match death/respawn:** after a death, there is a five-second respawn with HP reset and no wave counter reset; if score/time goal ends the match, a single result screen appears.
+- [ ] **Local menu/cleanup:** quit through Pause and return to Menu; retry different local mode/map; no leftover dog tags, HUD overlays, bot entities, duplicate score events or orphaned timers.
+- [ ] **Survival regression:** return to Survival after a Gun Game or Kill Confirmed match; its endless waves, standard Secondary Pistol, difficulty selection and existing quests still work.
+- [ ] **Document checks:** README and LOCAL_DEVELOPMENT instructions match the actual Babylon.js implementation and browser menus.
+
+
+
 **Branch to test:** `fix/foundations-room-flow-20261018` (open Draft PR #2).  
 **Do not merge into main until the owner confirms acceptance.**  
 **Current status:** these tasks are NOT all feature complete. This checklist distinguishes source-implemented / ready-to-evaluate behaviors from systems that cannot yet honestly be validated in a browser.
@@ -9,7 +28,7 @@
 - [ ] Check out the branch above. Record the short commit SHA. Hard-refresh after each code update.
 - [ ] Use latest Firefox and a Chromium-family browser on desktop; write down OS, browser version and graphics adapter.
 - [ ] Start site from repository root with `python3 -m http.server 3000`; open `http://localhost:3000` (not `file://`). Sign in with Google and set a display name.
-- [ ] For multiplayer, in another terminal run `cd server && npm ci && npm test && npm start`. Browse to the local room server at `ws://localhost:8080`; test with **two real browser sessions**.
+- [ ] **Optional, deferred only:** for later multiplayer investigation, start `cd server && npm ci && npm start` and use two browsers. **Do not run this for offline PR acceptance.**
 - [ ] Run from repository root: `node scripts/validate-map-data.cjs`, `node scripts/check-module-imports.cjs`, `node --test scripts/*.test.cjs server/*.test.js`. Record errors and results.
 - [ ] When an issue occurs, attach the **page console** stack trace (F12 → Console), the map/mode, reproduction sequence and a screenshot or 15–30 second video. Firefox *Browser Console* browser/extension messages are not a reliable substitute for the game tab.
 
@@ -19,7 +38,7 @@
 
 - [ ] **[1–2] Map editor/JSON** — open Scrapyard, City, Jungle and Moon Base in the editor; move an editable wall/ramp/car, save/export/import, and verify it remains in place with the same collision. Confirm no missing entity/material keys. Test undo/redo and navigation debug.
 - [ ] **[menu] Authentication** — Google sign in, name save, logout, login again; no blank menu or duplicate widgets. Home buttons Play, Loadout, Quests and Leaderboards are consistently sized.
-- [ ] **[menu] Play** — exactly two top choices, Create Room and Browse Rooms; Solo nested under Create. Map choice appears only in Play; no duplicate Home selector. Back/Close return cleanly.
+- [ ] **[menu] Play** — LOCAL PLAY is the default, with LOCAL MODES for Survival, Gun Game, Kill Confirmed, FFA Practice and TDM Practice. Experimental online room browsing is separate. Map choice appears only in Play; no duplicate Home selector. Back/Close return cleanly.
 - [ ] **[solo] Start** — launch and end Survival on *each* of the four maps, then restart. No startup crash, blank canvas or weapons disappearing. Starting Secondary should be the **Pistol**.
 - [ ] **[combat] Hits and barrels** — shoot robots and explosive barrels close/far and through glass vs opaque walls; rockets/plasma projectiles should not tunnel through geometry at high movement speed.
 - [ ] **[combat] Plasma sniper** — precision hitscan works; a visible blue beam persists briefly after firing; actual hit corresponds to the beam and glass/opaque wall behavior.
@@ -48,7 +67,7 @@
 - [ ] **[8] Weapon XP** — at PvE weapon max XP, surplus converts to Scraps at 25 XP : 1 Scrap with retained remainder; PvP rewards should not produce extra PvE Scraps.
 - [ ] **[leaderboards]** — score submission and pagination/load by map/mode, empty states, authentication and Firestore error handling; no duplicate score submissions after restart.
 
-### Multiplayer: existing implementation requires live verification
+### Multiplayer: **deferred to separate future PR (NOT a blocker for this PR)**
 
 - [ ] **[9] Public room** — host with a valid map, mode, timer and kill limit; another browser can browse it, join, see both players and correct **(YOU)** label. Room disappears when full/started.
 - [ ] **[9] Password and membership** — wrong password rejected; correct retry succeeds. A late guest cannot take host controls. On host leave, a remaining connected human gets host role and can start later.
@@ -63,7 +82,7 @@
 - [ ] **[11–13] Disconnect** — disconnect and reconnect during lobby and active round. **Do not mark seamless rejoin as passed:** authenticated session restoration is not yet implemented. Capture state lost or stuck screens.
 - [ ] **[13] Security observation** — attempt intentionally invalid fire/damage packets only in a local/private server test; log any impossible range/damage/speed results. Server-side authoritative validation is **not complete** and must not be approved as secure.
 
-## B. NOT READY for acceptance (engineering/deployment work still required)
+## B. Deferred and unfinished work (not a blocker for offline PR review)
 
 These are developer-owned gates, **not failures you need to reproduce today**.
 
