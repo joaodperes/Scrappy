@@ -95,6 +95,7 @@ function _hideAllScreens() {
 
 // ── Solo PvE ───────────────────────────────────────────────────
 function startGame(startWave = 0, difficulty = 'normal') {
+  document.getElementById('startupErrorNotice')?.remove();
   if(!['normal','hard','nightmare'].includes(difficulty))difficulty='normal';
   player.difficulty=difficulty;
   setActiveHardWave(null);
@@ -158,8 +159,23 @@ function startGame(startWave = 0, difficulty = 'normal') {
     window._hazardZones = hazardZones;
     window._movingPlatforms = movingPlatforms;
     window._powerSwitches = powerSwitches;
-    
     finishStart();
+  }).catch(error=>{
+    console.error('[SCRAPPY/STARTUP] Failed to build or start map '+currentMap,error);
+    gameRunning=false;
+    const hud=document.getElementById('hud');
+    if(hud)hud.style.display='none';
+    const screen=document.getElementById('menuScreen');
+    if(screen)screen.className='screen visible';
+    let notice=document.getElementById('startupErrorNotice');
+    if(!notice){
+      notice=document.createElement('div');
+      notice.id='startupErrorNotice';
+      notice.style.cssText='color:#ffae9d;font-size:12px;max-width:360px;text-align:center;padding:10px;border:1px solid #c44;font-family:monospace';
+      screen?.appendChild(notice);
+    }
+    notice.textContent='Map failed to start: '+(error?.message||String(error))+
+      '. Open the page Console (F12) for the full [SCRAPPY/STARTUP] error.';
   });
   
   function finishStart() {
@@ -373,6 +389,7 @@ function _populateMapDropdown() {
         }
       };
       (playBtn?.parentElement||container).appendChild(questsBtn);
+      questsBtn.style.display=window.__scrappyAuthenticated?'block':'none';
     }
     // ── Leaderboard moves to its own subpage. #leaderboardSection (the
     // STANDARD/HARD toggle + score list) gets relocated into it on first
