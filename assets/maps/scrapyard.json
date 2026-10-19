@@ -2351,6 +2351,510 @@
         "z": 1
       },
       "id": "scrapyard-entity-0086"
+    },
+    {
+      "id": "scrapyard-stair-01",
+      "generator": "createStaircase",
+      "params": {
+        "px": 32,
+        "py": 0,
+        "pz": 14,
+        "width": 6,
+        "depth": 11,
+        "steps": 12,
+        "dirX": 0,
+        "dirZ": 1,
+        "stepHeight": 0.5,
+        "flareEnds": true,
+        "mat": "concrete"
+      },
+      "position": {
+        "x": 32,
+        "y": 0.25,
+        "z": 14
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "scrapyard-stair-02",
+      "generator": "createStaircase",
+      "params": {
+        "px": -32,
+        "py": 0,
+        "pz": -14,
+        "width": 6,
+        "depth": 11,
+        "steps": 12,
+        "dirX": 0,
+        "dirZ": -1,
+        "stepHeight": 0.5,
+        "flareEnds": true,
+        "mat": "concrete"
+      },
+      "position": {
+        "x": -32,
+        "y": 0.25,
+        "z": -14
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "scrapyard-stair-03",
+      "generator": "createStaircase",
+      "params": {
+        "px": 40,
+        "py": 6,
+        "pz": 30,
+        "width": 6,
+        "depth": 11,
+        "steps": 12,
+        "dirX": 0,
+        "dirZ": -1,
+        "stepHeight": 0.5,
+        "flareEnds": true,
+        "mat": "concrete"
+      },
+      "position": {
+        "x": 40,
+        "y": 6.25,
+        "z": 30
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "scrapyard-stair-04",
+      "generator": "createStaircase",
+      "params": {
+        "px": -40,
+        "py": 6,
+        "pz": -30,
+        "width": 6,
+        "depth": 11,
+        "steps": 12,
+        "dirX": 0,
+        "dirZ": 1,
+        "stepHeight": 0.5,
+        "flareEnds": true,
+        "mat": "concrete"
+      },
+      "position": {
+        "x": -40,
+        "y": 6.25,
+        "z": -30
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "scrapyard-stair-05",
+      "generator": "createStaircase",
+      "params": {
+        "px": -27,
+        "py": 12,
+        "pz": 0,
+        "width": 8,
+        "depth": 15,
+        "steps": 13,
+        "dirX": 1,
+        "dirZ": 0,
+        "stepHeight": 0.5,
+        "flareEnds": true,
+        "mat": "concrete"
+      },
+      "position": {
+        "x": -27,
+        "y": 12.25,
+        "z": 0
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "scrapyard-stair-06",
+      "generator": "createStaircase",
+      "params": {
+        "px": 27,
+        "py": 12,
+        "pz": 0,
+        "width": 8,
+        "depth": 15,
+        "steps": 13,
+        "dirX": -1,
+        "dirZ": 0,
+        "stepHeight": 0.5,
+        "flareEnds": true,
+        "mat": "concrete"
+      },
+      "position": {
+        "x": 27,
+        "y": 12.25,
+        "z": 0
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "scrapyard-pad-01",
+      "generator": "createJumpPad",
+      "params": {
+        "px": -28,
+        "floorY": 6,
+        "pz": 28,
+        "force": 22,
+        "rotY": 0.7853981633974483
+      },
+      "position": {
+        "x": -28,
+        "y": 6.22,
+        "z": 28
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0.7853981633974483,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "scrapyard-pad-02",
+      "generator": "createJumpPad",
+      "params": {
+        "px": 28,
+        "floorY": 6,
+        "pz": 28,
+        "force": 22,
+        "rotY": 5.497787143782138
+      },
+      "position": {
+        "x": 28,
+        "y": 6.22,
+        "z": 28
+      },
+      "rotation": {
+        "x": 0,
+        "y": 5.497787143782138,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "scrapyard-pad-03",
+      "generator": "createJumpPad",
+      "params": {
+        "px": -28,
+        "floorY": 6,
+        "pz": -28,
+        "force": 22,
+        "rotY": 2.356194490192345
+      },
+      "position": {
+        "x": -28,
+        "y": 6.22,
+        "z": -28
+      },
+      "rotation": {
+        "x": 0,
+        "y": 2.356194490192345,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "scrapyard-pad-04",
+      "generator": "createJumpPad",
+      "params": {
+        "px": 28,
+        "floorY": 6,
+        "pz": -28,
+        "force": 22,
+        "rotY": 3.9269908169872414
+      },
+      "position": {
+        "x": 28,
+        "y": 6.22,
+        "z": -28
+      },
+      "rotation": {
+        "x": 0,
+        "y": 3.9269908169872414,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "scrapyard-pad-05",
+      "generator": "createJumpPad",
+      "params": {
+        "px": 0,
+        "floorY": 12,
+        "pz": 38,
+        "force": 22,
+        "rotY": 3.141592653589793
+      },
+      "position": {
+        "x": 0,
+        "y": 12.22,
+        "z": 38
+      },
+      "rotation": {
+        "x": 0,
+        "y": 3.141592653589793,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "scrapyard-pad-06",
+      "generator": "createJumpPad",
+      "params": {
+        "px": 0,
+        "floorY": 12,
+        "pz": -38,
+        "force": 22,
+        "rotY": 0
+      },
+      "position": {
+        "x": 0,
+        "y": 12.22,
+        "z": -38
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "scrapyard-pad-07",
+      "generator": "createJumpPad",
+      "params": {
+        "px": -36,
+        "floorY": 12,
+        "pz": 12,
+        "force": 24,
+        "rotY": 1.5707963267948966
+      },
+      "position": {
+        "x": -36,
+        "y": 12.22,
+        "z": 12
+      },
+      "rotation": {
+        "x": 0,
+        "y": 1.5707963267948966,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "scrapyard-pad-08",
+      "generator": "createJumpPad",
+      "params": {
+        "px": -36,
+        "floorY": 12,
+        "pz": -12,
+        "force": 24,
+        "rotY": 1.5707963267948966
+      },
+      "position": {
+        "x": -36,
+        "y": 12.22,
+        "z": -12
+      },
+      "rotation": {
+        "x": 0,
+        "y": 1.5707963267948966,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "scrapyard-pad-09",
+      "generator": "createJumpPad",
+      "params": {
+        "px": 36,
+        "floorY": 12,
+        "pz": 12,
+        "force": 24,
+        "rotY": -1.5707963267948966
+      },
+      "position": {
+        "x": 36,
+        "y": 12.22,
+        "z": 12
+      },
+      "rotation": {
+        "x": 0,
+        "y": -1.5707963267948966,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "scrapyard-pad-10",
+      "generator": "createJumpPad",
+      "params": {
+        "px": 36,
+        "floorY": 12,
+        "pz": -12,
+        "force": 24,
+        "rotY": -1.5707963267948966
+      },
+      "position": {
+        "x": 36,
+        "y": 12.22,
+        "z": -12
+      },
+      "rotation": {
+        "x": 0,
+        "y": -1.5707963267948966,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "scrapyard-pad-11",
+      "generator": "createJumpPad",
+      "params": {
+        "px": 0,
+        "floorY": 18,
+        "pz": 0,
+        "force": 28,
+        "rotY": 3.141592653589793
+      },
+      "position": {
+        "x": 0,
+        "y": 18.22,
+        "z": 0
+      },
+      "rotation": {
+        "x": 0,
+        "y": 3.141592653589793,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "scrapyard-pad-12",
+      "generator": "createJumpPad",
+      "params": {
+        "px": 0,
+        "floorY": 24,
+        "pz": 28,
+        "force": 22,
+        "rotY": 3.141592653589793
+      },
+      "position": {
+        "x": 0,
+        "y": 24.22,
+        "z": 28
+      },
+      "rotation": {
+        "x": 0,
+        "y": 3.141592653589793,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
     }
   ],
   "markers": []
