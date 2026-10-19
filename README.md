@@ -78,7 +78,7 @@ The checked-in `js/babylon.max.js` is a required local Babylon runtime asset; it
 
 Scrappy uses the existing Firebase Spark plan for Google sign-in and Firestore profiles. The owner explicitly chose a **free, friends-only** model: account-owned profile documents and transaction-safe shop spending, accepting simpler client-reported PvE rewards instead of paid anti-cheat infrastructure. Do not enable paid cloud infrastructure or expose admin credentials.
 
-The shop, secure/concurrent wallet persistence, applied PvE equipment and full bot-vs-bot modes remain work in progress. Pure testing modules are not a shipped UI. See [Firebase architecture](docs/FIREBASE_SPARK_DECISION.md) and [remaining work](docs/OPEN_WORK_REGISTER.md).
+The shop, secure/concurrent wallet persistence, applied PvE equipment and browser gameplay QA remain work in progress. Pure testing modules are not a shipped UI. See [Firebase architecture](docs/FIREBASE_SPARK_DECISION.md) and [remaining work](docs/OPEN_WORK_REGISTER.md).
 
 ## Test and contribution resources
 
