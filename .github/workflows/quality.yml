@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
   pull_request:
   push:
-    branches: [main]
+    branches: [main, fix/foundations-room-flow-20261018]
 jobs:
   verify:
     runs-on: ubuntu-latest
