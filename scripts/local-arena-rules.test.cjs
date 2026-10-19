@@ -83,7 +83,7 @@ test('FFA scores unique bot killers; TDM scores team frag and ignores friendly f
  let tdm=createLocalArena({mode:'tdm',scoreLimit:2});
  tdm=localArenaBotKill(tdm,{killerId:'ally',killerTeam:'RED',victimTeam:'BLUE',weapon:'DMR'});
  assert.equal(tdm.score,1);
- assert.equal(localArenaBotKill(tdm,{killerId:'ally',killerTeam:'RED',victimTeam:'RED',weapon:'DMR'),tdm);
+ assert.equal(localArenaBotKill(tdm,{killerId:'ally',killerTeam:'RED',victimTeam:'RED',weapon:'DMR'}),tdm);
  tdm=localArenaBotKill(tdm,{killerId:'foe',killerTeam:'BLUE',victimTeam:'RED',weapon:'SMG'});
  assert.equal(tdm.opposition,1);
 });
