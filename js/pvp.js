@@ -412,7 +412,7 @@ function drawMatchScoreboard(){
   list.replaceChildren();
   const rows=_buildScoreRows();
   const heading=document.createElement('div');
-  heading.textContent=(roomConfig.mode==='tdm'?'TEAM DEATHMATCH':roomConfig.mode==='gunGame'?'GUN GAME':'FREE FOR ALL')+' · '+Math.ceil(timeLeft)+'s';
+  heading.textContent=(roomConfig.mode==='tdm'?'TEAM DEATHMATCH':roomConfig.mode==='gunGame'?'GUN GAME':'FREE FOR ALL')+' · '+(roomConfig.roundDuration===0?'NO TIME LIMIT':Math.ceil(timeLeft)+'s');
   heading.style.cssText='font-weight:bold;color:#15cab6;margin-bottom:14px';
   list.appendChild(heading);
   for(const [i,r] of rows.entries()){
@@ -523,7 +523,7 @@ export function updateFfa(dt) {
   }
 
   if (roundActive) {
-    timeLeft = Math.max(0, timeLeft - dt);
+    if(roomConfig.roundDuration!==0)timeLeft = Math.max(0, timeLeft - dt);
     updateFfaHUD(_buildScoreRows(), timeLeft, getMyId());
     drawMatchScoreboard();
   }
