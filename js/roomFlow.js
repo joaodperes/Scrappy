@@ -335,7 +335,7 @@ function onRoomPacket(data,status,joinData){
          });
        },true);
        offlineDetails.appendChild(arenaLoadout);
-       const arenaWeapons=dom('p','font-size:12px;color:#bcd1a0','Gun Game uses its own fixed weapon ladder.');
+       const arenaWeapons=dom('p','font-size:12px;color:#bcd1a0','Local arenas use a saved two-firearm loadout; Gun Game overrides it.');
        offlineDetails.appendChild(arenaWeapons);
        mode.addEventListener('change',()=>{
          arenaLoadout.style.display=mode.value==='gunGame'?'none':'inline-block';
