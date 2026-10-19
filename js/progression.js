@@ -2815,6 +2815,12 @@ export function emitEvent(eventName, payload) {
       if (isBoss) {
         s.bossWaveClears = (s.bossWaveClears || 0) + 1;
         s[`bossWaveClears_${waveMapId}`] = (s[`bossWaveClears_${waveMapId}`] || 0) + 1;
+        if(player.difficulty==='hard'){
+          s[`bossWaveClearsHard_${waveMapId}`] = (s[`bossWaveClearsHard_${waveMapId}`] || 0) + 1;
+        }
+        if(player.difficulty==='nightmare'){
+          s[`bossWaveClearsNightmare_${waveMapId}`] = (s[`bossWaveClearsNightmare_${waveMapId}`] || 0) + 1;
+        }
       }
       break;
     }
