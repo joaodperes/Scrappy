@@ -5,11 +5,9 @@ import {
   UNLOCK_TABLE, getLevelProgress, getChallengeProgress, getEffectiveStats,
   isAttachmentUnlocked, isWeaponSkinUnlocked, isSkinUnlocked, isPrereqUnlocked,
   getUnlockHint, getChallengeDescription, SKIN_DIFFICULTY_ORDER, getWeaponLevelProgress, saveProfile,
-  getQuestBoard, claimProfileQuest,
 } from './progression.js';
 import { WDEFS, applyLoadoutToScene } from './weapons.js';
 import { MAPS } from './mapManager.js';
-import { SECONDARY_WEAPONS, canUseSecondary, selectedSecondary } from './weaponCategories.js';
 
 let _activeWeapon = 'PISTOL';
 let _activeTab    = 'attachments';
@@ -198,9 +196,10 @@ topBar.appendChild(deployBtn);
       '← BACK'
     );
     backBtn.onclick = () => {
-      // Return to the multiplayer room without abandoning the connected lobby.
+      // Cancel without saving a new selection. Preserve the room behind us.
       _currentMode = null;
       hideLoadout();
+      onClose?.(null);
     };
     topBar.appendChild(backBtn);
 
@@ -251,8 +250,6 @@ topBar.appendChild(deployBtn);
     {id:'player',       label:'PLAYER SKIN'  },
     { id:'progress',    label:'PROGRESS'     },
     { id:'pvp',         label:'PVP LOADOUT'  },
-    { id:'quests',      label:'QUESTS & SCRAPS' },
-    { id:'secondary',   label:'SECONDARY' },
   ];
   const tabBar = _el('div',
     `display:flex;background:${C.bgMid};border-bottom:1.5px solid ${C.border};padding:0 28px;flex-shrink:0;overflow-x:auto;white-space:nowrap`
@@ -507,7 +504,7 @@ function _renderContent() {
     b.style.cssText = _tabStyle(b.dataset.tabId === _activeTab);
   });
   const sidebar  = document.getElementById('loadoutSidebar');
-  const noSidebar = ['player','progress','pvp','quests','secondary'].includes(_activeTab);
+  const noSidebar = ['player','progress','pvp'].includes(_activeTab);
   if (sidebar) sidebar.style.display = noSidebar ? 'none' : 'block';
   sidebar?.querySelectorAll('[data-w-name]').forEach(c => {
     c.style.cssText = _wcardStyle(c.dataset.wName === _activeWeapon);
@@ -519,8 +516,6 @@ function _renderContent() {
   else if (_activeTab === 'player')      _renderPlayerSkins(main);
   else if (_activeTab === 'progress')    _renderProgress(main);
   else if (_activeTab === 'pvp')         _renderPvpSetup(main);
-  else if (_activeTab === 'quests')      _renderQuests(main);
-  else if (_activeTab === 'secondary')   _renderSecondary(main);
 }
 
 // ── Weapon level banner ───────────────────────────────────────
@@ -871,90 +866,51 @@ function _renderPlayerSkins(main) {
   main.appendChild(container);
 }
 
-// ── PvE Secondary selection, independent of unfinished melee work ──
-function _renderSecondary(main){
-  main.appendChild(_el('h2','margin:0 0 10px;color:'+C.accent,'SURVIVAL SECONDARY'));
-  main.appendChild(_el('p','font-size:12px;color:'+C.textDim+';line-height:1.6;max-width:680px',
-    'Choose the sidearm you bring into Survival. Unlocked Secondary weapons replace the starting Pistol. Primary guns remain map pickups; Wonder weapons are boss-only. Knife melee will get its own dedicated slot in priority 17.'));
-  const current=selectedSecondary(WDEFS,profile);
-  for(const id of SECONDARY_WEAPONS){
-    const available=canUseSecondary(id,WDEFS,profile);
-    const active=id===current;
-    const button=_el('button',
-      'padding:14px 18px;margin:6px 10px 6px 0;min-width:170px;border-radius:4px;'+
-      'border:1.5px solid '+(active?C.accent:C.border)+';background:'+C.bgCard+';'+
-      'color:'+(active?C.accent:C.textDim)+';cursor:'+(available?'pointer':'not-allowed')+';font-family:'+F,
-      _esc(WDEFS[id].name)+(active?' ✓ EQUIPPED':available?'':' 🔒 DISCOVER FIRST'));
-    button.disabled=!available;
-    button.onclick=()=>{
-      if(!canUseSecondary(id,WDEFS,profile))return;
-      profile.pveSecondary=id;
-      saveProfile();
-      _renderContent();
-    };
-    main.appendChild(button);
-  }
-  main.appendChild(_el('p','font-size:11px;color:'+C.dim+';margin-top:18px',
-    'Attachments and skins for your sidearm are configured in the ATTACHMENTS and WEAPON SKINS tabs.'));
-}
-
-// ── UTC Daily/Weekly Quests: explicit claim, no passive currency mint ──
-function _renderQuests(main){
-  const board=getQuestBoard();
-  main.appendChild(_el('h2','color:'+C.accent+';margin:0 0 8px','QUESTS & SCRAPS'));
-  main.appendChild(_el('p','color:'+C.warn+';font-size:17px;font-weight:bold;margin:4px 0 12px',
-    'SCRAPS BALANCE: '+_fmt(board.scraps)));
-  main.appendChild(_el('p','color:'+C.dim+';font-size:12px;margin:0 0 16px;line-height:1.5',
-    'Daily quests reset at 00:00 UTC; weekly quests reset each Monday 00:00 UTC. Rewards are claimed once per period. Multiplayer-earned currency requires future server validation.'));
-  for(const cadence of ['daily','weekly']){
-    const group=board.quests.filter(q=>q.cadence===cadence);
-    main.appendChild(_el('h3','margin:14px 0 8px;color:'+C.accentHi, cadence==='daily'?'DAILY':'WEEKLY COLLECTOR'));
-    for(const quest of group){
-      const item=_el('div','background:'+C.bgCard+';border:1px solid '+C.border+
-        ';border-radius:5px;padding:13px 16px;margin-bottom:8px;display:flex;gap:12px;align-items:center;flex-wrap:wrap');
-      const textWrap=_el('div','flex:1;min-width:200px');
-      textWrap.appendChild(_el('div','font-weight:bold;font-size:13px;color:'+C.text,_esc(quest.label)));
-      textWrap.appendChild(_el('div','font-size:11px;color:'+C.textDim+';margin:4px 0',_esc(quest.desc)));
-      textWrap.appendChild(_el('div','font-size:11px;color:'+C.accentGreen,quest.progress+' / '+quest.target));
-      const reward=quest.reward.skin
-        ? 'Collector '+quest.reward.skin.toUpperCase()+' · '+quest.reward.weapon+
-          ' (duplicate: '+quest.reward.duplicateScraps+' Scraps)'
-        : quest.reward.scraps+' Scraps';
-      textWrap.appendChild(_el('div','font-size:11px;color:'+C.warn+';margin-top:5px',_esc(reward)));
-      item.appendChild(textWrap);
-      const claim=_el('button',
-        'padding:9px 12px;background:'+(quest.complete&&!quest.claimed?C.accent:C.bg)+
-          ';color:'+(quest.complete&&!quest.claimed?'#10121d':C.dim)+
-          ';border:1px solid '+C.border+';font-family:'+F+';font-weight:bold;cursor:pointer',
-        quest.claimed?'✓ CLAIMED':quest.complete?'CLAIM REWARD':'IN PROGRESS');
-      claim.disabled=quest.claimed||!quest.complete;
-      claim.onclick=()=>{
-        const result=claimProfileQuest(quest.id);
-        if(result.ok)_renderContent();
-      };
-      item.appendChild(claim);
-      main.appendChild(item);
-    }
-  }
-}
-
 // ── PVP LOADOUT tab ──────────────────────────────────────────
 function _renderPvpSetup(main){
   main.appendChild(_el('h2','color:'+C.accent+';margin:0 0 12px','PVP MATCH LOADOUT'));
   main.appendChild(_el('p','color:'+C.textDim+';line-height:1.6;max-width:650px',
-    'Choose two different weapons for Free-for-all and Team Deathmatch. Configure each weapon’s attachments in the ATTACHMENTS tab. Survival finds weapons on the map; Gun Game uses its randomized progression.'));
-  const stored=profile.pvpLoadout||{primary:'SMG',secondary:'SHOTGUN'};
-  main.appendChild(_el('p','color:'+C.accentGreen+';font-weight:bold',
-    'SELECTED: '+(stored.primary||'SMG')+' + '+(stored.secondary||'SHOTGUN')));
-  const configure=_el('button',
-    'background:'+C.accent+';color:#10121d;border:0;padding:12px 20px;cursor:pointer;font-weight:bold;font-family:'+F,
-    'CHOOSE PVP WEAPONS');
-  configure.onclick=()=>{
-    // Reuse the same picker already used by Create/Join Room.
-    _activeTab='pvp';
-    showLoadout(()=>{_activeTab='pvp';showLoadout(null);},'ffa');
-  };
-  main.appendChild(configure);
+    'Select two different weapons below. Changes are saved immediately, without leaving Loadout. Configure attachments and skins in their existing tabs. Gun Game ignores this selection.'));
+  const usable=Object.keys(WDEFS).filter(id=>!WDEFS[id].wonderWeapon && id!=='KNIFE');
+  const old=profile.pvpLoadout||{};
+  const primary=usable.includes(old.primary)?old.primary:'SMG';
+  const secondary=usable.includes(old.secondary) && old.secondary!==primary
+    ?old.secondary:(primary==='SHOTGUN'?'PISTOL':'SHOTGUN');
+  const row=_el('div','display:flex;flex-wrap:wrap;gap:18px;margin:18px 0');
+  const inputs={};
+  function makePicker(slot,value){
+    const section=_el('label','display:flex;flex-direction:column;gap:8px;font-size:12px;color:'+C.accentHi,slot.toUpperCase());
+    const select=_el('select','background:'+C.bgCard+';color:'+C.text+';padding:12px 14px;border:1px solid '+C.border+';border-radius:4px;font-family:'+F+';min-width:220px');
+    for(const id of usable){
+      const opt=_el('option','',WDEFS[id].name);
+      opt.value=id;
+      select.appendChild(opt);
+    }
+    select.value=value;
+    inputs[slot]=select;
+    section.appendChild(select);row.appendChild(section);
+    select.onchange=()=>{
+      const other=slot==='primary'?'secondary':'primary';
+      if(select.value===inputs[other].value){
+        const replacement=usable.find(id=>id!==select.value);
+        inputs[other].value=replacement;
+      }
+      profile.pvpLoadout={primary:inputs.primary.value,secondary:inputs.secondary.value};
+      saveProfile();
+      note.textContent='✓ SAVED — '+profile.pvpLoadout.primary+' + '+profile.pvpLoadout.secondary;
+    };
+  }
+  makePicker('primary',primary);
+  makePicker('secondary',secondary);
+  main.appendChild(row);
+  const note=_el('p','font-size:12px;color:'+C.accentGreen,
+    '✓ SAVED — '+primary+' + '+secondary);
+  main.appendChild(note);
+  // Repair old saves containing a missing/duplicate weapon.
+  if(old.primary!==primary || old.secondary!==secondary){
+    profile.pvpLoadout={primary,secondary};
+    saveProfile();
+  }
 }
 
 // ── PROGRESS tab ──────────────────────────────────────────────
