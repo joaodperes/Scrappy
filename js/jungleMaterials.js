@@ -32,7 +32,9 @@ export function createJungleMaterials(scene,BABYLON){
     mat.diffuseColor=new BABYLON.Color3(...recipe.tint);
     mat.specularColor=new BABYLON.Color3(recipe.spec,recipe.spec,recipe.spec);
     mat.maxSimultaneousLights=8;
-    mat.backFaceCulling=false; // Ceilings and mine walls visible from both sides.
+    // Map primitives are boxes with proper inward/outward faces. Keep normal
+    // backface culling for better frame time throughout the stacked mine.
+    mat.backFaceCulling=true;
     materials[key]=mat;
   }
   return materials;
