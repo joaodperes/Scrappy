@@ -98,7 +98,8 @@ export function updateLocalArena(dt){
   const tag=tags[i];
   tag.lifetime-=dt;tag.mesh.rotation.y+=dt*1.9;
   if(tag.lifetime<=0){
-   tag.mesh.dispose();tag.mat.dispose();tags.splice(i,1);continue;
+   tag.mesh.dispose();tag.mat.dispose();tags.splice(i,1);
+   active.state=localArenaTagExpired(active.state);continue;
   }
   if(BABYLON.Vector3.Distance(camera.position,tag.mesh.position)<1.65){
    tag.mesh.dispose();tag.mat.dispose();tags.splice(i,1);
