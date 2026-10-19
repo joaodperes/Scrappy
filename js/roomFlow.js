@@ -1,6 +1,6 @@
 // Room configuration/lobby foundation. Multiplayer match runtimes are not
 // enabled until team replication, bot controllers and authoritative scoring exist.
-import { MAPS, getRoomCapacity, isModeSupported, getCurrentMap, isHardModeUnlocked } from './mapManager.js';
+import { MAPS, getRoomCapacity, isModeSupported, getCurrentMap, isHardModeUnlocked, isNightmareUnlocked } from './mapManager.js';
 import { profile } from './progression.js';
 import { HARD_MODE_MODIFIERS } from './hardModeRules.js';
 
@@ -134,7 +134,8 @@ function lobby() {
         sec-=1;
         if(sec>0){message(status,'Starting solo Survival in '+sec+'…');return}
         clearInterval(countdown);countdown=null;
-        const cfg={mapId:config.mapId,hardMode:config.hardMode};
+        const cfg={mapId:config.mapId,difficulty:config.difficulty||
+          (config.hardMode?'hard':'normal'),hardMode:!!config.hardMode};
         closePage();
         actions.onStartSurvival?.(cfg);
       },1000);
@@ -204,133 +205,172 @@ function onRoomPacket(data,status,joinData){
     host=true;lobby();
   }
 }
-// Offline Survival uses the existing solo game flow. Do not construct a
-// WebSocket or create a lobby: no room server is needed for local map testing.
-function soloPage() {
-  clearSocket();
-  shell('SINGLE PLAYER — SURVIVAL');
-  const box=dom('section',CSS.box);
-  root.appendChild(box);
-  box.appendChild(dom('p','color:#adaeb5;line-height:1.6',
-    'Choose a map and start a local Survival run. No room or multiplayer server is required.'));
-  const map=selector(Object.values(MAPS).map(m=>[m.id,m.icon+' '+m.name]),getCurrentMap());
-  const hard=input('checkbox');
-  const modifier=selector([['auto','Automatic (map-specific starting rule)'],
-      ...HARD_MODE_MODIFIERS.map(m=>[m.id,m.label+' — '+m.desc])],'auto');
-  const hardHint=dom('p','color:#adaeb5;font-size:12px');
-  row(box,'Map',map);
-  row(box,'Hard mode',hard);
-  row(box,'First Hard modifier',modifier);
-  box.appendChild(hardHint);
-  function refresh(){
-    const unlocked=isHardModeUnlocked(map.value);
-    hard.disabled=!unlocked;
-    if(!unlocked)hard.checked=false;
-    modifier.disabled=!unlocked||!hard.checked;
-    hardHint.textContent=unlocked
-      ? 'Hard modifiers rotate every three waves. Choose the first one or use Automatic.'
-      : 'Defeat a boss wave on this map to unlock Hard Mode.';
-  }
-  map.onchange=refresh;
-  hard.onchange=refresh;
-  refresh();
-  const actionsRow=dom('div',CSS.row);
-  box.appendChild(actionsRow);
-  const start=button('START SOLO SURVIVAL',()=>{
-    start.disabled=true;
-    const cfg={mapId:map.value,hardMode:!hard.disabled&&hard.checked,
-      hardModifier:!hard.disabled&&hard.checked?modifier.value:'auto'};
-    closePage();
-    actions.onStartSurvival?.(cfg);
-  });
-  actionsRow.appendChild(start);
-  actionsRow.appendChild(button('BACK',showPlayPage,true));
-}
-
-function createPage() {
-  shell('CREATE ROOM');
-  const box=dom('section',CSS.box);root.appendChild(box);
-  const map=selector(Object.values(MAPS).map(m=>[m.id,m.icon+' '+m.name]),getCurrentMap());
-  const mode=selector(MODES,'survival');
-  const bots=input('checkbox');bots.checked=true;
-  const hard=input('checkbox');
-  const name=input('text',((profile.displayName||profile.name||'Player') + "'s Room").slice(0,48));
-  name.maxLength=48;
-  const password=input('password','','Optional password');
-  const url=input('url',endpoint());url.style.width='100%';
-  const info=dom('p','color:#adaeb5;margin:12px 0');
-  function refresh(){
-    for(const o of mode.options)o.disabled=!isModeSupported(map.value,o.value);
-    if(!isModeSupported(map.value,mode.value))mode.value='survival';
-    const survival=mode.value==='survival';
-    bots.disabled=survival;bots.checked=survival?false:bots.checked;
-    hard.disabled=!survival || !isHardModeUnlocked(map.value);
-    if(hard.disabled)hard.checked=false;
-    info.textContent='Capacity: '+getRoomCapacity(map.value,mode.value)+
-      (survival?' players (co-op planned; solo runtime available)':' players (lobby-only; match runtime pending)');
-  }
-  row(box,'Map',map);row(box,'Mode',mode);row(box,'Fill with bots',bots);
-  row(box,'Hard mode (Survival)',hard);row(box,'Room name',name);
-  row(box,'Password',password);row(box,'Room server',url);
-  box.appendChild(info);map.onchange=refresh;mode.onchange=refresh;refresh();
-  const status=dom('div','min-height:26px;color:#adaeb5');box.appendChild(status);
-  const buttons=dom('div',CSS.row);box.appendChild(buttons);
-  buttons.appendChild(button('CREATE ROOM',()=>{
-    const cfg={directoryRoom:true,mode:mode.value,mapId:map.value,
-      maxPlayers:getRoomCapacity(map.value,mode.value),fillBots:bots.checked,
-      hardMode:mode.value==='survival'&&!hard.disabled&&hard.checked,name:name.value||'Room'};
-    const code=randCode();
-    message(status,'Connecting to room server…');
-    wsConnect(url.value,()=>send({type:'join',room:code,name:profile.displayName||profile.name||'Player',
-        isHost:true,config:cfg,password:password.value}),
-      data=>onRoomPacket(data,status,{config:cfg}),err=>message(status,err,true));
-  }));
-  buttons.appendChild(button('BACK',showPlayPage,true));
-}
-function browsePage() {
-  shell('BROWSE ROOMS');
-  const box=dom('section',CSS.box);root.appendChild(box);
-  const url=input('url',endpoint());url.style.width='100%';
-  row(box,'Room server',url);
-  const status=dom('p','color:#adaeb5;margin:12px 0','Connect to browse active rooms.');
-  box.appendChild(status);
-  const list=dom('div','margin:16px 0');box.appendChild(list);
-  const buttons=dom('div',CSS.row);box.appendChild(buttons);
-  const refresh=()=>{
-    message(status,'Connecting to room directory…');
-    wsConnect(url.value,()=>send({type:'listRooms'}),data=>{
-      if(data.type==='roomList'){
-        list.replaceChildren();
-        for(const r of data.rooms||[]){
-          const item=dom('div','display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid #5f6b6d');
-          const title=dom('div','',r.name+' · '+r.mode+' · '+r.mapId+' · '+r.humans+'/'+r.maxPlayers);
-          item.appendChild(title);
-          const joinBtn=button('JOIN',()=>{
-            const password=r.hasPassword ? prompt('Room password:') : '';
-            if(password===null)return;
-            message(status,'Joining '+r.name+'…');
-            send({type:'join',room:r.id,requireExisting:true,password,name:profile.displayName||profile.name||'Player'});
-          });
-          item.appendChild(joinBtn);list.appendChild(item);
-        }
-        if(!(data.rooms||[]).length)list.appendChild(dom('p','color:#adaeb5','No open rooms on this server.'));
-      } else onRoomPacket(data,status,{});
-    },err=>message(status,err,true));
-  };
-  buttons.appendChild(button('REFRESH',refresh));
-  buttons.appendChild(button('BACK',showPlayPage,true));
-  refresh();
-}
+// One Play page: shared map/mode/difficulty controls stay visible above
+// expandable Single Player, Create Room and Browse Rooms panels.
 export function initRoomFlow(callbacks={}){actions=callbacks}
 export function showPlayPage(){
-  if(countdown){clearInterval(countdown);countdown=null;}
-  clearSocket();shell('PLAY SCRAPPY');
-  const box=dom('section',CSS.box);root.appendChild(box);
-  box.appendChild(dom('p','line-height:1.6;color:#adaeb5;margin-bottom:18px',
-    'Single Player starts local Survival without networking. Create Room and Browse Rooms use the separate multiplayer server.'));
-  const buttons=dom('div',CSS.row);box.appendChild(buttons);
-  buttons.appendChild(button('SINGLE PLAYER',soloPage));
-  buttons.appendChild(button('CREATE ROOM',createPage));
-  buttons.appendChild(button('BROWSE ROOMS',browsePage));
-  buttons.appendChild(button('BACK TO MENU',back,true));
+  if(countdown){clearInterval(countdown);countdown=null}
+  clearSocket();
+  shell('PLAY SCRAPPY');
+  const box=dom('section',CSS.box);
+  root.appendChild(box);
+  box.appendChild(dom('h2','margin:0 0 10px;color:#15cab6','MATCH SETTINGS'));
+  const map=selector(Object.values(MAPS).map(m=>[m.id,(m.icon||'🗺️')+' '+m.name]),getCurrentMap());
+  const mode=selector(MODES,'survival');
+  const difficulty=selector([
+    ['normal','Normal'],['hard','Hard'],['nightmare','Nightmare'],
+  ],'normal');
+  row(box,'Map',map);
+  row(box,'Game mode',mode);
+  row(box,'Survival difficulty',difficulty);
+  const difficultyHint=dom('p','color:#adaeb5;font-size:12px;line-height:1.6');
+  box.appendChild(difficultyHint);
+  const modifierInfo=dom('div','padding:8px 10px;border:1px solid #4d5266;border-radius:5px;color:#c7d4dd;font-size:12px');
+  modifierInfo.appendChild(dom('strong','color:#bceae5','AUTOMATIC MODIFIERS'));
+  for(const def of HARD_MODE_MODIFIERS){
+    modifierInfo.appendChild(dom('div','padding:3px 0',def.label+': '+def.desc));
+  }
+  modifierInfo.appendChild(dom('p','color:#9ab5bd;font-size:11px;line-height:1.5',
+    'Hard: 1 modifier rotates every wave without consecutive repeats. '+
+    'Nightmare: 1 initially, then 2 at wave 11, 3 at wave 21, and all 4 from wave 31. '+
+    'Only the newest modifier rotates; previously gained modifiers remain active.'));
+  box.appendChild(modifierInfo);
+
+  const nav=dom('div',CSS.row);box.appendChild(nav);
+  const panels=dom('section',CSS.box);root.appendChild(panels);
+  const header=dom('h2','margin:0 0 12px;color:#15cab6');panels.appendChild(header);
+  const content=dom('div');panels.appendChild(content);
+  const panelStatus=dom('p','min-height:18px;color:#adaeb5;font-size:12px');
+  panels.appendChild(panelStatus);
+  const below=dom('div',CSS.row);root.appendChild(below);
+  below.appendChild(button('BACK TO MENU',back,true));
+
+  const refreshSettings=()=>{
+    for(const opt of mode.options)opt.disabled=!isModeSupported(map.value,opt.value);
+    if(!isModeSupported(map.value,mode.value))mode.value='survival';
+    const isSurvival=mode.value==='survival';
+    for(const opt of difficulty.options){
+      opt.disabled=!isSurvival ||
+        (opt.value==='hard'&&!isHardModeUnlocked(map.value)) ||
+        (opt.value==='nightmare'&&!isNightmareUnlocked(map.value));
+    }
+    difficulty.disabled=!isSurvival;
+    if(difficulty.options.find(o=>o.value===difficulty.value)?.disabled)
+      difficulty.value='normal';
+    difficultyHint.textContent=!isSurvival?
+      'Difficulty modifiers apply only to Survival. Competitive modes use the room settings below.':
+      !isHardModeUnlocked(map.value)?
+      'Hard unlocks after a boss clear on this map; Nightmare requires a Hard boss clear.':
+      !isNightmareUnlocked(map.value)?
+      'Hard unlocked. Defeat a boss wave on Hard on this map to unlock Nightmare.':
+      'Hard and Nightmare available on this map. Modifiers are selected automatically.';
+  };
+  map.onchange=refreshSettings;
+  mode.onchange=refreshSettings;
+  refreshSettings();
+  let selected='solo';
+  const changePanel=name=>{
+    selected=name;
+    content.replaceChildren();
+    message(panelStatus,'');
+    header.textContent=name==='solo'?'SINGLE PLAYER':name==='create'?'CREATE ROOM':'BROWSE ROOMS';
+    refreshSettings();
+    if(name==='solo'){
+      if(mode.value!=='survival'){mode.value='survival';refreshSettings()}
+      content.appendChild(dom('p','color:#adaeb5',
+        'Offline Survival, no multiplayer server or WebSocket required.'));
+      const actionsRow=dom('div',CSS.row);content.appendChild(actionsRow);
+      const start=button('START SOLO SURVIVAL',()=>{
+        start.disabled=true;
+        const cfg={mapId:map.value,mode:'survival',difficulty:difficulty.value,
+          hardMode:difficulty.value!=='normal'};
+        closePage();
+        actions.onStartSurvival?.(cfg);
+      });
+      actionsRow.appendChild(start);
+      return;
+    }
+    const url=input('url',endpoint());url.style.width='100%';
+    if(name==='create'){
+      const nameField=input('text',((profile.displayName||profile.name||'Player')+"'s Room").slice(0,48));
+      nameField.maxLength=48;
+      const password=input('password','','Optional password');
+      const bots=input('checkbox');bots.checked=true;
+      const duration=input('number','10');
+      duration.min='1';duration.max='30';duration.step='1';
+      const kills=input('number','30');
+      kills.min='0';kills.max='500';kills.step='1';
+      row(content,'Room name',nameField);
+      row(content,'Password',password);
+      row(content,'Fill with bots',bots);
+      row(content,'Time limit (minutes)',duration);
+      row(content,'Kill limit (0 = none)',kills);
+      row(content,'Room server',url);
+      const note=dom('p','color:#adaeb5;font-size:12px');content.appendChild(note);
+      const refreshNote=()=>{
+        const survival=mode.value==='survival';
+        bots.disabled=survival;
+        duration.disabled=survival;
+        kills.disabled=survival;
+        note.textContent='Capacity: '+getRoomCapacity(map.value,mode.value)+
+          (survival?' · Co-op not implemented; solo lobby host only.':
+            ' · Player-like bots are not available yet; match requires 2 humans.');
+      };
+      map.addEventListener('change',refreshNote);
+      mode.addEventListener('change',refreshNote);
+      refreshNote();
+      const actionsRow=dom('div',CSS.row);content.appendChild(actionsRow);
+      actionsRow.appendChild(button('CREATE ROOM',()=>{
+        const mins=Number(duration.value),limit=Number(kills.value);
+        if(!Number.isInteger(mins)||mins<1||mins>30)
+          return message(panelStatus,'Time limit must be 1–30 minutes',true);
+        if(!Number.isInteger(limit)||limit<0||limit>500)
+          return message(panelStatus,'Kill limit must be 0–500',true);
+        const cfg={
+          directoryRoom:true,mode:mode.value,mapId:map.value,
+          maxPlayers:getRoomCapacity(map.value,mode.value),fillBots:!bots.disabled&&bots.checked,
+          difficulty:mode.value==='survival'?difficulty.value:'normal',
+          hardMode:mode.value==='survival'&&difficulty.value!=='normal',
+          roundDuration:mins*60,scoreLimit:limit,
+          name:nameField.value||'Room',
+        };
+        const code=randCode();
+        message(panelStatus,'Connecting to room server…');
+        wsConnect(url.value,()=>send({type:'join',room:code,name:profile.displayName||profile.name||'Player',
+          isHost:true,config:cfg,password:password.value}),
+          data=>onRoomPacket(data,panelStatus,{config:cfg}),
+          err=>message(panelStatus,err,true));
+      }));
+      return;
+    }
+    row(content,'Room server',url);
+    const list=dom('div','margin:12px 0');content.appendChild(list);
+    const actionsRow=dom('div',CSS.row);content.appendChild(actionsRow);
+    const refresh=()=>{
+      message(panelStatus,'Connecting to room directory…');
+      wsConnect(url.value,()=>send({type:'listRooms'}),data=>{
+        if(data.type==='roomList'){
+          list.replaceChildren();
+          for(const r of data.rooms||[]){
+            const item=dom('div','display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #5f6b6d');
+            item.appendChild(dom('div','',r.name+' · '+r.mode+' · '+r.mapId+' · '+r.humans+'/'+r.maxPlayers));
+            item.appendChild(button('JOIN',()=>{
+              const pass=r.hasPassword?prompt('Room password:'):'';
+              if(pass===null)return;
+              message(panelStatus,'Joining '+r.name+'…');
+              send({type:'join',room:r.id,requireExisting:true,password:pass,
+                name:profile.displayName||profile.name||'Player'});
+            }));
+            list.appendChild(item);
+          }
+          if(!(data.rooms||[]).length)list.appendChild(dom('p','color:#adaeb5','No open rooms on this server.'));
+        }else onRoomPacket(data,panelStatus,{});
+      },err=>message(panelStatus,err,true));
+    };
+    actionsRow.appendChild(button('REFRESH ROOMS',refresh));
+  };
+  nav.appendChild(button('SINGLE PLAYER',()=>changePanel('solo')));
+  nav.appendChild(button('CREATE ROOM',()=>changePanel('create')));
+  nav.appendChild(button('BROWSE ROOMS',()=>changePanel('browse')));
+  changePanel('solo');
 }
