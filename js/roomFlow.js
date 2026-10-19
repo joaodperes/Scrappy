@@ -1,6 +1,6 @@
 // Room configuration/lobby foundation. Multiplayer match runtimes are not
 // enabled until team replication, bot controllers and authoritative scoring exist.
-import { MAPS, getRoomCapacity, isModeSupported, getCurrentMap, isHardModeUnlocked, isNightmareUnlocked } from './mapManager.js';
+import { MAPS, getRoomCapacity, isModeSupported, getCurrentMap, isMapUnlocked, isHardModeUnlocked, isNightmareUnlocked } from './mapManager.js';
 import { profile } from './progression.js';
 import { HARD_MODE_MODIFIERS } from './hardModeRules.js';
 import { TIME_LIMITS, KILL_LIMITS, PVP_ROOM_SIZES, validateMatchSettings } from './roomSettings.js';
@@ -36,7 +36,7 @@ function button(label, onClick, secondary = false) {
 }
 function row(parent, label, input) {
   const r=dom('label',CSS.row);
-  r.appendChild(dom('span','min-width:140px',label));
+  r.appendChild(dom('span','width:155px;min-width:155px;flex-shrink:0',label));
   r.appendChild(input);parent.appendChild(r);return input;
 }
 function input(type, value='', placeholder='') {
@@ -45,7 +45,7 @@ function input(type, value='', placeholder='') {
 function selector(options, value) {
   const e=dom('select',CSS.field);
   for(const [id,label] of options){const o=dom('option','',label);o.value=id;e.appendChild(o)}
-  e.value=value;return e;
+  e.value=value;e.style.height='42px';return e;
 }
 function message(target, msg, error=false) {
   target.textContent=msg;target.style.color=error?'#ff8b7e':'#c4ea48';
@@ -298,19 +298,22 @@ function onRoomPacket(data,status,joinData){
      onlineBtn.style.borderColor=!solo?'#c4ea48':'#627a3d';
      choice.appendChild(soloBtn);choice.appendChild(onlineBtn);
 
-     const map=makeChoice('Map',Object.values(MAPS).map(m=>[m.id,(m.icon||'🗺️')+' '+m.name]),getCurrentMap());
+     const map=makeChoice('Map',Object.values(MAPS).map(m=>[m.id,
+       (m.icon||'🗺️')+' '+m.name+(isMapUnlocked(m.id)?'':' 🔒 '+(m.unlockHint||'Not unlocked'))
+     ]),getCurrentMap());
      const mode=solo?null:makeChoice('Game mode',MODES,'survival');
      const difficulty=makeChoice('Survival difficulty',[
        ['normal','Normal'],['hard','Hard'],['nightmare','Nightmare'],
      ],'normal');
-     const hint=dom('p','min-height:18px;color:#c1d7a7;font-size:12px;line-height:1.5');
-     content.appendChild(hint);
      const help=dom('details','border:1px solid #4b6336;border-radius:5px;padding:10px 14px;margin:12px 0;color:#bfd5a3');
      const summary=dom('summary','cursor:pointer;font-weight:bold;color:#c4ea48','HELP: HARD / NIGHTMARE MODIFIERS');
      help.appendChild(summary);
      const info=dom('div','padding-top:9px;font-size:12px;line-height:1.6');
      for(const def of HARD_MODE_MODIFIERS)info.appendChild(dom('div','margin:4px 0',def.label+': '+def.desc));
-     info.appendChild(dom('p','margin-bottom:0','Hard rotates one modifier per wave; Nightmare permanently stacks previous modifiers on waves 11, 21 and 31.'));
+     info.appendChild(dom('p','margin-bottom:8px','Hard rotates one modifier per wave; Nightmare permanently stacks previous modifiers on waves 11, 21 and 31.'));
+     info.appendChild(dom('strong','color:#c4ea48','ELITE ENEMIES'));
+     info.appendChild(dom('p','margin:5px 0',
+       'Hard and Nightmare introduce Elites starting at wave 5. Elites have a colored halo: amber Bulwark (armored), red Frenzied (enrages below 40% HP), cyan Regenerator (heals outside combat), and purple dual-trait Elites starting at wave 25. Stronger Elites reward bonus XP, score and a consumable. Boss waves limit Elite minions.'));
      help.appendChild(info);content.appendChild(help);
 
      const roomDetails=dom('div');content.appendChild(roomDetails);
@@ -353,6 +356,16 @@ function onRoomPacket(data,status,joinData){
        }
        const currentMode=mode?.value||'survival';
        const survival=currentMode==='survival';
+       for(const opt of map.options){
+         const meta=MAPS[opt.value];
+         const unlocked=isMapUnlocked(opt.value);
+         opt.disabled=!unlocked;
+         opt.textContent=(meta?.icon||'🗺️')+' '+(meta?.name||opt.value)+
+           (unlocked?'':' 🔒 '+(meta?.unlockHint||'Not unlocked'));
+       }
+       if(Array.from(map.options).find(o=>o.value===map.value)?.disabled){
+         map.value=Array.from(map.options).find(o=>!o.disabled)?.value||'scrapyard';
+       }
        difficulty.disabled=!survival;
        for(const opt of difficulty.options){
          const locked=opt.value==='hard'?!isHardModeUnlocked(map.value):
@@ -363,10 +376,6 @@ function onRoomPacket(data,status,joinData){
            opt.value==='hard'?'Hard':opt.value==='nightmare'?'Nightmare':'Normal';
        }
        if(Array.from(difficulty.options).find(o=>o.value===difficulty.value)?.disabled)difficulty.value='normal';
-       hint.textContent=survival?
-         (!isHardModeUnlocked(map.value)?'🔒 Hard: clear a Normal boss wave on this map. 🔒 Nightmare: clear a Hard boss wave.':
-          !isNightmareUnlocked(map.value)?'🔒 Nightmare: clear a Hard boss wave on this map.':'Normal, Hard and Nightmare are unlocked for this map.'):
-         'Competitive difficulty is standardized; select your two weapons and attachments using Loadout.';
        if(help)help.style.display=survival?'block':'none';
        if(pvpDetails)pvpDetails.style.display=survival?'none':'block';
        if(size){
