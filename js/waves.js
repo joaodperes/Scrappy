@@ -2,6 +2,7 @@ import { enemies, player } from './gameState.js';
 import { spawnBot } from './enemies.js';
 import { sfx } from './audio.js';
 import { getCurrentMap, getWaveConfig } from './mapManager.js';
+import { getHardWaveRules, applyHardWaveCount, setActiveHardWave } from './hardModeRules.js';
 
 export let curWave = 0, waveOn = false, waveDly = 1.8;
 export function setCurWave(v)  { curWave  = v; }
@@ -13,7 +14,8 @@ function _isBossWave(idx) { return (idx + 1) % 10 === 0; }
 export function getWaveComposition(idx) {
   const waveNum = idx + 1;
   const map = getCurrentMap();
-  const scenario = getWaveConfig(map); 
+  const scenario = getWaveConfig(map);
+  const hardRules=player.hardMode?getHardWaveRules(map,waveNum):null;
 
   let currentPool = [...(scenario.botPool || ['scout'])];
   if (player.hardMode && scenario.hardPool) {
@@ -30,18 +32,18 @@ export function getWaveComposition(idx) {
     for (let i = 0; i < minionCount && i < shuffled.length; i++) {
       comp.push({ type: shuffled[i], count: 1 });
     }
-    return comp;
+    return applyHardWaveCount(comp,hardRules);
   }
 
   // Safely check if the fixed wave exists
   if (scenario.fixed && scenario.fixed[waveNum]) {
     const raw = scenario.fixed[waveNum];
-    return _sanitizeWave(raw, currentPool);
+    return applyHardWaveCount(_sanitizeWave(raw, currentPool),hardRules);
   }
 
   // Open pool 
   const baseBudget = Math.max(4, 4 + Math.floor(waveNum * 1.2)); 
-  const multiplier = scenario.budgetMultiplier || 1.0;
+  const multiplier = (scenario.budgetMultiplier || 1.0)*(hardRules?.budget||1);
   const budget = Math.min(Math.floor(baseBudget * multiplier), 45);
   const comp = [];
   let remaining = budget;
@@ -63,7 +65,7 @@ export function getWaveComposition(idx) {
     else comp.push({ type: fallbackBot, count: remaining });
   }
   
-  return comp;
+  return applyHardWaveCount(comp,hardRules);
 }
 
 function _sanitizeWave(composition, pool) {
@@ -82,10 +84,13 @@ function _sanitizeWave(composition, pool) {
 export function launchWave(idx) {
   const map = getCurrentMap();
   const scenario = getWaveConfig(map);
+  const hardRules=player.hardMode?getHardWaveRules(map,idx+1):null;
+  setActiveHardWave(hardRules);
   const spawns = scenario.spawns || getWaveConfig('scrapyard').spawns;
   const scale = Math.max(0.40, 0.40 + idx * 0.10);
   const isBoss = _isBossWave(idx);
-  const waveLabel = isBoss ? '⚠ BOSS WAVE ' + (idx + 1) + ' ⚠' : 'WAVE ' + (idx + 1);
+  const baseLabel = isBoss ? '⚠ BOSS WAVE ' + (idx + 1) + ' ⚠' : 'WAVE ' + (idx + 1);
+  const waveLabel=hardRules?baseLabel+' · '+hardRules.modifier.label:baseLabel;
   const comp = getWaveComposition(idx);
   let si = 0;
   for (const grp of comp) {
