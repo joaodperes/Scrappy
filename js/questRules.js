@@ -38,8 +38,24 @@ const fresh=(key)=>({key,metrics:{pveKills:0,damage:0,waves:0},claimed:[]});
 export function ensureQuestState(profile,date=new Date()){
   if(!profile.questProgress || typeof profile.questProgress!=='object' || Array.isArray(profile.questProgress))profile.questProgress={};
   const {day,week}=questPeriods(date);
-  if(profile.questProgress.daily?.key!==day)profile.questProgress.daily=fresh(day);
-  if(profile.questProgress.weekly?.key!==week)profile.questProgress.weekly=fresh(week);
+  // Old/partial cloud saves can contain a matching period key but no
+  // metrics/claims. Repair the shape while preserving legitimate progress.
+  for(const [cadence,key] of [['daily',day],['weekly',week]]){
+    const q=profile.questProgress[cadence];
+    if(!q||typeof q!=='object'||Array.isArray(q)||q.key!==key){
+      profile.questProgress[cadence]=fresh(key);
+      continue;
+    }
+    if(!q.metrics||typeof q.metrics!=='object'||Array.isArray(q.metrics))q.metrics={};
+    for(const metric of ['pveKills','damage','waves']){
+      const amount=q.metrics[metric];
+      q.metrics[metric]=Number.isSafeInteger(amount)&&amount>=0
+        ?Math.min(1000000000,amount):0;
+    }
+    q.claimed=Array.isArray(q.claimed)
+      ?[...new Set(q.claimed.filter(id=>typeof id==='string'&&id.startsWith(cadence+'-')))]
+      :[];
+  }
   if(!Number.isSafeInteger(profile.scraps)||profile.scraps<0)profile.scraps=0;
   return profile.questProgress;
 }
@@ -80,14 +96,15 @@ export function claimQuest(profile,id,date=new Date()){
   if(definition.reward.skin){
     const {weapon,skin:skinId,duplicateScraps}=definition.reward;
     if(!profile.unlockedWeaponSkins || typeof profile.unlockedWeaponSkins!=='object')profile.unlockedWeaponSkins={};
-    const owned=profile.unlockedWeaponSkins[weapon]||[];
+    const owned=Array.isArray(profile.unlockedWeaponSkins[weapon])
+      ?profile.unlockedWeaponSkins[weapon]:[];
     if(owned.includes(skinId))scraps+=duplicateScraps;
     else {
       profile.unlockedWeaponSkins[weapon]=[...owned,skinId];
       skin={weapon,id:skinId};
     }
   }
-  profile.scraps+=scraps;
+  profile.scraps=Math.min(Number.MAX_SAFE_INTEGER,profile.scraps+scraps);
   return {ok:true,scraps,skin};
 }
 
