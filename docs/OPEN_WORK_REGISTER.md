@@ -1,6 +1,15 @@
 # Remaining engineering work — ordered blockers, not an acceptance claim
 
-**Current branch:** `fix/foundations-room-flow-20261018`.  
+**Current branch:** `fix/foundations-room-flow-20261018`.
+
+**Updated architecture approval (19 October):** the owner selected **Firebase
+Spark / friends-only**. Reuse existing Google sign-in and Firestore profiles;
+allow player-reported PvE rewards as an accepted casual-play compromise,
+while retaining UID-scoped Firestore rules, duplicate-claim protection and
+transaction-safe purchases. No paid Firebase Functions/Cloud Run or new
+backend is required for the shop. The older strict anti-cheat deployment
+gates below are superseded where they conflict with this approval.
+  
 **Companion owner test list:** [OWNER_VALIDATION_TODO.md](OWNER_VALIDATION_TODO.md).  
 Do not merge a partial system or activate money/rewards solely because static tests pass. This register lists the open engineering work after the 19 October implementation pass, with code entry points.
 
@@ -10,7 +19,7 @@ Do not merge a partial system or activate money/rewards solely because static te
 
 2. **Priorities 7/17: actual dedicated Knife/melee gameplay.** Introduce a real special/melee slot and input/action animation while keeping Gun Game Knife finale. Enforce melee target/range/timing consistently for PvE and PvP, add controlled map availability/unlock and cosmetic progression; respect Aegis Primary/Pistol Secondary. Relevant: `js/weaponCategories.js`, `js/weapons.js`, `js/player.js`, `js/projectiles.js`, `js/loadout.js`, `js/pvp.js`; validate with Firefox/Chromium. Current melee call already passes through `hitscan()`, which delegates to PvP when applicable; do not create a duplicate damage path.
 
-3. **Priority 8: trusted quests/Scraps ledger.** Replace untrusted client `profile.scraps` awards with Firebase-user-owned verified events/atomic claims. The offline MVP is `js/questRules.js` + `js/progression.js` + `js/questPage.js`. `server/economyLedger.js` is a standalone idempotent state machine, **not** deployed or authenticated. Add trusted event receipts, cross-device reconciliations, anti-farm validation and database transactions. Do not spend provisional local Scraps in the shop.
+3. **Priority 8: friends-only quests/Scraps persistence.** Reuse Firebase UID-owned profiles and transaction-based claim/purchase persistence; client-reported PvE progress is acceptable. The offline MVP is `js/questRules.js` + `js/progression.js` + `js/questPage.js`. `server/economyLedger.js` is a standalone idempotent state machine, **not** deployed or authenticated. Add trusted event receipts, cross-device reconciliations, anti-farm validation and database transactions. Do not spend provisional local Scraps in the shop.
 
 4. **Priority 9: production rooms.** The current in-memory WS server is `server/server.js`; browser UI is `js/roomFlow.js`, `js/network.js`. Implement authenticated identity/token verification, reconnection/reclaiming player ID and host rights, rate limiting/heartbeat, server-side validation of catalog custom maps, multi-instance shared directory and deployment. Existing disconnect paths end an active PvP round after losing its last opponent, intentionally **not** seamless rejoin. Do not deploy paid infrastructure without owner approval.
 
@@ -20,7 +29,7 @@ Do not merge a partial system or activate money/rewards solely because static te
 
 7. **Priority 14: 2-player authoritative co-op Survival.** No live co-op runtime exists. Create server-owned wave director, unique enemy IDs/ownership, shared difficulty/boss states, replicated projectiles/damage, pickup and quest rewards, safe reconnect, per-player score, and strict 2-human maximum. Existing `js/waves.js`, `js/enemies.js`, `js/roomFlow.js` are currently solo or competitive and must not be called 'working co-op' from a room UI alone.
 
-8. **Priority 15: actual cosmetics/XP-pack shop.** After (3) and (6), define approved cosmetic art/catalog and tier costs, actual UI in `js/loadout.js` or separate Home screen, atomic database purchases and refunds/duplicates, direct-use XP-pack caps and account recovery. Test balance and item ownership in two concurrent sessions. `server/economyLedger.js` is **in-memory single-process**, meant only as domain logic to adapt to trusted storage.
+8. **Priority 15: actual cosmetics/XP-pack shop.** After UID-scoped persistence and atomic wallet writes (not contingent on strict PvE anti-cheat), define approved cosmetic art/catalog and tier costs, actual UI in `js/loadout.js` or separate Home screen, atomic database purchases and refunds/duplicates, direct-use XP-pack caps and account recovery. Test balance and item ownership in two concurrent sessions. `server/economyLedger.js` is **in-memory single-process**, meant only as domain logic to adapt to trusted storage.
 
 9. **Priority 16: applied PvE-only stats/equipment.** `js/pveStatsRules.js` is a tested pure allocation/respec/earned-gear rules engine, not yet hooked into `profile`, user-facing menus, stat effects or `js/player.js`. Review balance with owner and wire chosen modifiers to *Survival only*; assert PvP normalization and never price these upgrades in Scraps.
 
