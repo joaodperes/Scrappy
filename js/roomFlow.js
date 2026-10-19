@@ -10,8 +10,8 @@ const OFFLINE_MODES = [
   ['survival','Survival (endless waves)'],
   ['gunGame','Gun Game (vs robots)'],
   ['killConfirmed','Kill Confirmed (vs robots)'],
-  ['ffa','FFA Practice (vs robots)'],
-  ['tdm','TDM Practice (1 vs robots)'],
+  ['ffa','Free-for-all (local bots · beta)'],
+  ['tdm','Team Deathmatch (local bots · beta)'],
 ];
 const MODES = [
   ['survival', 'Survival (solo / co-op planned)'],
