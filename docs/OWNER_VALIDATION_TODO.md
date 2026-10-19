@@ -12,6 +12,7 @@ Node WebSocket service. FFA/TDM are *bot practice*, not full team AI yet.
 - [ ] **Gun Game finish:** after progressing through all guns, a Knife elimination shows VICTORY; reaching a generic point target early must not finish the ladder.
 - [ ] **Kill Confirmed:** kills drop bright golden collectable tags; counter only increases by collecting them. Walk away from a tag until it expires and confirm no phantom points or collectible remains.
 - [ ] **FFA Practice / TDM Practice:** local bots spawn, attack and replenish without a WebSocket service; UI says PRACTICE (bots currently only target you). Score/time conditions and results behave sensibly; don't classify these as full FFA/TDM bot-vs-bot matches.
+- [ ] **Local arena loadout:** select local Primary/Secondary weapons without an online room; saved pair persists into FFA/TDM Practice and Kill Confirmed, while Gun Game always overrides with its weapon ladder.
 - [ ] **Local match death/respawn:** after a death, there is a five-second respawn with HP reset and no wave counter reset; if score/time goal ends the match, a single result screen appears.
 - [ ] **Local menu/cleanup:** quit through Pause and return to Menu; retry different local mode/map; no leftover dog tags, HUD overlays, bot entities, duplicate score events or orphaned timers.
 - [ ] **Survival regression:** return to Survival after a Gun Game or Kill Confirmed match; its endless waves, standard Secondary Pistol, difficulty selection and existing quests still work.
