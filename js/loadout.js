@@ -8,6 +8,7 @@ import {
 } from './progression.js';
 import { WDEFS, applyLoadoutToScene } from './weapons.js';
 import { MAPS } from './mapManager.js';
+import { isCompetitiveFirearm, normalizeCompetitiveLoadout } from './weaponCategories.js';
 
 let _activeWeapon = 'PISTOL';
 let _activeTab    = 'attachments';
@@ -25,12 +26,7 @@ export function showLoadout(onClose, mode = null) {
   _currentMode = mode;
   _modeSlotTarget = 'primary';
   if(mode)_activeTab='attachments';
-  const saved=profile.pvpLoadout||{};
-  _modeSlots = {
-    primary:WDEFS[saved.primary]&&!WDEFS[saved.primary].wonderWeapon?saved.primary:'SMG',
-    secondary:WDEFS[saved.secondary]&&!WDEFS[saved.secondary].wonderWeapon?saved.secondary:'SHOTGUN',
-  };
-  if(_modeSlots.primary===_modeSlots.secondary)_modeSlots.secondary='SHOTGUN';
+  _modeSlots = normalizeCompetitiveLoadout(profile.pvpLoadout,WDEFS);
   document.body.appendChild(_buildPanel(onClose, mode));
   _renderContent();
 }
@@ -272,6 +268,7 @@ topBar.appendChild(deployBtn);
   );
   sidebar.id = 'loadoutSidebar';
   Object.keys(WDEFS).forEach(wName => {
+    if (_currentMode && !isCompetitiveFirearm(wName,WDEFS)) return;
     if (WDEFS[wName].wonderWeapon) return;
     // Pistol is a valid selectable competitive slot; Gun Game stays automatic.
 
@@ -890,11 +887,9 @@ function _renderPvpSetup(main){
   main.appendChild(_el('h2','color:'+C.accent+';margin:0 0 12px','PVP MATCH LOADOUT'));
   main.appendChild(_el('p','color:'+C.textDim+';line-height:1.6;max-width:650px',
     'Select two different weapons below. Changes are saved immediately, without leaving Loadout. Configure attachments and skins in their existing tabs. Gun Game ignores this selection.'));
-  const usable=Object.keys(WDEFS).filter(id=>!WDEFS[id].wonderWeapon && id!=='KNIFE');
+  const usable=Object.keys(WDEFS).filter(id=>isCompetitiveFirearm(id,WDEFS));
   const old=profile.pvpLoadout||{};
-  const primary=usable.includes(old.primary)?old.primary:'SMG';
-  const secondary=usable.includes(old.secondary) && old.secondary!==primary
-    ?old.secondary:(primary==='SHOTGUN'?'PISTOL':'SHOTGUN');
+  const {primary,secondary}=normalizeCompetitiveLoadout(old,WDEFS);
   const row=_el('div','display:flex;flex-wrap:wrap;gap:18px;margin:18px 0');
   const inputs={};
   function makePicker(slot,value){
