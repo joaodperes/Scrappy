@@ -96,7 +96,7 @@ function _hideAllScreens() {
   const cb2 = document.getElementById('ffaConfigBanner');  if (cb2) cb2.style.display = 'none';
 }
 
-// ── Solo PvE ───────────────────────────────────────────────────
+// ── Offline Survival and local robot arenas ───────────────────
 function startGame(startWave = 0, difficulty = 'normal', localMode = null) {
   stopLocalArena();
   document.getElementById('startupErrorNotice')?.remove();
