@@ -1828,7 +1828,7 @@
         "pz": 0,
         "sx": 0.95,
         "sy": 6.2,
-        "sz": 104,
+        "sz": 126,
         "mat": "mossy"
       },
       "position": {
@@ -1856,7 +1856,7 @@
         "pz": 0,
         "sx": 0.95,
         "sy": 6.2,
-        "sz": 104,
+        "sz": 126,
         "mat": "mossy"
       },
       "position": {
@@ -1881,7 +1881,7 @@
       "params": {
         "px": 0,
         "py": -11.9,
-        "pz": -52,
+        "pz": -63,
         "sx": 104,
         "sy": 6.2,
         "sz": 0.95,
@@ -1890,7 +1890,7 @@
       "position": {
         "x": 0,
         "y": -11.9,
-        "z": -52
+        "z": -63
       },
       "rotation": {
         "x": 0,
@@ -1909,7 +1909,7 @@
       "params": {
         "px": 0,
         "py": -11.9,
-        "pz": 52,
+        "pz": 63,
         "sx": 104,
         "sy": 6.2,
         "sz": 0.95,
@@ -1918,7 +1918,7 @@
       "position": {
         "x": 0,
         "y": -11.9,
-        "z": 52
+        "z": 63
       },
       "rotation": {
         "x": 0,
@@ -4286,122 +4286,6 @@
       }
     },
     {
-      "id": "j5-m2-floor-01",
-      "generator": "createSlab",
-      "params": {
-        "px": -45,
-        "surfY": -15,
-        "pz": 0,
-        "sx": 14,
-        "sz": 104,
-        "mat": "mossy",
-        "lift": false,
-        "thickness": 0.8
-      },
-      "position": {
-        "x": -45,
-        "y": -15.4,
-        "z": 0
-      },
-      "rotation": {
-        "x": 0,
-        "y": 0,
-        "z": 0
-      },
-      "scaling": {
-        "x": 1,
-        "y": 1,
-        "z": 1
-      }
-    },
-    {
-      "id": "j5-m2-floor-02",
-      "generator": "createSlab",
-      "params": {
-        "px": 11,
-        "surfY": -15,
-        "pz": 0,
-        "sx": 82,
-        "sz": 104,
-        "mat": "mossy",
-        "lift": false,
-        "thickness": 0.8
-      },
-      "position": {
-        "x": 11,
-        "y": -15.4,
-        "z": 0
-      },
-      "rotation": {
-        "x": 0,
-        "y": 0,
-        "z": 0
-      },
-      "scaling": {
-        "x": 1,
-        "y": 1,
-        "z": 1
-      }
-    },
-    {
-      "id": "j5-m2-floor-03",
-      "generator": "createSlab",
-      "params": {
-        "px": -34,
-        "surfY": -15,
-        "pz": -48.25,
-        "sx": 8,
-        "sz": 7.5,
-        "mat": "mossy",
-        "lift": false,
-        "thickness": 0.8
-      },
-      "position": {
-        "x": -34,
-        "y": -15.4,
-        "z": -48.25
-      },
-      "rotation": {
-        "x": 0,
-        "y": 0,
-        "z": 0
-      },
-      "scaling": {
-        "x": 1,
-        "y": 1,
-        "z": 1
-      }
-    },
-    {
-      "id": "j5-m2-floor-04",
-      "generator": "createSlab",
-      "params": {
-        "px": -34,
-        "surfY": -15,
-        "pz": 32,
-        "sx": 8,
-        "sz": 40,
-        "mat": "mossy",
-        "lift": false,
-        "thickness": 0.8
-      },
-      "position": {
-        "x": -34,
-        "y": -15.4,
-        "z": 32
-      },
-      "rotation": {
-        "x": 0,
-        "y": 0,
-        "z": 0
-      },
-      "scaling": {
-        "x": 1,
-        "y": 1,
-        "z": 1
-      }
-    },
-    {
       "id": "j5-m3-floor-01",
       "generator": "createSlab",
       "params": {
@@ -4505,6 +4389,122 @@
         "x": 34,
         "y": -30.4,
         "z": 53.75
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "j5-m2-floor-01",
+      "generator": "createSlab",
+      "params": {
+        "px": -45,
+        "surfY": -15,
+        "pz": 0,
+        "sx": 14,
+        "sz": 126,
+        "mat": "mossy",
+        "lift": false,
+        "thickness": 0.8
+      },
+      "position": {
+        "x": -45,
+        "y": -15.4,
+        "z": 0
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "j5-m2-floor-02",
+      "generator": "createSlab",
+      "params": {
+        "px": 11,
+        "surfY": -15,
+        "pz": 0,
+        "sx": 82,
+        "sz": 126,
+        "mat": "mossy",
+        "lift": false,
+        "thickness": 0.8
+      },
+      "position": {
+        "x": 11,
+        "y": -15.4,
+        "z": 0
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "j5-m2-floor-03",
+      "generator": "createSlab",
+      "params": {
+        "px": -34,
+        "surfY": -15,
+        "pz": -53.75,
+        "sx": 8,
+        "sz": 18.5,
+        "mat": "mossy",
+        "lift": false,
+        "thickness": 0.8
+      },
+      "position": {
+        "x": -34,
+        "y": -15.4,
+        "z": -53.75
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "j5-m2-floor-04",
+      "generator": "createSlab",
+      "params": {
+        "px": -34,
+        "surfY": -15,
+        "pz": 37.5,
+        "sx": 8,
+        "sz": 51,
+        "mat": "mossy",
+        "lift": false,
+        "thickness": 0.8
+      },
+      "position": {
+        "x": -34,
+        "y": -15.4,
+        "z": 37.5
       },
       "rotation": {
         "x": 0,
