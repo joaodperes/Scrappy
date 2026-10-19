@@ -46,6 +46,7 @@ let _nvPostProcess = null;
 let _nvgActive = false;
 let _nvgHl = null;
 let _aegisHl = null;
+let _aegisHudVisible = false;
 export let jetpackHeat = 0;
 let _jetpackOverheated = false;
 
@@ -841,6 +842,7 @@ function _aegisHasLineOfSight(e){
   return !block?.hit;
 }
 function _showAegisLockCount(count,max,visible){
+  _aegisHudVisible = visible;
   let hud=document.getElementById('aegisLockHud');
   if(!hud && visible){
     hud=document.createElement('div');
@@ -959,7 +961,7 @@ export function updatePlayer(dt, gameRunning, paused) {
     }
   }
   if(curWep==='AEGIS'&&isScoped)_updateAegisTargeting();
-  else if(paintedTargets.length||document.getElementById('aegisLockHud'))_clearAegisLocks();
+  else if(paintedTargets.length||_aegisHighlighted.size||_aegisHudVisible)_clearAegisLocks();
 
   // ── Background Weapon Heat & Scope Heating Loop ──
     for (const wName in WDEFS) {
