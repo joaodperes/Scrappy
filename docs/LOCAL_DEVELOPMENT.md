@@ -18,15 +18,18 @@ the player's display name are available.
 
 ### Local single-player gameplay (no WebSocket server)
 
-After signing in, select **Play → Single Player**, choose a map, optionally enable
-Hard Mode when unlocked, and press **Start Solo Survival**. This calls the existing
-local `startGame(0)` flow directly. It does not open `ws://localhost:8080`,
-does not create a room, and can be used to test all four maps while multiplayer
-features are still in development.
+After signing in, select **PLAY → LOCAL MODES**, choose a map and
+a mode, then press **START LOCAL MATCH**. Survival supports Normal / Hard /
+Nightmare. Offline robot arenas include **Gun Game**, **Kill Confirmed**,
+**FFA Practice** and **TDM Practice**, with local score and time goals.
+No mode in this local path opens `ws://localhost:8080`, creates a room or
+requires a WebSocket server. FFA/TDM are deliberately labeled *Practice*
+until the robots can fight each other and support proper teams.
 
-**Create Room** and **Browse Rooms** are online/multiplayer actions and require
-the separate WebSocket server; use Single Player when only the static frontend
-is running. Browser messages about `WEBGL_debug_renderer_info` deprecation
+**ONLINE (EXPERIMENTAL)** and **BROWSE ONLINE (EXPERIMENTAL)** remain
+available for developers exercising the older multiplayer prototype; they
+require a separate WebSocket server. They are **not** part of offline
+acceptance or a required condition for closing this PR. Browser messages about `WEBGL_debug_renderer_info` deprecation
 and missing Recast WebAssembly source maps are development-tool warnings,
 not the reason the multiplayer connection fails.
 
@@ -39,6 +42,7 @@ npm install
 npm start
 ```
 
+This step is **optional** and solely for the deferred multiplayer prototype.
 The default local WebSocket address is `ws://localhost:8080`. The server reads
 `PORT` from the environment if provided, defaulting to port 8080; no other
 server environment variables are required by the current implementation.
