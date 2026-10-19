@@ -48,9 +48,22 @@ test('bots apply per-map gravity and Moon players retain their jetpack',()=>{
   const bots=fs.readFileSync(path.join(dir,'js/enemies.js'),'utf8');
   const player=fs.readFileSync(path.join(dir,'js/player.js'),'utf8');
   const map=fs.readFileSync(path.join(dir,'js/mapManager.js'),'utf8');
-  assert.match(bots,/35\.0 \* \(getMapMeta\(getCurrentMap\(\)\)\.gravityMult \?\? 1\) \* dt/);
+  assert.match(bots,/const botGravityMult=getMapMeta\(getCurrentMap\(\)\)\.gravityMult \?\? 1/);
+  assert.match(bots,/e\._yVel -= 35\.0 \* botGravityMult \* dt/);
   assert.match(map,/gravityMult:\s*0\.55/);
   assert.match(player,/getCurrentMap\(\) === 'terminal'/);
   assert.match(player,/jetpackHeat/);
   assert.doesNotMatch(player,/camera\.position\.y < -27/);
+});
+
+test('all Moon weapon pickup coordinates have solid floor support',()=>{
+  const cfg=fs.readFileSync(path.join(dir,'js/mapManager.js'),'utf8');
+  const part=cfg.slice(cfg.indexOf('  terminal: {'),cfg.indexOf('  },\n};',cfg.indexOf('  terminal: {')));
+  const weaponLines=[...part.matchAll(/\{ wName:\s*'([A-Z_]+)',\s*x:\s*(-?\d+),\s*y:\s*([\d.]+),\s*z:\s*(-?\d+) \}/g)];
+  assert.ok(weaponLines.length>=13,'Moon weapons should include legacy and new floater pickups');
+  for(const [,name,x,y,z] of weaponLines){
+    const surface=Math.round(Number(y));
+    assert.equal(floor(Number(x),Number(z),surface),true,
+      name+' pickup at '+[x,y,z]+' lacks solid floating platform');
+  }
 });
