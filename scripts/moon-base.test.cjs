@@ -62,7 +62,7 @@ test('all Moon weapon pickup coordinates have solid floor support',()=>{
   const weaponLines=[...part.matchAll(/\{ wName:\s*'([A-Z_]+)',\s*x:\s*(-?\d+),\s*y:\s*([\d.]+),\s*z:\s*(-?\d+) \}/g)];
   assert.ok(weaponLines.length>=13,'Moon weapons should include legacy and new floater pickups');
   for(const [,name,x,y,z] of weaponLines){
-    const surface=Math.round(Number(y));
+    const surface=Math.floor(Number(y));
     assert.equal(floor(Number(x),Number(z),surface),true,
       name+' pickup at '+[x,y,z]+' lacks solid floating platform');
   }
