@@ -70,8 +70,9 @@ export function startLocalArena(cfg,onFinish,onPlayerHit=()=>{}){
  fetchArenaPersonas().then(personas=>{
    if(!isActive()||generation!==token)return;
    for(let i=0;i<5;i++){
-     const allies=state.mode==='tdm'&&i<2;
-     const team=state.mode==='tdm'?(allies?'RED':'BLUE'):'BOT_'+i;
+     const teamMode=state.mode==='tdm'||state.mode==='killConfirmed';
+     const allies=teamMode&&i<2;
+     const team=teamMode?(allies?'RED':'BLUE'):'BOT_'+i;
      const spawn=chooseArenaSpawn(active.actors);
      if(!spawn)continue;
      const persona=personas[i%personas.length];
