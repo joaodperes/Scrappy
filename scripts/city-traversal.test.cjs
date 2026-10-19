@@ -47,7 +47,29 @@ test('City skybridge spans retain eight rooftop route connections',()=>{
      'city-bridge-FN','city-bridge-GO','city-bridge-HP','city-bridge-IQ'].sort());
   assert.ok(bridges.every(b=>b.params.bridgeW===4));
 });
+test('City wrecks are atomic editor entities with exactly one roof pad each',()=>{
+  const cars=get('createCarWreck');
+  assert.equal(cars.length,44);
+  assert.equal(new Set(cars.map(c=>c.id)).size,44);
+  for(const car of cars){
+    assert.equal(car.position.x,car.params.cx);
+    assert.equal(car.position.y,.5);
+    assert.equal(car.position.z,car.params.cz);
+    assert.equal(car.rotation.y,car.params.rotY);
+  }
+});
+test('City rooftop and relay pads are JSON entries with effective launch force',()=>{
+  const pads=get('createJumpPad');
+  assert.equal(pads.length,33);
+  assert.equal(pads.filter(x=>x.params.force===27).length,16);
+  for(const pad of pads){
+    assert.equal(pad.position.x,pad.params.px);
+    assert.equal(pad.position.z,pad.params.pz);
+    assert.ok(pad.params.force>=27 && pad.params.force<=36);
+    assert.ok(Math.abs(pad.position.y-pad.params.floorY-.22)<1e-10);
+  }
+});
 test('City script no longer duplicates serialized transport systems',()=>{
   const source=fs.readFileSync(path.join(root,'js/levelCity.js'),'utf8');
-  assert.doesNotMatch(source,/\b_(?:zipline|lift|bridge)\s*\(/);
+  assert.doesNotMatch(source,/\b_(?:zipline|lift|bridge|car|jp)\s*\(/);
 });
