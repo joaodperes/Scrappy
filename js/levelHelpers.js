@@ -529,6 +529,55 @@ export function createZipline(name, startX, startY, startZ, endX, endY, endZ,
   return car;
 }
 
+// City rooftop lift, matching the original 20x20-building shaft layout.
+// The car is the editable entity; rails follow it, poles remain stationary.
+export function createRooftopLift(cx, cz, topSurfY, face, faceOffset=0, opts={}) {
+  const scene=getScene();
+  const halfFootprint=10, stand=2, carWidth=3.6, half=carWidth/2;
+  const alongX=face==='N'||face==='S';
+  const wall=alongX?cz+(face==='N'?-halfFootprint:halfFootprint):
+    cx+(face==='E'?halfFootprint:-halfFootprint);
+  const sign=(face==='N'||face==='W')?-1:1;
+  const anchor=(alongX?cx:cz)+faceOffset;
+  const out=wall+sign*stand;
+  const shaftX=alongX?anchor:out,shaftZ=alongX?out:anchor;
+  const auxiliary=[];
+  const poleHeight=topSurfY+1.2;
+  for(const [dx,dz] of [[-half,-half],[half,-half],[-half,half],[half,half]]){
+    const pole=BABYLON.MeshBuilder.CreateCylinder('liftPole',
+      {diameter:0.16,height:poleHeight},scene);
+    pole.position.set(shaftX+dx,poleHeight/2,shaftZ+dz);
+    pole.material=matSteel;
+    pole.isPickable=false;
+    auxiliary.push(pole);
+  }
+  const H=0.3;
+  const car=BABYLON.MeshBuilder.CreateBox('liftPlat',
+    {width:carWidth,height:H,depth:carWidth},scene);
+  car.position.set(shaftX,-H/2,shaftZ);
+  car.material=matSteel;
+  car.checkCollisions=true;
+  _tagMeta(car,'rooftop_lift','createRooftopLift',
+    {cx,cz,topSurfY,face,faceOffset},true,null);
+  for(const side of [-1,1]){
+    const rail=BABYLON.MeshBuilder.CreateBox('liftRail',{
+      width:alongX?carWidth:0.15,height:1,depth:alongX?0.15:carWidth},scene);
+    rail.parent=car;
+    rail.position.set(alongX?0:side*half,0.5+H/2,alongX?side*half:0);
+    rail.material=matSteel;
+    rail.isPickable=false;
+  }
+  car._moveData={
+    start:new BABYLON.Vector3(shaftX,-H/2,shaftZ),
+    end:new BABYLON.Vector3(shaftX,topSurfY-H/2,shaftZ),
+    speed:5/topSurfY,t:0,dir:1,waitTimer:0,waitTime:2,paused:false,
+  };
+  car.metadata.auxiliaryMeshes=auxiliary;
+  opts.movingPlatforms?.push(car);
+  walkableMeshes.push(car);
+  return car;
+}
+
 // ── JSON layout pipeline ─────────────────────────────────────────
 // This is the single source of truth for turning a JSON "objects" array
 // (the exact shape editor.html's "Export JSON" produces) back into real
@@ -576,6 +625,8 @@ const _generators = {
   createZipline:          (p,t) => createZipline(p.name,p.startX,p.startY,p.startZ,
                               p.endX,p.endY,p.endZ,p.worldSpeed,p.width,p.depth,
                               {movingPlatforms:t?.movingPlatforms}),
+  createRooftopLift:      (p,t) => createRooftopLift(p.cx,p.cz,p.topSurfY,p.face,
+                              p.faceOffset||0,{movingPlatforms:t?.movingPlatforms}),
 };
 
 /** Re-creates one editable prop from its generator name + params. `targets`
