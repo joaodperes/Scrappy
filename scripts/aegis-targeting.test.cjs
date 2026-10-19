@@ -32,6 +32,16 @@ test('Dead locks are dropped; valid new targets replace them',async()=>{
   const a={id:1,alive:false},b={id:2,alive:true},c={id:3,alive:true};
   assert.deepEqual(updateAegisLocks([a,b],[a,b,c],2,e=>e.alive,()=>true),[b,c]);
 });
+test('A previously locked enemy dying invalidates the entire group',async()=>{
+  const {hasDeadAegisLock,updateAegisLocks}=await import(url);
+  const a={id:'a',alive:true},b={id:'b',alive:true},c={id:'c',alive:true};
+  const locks=updateAegisLocks([],[a,b,c],3,e=>e.alive,()=>true);
+  assert.equal(hasDeadAegisLock(locks),false);
+  b.alive=false;
+  assert.equal(hasDeadAegisLock(locks),true);
+  // Runtime resets the entire lock list, not just the dead enemy.
+  assert.deepEqual(updateAegisLocks([],[],3,e=>e.alive,()=>true),[]);
+});
 test('Obstructed targets cannot be acquired or struck through a wall',async()=>{
   const {updateAegisLocks,getAegisFireTargets}=await import(url);
   const a={id:1,alive:true},b={id:2,alive:true};
@@ -51,4 +61,10 @@ test('Aegis runtime uses exactly one round for a multi-hit trigger pull',()=>{
   assert.doesNotMatch(aegis,/paintedTargets\s*=\s*\[\]/);
   assert.match(player,/_aegisHasLineOfSight\(e\)/);
   assert.match(player,/EW\.maxTargets\|\|3/);
+  assert.match(aegis,/_clearAegisLocks\(\)/);
+  assert.match(aegis,/_aegisReacquireDelay=Math\.max\(/);
+  assert.match(player,/if\(hasDeadAegisLock\(paintedTargets\)\)/);
+  assert.match(player,/cb\.clearAegisLocks=\(\)=>/);
+  const weapons=fs.readFileSync(path.join(root,'js/weapons.js'),'utf8');
+  assert.match(weapons,/if\(curWep!==name\)cb\.clearAegisLocks\?\.\(\)/);
 });
