@@ -140,15 +140,51 @@ existing arena. Always save a backup before importing or changing a layout.
 7. Only then submit a PR with screenshots, baseline FPS, navigation findings,
    object counts, schema check result and any known limitations.
 
-### How to build a brand-new map
+### Publish a new community map without JavaScript changes
 
-Current menu registration is **not JSON-only**: copy a known working map as a
-starting point, add its layout JSON, register the new map in
-`js/mapManager.js` (`MAP_CONFIG`: `meta`, `wave`, spawns, weapon spawns,
-`levelModule`, `buildFn`), and expose its entry in the editor's
-`MAP_MODULES` and map-switcher links. Keep existing default values valid.
-A future catalog-driven registration pass can remove the remaining JavaScript
-registration step.
+1. Create your geometry in the editor, starting with any existing map as a
+   template if desired. Give the new map its own ID (e.g. `cargo_bay`).
+2. Save the layout as `assets/maps/cargo_bay.json`; the top-level `map`
+   field must be `"cargo_bay"`, `version` must be `2`, and entity IDs
+   must be unique within the file. Remove any objects from the starting
+   map that you do not want to include.
+3. Add an entry in **`assets/maps/catalog.json`**:
+   ```json
+   {
+     "version": 1,
+     "maps": [
+       {
+         "id": "cargo_bay",
+         "name": "Cargo Bay",
+         "icon": "📦",
+         "desc": "Compact warehouse arena",
+         "teamSize": 3,
+         "supportedModes": ["survival", "ffa"],
+         "spawn": {"x": 0, "yOffset": 0, "z": 0}
+       }
+     ]
+   }
+   ```
+4. Reload the page. The game menu and editor map switcher discover
+   catalog entries automatically. Open `editor.html?map=cargo_bay`.
+   The **generic community level builder** provides common materials,
+   lighting, all schema-defined entity generators and the Recast NavMesh.
+   It does not execute arbitrary code from the map JSON.
+5. Add at least a floor, player spawn, enemy spawns and appropriate pickups.
+   Every intended game area should be reachable by players and bots.
+   Export/re-import and test the map in Single Player before sharing.
+6. Run `node scripts/validate-map-data.cjs`,
+   `node --test scripts/map-catalog.test.cjs`, and
+   `node scripts/check-module-imports.cjs`. Contributor maps should
+   additionally receive manual collision, spawn and performance testing.
+
+Catalog mode names are `survival`, `ffa`, `tdm` and `gunGame`.
+The default community Survival wave composition is intentionally generic.
+A dedicated wave/balance manifest remains a future extension.
+
+This workflow registers a **map in a trusted game build**, not an
+unmoderated upload service. A contributor should submit the two JSON files
+through a normal PR. Do not accept arbitrary JS or credentials as map data.
 
 ### Current exceptions and known limitations
 
@@ -158,9 +194,10 @@ registration step.
   anchors translates linked geometry; rotating a moving car alone does
   not redefine its movement path. Verify that cable and endpoint
   positions remain consistent after export/reimport.
-- City's decorative **car wrecks, rooftop/relay jump pads and some
-  boundaries** are still procedural. Finish migrating those before
-  describing the City layout as fully JSON-authoritative.
+- City's **44 composite car wrecks** (including attached roof pads) and
+  **33 rooftop/relay jump pads** are now in JSON. The City level module
+  still provides lighting, roads and environmental decoration, which
+  are intentionally non-gameplay scene dressing.
 - Scrapyard's **six staircase composites and 12 jump pads** are now
   serialized in `scrapyard.json`. Stairs are selected and moved as whole
   flights, not as individual mesh steps.
@@ -169,8 +206,10 @@ registration step.
   shortens child-step offsets, creating a uniform gap at connected platforms.
   After adjusting stairs, verify the last step reaches the original landing
   and run `node --test scripts/staircase-geometry.test.cjs`.
-- Creator-defined maps do not yet provide procedural script hooks from JSON.
-  Keep any remaining scene-specific effects in the appropriate level module.
+- Community maps have a generic level builder with shared lighting/material
+  defaults. Special artistic effects, custom AI waves, and arbitrary new
+  entity types are not expressible by catalog/layout JSON alone; those
+  additions still need reviewed code.
 - Rotation-quaternion-based procedural bridges are not editable as generic
   Euler-rotated slabs. They need a dedicated serialized bridge entity.
 - Editor marker placement can affect existing gameplay spawn logic only once
