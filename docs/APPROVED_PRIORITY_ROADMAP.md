@@ -84,10 +84,22 @@ Moon Base is a distinct low-gravity/jetpack game experience.
   Nightmare wave transitions and room form behavior. Also complete run
   balancing/reward rationale before marking priority 3 production-ready.
 
-### Priority 4: Elites
+### Priority 4: Elites (source implementation on follow-up branch; QA pending)
 
-Not started. Elite archetypes, AI traits and their Hard Mode spawn budgets
-depend on the tested priority-3 modifier architecture.
+- A deterministic `eliteRules.js` encounter planner budgets Elites separately
+  from Hard/Nightmare wave modifiers, excluding bosses and summons. Normal
+  Survival is unchanged. Dual-trait Elites start at wave 25 with explicit cost.
+- Three typed traits are wired to spawned PvE enemies: **Bulwark** (direct-hit
+  mitigation), **Frenzied** (one-time low-HP speed/damage/attack buff), and
+  **Regenerator** (limited out-of-combat healing). Colored, non-collidable halo
+  rings, boosted score/XP and one extra consumable identify/reward encounters.
+- Boss special projectile attacks previously bypassed Hard/Nightmare damage
+  modifiers; they now use the per-wave difficulty multiplier.
+- Pure rules, budgets, invalid inputs, trait combinations and boss damage
+  have automated tests. See `docs/ELITE_ENCOUNTERS.md` for precise formulas.
+- **Open gate:** gameplay QA and late-wave performance testing, especially
+  combined native shield mitigation, regen/DOT, boss minions, cleanup and
+  scoring/rewards. This does **not** close priorities 3 or 4 yet.
 
 ## Play-menu and Aegis regression checkpoint — 19 October 2026
 
