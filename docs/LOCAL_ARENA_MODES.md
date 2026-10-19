@@ -1,6 +1,6 @@
 # Offline arena modes — initial development slice (October 19, 2026)
 
-**Scope:** single browser, no WebSocket service and no new Firebase services. All modes run against the existing local PvE robots. This is new work requiring Firefox/Chromium gameplay review, **not a declaration that the complete FFA/TDM bots milestone is done**.
+**Scope:** single browser, no WebSocket service and no new Firebase services. An initial prototype used Survival robots, but the new runtime uses **player-shaped local arena actors with team/individual combat**. Real Firefox/Chromium gameplay verification, multi-floor nav QA and weapon effect parity are still outstanding.
 
 ## Entry and settings
 
