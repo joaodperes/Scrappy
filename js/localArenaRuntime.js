@@ -134,7 +134,7 @@ export function localArenaActorHit(actor,dmg,source='PLAYER'){
  if(active.state.mode==='gunGame'&&curWep!==active.state.gunOrder[active.state.gunIndex])return;
  if(['tdm','killConfirmed'].includes(active.state.mode)&&actor.team==='RED')return;
  actor.hp=Math.max(0,actor.hp-Math.min(500,dmg));
- if(actor.hp===0)onActorKilled(actor,'human',curWep);
+ if(actor.hp===0)onActorKilled(actor,source==='PLAYER'?'human':null,curWep);
 }
 // Legacy Survival robot kills do not score in arena games. No Survival bots
 // are spawned by the new modes, so this callback must remain a no-op.
