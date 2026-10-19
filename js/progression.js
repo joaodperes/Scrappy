@@ -3,6 +3,7 @@
 import { player } from './gameState.js';
 import { getCurrentMap } from './mapManager.js';
 import { WDEFS } from './weapons.js';
+import { crossedMilestone, notificationKey, upgradeNotificationHistory } from './milestoneNotifications.js';
 
 const XP_BASE = 200, XP_EXP = 1.4;
 export function xpForLevel(level) { return Math.floor(XP_BASE * Math.pow(level, XP_EXP)); }
@@ -2390,6 +2391,8 @@ const _defaultProfile = () => ({
   hardModeClears: 0,
   wonderWeaponsCollected: [],
   unlockedWeapons: [],
+  progressNoticeVersion: 0,
+  progressNoticeSeen: {},
 });
 
 const EXCLUSIONS_TO_TRACK = [...new Set(
@@ -2430,12 +2433,14 @@ export function initFirebaseAuth() {
             profile = _deepMerge(_defaultProfile(), cloudProfile);
             profile.firebaseUid = uid;
             _sanitizeUnlocks();
+            _primeProgressNoticeHistory();
             _saveToLocalStorage();
             //console.log('[progression] Cross-session profile restored from cloud');
         }
       } else {
         // Brand new cloud account. 
         profile.firebaseUid = uid;
+        _primeProgressNoticeHistory();
         await _saveToFirestore();
         _saveToLocalStorage();
         //console.log('[progression] New cloud profile created');
@@ -2549,6 +2554,7 @@ export function loadProfile() {
     if (raw) { const saved = JSON.parse(raw); profile = _deepMerge(_defaultProfile(), saved); _migrateOldWeaponSkins(); }
   } catch {}
   _sanitizeUnlocks();
+  _primeProgressNoticeHistory();
   initFirebaseAuth();
 }
 
@@ -2973,39 +2979,37 @@ export function isWonderWeaponUnlocked(wName) {
          (profile.unlockedWeapons?.includes(wName) ?? false);
 }
 
-// ── Progress milestones (in-game notification at 25/50/75%) ───
-// Persisted in localStorage so we don't re-show on reload.
-const _MILESTONE_STORAGE = 'botarena_milestones';
-let _shownMilestones = null;
-
-function _loadShownMilestones() {
-  if (_shownMilestones) return;
-  try { _shownMilestones = new Set(JSON.parse(localStorage.getItem(_MILESTONE_STORAGE) ?? '[]')); }
-  catch { _shownMilestones = new Set(); }
-}
-function _saveShownMilestones() {
-  try { localStorage.setItem(_MILESTONE_STORAGE, JSON.stringify([..._shownMilestones])); } catch {}
+// ── Persistent progress notifications (Firebase profile + local cache) ──
+function _primeProgressNoticeHistory(){
+  // On first use with an existing profile, record its current progression
+  // rather than replaying notifications earned before this feature shipped.
+  return upgradeNotificationHistory(profile,UNLOCK_TABLE,getChallengeProgress);
 }
 
-export function checkProgressMilestones() {
-  _loadShownMilestones();
-  const THRESHOLDS = [0.25, 0.50, 0.75];
-  for (const u of UNLOCK_TABLE) {
-    if (!u.challenge) continue;
-    // Skip already fully unlocked items
-    if (u.type==='attachment' && profile.unlockedAttachments[u.weapon]?.includes(u.id)) continue;
-    if (u.type==='weaponSkin' && profile.unlockedWeaponSkins[u.weapon]?.includes(u.id)) continue;
-    if (u.type==='playerSkin' && profile.unlocked?.includes(u.id)) continue;
+function _ownsChallengeReward(u){
+  if(u.type==='attachment')return !!profile.unlockedAttachments?.[u.weapon]?.includes(u.id);
+  if(u.type==='weaponSkin')return !!profile.unlockedWeaponSkins?.[u.weapon]?.includes(u.id);
+  if(u.type==='weaponUnlock')return !!profile.unlockedWeapons?.includes(u.id);
+  if(u.type==='playerSkin'||u.type==='currency')
+    return !!profile.unlocked?.includes(u.id);
+  return false;
+}
 
-    const prog = getChallengeProgress(u.challenge);
-    for (const t of THRESHOLDS) {
-      if (prog.pct < t) continue;
-      const key = `${u.id}:${u.weapon??''}:${Math.round(t*100)}`;
-      if (_shownMilestones.has(key)) continue;
-      _shownMilestones.add(key);
-      _saveShownMilestones();
-      _showMilestoneToast(u, prog, t);
-    }
+export function checkProgressMilestones(){
+  if(_primeProgressNoticeHistory())return;
+  const seen=profile.progressNoticeSeen;
+  for(const u of UNLOCK_TABLE){
+    if(!u.challenge)continue;
+    const key=notificationKey(u);
+    const p=getChallengeProgress(u.challenge);
+    const current=Number.isFinite(p.pct)?Math.max(0,Math.min(1,p.pct)):0;
+    const previous=Number.isFinite(seen[key])?seen[key]:current;
+    // Keep the high-water mark so a profile sync or map/rule change can't
+    // produce repeated "lost progress" alerts for older earned progress.
+    seen[key]=Math.max(previous,current);
+    if(_ownsChallengeReward(u))continue;
+    const crossed=crossedMilestone(u.challenge,previous,current);
+    if(crossed!==null)_showMilestoneToast(u,p,crossed);
   }
 }
 
