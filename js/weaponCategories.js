@@ -17,3 +17,24 @@ export function selectedSecondary(weapons,profile){
   const requested=profile?.pveSecondary||'PISTOL';
   return canUseSecondary(requested,weapons,profile)?requested:'PISTOL';
 }
+
+/**
+ * Standard FFA/TDM players pick two distinct firearms. Melee belongs in its
+ * own eventual slot, and boss Wonder weapons are not selectable. Gun Game's
+ * Knife finale is intentionally exempt because Gun Game does not use this
+ * selection function.
+ */
+export function isCompetitiveFirearm(id,weapons){
+  if(!id || typeof id!=='string')return false;
+  const def=weapons?.[id];
+  return !!def && !def.melee && !def.wonderWeapon && id!=='KNIFE';
+}
+export function normalizeCompetitiveLoadout(slots,weapons){
+  const ids=Object.keys(weapons||{}).filter(id=>isCompetitiveFirearm(id,weapons));
+  const primary=isCompetitiveFirearm(slots?.primary,weapons)?slots.primary:
+    (ids.includes('SMG')?'SMG':ids[0]||null);
+  const secondary=isCompetitiveFirearm(slots?.secondary,weapons)&&slots.secondary!==primary
+    ?slots.secondary:(ids.includes('SHOTGUN')&&primary!=='SHOTGUN'
+      ?'SHOTGUN':ids.find(id=>id!==primary)||null);
+  return {primary,secondary};
+}
