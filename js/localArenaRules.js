@@ -80,7 +80,7 @@ export function localArenaBotTag(s,{collectorId,collectorTeam='BLUE',tagTeam='RE
  if(s.complete||s.mode!=='killConfirmed')return s;
  // Picking up your OWN side's fallen tag denies it but earns no points.
  if(collectorTeam===tagTeam)return s;
- if(collectorTeam==='RED')return localArenaTag({...s,pendingTags:s.pendingTags+1});
+ if(collectorTeam==='RED')return localArenaTag(s);
  const botScores={...s.botScores};
  if(collectorId)botScores[collectorId]=(botScores[collectorId]||0)+1;
  const n={...s,botScores,opposition:s.opposition+1};
