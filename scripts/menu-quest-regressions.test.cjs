@@ -41,7 +41,7 @@ test('PvP loadout editor stays in the existing panel and saves valid pairs',()=>
  const WDEFS={PISTOL:{name:'Pistol'},SMG:{name:'SMG'},SHOTGUN:{name:'Shotgun'},KNIFE:{name:'Knife'},OMEGA:{name:'Omega',wonderWeapon:true}};
  let saved=0;
  const helpers=read('js/weaponCategories.js').replace(/^export /gm,'');
- const categoryFns=new Function(helpers+'\\nreturn {isCompetitiveFirearm,normalizeCompetitiveLoadout};')();
+ const categoryFns=new Function(helpers+'\nreturn {isCompetitiveFirearm,normalizeCompetitiveLoadout};')();
  const render=new Function('_el','profile','WDEFS','saveProfile','C','F','isCompetitiveFirearm','normalizeCompetitiveLoadout',chunk+'\nreturn _renderPvpSetup;')(
    _el,profile,WDEFS,()=>{saved++;},
    {accent:'#7f0',text:'#fff',textDim:'#aaa',accentHi:'#eae',bgCard:'#222',border:'#444',accentGreen:'#9f9'},'monospace',
