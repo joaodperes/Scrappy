@@ -19,6 +19,7 @@ export const player = {
   onGround: false, yVel: 0,
   buffs: {},
   hardMode: false,
+  difficulty: 'normal',
   
   // New weapon state tracking:
   wepHeat: 0,
