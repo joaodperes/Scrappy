@@ -11,7 +11,9 @@ function harness(){
   class Element{
     constructor(tag){
       this.tag=tag;this.children=[];this.style={};this._text='';
-      this.value='';this.disabled=false;this.options=[];this.checked=false;
+      this.value='';this.disabled=false;this.options={items:[],get length(){return this.items.length},
+        [Symbol.iterator](){return this.items[Symbol.iterator]()},
+        push(v){this.items.push(v)}};this.checked=false;
       this.listeners={};elements.push(this);
     }
     set textContent(v){this._text=String(v);this.children=[]}
@@ -57,14 +59,14 @@ function harness(){
   context.api.initRoomFlow({onStartSurvival:cfg=>started.push(cfg)});
   return {context,elements,sockets,sent,started,
     findButton:label=>elements.filter(e=>e.tag==='button'&&e.textContent===label).at(-1),
-    findSelect:value=>elements.find(e=>e.tag==='select'&&e.options.some(x=>x.value===value))};
+    findSelect:value=>elements.find(e=>e.tag==='select'&&Array.from(e.options).some(x=>x.value===value))};
 }
 test('Play choices, mode, map and difficulty remain on a single page',()=>{
   const h=harness();h.context.api.showPlayPage();
   for(const label of ['SINGLE PLAYER','CREATE ROOM','BROWSE ROOMS','BACK TO MENU'])
     assert.ok(h.findButton(label),label);
   const difficulty=h.findSelect('nightmare');
-  assert.equal(difficulty.options.find(x=>x.value==='nightmare').disabled,true);
+  assert.equal(Array.from(difficulty.options).find(x=>x.value==='nightmare').disabled,true);
   assert.equal(h.sockets.length,0);
   h.findButton('CREATE ROOM').onclick();
   assert.ok(h.findButton('CREATE ROOM'));
@@ -94,7 +96,7 @@ test('Nightmare selector launches solo without a room connection',()=>{
   const h=harness();h.context.api.showPlayPage();
   const map=h.findSelect('jungle');map.value='jungle';map.fire('change');
   const difficulty=h.findSelect('nightmare');
-  assert.equal(difficulty.options.find(x=>x.value==='nightmare').disabled,false);
+  assert.equal(Array.from(difficulty.options).find(x=>x.value==='nightmare').disabled,false);
   difficulty.value='nightmare';
   h.findButton('START SOLO SURVIVAL').onclick();
   assert.equal(h.sockets.length,0);
