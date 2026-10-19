@@ -76,3 +76,19 @@ test('deep player fall reset and layered lighting agree with dungeon extent',()=
   for(const depth of ['-4','-11','-24','-39'])
     assert.ok(jungle.includes(','+depth+','),'Mine lighting must cover '+depth);
 });
+test('Survival and PvP Jungle spawns stand on supported strata, never shaft holes',()=>{
+  const src=fs.readFileSync(path.join(base,'js/mapManager.js'),'utf8');
+  const part=src.slice(src.indexOf('  jungle: {'),src.indexOf('  city: {'));
+  function spawns(key){
+    const result=part.match(new RegExp('(?:^|\\n)\\s*'+key+':\\s*\\[([\\s\\S]*?)\\n\\s*\\],'));
+    assert.ok(result,key+' missing');
+    return new Function('return ['+result[1]+'];')();
+  }
+  const floorForSpawn=y=>y>=4?4.5:y>=0?0:y>-10?-7.5:y>-20?-15:y>-35?-30:-45;
+  for(const kind of ['spawns','walkableSpawns']){
+    for(const [index,[x,y,z]] of spawns(kind).entries()){
+      assert.equal(floorAt(x,z,floorForSpawn(y)),true,
+        kind+'['+index+'] unsupported at '+[x,y,z]);
+    }
+  }
+});
