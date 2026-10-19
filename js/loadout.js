@@ -753,8 +753,10 @@ function _renderWeaponSkins(main) {
   main.appendChild(_el('div',`font-size:12px;color:${C.dim};letter-spacing:2px;margin-bottom:12px`,
     `SKINS FOR: ${_esc(WDEFS[wName].name)}`));
 
-  // Only grab skins that have an unlock challenge for THIS specific weapon
-  const availableSkins = Object.values(WEAPON_SKINS).filter(skin => 
+  // Collector finishes are granted by weekly quests, not the standard
+  // permanent weapon challenge table.
+  const availableSkins = Object.values(WEAPON_SKINS).filter(skin =>
+      skin.category==='Collector' ||
       UNLOCK_TABLE.some(u => u.type === 'weaponSkin' && u.weapon === wName && u.id === skin.id)
   );
 
@@ -783,7 +785,13 @@ function _renderWeaponSkins(main) {
       card.appendChild(sw);
       card.appendChild(_el('div',`font-size:11px;font-weight:bold;color:${isEquipped?C.accentPurple:C.text}`,_esc(skin.name)));
       card.appendChild(_el('div',`font-size:11px;color:${C.dim}`,_esc(skin.desc)));
-      if (!isOwned) { const f=_el('div',''); f.innerHTML=_lockHTML(skin.id, wName, 'weaponSkin'); card.appendChild(f); }
+      if (!isOwned) {
+        const f=_el('div','');
+        f.innerHTML=skin.category==='Collector'
+          ? '<span style="font-size:11px">🔒 Weekly Collector quest reward</span>'
+          : _lockHTML(skin.id,wName,'weaponSkin');
+        card.appendChild(f);
+      }
       else if (isEquipped) card.appendChild(_el('div',`font-size:11px;color:${C.accentGreen}`,'✓ EQUIPPED'));
       if (isOwned) card.onclick = () => { setWeaponSkin(wName, skin.id); applyLoadoutToScene(wName); _renderContent(); };
       grid.appendChild(card);
