@@ -8,6 +8,7 @@ import { spawnSparks } from './particles.js';
 import { fireEnemyShot, createYellowEMPStunArc } from './projectiles.js';
 import { sfx } from './audio.js';
 import { jumpPads } from './level.js';
+import { getHardWaveRules, getActiveHardWave } from './hardModeRules.js';
 import { botTravelTarget, botNavPath } from './botNavigation.js';
 import { getCurrentMap, getWalkableSpawns } from './mapManager.js';
 import { recordDamage, isWonderWeaponUnlocked  } from './progression.js';
@@ -546,10 +547,12 @@ export function spawnBot(type, _x, _spawnY, _z, scale = 1.0) {
   let speedMod = scale;
     
   if (player.hardMode) {
-    hpMod *= 1.3;
-    dmgMod *= 1.2;
-    speedMod *= 1.5;
-    e.score *= 2; 
+    const rules=getActiveHardWave()||getHardWaveRules(mapId,1);
+    hpMod *= rules.hp;
+    dmgMod *= rules.damage;
+    speedMod *= rules.speed;
+    e.score *= rules.score;
+    e.hardModifier=rules.modifier.id;
   }
 
   e.hp = Math.round(e.hp * hpMod); 
