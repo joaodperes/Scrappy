@@ -8,6 +8,7 @@ const BABYLON = window.BABYLON;
 // ── Helper to warn about missing entries ──
 const _warnedMissingMapData = new Set();
 import { getMapMarkers } from './mapLayoutStore.js';
+import { loadMapCatalog } from './mapCatalog.js';
 
 export function resolveMapData(table, mapId, fallbackId = 'scrapyard', tableName = 'map data') {
   if (table[mapId] !== undefined) return table[mapId];
@@ -280,6 +281,35 @@ export const MAP_CONFIG = {
   },
 };
 
+// Community maps use one catalog entry plus one map document and the same
+// generic builder. Existing built-in configurations remain unchanged.
+export async function registerCommunityMaps(){
+  const entries=await loadMapCatalog();
+  for(const item of entries){
+    if(MAP_CONFIG[item.id])throw Error('Map ID collision: '+item.id);
+    const meta={
+      ...item,id:item.id,unlockHint:null,
+      levelModule:'./levelCommunity.js',buildFn:'buildCommunityLevel',
+    };
+    MAP_CONFIG[item.id]={
+      meta,
+      wave:{
+        botPool:['scout','drone','heavy','shotgun','sniper'],
+        bossPool:['rocket','sniper'],
+        hardPool:['electron_bot','ion_sniper'],
+        budgetMultiplier:1,
+        fixed:{},
+        spawns:[[item.spawn.x,item.spawn.yOffset,item.spawn.z]],
+      },
+      secretKits:()=>[],
+      weaponSpawns:()=>[],
+      walkableSpawns:[[item.spawn.x,item.spawn.yOffset,item.spawn.z]],
+    };
+    MAPS[item.id]=meta;
+  }
+  return entries.map(m=>m.id);
+}
+
 // ── Helper getters ────────────────────────────────────────────
 export function getMapMeta(mapId) {
   const meta=resolveMapData(MAP_CONFIG,mapId,'scrapyard','map meta').meta;
@@ -322,7 +352,7 @@ export function isMapUnlocked(mapId) {
   if (mapId === 'jungle') return true;   // placeholder
   if (mapId === 'city') return true;
   if (mapId === 'terminal') return true;
-  return false;
+  return !!MAP_CONFIG[mapId]; // Catalog-registered maps are publicly playable.
 }
 export function isHardModeUnlocked(mapId) {
   const stats = profile.stats || {};
@@ -348,7 +378,7 @@ export async function buildMap(mapId) {
   // buildXLevel() is async — it awaits an assets/maps/<mapId>.json layout
   // fetch before baking the NavMesh, so this MUST be awaited too, or
   // callers could start spawning enemies against a stale/incomplete navmesh.
-  await mod[meta.buildFn]();
+  await mod[meta.buildFn](undefined,mapId);
   return {
     hazardZones:     mod.hazardZones     || [],
     movingPlatforms: mod.movingPlatforms || [],
