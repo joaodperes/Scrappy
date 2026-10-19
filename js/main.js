@@ -20,6 +20,7 @@ import { loadProfile, getLevelProgress, levelFromTotalXp } from './progression.j
 import { showLoadout } from './loadout.js';
 import { getCurrentMap, setCurrentMap, MAPS, getMapMeta, buildMap, isHardModeUnlocked, isMapUnlocked, registerCommunityMaps } from './mapManager.js';
 import { initRoomFlow, showPlayPage } from './roomFlow.js';
+import { setHardModeOpeningModifier } from './hardModeRules.js';
 import { showLeaderboardPage } from './leaderboardPage.js';
 
 let gameRunning = false;
@@ -93,7 +94,8 @@ function _hideAllScreens() {
 }
 
 // ── Solo PvE ───────────────────────────────────────────────────
-function startGame(startWave = 0) {
+function startGame(startWave = 0, hardModifier = 'auto') {
+  setHardModeOpeningModifier(hardModifier);
   if (isFfaActive()) stopFfa();
   // Capture Hard Mode state BEFORE resetting everything
   player.hardMode = document.getElementById('hardModeToggle')?.checked || false;
@@ -668,7 +670,7 @@ initRoomFlow({
     setCurrentMap(cfg.mapId);
     const hmToggle = document.getElementById('hardModeToggle');
     if (hmToggle) hmToggle.checked = !!cfg.hardMode;
-    startGame(0);
+    startGame(0,cfg.hardModifier||'auto');
   },
 });
 
