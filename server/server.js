@@ -8,6 +8,43 @@ const rooms = new Map();
 // rooms: Map<roomId, { players: Map<id, player>, config, started, hostId }>
 let _nextId = 1;
 const GUN_POOL=['SMG','SHOTGUN','CHAINGUN','DMR','COMET','RAILGUN','TESLA','CROSSBOW','ELECTRON','ION'];
+// Room directory configuration is validated server-side: clients may be
+// modified and their dropdown restrictions cannot be trusted. Historical
+// non-directory PvP connections retain their existing compatibility path.
+const VALID_MAPS=new Set(['scrapyard','jungle','city','terminal']);
+const VALID_MODES=new Set(['survival','ffa','tdm','gunGame']);
+function validateHostedRoomConfig(input){
+  if(!input||typeof input!=='object'||Array.isArray(input))
+    return {ok:false,error:'Missing room configuration'};
+  if(!VALID_MODES.has(input.mode))return {ok:false,error:'Unsupported game mode'};
+  if(!VALID_MAPS.has(input.mapId))return {ok:false,error:'Unsupported map'};
+  if(!Number.isInteger(input.maxPlayers)||input.maxPlayers<2||input.maxPlayers>14)
+    return {ok:false,error:'Invalid room capacity'};
+  if(input.mode==='survival'&&input.maxPlayers!==2)
+    return {ok:false,error:'Survival rooms require two slots'};
+  if(input.mode==='tdm'&&input.maxPlayers%2!==0)
+    return {ok:false,error:'TDM requires even room capacity'};
+  const duration=input.roundDuration===undefined?600:input.roundDuration;
+  const score=input.scoreLimit===undefined?30:input.scoreLimit;
+  if(!Number.isInteger(duration)||duration<0||duration>1800)
+    return {ok:false,error:'Invalid round duration'};
+  if(!Number.isInteger(score)||score<0||score>500)
+    return {ok:false,error:'Invalid score limit'};
+  if(input.mode!=='survival' && duration===0&&score===0)
+    return {ok:false,error:'Choose a time limit or a kill limit'};
+  if(input.name!==undefined&&typeof input.name!=='string')
+    return {ok:false,error:'Invalid room name'};
+  const name=(input.name||'Room').trim().slice(0,48)||'Room';
+  return {ok:true,config:{
+    directoryRoom:true,mode:input.mode,mapId:input.mapId,
+    maxPlayers:input.maxPlayers,roundDuration:duration,scoreLimit:score,
+    fillBots:input.mode!=='survival'&&input.fillBots===true,
+    name,difficulty:input.mode==='survival'&&['normal','hard','nightmare'].includes(input.difficulty)?input.difficulty:'normal',
+    hardMode:input.mode==='survival'&&input.hardMode===true,
+    respawnDelay:5,
+  }};
+}
+
 function randomizedGunOrder(){
   const others=GUN_POOL.slice();
   for(let i=others.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[others[i],others[j]]=[others[j],others[i]]}
@@ -58,8 +95,12 @@ wss.on('connection', ws => {
         ws.send(JSON.stringify({type:'roomError',message:'Already in a room'}));
         return;
       }
-      name = String(msg.name || 'ANON').slice(0,20);
-      const requestedId = String(msg.room || 'default').slice(0,20);
+      name = String(msg.name || 'ANON').trim().slice(0,20)||'ANON';
+      const requestedId = String(msg.room || 'default').trim().slice(0,20);
+      if(!/^[a-zA-Z0-9_-]{3,20}$/.test(requestedId)){
+        ws.send(JSON.stringify({type:'roomError',message:'Invalid room code'}));
+        return;
+      }
 
       if (!rooms.has(requestedId) && msg.requireExisting) {
         ws.send(JSON.stringify({type:'roomError',message:'Room no longer exists'}));
@@ -67,14 +108,18 @@ wss.on('connection', ws => {
       }
       if (!rooms.has(requestedId)) {
         const candidate=msg.config||{};
-        if(candidate.directoryRoom && ['tdm','ffa','gunGame'].includes(candidate.mode) &&
-            Number(candidate.roundDuration)===0 && Number(candidate.scoreLimit)===0){
-          ws.send(JSON.stringify({type:'roomError',message:'Choose a time limit or a kill limit'}));
-          return;
+        let safeConfig=msg.config??null;
+        if(candidate.directoryRoom){
+          const checked=validateHostedRoomConfig(candidate);
+          if(!checked.ok){
+            ws.send(JSON.stringify({type:'roomError',message:checked.error}));
+            return;
+          }
+          safeConfig=checked.config;
         }
         rooms.set(requestedId, {
           players: new Map(),
-          config:  msg.config ?? null,
+          config:  safeConfig,
           started: false,
           hostId:  null,
           password: typeof msg.password === 'string' ? msg.password.slice(0,100) : '',
@@ -85,7 +130,7 @@ wss.on('connection', ws => {
 
       // Never allow a new joiner to usurp an existing host.
       if (room.config?.directoryRoom) {
-        const capacity = Math.max(2, Math.min(24, Number(room.config.maxPlayers) || 2));
+        const capacity = room.config.maxPlayers;
         if (room.started || room.preparing || room.players.size >= capacity) {
           ws.send(JSON.stringify({type:'roomError',message:'Room is full or already started'}));
           return;
@@ -150,11 +195,19 @@ wss.on('connection', ws => {
         return;
       }
       room.preparing=true;
+      room.countdownVersion=(room.countdownVersion||0)+1;
+      const countdownVersion=room.countdownVersion;
       room.gunOrder=room.config?.mode==='gunGame'?randomizedGunOrder():null;
       _broadcastAll(room,{type:'roundCountdown',startsAt:Date.now()+5000,gunOrder:room.gunOrder});
       room.countdownTimer=setTimeout(()=>{
-        room.preparing=false;
-        if (room.config?.directoryRoom && room.players.size<2) return;
+        // A disconnected player might have canceled this countdown while
+        // the callback was already in the event queue.
+        if(!room.preparing||room.countdownVersion!==countdownVersion)return;
+        room.preparing=false;room.countdownTimer=null;
+        if (room.config?.directoryRoom && room.players.size<2){
+          _broadcastAll(room,{type:'roundCancelled',reason:'Not enough connected players'});
+          return;
+        }
         room.started=true;
         for(const p of room.players.values()){
           p.score=0;p.hp=100;p.deadUntil=0;p.lastHitAt=0;p.weaponIndex=0;
@@ -233,7 +286,7 @@ wss.on('connection', ws => {
     const room = rooms.get(roomId); if (!room) return;
     room.players.delete(id);
     _broadcast(room, id, { type: 'playerLeft', id });
-    _broadcastAll(room, {type:'roomUpdated',players:[...room.players.values()].map(p=>({id:p.id,name:p.name}))});
+    _broadcastAll(room, {type:'roomUpdated',players:[...room.players.values()].map(p=>({id:p.id,name:p.name,team:p.team}))});
 
     // If host left, reassign to first remaining player
     if (room.hostId === id && room.players.size > 0) {
@@ -245,7 +298,11 @@ wss.on('connection', ws => {
     }
 
     if(room.preparing && room.players.size<2){
-      clearTimeout(room.countdownTimer);room.preparing=false;
+      clearTimeout(room.countdownTimer);
+      room.countdownTimer=null;room.preparing=false;
+      room.countdownVersion=(room.countdownVersion||0)+1;
+      room.gunOrder=null;
+      _broadcastAll(room,{type:'roundCancelled',reason:'Not enough connected players'});
     }
     if (room.players.size === 0){
       clearTimeout(room.countdownTimer);
