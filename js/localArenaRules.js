@@ -46,6 +46,10 @@ export function localArenaTag(s){
  const n={...s,pendingTags:s.pendingTags-1,score:s.score+1};
  return n.score>=n.goal?finish(n,'goal'):n;
 }
+export function localArenaTagExpired(s){
+ if(s.complete||s.mode!=='killConfirmed'||s.pendingTags<=0)return s;
+ return {...s,pendingTags:s.pendingTags-1};
+}
 export function localArenaDeath(s){
  if(s.complete)return s;
  const n={...s,deaths:s.deaths+1,opposition:s.opposition+1};
