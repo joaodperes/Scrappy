@@ -41,6 +41,7 @@
         <button data-action="addGlass">+ Glass</button>
         <button data-action="addRamp">+ Ramp</button>
         <button data-action="addRampDirectional">+ Ramp (Rise)</button>
+        <button data-action="addStaircase">+ Staircase (composite)</button>
         <button data-action="addBarrel">+ Barrel</button>
         <button data-action="addCrate">+ Crate</button>
         <button data-action="addLava" class="warning">+ Lava</button>
@@ -136,7 +137,7 @@
             const NAVMESH_PARAMS = levelMod.NAVMESH_PARAMS;
             const {
                 createSlab, createWall, createPillar, createColumn, createGlass,
-                createRampBox, createRamp, createLava, createDestructibleWall, createSpikeTrap,
+                createRampBox, createRamp, createStaircase, createLava, createDestructibleWall, createSpikeTrap,
                 createBarrel, createCrate, createCeiling, createJumpPad, createMovingPlatform, createPowerSwitch,
                 applyEditableLayout, loadMapDocument,
             } = await import('/js/levelHelpers.js');
@@ -265,6 +266,7 @@
                             else if (action === 'addGlass') this.addObject('glass');
                             else if (action === 'addRamp') this.addObject('ramp');
                             else if (action === 'addRampDirectional') this.addObject('rampDirectional');
+                            else if (action === 'addStaircase') this.addObject('staircase');
                             else if (action === 'addBarrel') this.addObject('barrel');
                             else if (action === 'addCrate') this.addObject('crate');
                             else if (action === 'addLava') this.addObject('lava');
@@ -644,6 +646,7 @@
                         case 'glass':  mesh = createGlass(pos.x, y, pos.z, 3, 3, 0.2); break;
                         case 'ramp':   mesh = createRampBox(pos.x, y, pos.z, 4, 0.5, 6, 0.3, 0); break;
                         case 'rampDirectional': mesh = createRamp(pos.x, pos.z, 'N', 4, y, y - 2, 8); break;
+                        case 'staircase': mesh = createStaircase(pos.x, y, pos.z, 4, 8, 10, 0, 1, 0.5, false); break;
                         case 'barrel': mesh = createBarrel(pos.x, pos.z, 0); break;
                         case 'crate':  mesh = createCrate(pos.x, y+1, pos.z, 2, 2, 2); break;
                         case 'lava':   mesh = createLava(pos.x, pos.z, 6, 6, { hazardZones }); break;
@@ -671,8 +674,11 @@
                         m.dispose();this.selectedMesh=null;
                         this.gizmoManager.attachToMesh(null);this.showInspector();return;
                     }
-                    const idx = walkableMeshes.indexOf(m);
-                    if (idx !== -1) walkableMeshes.splice(idx, 1);
+                    const children = m.getChildMeshes(false);
+                    for (const item of [m,...children]) {
+                        const idx=walkableMeshes.indexOf(item);
+                        if(idx!==-1)walkableMeshes.splice(idx,1);
+                    }
 
                     // Barrels are multi-mesh (body + 2 hoop bands) — only the
                     // body is individually selectable, but deleting it should
