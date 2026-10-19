@@ -59,3 +59,12 @@ test('shared projectile loop uses segment sweep and first-wall occlusion',()=>{
   assert.match(game,/new BABYLON\.Ray\(from,direction,distance\),blocksBullet/);
   assert.match(game,/plasmaSniper \? 0\.28/);
 });
+
+test('the invisible collision controller at the camera cannot block shots',async()=>{
+  const {blocksBullet}=await import(uri);
+  const mesh={name:'_playerBody',checkCollisions:true,isPickable:false,isEnabled:()=>true};
+  assert.equal(blocksBullet(mesh),false);
+  assert.equal(blocksBullet({...mesh,name:'wep_RIFLE'}),false);
+  assert.equal(blocksBullet({...mesh,name:'wm_RIFLE'}),false);
+  assert.equal(blocksBullet({...mesh,name:'city_solid_wall'}),true);
+});
