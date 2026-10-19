@@ -4,6 +4,7 @@ import { player } from './gameState.js';
 import { getCurrentMap } from './mapManager.js';
 import { WDEFS } from './weapons.js';
 import { crossedMilestone, notificationKey, upgradeNotificationHistory } from './milestoneNotifications.js';
+import { questDefinitions, ensureQuestState, trackQuestEvent, questProgress, claimQuest } from './questRules.js';
 
 const XP_BASE = 200, XP_EXP = 1.4;
 export function xpForLevel(level) { return Math.floor(XP_BASE * Math.pow(level, XP_EXP)); }
@@ -625,6 +626,9 @@ export const WEAPON_SKINS = {
 
   // --- COLLECTOR SKINS ---
   aurora:     {id:'aurora',     category:'Collector',name:'Aurora',    desc:'Ethereal green pulse.',     body:[0.01,0.10,0.03], accent:[0.10,0.90,0.30], grip:[0.02,0.15,0.05], pulseMult: 1.5},
+  nebula:     {id:'nebula',     category:'Collector',name:'Nebula',    desc:'Violet lunar clouds.',     body:[0.08,0.03,0.19], accent:[0.66,0.29,1.0], grip:[0.10,0.06,0.24]},
+  cinder:     {id:'cinder',     category:'Collector',name:'Cinder',    desc:'Meteor ember finish.',    body:[0.17,0.04,0.02], accent:[1.0,0.35,0.06], grip:[0.21,0.08,0.04]},
+  tundra:     {id:'tundra',     category:'Collector',name:'Tundra',    desc:'Cryogenic ice-metal.',    body:[0.55,0.72,0.77], accent:[0.26,0.82,1.0], grip:[0.22,0.40,0.46]},
 };
 
 export const SKIN_DIFFICULTY_ORDER = [
@@ -2386,6 +2390,9 @@ const _defaultProfile = () => ({
   },
   playerSkin:'default',
   pvpLoadout:{primary:'SMG',secondary:'SHOTGUN'},
+  scraps:0,
+  questProgress:{},
+
   firebaseUid:null,
   stats:{totalKills:0,pvpKills:0,bossWaveClears:0,maxWave:0,killsOfType:{},killsWith:{},killsWhileJumping:{},killsWhileScoped:{},energyPickups:{},bossKillsWith:{}},
   maxWaveHard: 0,
@@ -2534,6 +2541,11 @@ function _sanitizeUnlocks() {
         profile.unlockedAttachments[wName] = profile.unlockedAttachments[wName].filter(id => allowedAtts.has(id));
         
         const allowedSkins = validSkins[wName] || new Set();
+        // Collector rewards are issued by the UTC quest claim ledger rather
+        // than UNLOCK_TABLE; preserve legitimate reward IDs after reloading.
+        for(const [id,def] of Object.entries(WEAPON_SKINS)){
+          if(def.category==='Collector')allowedSkins.add(id);
+        }
         if (profile.unlockedWeaponSkins[wName]) {
              profile.unlockedWeaponSkins[wName] = profile.unlockedWeaponSkins[wName].filter(id => allowedSkins.has(id));
         }
@@ -2608,6 +2620,17 @@ export function ensureDisplayName() {
 }
 
 let _cloudDirty = false;
+
+export function getQuestBoard(date=new Date()){
+  const state=ensureQuestState(profile,date);
+  return {scraps:profile.scraps||0,
+    quests:questDefinitions(date).map(def=>({...def,...questProgress(profile,def,date)}))};
+}
+export function claimProfileQuest(id,date=new Date()){
+  const result=claimQuest(profile,id,date);
+  if(result.ok)saveProfile();
+  return result;
+}
 
 export function saveProfile() {
   _saveToLocalStorage();
@@ -2831,6 +2854,9 @@ export function emitEvent(eventName, payload) {
       break;
   }
 
+  // Daily/weekly progression tracks completed gameplay events. Currency
+  // is only issued by a deliberate, idempotent claim, never per event.
+  trackQuestEvent(profile,eventName,payload);
   // Evaluate challenges immediately (except damage, which is debounced above)
   if (eventName !== 'DAMAGE_DEALT') {
     const n = _checkChallenges(); if (n.length) _showUnlockToasts(n);
