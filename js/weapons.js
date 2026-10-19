@@ -2,7 +2,7 @@
 const BABYLON = window.BABYLON;
 import { scene, camera } from './scene.js';
 import { M } from './textures.js';
-import { player } from './gameState.js';
+import { player, cb } from './gameState.js';
 import { hasLaserDot, isAkimbo, hasEnergyConverter, getEffectiveStats, getLoadout, getAdsLerpSpeed  } from './progression.js';
 import { isScoped } from './player.js'
 
@@ -1002,6 +1002,7 @@ export function setWeapon(name) {
   }
   
   if (!WDEFS[name]) return;
+  if(curWep!==name)cb.clearAegisLocks?.();
   curWep = name;
   player.wepHeat = 0; player.overheated = false; 
   
