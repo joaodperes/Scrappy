@@ -84,7 +84,7 @@ test('Survival and PvP Jungle spawns stand on supported strata, never shaft hole
     assert.ok(result,key+' missing');
     return new Function('return ['+result[1]+'];')();
   }
-  const floorForSpawn=y=>y>=4?4.5:y>=0?0:y>-10?-7.5:y>-20?-15:y>-35?-30:-45;
+  const floorForSpawn=y=>y>=2?4.5:y>=0?0:y>-10?-7.5:y>-20?-15:y>-35?-30:-45;
   for(const kind of ['spawns','walkableSpawns']){
     for(const [index,[x,y,z]] of spawns(kind).entries()){
       assert.equal(floorAt(x,z,floorForSpawn(y)),true,
