@@ -578,6 +578,67 @@ export function createRooftopLift(cx, cz, topSurfY, face, faceOffset=0, opts={})
   return car;
 }
 
+// Preserve City's original bridge orientation: width stays horizontal even
+// when the deck rises between two different roof heights.
+function _bridgeOrientation(direction) {
+  const forward=direction.normalize();
+  let right=BABYLON.Vector3.Cross(BABYLON.Axis.Y,forward);
+  if(right.lengthSquared()<1e-6)right=BABYLON.Vector3.Cross(BABYLON.Axis.Z,forward);
+  right.normalize();
+  const up=BABYLON.Vector3.Cross(forward,right).normalize();
+  const trace=right.x+up.y+forward.z;
+  let qx,qy,qz,qw;
+  if(trace>0){
+    const t=Math.sqrt(trace+1)*2;
+    qw=.25*t;qx=(up.z-forward.y)/t;qy=(forward.x-right.z)/t;qz=(right.y-up.x)/t;
+  }else if(right.x>up.y&&right.x>forward.z){
+    const t=Math.sqrt(1+right.x-up.y-forward.z)*2;
+    qw=(up.z-forward.y)/t;qx=.25*t;qy=(up.x+right.y)/t;qz=(forward.x+right.z)/t;
+  }else if(up.y>forward.z){
+    const t=Math.sqrt(1+up.y-right.x-forward.z)*2;
+    qw=(forward.x-right.z)/t;qx=(up.x+right.y)/t;qy=.25*t;qz=(forward.y+up.z)/t;
+  }else{
+    const t=Math.sqrt(1+forward.z-right.x-up.y)*2;
+    qw=(right.y-up.x)/t;qx=(forward.x+right.z)/t;qy=(forward.y+up.z)/t;qz=.25*t;
+  }
+  return new BABYLON.Quaternion(qx,qy,qz,qw);
+}
+
+// One selectable deck and two attached railings; the entire sloped bridge
+// rotates/moves as one physical and serializable composite.
+export function createSkybridge(cx,cz,spanAxis,spanLen,bridgeW,y1,y2) {
+  const scene=getScene(),half=spanLen/2,H=.35;
+  const p1=spanAxis==='X'
+    ?new BABYLON.Vector3(cx-half,y1,cz)
+    :new BABYLON.Vector3(cx,y1,cz-half);
+  const p2=spanAxis==='X'
+    ?new BABYLON.Vector3(cx+half,y2,cz)
+    :new BABYLON.Vector3(cx,y2,cz+half);
+  const distance=BABYLON.Vector3.Distance(p1,p2);
+  const mid=BABYLON.Vector3.Lerp(p1,p2,.5);
+  const deck=BABYLON.MeshBuilder.CreateBox('bridgeDeck',
+    {width:bridgeW,height:H,depth:distance},scene);
+  deck.position.set(mid.x,mid.y-H/2,mid.z);
+  deck.rotationQuaternion=_bridgeOrientation(p2.subtract(p1));
+  deck.material=matConcrete;
+  deck.checkCollisions=true;
+  _tagMeta(deck,'skybridge','createSkybridge',
+    {cx,cz,spanAxis,spanLen,bridgeW,y1,y2},true,null);
+  walkableMeshes.push(deck);
+  for(const side of [-1,1]){
+    const rail=BABYLON.MeshBuilder.CreateBox('bridgeRail',
+      {width:.25,height:1.4,depth:distance},scene);
+    rail.parent=deck;
+    rail.position.set(side*bridgeW/2,.7,0);
+    rail.material=matConcrete;
+    rail.checkCollisions=true;
+    rail.isPickable=false;
+    rail.metadata={editable:false,type:'bridge_rail'};
+    walkableMeshes.push(rail);
+  }
+  return deck;
+}
+
 // ── JSON layout pipeline ─────────────────────────────────────────
 // This is the single source of truth for turning a JSON "objects" array
 // (the exact shape editor.html's "Export JSON" produces) back into real
@@ -627,6 +688,8 @@ const _generators = {
                               {movingPlatforms:t?.movingPlatforms}),
   createRooftopLift:      (p,t) => createRooftopLift(p.cx,p.cz,p.topSurfY,p.face,
                               p.faceOffset||0,{movingPlatforms:t?.movingPlatforms}),
+  createSkybridge:        p => createSkybridge(p.cx,p.cz,p.spanAxis,p.spanLen,
+                              p.bridgeW,p.y1,p.y2),
 };
 
 /** Re-creates one editable prop from its generator name + params. `targets`
@@ -728,7 +791,12 @@ export function applyEditableLayout(objects, targets = null) {
     const mesh = instantiateFromParams(obj.generator, obj.params || {}, targets);
     if (!mesh) continue;
     if (obj.position) mesh.position.set(obj.position.x, obj.position.y, obj.position.z);
-    if (obj.rotation) mesh.rotation.set(obj.rotation.x, obj.rotation.y, obj.rotation.z);
+    if (obj.rotation) {
+      // Composite bridges initialize with a quaternion; replace it when
+      // importing explicit Euler angles from a saved editor transform.
+      mesh.rotationQuaternion=null;
+      mesh.rotation.set(obj.rotation.x,obj.rotation.y,obj.rotation.z);
+    }
     if (obj.scaling)  mesh.scaling.set(obj.scaling.x, obj.scaling.y, obj.scaling.z);
     mesh.computeWorldMatrix(true);
     if (mesh.metadata?.editable) {
