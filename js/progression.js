@@ -2630,7 +2630,12 @@ export function getQuestBoard(date=new Date()){
 }
 export function claimProfileQuest(id,date=new Date()){
   const result=claimQuest(profile,id,date);
-  if(result.ok)saveProfile();
+  if(result.ok){
+    saveProfile();
+    const reward=result.skin?result.skin.id.toUpperCase()+' · '+result.skin.weapon:
+      result.scraps+' Scraps';
+    _showQuestToast('REWARD CLAIMED',reward);
+  }
   return result;
 }
 
@@ -2864,7 +2869,18 @@ export function emitEvent(eventName, payload) {
 
   // Daily/weekly progression tracks completed gameplay events. Currency
   // is only issued by a deliberate, idempotent claim, never per event.
-  trackQuestEvent(profile,eventName,payload);
+  if(['KILL','DAMAGE_DEALT','WAVE_COMPLETE'].includes(eventName)){
+    const when=new Date();
+    const definitions=questDefinitions(when);
+    const incomplete=definitions.filter(q=>!questProgress(profile,q,when).complete);
+    trackQuestEvent(profile,eventName,payload,when);
+    for(const q of incomplete){
+      const current=questProgress(profile,q,when);
+      if(current.complete && !current.claimed){
+        _showQuestToast('QUEST COMPLETE',q.label+' — claim on the main menu');
+      }
+    }
+  }
   // Evaluate challenges immediately (except damage, which is debounced above)
   if (eventName !== 'DAMAGE_DEALT') {
     const n = _checkChallenges(); if (n.length) _showUnlockToasts(n);
@@ -3411,6 +3427,22 @@ function _showUnlockToasts(unlocks){
     const css = 'position:fixed;bottom:90px;right:20px;background:rgba(0,0,0,.85);border:1px solid rgba(216,240,48,.4);padding:10px 18px;z-index:1100;font-family:"Courier New",monospace;font-size:15px;color:#d8f030;animation:_fadeToast 2.0s forwards';
     _enqueueToast(html, 2100, css);
   });
+}
+
+function _showQuestToast(title,desc){
+  // Uses the same sequential queue as unlock/challenge toasts, avoiding
+  // overlapping notifications when multiple quests finish in one wave.
+  const safe=value=>String(value).replace(/[&<>"']/g,c=>({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;',
+  })[c]);
+  const html='<div style="color:#b9ed83;font-size:11px;letter-spacing:2px">'+
+    safe(title)+'</div><div style="color:#d8f030;font-size:15px;font-weight:bold;margin-top:4px">'+
+    safe(desc)+'</div>';
+  const css='position:fixed;bottom:115px;right:20px;max-width:340px;'+
+    'background:rgba(4,16,4,.94);color:#d8f030;border:1px solid #7a9940;'+
+    'padding:12px 18px;z-index:1200;font-family:"Courier New",monospace;'+
+    'pointer-events:none;animation:_fadeToast 3.8s forwards';
+  _enqueueToast(html,3800,css);
 }
 
 function _showWeaponLevelUpToast(wName, newLv) {
