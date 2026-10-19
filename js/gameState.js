@@ -42,6 +42,8 @@ export const cb = {
   showHitMarker: null,
   /** @type {((wName: string) => void)|null} */
   resetWeaponHeat: null,
+  /** @type {(() => void)|null} Clears scoped smart-pistol locks before swapping. */
+  clearAegisLocks: null,
 };
 
 // PvP remote player map: socketId → { group, hp, team, name }
