@@ -105,9 +105,15 @@ Moon Base is a distinct low-gravity/jetpack game experience.
 ### Priority 5: Jungle dungeon repair — next active development
 
 - Preserve the good surface arena and shared v2 JSON/editor system.
+- **Source audit:** `assets/maps/jungle.json` currently has 112 entities,
+  including only a single discontinuous underground slab layer at `surfY:-7.5`
+  (and no `createCeiling` entities); the central surface is a few isolated
+  pads between the perimeter slabs. `mapManager.js` defines Jungle weapons at
+  y=-15/-30/-45 despite the missing corresponding mine levels. Treat these
+  as geometry/layout inconsistencies, not isolated texture defects.
 - Rebuild underground geometry with solid surface/ceilings and clear
   excavated entrances rather than broad holes, plus correctly connected
-  ramps from surface through each mine depth and collidable lava/spikes.
+  ramps from surface through all intended mine depths and collidable lava/spikes.
 - Validate bot Recast routes, mine lighting and Lantern/NVG, destructible
   placement and border barriers before marking complete.
 - Test the map in Chromium/Firefox; do not infer reachability from the JSON
@@ -123,7 +129,10 @@ Moon Base is a distinct low-gravity/jetpack game experience.
   `scripts/`; keep browser ES modules under `js/` even if they implement
   scripting logic. Update all path references atomically and test each batch.
 - Modernize demonstrably stale documentation and file layout only after
-  behavior-preserving automated and in-browser smoke checks.
+  behavior-preserving automated and in-browser smoke checks. In particular,
+  `README.md` still describes a Three.js renderer while the runtime uses
+  Babylon.js; do not delete `js/babylon.max.js` without resolving all its
+  HTML/editor usage and vendoring/license constraints.
 
 ## Play-menu and Aegis regression checkpoint — 19 October 2026
 
