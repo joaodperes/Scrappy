@@ -54,6 +54,9 @@
 - [ ] **[9] Password and membership** — wrong password rejected; correct retry succeeds. A late guest cannot take host controls. On host leave, a remaining connected human gets host role and can start later.
 - [ ] **[9] Capacity/constraints** — 6/10/14 selections, balanced RED/BLUE TDM assignment, invalid combinations rejected; both No Limit options cannot be selected at once.
 - [ ] **[9] Countdown** — host starts synchronized five-second countdown. If a guest closes their browser before it ends, the server announces cancellation and a remaining host can start anew after a new guest joins.
+- [ ] **[11] Damage synchronization** — compare shooter-reported confirmed damage against victim HP after one hit. A custom damage multiplier must be applied **once**, not twice; both clients should converge on the same remaining HP.
+- [ ] **[11] Server-owned results** — a kill near score limit must not display two result screens or award a premature winner; only the server `roundEnd` packet concludes FFA/TDM/Gun Game.
+- [ ] **[11] Live opponent disconnect** — once a two-human match has started, close the guest browser; the remaining client should see **MATCH CANCELLED** and return cleanly, not wait out a 5/10-minute timer.
 - [ ] **[11] FFA** — two real clients see replicated player positions, hits, deaths, scores, leaderboard and 5-second respawn; matches finish on configured time or kill limit; test map transitions.
 - [ ] **[11] TDM** — shared team score and teammate friendly fire prevention. Three or more players distribute across teams without losing join/leave roster information.
 - [ ] **[12] Gun Game** — every human gets the **same randomized order**, beginning Pistol and ending Knife; a legal kill advances one weapon; final **human Knife hit** finishes match. Verify score/time display and respawn.
