@@ -129,7 +129,7 @@ export function respawnArenaActor(actor,spawn){
 export function destroyArenaActors(actors){
  for(const actor of actors){
   unregisterArenaTarget(actor);
-  actor.gunModel?.dispose(false,true);
+  actor.gunModel?.dispose(false,false);
   actor.group.getChildMeshes().forEach(m=>m.dispose());
   actor.group.dispose();
   actor.label?.dispose();
