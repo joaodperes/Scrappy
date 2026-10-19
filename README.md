@@ -24,7 +24,7 @@ Select **PLAY → LOCAL MODES**, choose a map and:
 - **Kill Confirmed (vs robots):** eliminate robots, then physically collect the glowing dog tag; a frag alone does not award a point.
 - **Free-for-all / Team Deathmatch:** local player-shaped bot opponents use their own weapon loadouts, spawn/respawn, acquire each other as targets and score independent frags (FFA) or RED/BLUE team frags (TDM). TDM includes two allied bots on RED alongside the human against three BLUE bots.
 
-Offline arena modes support configurable match time and point targets, local opponent replenishment and respawn after death. They reuse the existing PvE enemy models and physics. These new modes still require owner gameplay QA and are not yet considered accepted.
+Offline arena modes support configurable match time and point targets and five computer-controlled contestants. Their player-shaped meshes and firearm rules are separate from Survival robots. Shots use the real weapon definitions for range, damage and cooldown with simplified bot hit resolution (special projectile/attachment effects are not yet one-to-one identical to the human versions). These new modes still require owner gameplay QA and are not yet considered accepted.
 
 ### Experimental network rooms (not required for local modes)
 
