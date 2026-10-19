@@ -31,7 +31,10 @@ function harness(){
    console,
  };
  vm.createContext(context);
- vm.runInContext(rulesSource+'\n'+runtimeSource+'\nthis.api={startLocalArena,stopLocalArena,updateLocalArena,localArenaRobotKilled,localArenaPlayerDead,isLocalArenaActive}',context);
+ const rules=vm.runInContext('(function(){'+rulesSource+
+   '\\nreturn {createLocalArena,localArenaKill,localArenaTag,localArenaTagExpired,localArenaDeath,tickLocalArena};})()',context);
+ Object.assign(context,rules);
+ vm.runInContext(runtimeSource+'\\nthis.api={startLocalArena,stopLocalArena,updateLocalArena,localArenaRobotKilled,localArenaPlayerDead,isLocalArenaActive}',context);
  return {context,api:context.api,enemies,equipped,tags,elements,camera};
 }
 test('offline runtime starts a timed arena, replenishes robots and prunes dead entries',()=>{
