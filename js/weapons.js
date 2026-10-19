@@ -152,23 +152,47 @@ function _ensureDarkMatterAnimation() {
   })
 }
 
-let _auroraObserver = null;
-function _ensureAuroraAnimation(scene) {
-  // Only bind one global observer for the scene loop
-  if (_auroraObserver) return;
-
-  _auroraObserver = scene.onBeforeRenderObservable.add(() => {
-    // High frequency frequency multiplier (0.0055 vs dark matter's standard slower rate)
-    const t = Date.now() * 0.0055;
-    scene.materials.forEach(mat => {
-      if (mat && mat.metadata && mat.metadata.isAurora && mat.emissiveColor) {
-          // Pin colors strictly to a dark green/emerald spectrum with a slight teal shift
-          mat.emissiveColor.r = 0.0;
-          mat.emissiveColor.g = 0.22 + (Math.sin(t) * 0.18);       // Ranges from 0.04 to 0.40
-          mat.emissiveColor.b = 0.06 + (Math.cos(t * 0.8) * 0.05); // Asynchronous subtle cyan/emerald bleed
+// All Collector finishes animate independently of standard camouflage.
+// Register only materials actively assigned to a weapon mesh; no scanning
+// every scene material per frame or using undefined `parentMesh` variables.
+const _collectorMats=new Set();
+let _collectorObserver=null;
+function _ensureCollectorAnimation(){
+  if(_collectorObserver)return;
+  _collectorObserver=scene.onBeforeRenderObservable.add(()=>{
+    const t=Date.now()/1000;
+    for(const item of _collectorMats){
+      const {mat,skinId,phase}=item;
+      if(!mat || (typeof mat.isDisposed==='function'&&mat.isDisposed()))continue;
+      const wave=Math.sin(t*1.65+phase)*.5+.5;
+      const shimmer=Math.sin(t*4.3+phase*2)*.5+.5;
+      const e=mat.emissiveColor, d=mat.diffuseColor;
+      if(!e||!d)continue;
+      if(skinId==='aurora'){
+        // Shifting aurora: green/teal light flowing across a dark body.
+        e.r=.015;e.g=.12+.53*wave;e.b=.04+.36*(1-wave);
+        d.r=.025;d.g=.055+.08*wave;d.b=.035+.065*(1-wave);
+      }else if(skinId==='nebula'){
+        // Iridescent galactic violet, blue and magenta.
+        e.r=.17+.42*wave;e.g=.025+.12*shimmer;e.b=.3+.48*(1-wave);
+        d.r=.08+.11*wave;d.g=.025;d.b=.17+.08*(1-wave);
+      }else if(skinId==='cinder'){
+        // Unsteady orange/red volcanic embers, without strobe flashes.
+        e.r=.27+.58*shimmer;e.g=.035+.25*shimmer;e.b=.003;
+        d.r=.11+.09*wave;d.g=.025+.02*wave;d.b=.012;
+      }else if(skinId==='tundra'){
+        // Slow cool/white cryo sheen with a drifting cyan highlight.
+        e.r=.025+.13*(1-wave);e.g=.17+.43*wave;e.b=.32+.48*wave;
+        d.r=.13+.07*(1-wave);d.g=.20+.08*wave;d.b=.23+.08*wave;
       }
-    });
+    }
   });
+}
+function _registerCollectorMaterial(mat,skinId,offset=0){
+  const item={mat,skinId,phase:offset*4.0};
+  _collectorMats.add(item);
+  mat.onDisposeObservable.add(()=>_collectorMats.delete(item));
+  _ensureCollectorAnimation();
 }
 
 // ── Weapon models ─────────────────────────────────────────────
@@ -1125,21 +1149,18 @@ export function applyLoadoutToScene(wName) {
             m.material = mat;
         }
         return;
-      } else if (skin.id === 'aurora') {
-        // Target any child mesh materials on the weapon model
-        parentMesh.getChildMeshes().forEach(mesh => {
-          if (mesh.material) {
-            // Re-use standard material or your specific base material setup
-            const mat = mesh.material;
-            mat.diffuseColor = new BABYLON.Color3(0.01, 0.04, 0.01); // Deep obsidian green base
-            mat.emissiveColor = new BABYLON.Color3(0.0, 0.15, 0.02); // Initial green glow
-            
-            // Mark it with metadata so the render loop identifier catches it
-            mat.metadata = mat.metadata || {};
-            mat.metadata.isAurora = true;
-          }
-        });
-        _ensureAuroraAnimation(scene);
+      }
+
+      // Collector skins deliberately use animated diffuse/emissive palettes.
+      // This is a separate FX class, not an ordinary static gameplay camo.
+      if(skin.category==='Collector'){
+        mat.diffuseColor=new BABYLON.Color3(br,bg,bb);
+        mat.emissiveColor=new BABYLON.Color3(ar*.28,ag*.28,ab*.28);
+        mat.specularColor=new BABYLON.Color3(.65,.75,.8);
+        mat.specularPower=92;
+        _registerCollectorMaterial(mat,skin.id,meshIdx+(.3*m.position.z));
+        m.material=mat;
+        return;
       }
 
       // ── Bengal — Procedural Canvas Stripes ──────────────────────
