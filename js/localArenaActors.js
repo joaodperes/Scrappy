@@ -138,7 +138,7 @@ export function destroyArenaActors(actors){
 }
 export function arenaTeamEnemy(a,b,mode){
  if(!a||!b||a.id===b.id||b.alive===false)return false;
- return mode!=='tdm'||a.team!==b.team;
+ return !['tdm','killConfirmed'].includes(mode)||a.team!==b.team;
 }
 function unobstructed(a,b){
  const delta=b.subtract(a),len=delta.length();
