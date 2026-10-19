@@ -146,9 +146,12 @@ export function localArenaPlayerDead(onRespawn){
  const pos=camera.position.clone();pos.y-=1.6;
  const killer=active.lastAttacker;
  if(active.state.mode==='killConfirmed')createTag(pos,'RED','human');
- applyResult(localArenaDeath(active.state,{
+ const next=localArenaDeath(active.state,{
    killerId:killer?.id||null,weapon:killer?.weapon||null,killerTeam:killer?.team||'BLUE',
- }));
+ });
+ if(killer&&active.state.mode==='gunGame'&&!next.complete)
+   setArenaActorWeapon(killer,next.gunOrder[next.botGuns[killer.id]||0]);
+ applyResult(next);
  if(!isActive())return true;
  showHud('RESPAWNING IN 5s');
  const token=generation;
