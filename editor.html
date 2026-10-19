@@ -520,6 +520,7 @@
                     if(!host)return;
                     host.replaceChildren();
                     const mesh=this.selectedMesh;
+                    this.transformInputs=null;
                     if(!mesh?.metadata?.editable)return;
                     if(!mesh.metadata.editorId)mesh.metadata.editorId='e_'+crypto.randomUUID();
                     const isMarker=!!mesh.metadata.isMarker;
@@ -563,6 +564,71 @@
                         }catch(e){this.status(e.message,true)}
                     };
                     host.appendChild(save);
+
+                    // Exact per-axis transforms are distinct from generator
+                    // dimensions. Reset scale never changes the base params.
+                    const heading=document.createElement('p');
+                    heading.className='editorTransformHeading';
+                    heading.textContent='EXACT TRANSFORM';
+                    host.appendChild(heading);
+                    this.transformInputs={};
+                    for(const [group,label,unit,step] of [
+                        ['position','Position','world units','0.25'],
+                        ['rotation','Rotation','degrees','5'],
+                        ['scaling','Scale','multiplier','0.1'],
+                    ]){
+                        const fieldset=document.createElement('fieldset');
+                        fieldset.className='transformFieldset';
+                        const legend=document.createElement('legend');
+                        legend.textContent=label+' ('+unit+')';
+                        fieldset.appendChild(legend);
+                        const row=document.createElement('div');
+                        row.className='transformAxes';
+                        const axes={};
+                        for(const axis of ['x','y','z']){
+                            const labelEl=document.createElement('label');
+                            labelEl.textContent=axis.toUpperCase();
+                            const input=document.createElement('input');
+                            input.type='number';
+                            input.step=step;
+                            input.setAttribute('aria-label',label+' '+axis.toUpperCase());
+                            input.dataset.transformGroup=group;
+                            input.dataset.axis=axis;
+                            input.addEventListener('keydown',e=>{
+                                if(e.key==='Enter'){
+                                    e.preventDefault();
+                                    this.applyExactTransform();
+                                    input.blur();
+                                }
+                            });
+                            labelEl.appendChild(input);
+                            row.appendChild(labelEl);
+                            axes[axis]=input;
+                        }
+                        this.transformInputs[group]=axes;
+                        fieldset.appendChild(row);
+                        host.appendChild(fieldset);
+                    }
+                    const controls=document.createElement('div');
+                    controls.className='transformButtons';
+                    const apply=document.createElement('button');
+                    apply.type='button';
+                    apply.textContent='Apply exact transform';
+                    apply.onclick=()=>this.applyExactTransform();
+                    controls.appendChild(apply);
+                    const resetScale=document.createElement('button');
+                    resetScale.type='button';
+                    resetScale.textContent='Reset scale (1, 1, 1)';
+                    resetScale.title='Restore the original generator size multiplier without modifying its dimensions';
+                    resetScale.onclick=()=>{
+                        if(!this.selectedMesh)return;
+                        this.selectedMesh.scaling.set(1,1,1);
+                        this.finishTransform();
+                        this.status('Scale reset to 1 on all axes; base geometry dimensions unchanged');
+                    };
+                    controls.appendChild(resetScale);
+                    host.appendChild(controls);
+                    this.refreshTransformFields();
                 }
 
                 addObject(type) {
@@ -692,6 +758,7 @@
                     if(!checked.valid)throw Error(checked.errors.slice(0,15).join(' | '));
                     this.gizmoManager.attachToMesh(null);
                     this.selectedMesh=null;
+                    this.transformInputs=null;
                     applyEditableLayout(checked.document.objects,
                         {hazardZones,destructibleWalls,movingPlatforms,powerSwitches});
                     this.baseDocument=checked.document;
