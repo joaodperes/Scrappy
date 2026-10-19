@@ -50,6 +50,11 @@ multiplayer server is unauthenticated, not production-deployed, and the
 browser/physics tests are pending. The following components were added
 without prematurely activating insecure gameplay systems:
 
+- **Priority 11 / damage and results:** `js/pvp.js` now consumes the
+  server-applied damage amount without multiplying the damage setting twice;
+  client-side `killed` no longer declares a winner based on the last kill.
+  `scripts/pvp-sync-regressions.test.cjs` covers these ownership rules.
+- **Priority 9 / match lifecycle:** live human matches now broadcast a clean
 - **Priority 9 / match lifecycle:** live human matches now broadcast a clean
   canceled round result when their last opponent disconnects; the remaining
   player returns to a match-ended state rather than waiting alone for the
