@@ -390,6 +390,14 @@ function _wireEvents(onRoundEnd, onGameStart) {
     roundActive=false;
     _gunOrder=msg.gunOrder||null;
   });
+  // Disconnect while the host's 5s countdown is running: do not leave
+  // remaining clients stranded behind the pre-match overlay.
+  on('roundCancelled', msg=>{
+    roundActive=false;
+    _gunOrder=null;
+    if(_inPreLobby)_hidePreLobbyOverlay();
+    onRoundEnd?.('CANCELLED',[]);
+  });
   on('roundEnd',    msg => _handleRoundEnd(msg, onRoundEnd));
   on('disconnected', ()  => stopFfa());
 }
@@ -496,7 +504,7 @@ export function stopFfa() {
   _clearRemotePlayers();
   _hidePreLobbyOverlay();
   ['welcome','playerJoined','playerLeft','state','hit','killed','damageConfirmed',
-   'respawn','weaponProgress','roundCountdown','roundStart','roundEnd','disconnected'].forEach(t => off(t));
+   'respawn','weaponProgress','roundCountdown','roundCancelled','roundStart','roundEnd','disconnected'].forEach(t => off(t));
   for (const e of enemies) {
     if (!e.alive) continue;
     e.group.getChildMeshes().forEach(m => m.dispose());
