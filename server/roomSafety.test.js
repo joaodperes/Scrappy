@@ -144,3 +144,20 @@ test('password protected rooms still prevent join and do not disclose password',
   guest.emit({type:'join',room:'PRIVATE1',requireExisting:true,password:'secret123'});
   assert.equal(guest.latest('welcome').isHost,false);
 });
+
+test('losing the last opponent during a live PvP round ends the match for the remaining player',()=>{
+ const {connect,advance}=boot(),host=connect(),guest=connect();
+ join(host,'ACTIVE2',cfg({mode:'ffa',roundDuration:600,scoreLimit:0}));
+ guest.emit({type:'join',room:'ACTIVE2',name:'Guest',requireExisting:true});
+ host.emit({type:'hostStartGame'});
+ assert.equal(advance(5000),1);
+ assert.equal(host.latest('roundStart').type,'roundStart');
+ guest.close();
+ assert.equal(host.latest('roundEnd').winner,'CANCELLED');
+ assert.equal(host.latest('roundEnd').reason,'insufficientPlayers');
+ assert.equal(host.latest('roomUpdated').players.length,1);
+ // Stale timeout must not award a win after cancellation.
+ assert.equal(advance(600000),0);
+ const browser=connect();browser.emit({type:'listRooms'});
+ assert.equal(browser.latest('roomList').rooms.some(r=>r.id==='ACTIVE2'),true);
+});
