@@ -39,7 +39,7 @@
       "preferredRange": 7,
       "loadout": {
         "primary": "SHOTGUN",
-        "secondary": "AEGIS"
+        "secondary": "PISTOL"
       },
       "skin": "oni"
     },
@@ -81,7 +81,7 @@
       "preferredRange": 19,
       "loadout": {
         "primary": "ELECTRON",
-        "secondary": "AEGIS"
+        "secondary": "PISTOL"
       },
       "skin": "default"
     }
