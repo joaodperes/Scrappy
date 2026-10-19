@@ -119,7 +119,7 @@ Moon Base is a distinct low-gravity/jetpack game experience.
   consists largely of browser/extension service messages rather than a
   game-page stack trace.
 
-### Priority 5: Jungle dungeon repair (source reconstruction; gameplay QA pending)
+### Priority 5: Jungle dungeon repair (owner confirms improved layout; textured source update awaiting QA)
 
 - Previously the map had 112 editable entities with perforated central ground
   and only a single underground level at −7.5. Deep pickups at −15/−30/−45
@@ -143,6 +143,14 @@ Moon Base is a distinct low-gravity/jetpack game experience.
   upper/lower landing, deep weapon floor support, layer walls/ceilings,
   bot/PvP spawn support and navigable planar room routes. Full instructions
   and exact route coordinates: `docs/JUNGLE_DUNGEON.md`.
+- **Owner feedback 19 Oct 2026:** Jungle now plays better, but was still
+  visibly unfinished without textures. Added `js/jungleMaterials.js` with ten
+  tiled local image-based materials for soil, moss, ruins, each mine rock
+  stratum, ceilings, ramps and rails. Assigned 121 textured entities in
+  `assets/maps/jungle.json`; all 161 entities retain the same geometry,
+  hazards and serialized IDs. Legacy material aliases remain supported.
+  `scripts/jungle-textures.test.cjs` checks recipe assets and stratification.
+  **Browser visual approval of the textures is still pending.**
 - **Open gate:** Chromium/Firefox collision and in-game Recast bot route
   validation, lower-level pickup access, lava/damage tests, Lantern/NVG,
   weapon spawn visibility, performance and editor round-trip. Code-level
