@@ -5,6 +5,7 @@ import {
   UNLOCK_TABLE, getLevelProgress, getChallengeProgress, getEffectiveStats,
   isAttachmentUnlocked, isWeaponSkinUnlocked, isSkinUnlocked, isPrereqUnlocked,
   getUnlockHint, getChallengeDescription, SKIN_DIFFICULTY_ORDER, getWeaponLevelProgress, saveProfile,
+  getQuestBoard, claimProfileQuest,
 } from './progression.js';
 import { WDEFS, applyLoadoutToScene } from './weapons.js';
 import { MAPS } from './mapManager.js';
@@ -249,6 +250,7 @@ topBar.appendChild(deployBtn);
     {id:'player',       label:'PLAYER SKIN'  },
     { id:'progress',    label:'PROGRESS'     },
     { id:'pvp',         label:'PVP LOADOUT'  },
+    { id:'quests',      label:'QUESTS & SCRAPS' },
   ];
   const tabBar = _el('div',
     `display:flex;background:${C.bgMid};border-bottom:1.5px solid ${C.border};padding:0 28px;flex-shrink:0`
@@ -502,7 +504,7 @@ function _renderContent() {
     b.style.cssText = _tabStyle(b.dataset.tabId === _activeTab);
   });
   const sidebar  = document.getElementById('loadoutSidebar');
-  const noSidebar = _activeTab === 'player' || _activeTab === 'progress' || _activeTab === 'pvp';
+  const noSidebar = ['player','progress','pvp','quests'].includes(_activeTab);
   if (sidebar) sidebar.style.display = noSidebar ? 'none' : 'block';
   sidebar?.querySelectorAll('[data-w-name]').forEach(c => {
     c.style.cssText = _wcardStyle(c.dataset.wName === _activeWeapon);
@@ -514,6 +516,7 @@ function _renderContent() {
   else if (_activeTab === 'player')      _renderPlayerSkins(main);
   else if (_activeTab === 'progress')    _renderProgress(main);
   else if (_activeTab === 'pvp')         _renderPvpSetup(main);
+  else if (_activeTab === 'quests')      _renderQuests(main);
 }
 
 // ── Weapon level banner ───────────────────────────────────────
@@ -854,6 +857,46 @@ function _renderPlayerSkins(main) {
   container.appendChild(grid);
   container.appendChild(viewer);
   main.appendChild(container);
+}
+
+// ── UTC Daily/Weekly Quests: explicit claim, no passive currency mint ──
+function _renderQuests(main){
+  const board=getQuestBoard();
+  main.appendChild(_el('h2','color:'+C.accent+';margin:0 0 8px','QUESTS & SCRAPS'));
+  main.appendChild(_el('p','color:'+C.warn+';font-size:17px;font-weight:bold;margin:4px 0 12px',
+    'SCRAPS BALANCE: '+_fmt(board.scraps)));
+  main.appendChild(_el('p','color:'+C.dim+';font-size:12px;margin:0 0 16px;line-height:1.5',
+    'Daily quests reset at 00:00 UTC; weekly quests reset each Monday 00:00 UTC. Rewards are claimed once per period. Multiplayer-earned currency requires future server validation.'));
+  for(const cadence of ['daily','weekly']){
+    const group=board.quests.filter(q=>q.cadence===cadence);
+    main.appendChild(_el('h3','margin:14px 0 8px;color:'+C.accentHi, cadence==='daily'?'DAILY':'WEEKLY COLLECTOR'));
+    for(const quest of group){
+      const item=_el('div','background:'+C.bgCard+';border:1px solid '+C.border+
+        ';border-radius:5px;padding:13px 16px;margin-bottom:8px;display:flex;gap:12px;align-items:center;flex-wrap:wrap');
+      const textWrap=_el('div','flex:1;min-width:200px');
+      textWrap.appendChild(_el('div','font-weight:bold;font-size:13px;color:'+C.text,_esc(quest.label)));
+      textWrap.appendChild(_el('div','font-size:11px;color:'+C.textDim+';margin:4px 0',_esc(quest.desc)));
+      textWrap.appendChild(_el('div','font-size:11px;color:'+C.accentGreen,quest.progress+' / '+quest.target));
+      const reward=quest.reward.skin
+        ? 'Collector '+quest.reward.skin.toUpperCase()+' · '+quest.reward.weapon+
+          ' (duplicate: '+quest.reward.duplicateScraps+' Scraps)'
+        : quest.reward.scraps+' Scraps';
+      textWrap.appendChild(_el('div','font-size:11px;color:'+C.warn+';margin-top:5px',_esc(reward)));
+      item.appendChild(textWrap);
+      const claim=_el('button',
+        'padding:9px 12px;background:'+(quest.complete&&!quest.claimed?C.accent:C.bg)+
+          ';color:'+(quest.complete&&!quest.claimed?'#10121d':C.dim)+
+          ';border:1px solid '+C.border+';font-family:'+F+';font-weight:bold;cursor:pointer',
+        quest.claimed?'✓ CLAIMED':quest.complete?'CLAIM REWARD':'IN PROGRESS');
+      claim.disabled=quest.claimed||!quest.complete;
+      claim.onclick=()=>{
+        const result=claimProfileQuest(quest.id);
+        if(result.ok)_renderContent();
+      };
+      item.appendChild(claim);
+      main.appendChild(item);
+    }
+  }
 }
 
 // ── PVP LOADOUT tab ──────────────────────────────────────────
