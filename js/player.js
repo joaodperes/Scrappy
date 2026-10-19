@@ -1144,8 +1144,14 @@ export function updatePlayer(dt, gameRunning, paused) {
   const preY  = _playerBody.position.y;
   _playerBody.moveWithCollisions(new BABYLON.Vector3(dispX, dispY, dispZ));
 
-  if (_playerBody.position.y < -25) { // Update reset threshold to -25 to prevent accidental resets on mine (levelJungle.js)
-    _playerBody.position.y = PH; _yVel = 0; player.onGround = true; _wasOnGround = true;
+  // Respect a map-specific void boundary: Jungle's fourth mine level is
+  // y=-45. Return to the actual spawn after a real fall, never mid-mine.
+  const currentMeta=getMapMeta(getCurrentMap());
+  if (_playerBody.position.y < (currentMeta.fallResetY ?? -25)) {
+    const start=currentMeta.spawn;
+    _playerBody.position.set(start.x,PH+(start.yOffset??0),start.z);
+    _yVel=0;_xVel=0;_zVel=0;
+    player.onGround=true;_wasOnGround=true;
   }
   camera.position.copyFrom(_playerBody.position);
 
