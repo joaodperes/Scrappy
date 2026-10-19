@@ -288,7 +288,7 @@ export const MAP_CONFIG = {
     walkableSpawns: [ 
       [-20, 0, -10], [20, 0, -10], [-20, 0, 10], [20, 0, 10],
       [0, 0, -16], [0, 0, 16], [-15, 0, 0], [15, 0, 0], [0, 0, 0],
-      [-20, 6, -16], [20, 6, -16], [-20, 6, 16], [20, 6, 16],
+      // Elevated areas spawn at actual floor heights rather than in mid-air.
       // Raised balcony and ramp-accessible resource platforms.
       [0,8,44],[0,8,-44],[-54,8,0],[54,8,0],
       [-20,14,24],[20,14,24],[-20,14,-24],[20,14,-24],
