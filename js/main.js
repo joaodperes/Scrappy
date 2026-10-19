@@ -20,7 +20,7 @@ import { loadProfile, getLevelProgress, levelFromTotalXp } from './progression.j
 import { showLoadout } from './loadout.js';
 import { getCurrentMap, setCurrentMap, MAPS, getMapMeta, buildMap, isHardModeUnlocked, isMapUnlocked, registerCommunityMaps } from './mapManager.js';
 import { initRoomFlow, showPlayPage } from './roomFlow.js';
-import { setHardModeOpeningModifier } from './hardModeRules.js';
+import { setActiveHardWave } from './hardModeRules.js';
 import { showLeaderboardPage } from './leaderboardPage.js';
 
 let gameRunning = false;
@@ -94,11 +94,13 @@ function _hideAllScreens() {
 }
 
 // ── Solo PvE ───────────────────────────────────────────────────
-function startGame(startWave = 0, hardModifier = 'auto') {
-  setHardModeOpeningModifier(hardModifier);
+function startGame(startWave = 0, difficulty = 'normal') {
+  if(!['normal','hard','nightmare'].includes(difficulty))difficulty='normal';
+  player.difficulty=difficulty;
+  setActiveHardWave(null);
   if (isFfaActive()) stopFfa();
   // Capture Hard Mode state BEFORE resetting everything
-  player.hardMode = document.getElementById('hardModeToggle')?.checked || false;
+  player.hardMode = difficulty !== 'normal';
   ensureAudio();
   player.hp = 100; player.armor = 0; player.score = 0;
   player.yVel = 0; player.onGround = true; player.buffs = {};
@@ -586,6 +588,7 @@ async function launchCompetitiveRoom(cfg,session) {
     ensureAudio();
     gameRunning=false;paused=false;
     player.hardMode=false;
+    player.difficulty='normal';
     player.hp=100;player.armor=0;player.score=0;
     player.onGround=true;player.yVel=0;player.buffs={};
     setCurrentMap(cfg.mapId);
@@ -668,9 +671,7 @@ initRoomFlow({
   onStartMatch: launchCompetitiveRoom,
   onStartSurvival: (cfg) => {
     setCurrentMap(cfg.mapId);
-    const hmToggle = document.getElementById('hardModeToggle');
-    if (hmToggle) hmToggle.checked = !!cfg.hardMode;
-    startGame(0,cfg.hardModifier||'auto');
+    startGame(0,cfg.difficulty||((cfg.hardMode)?'hard':'normal'));
   },
 });
 
