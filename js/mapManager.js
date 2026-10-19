@@ -8,6 +8,7 @@ const BABYLON = window.BABYLON;
 // ── Helper to warn about missing entries ──
 const _warnedMissingMapData = new Set();
 import { getMapMarkers } from './mapLayoutStore.js';
+import { canUnlockNightmare } from './hardModeRules.js';
 import { loadMapCatalog } from './mapCatalog.js';
 
 export function resolveMapData(table, mapId, fallbackId = 'scrapyard', tableName = 'map data') {
@@ -355,9 +356,7 @@ export function isMapUnlocked(mapId) {
   return !!MAP_CONFIG[mapId]; // Catalog-registered maps are publicly playable.
 }
 export function isNightmareUnlocked(mapId){
-  const stats=profile.stats||{};
-  return (stats[`bossWaveClearsHard_${mapId}`]||0)>0 ||
-    (stats[`maxWaveHard_${mapId}`]||0)>=10;
+  return canUnlockNightmare(profile.stats||{},mapId);
 }
 export function isHardModeUnlocked(mapId) {
   const stats = profile.stats || {};
