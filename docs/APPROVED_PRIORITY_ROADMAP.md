@@ -18,7 +18,7 @@ Moon Base is a distinct low-gravity/jetpack game experience.
 | 7 | **Weapon categories + melee** | Pistol remains the standard Survival Secondary; Aegis is a Primary weapon. Separate Melee/Wonder categories, animation and exclusive special slot remain to be implemented/validated; no configurable Survival sidearm. |
 | 8 | **Daily/weekly quests + Scraps rewards only** | Quests keyed by UTC day/week; explicit idempotent local claims; rotating Collector weapon finishes and duplicate-owner Scraps; max-rank PvE XP conversion; **offline MVP implemented**, but secure server-authoritative currency/claim ledger, cross-device consistency and anti-farm remain open; **no shop yet** |
 | 9 | **Room creation and browsing** | Server room config validation, passwords, capacity, host succession, safe countdown cancellation and client roster feedback implemented at source level. **Open:** authenticated reconnect, real browser/network playtests, shared community-map catalog, durable deployments and abuse controls. |
-| 10 | **Player-model bots** | JSON personalities and loadouts/skins, reusable traversal AI, team awareness, server/local match ownership and slots, bot replacement when people join. **Partial:** six personas, server-owned slot planner and TDM team allocation tested; no live bots yet. |
+| 10 | **Player-model bots** | Six JSON personas, deterministic server-only targeting/steering/fire intent, slot allocation and human-join reconciliation, respawn planning, team awareness. **Foundation implemented and tested; live bot actors, movement physics, hit validation and network replication still pending.** |
 | 11 | **TDM + FFA** | Locally testable complete matches with bots, team rules, scoreboard, spawns, 5-second respawn, time/score limits, attachments, mode XP |
 | 12 | **Gun Game** | Shared per-match 32-bit seed, deterministic shuffled weapon ladder from Pistol to Knife, synchronized client order, transitions and scoring are source-implemented. **Open:** real-match QA, progression rewards integrity, bots and priority-13 authoritative hit validation. |
 | 13 | **PvP humans** | Authoritative server hit/weapon validation, anti-cheat, synchronization, remote skins/loadouts, teams, reconnect and latency tests; deploy & load-test |
@@ -204,6 +204,10 @@ Moon Base is a distinct low-gravity/jetpack game experience.
   at a 25:1 rate with retained remainder.
 - See `js/questRules.js`, `scripts/quest-rules.test.cjs` and
   `docs/QUESTS_AND_SCRAPS.md`.
+- Client-side regression hardening: PvP damage packets now have an explicit
+  source tag and are excluded from PvE damage quests. Matching-key partial
+  cloud/profile saves are normalized before progress/claim access, and
+  corrupted Collector skin ownership arrays can no longer crash claims.
 - **Open gate:** browser profile/Firestore persistence, cross-device claim
   races, verified anti-farm/anti-cheat ledger and authoritative PvP accounting.
   The shop (priority 15) must not spend unverified local Scraps.
@@ -242,7 +246,7 @@ Moon Base is a distinct low-gravity/jetpack game experience.
 - **Open:** browser weapon progression/respawn QA, verified hit/weapon
   authority, challenge rewards and real AI bot participants.
 
-### Priority 10: Player-model bots (personas and slot allocator only)
+### Priority 10: Player-model bots (pure decision/session foundation, no runtime activation)
 
 - Added six data-driven, bounded bot personality presets to
   `assets/bot-personalities.json`: name, role, range, aggression,
@@ -251,10 +255,18 @@ Moon Base is a distinct low-gravity/jetpack game experience.
   only in opt-in competitive 6/10/14 rooms, balances TDM slots within each
   half team, and yields slots to newly joined humans. Unit tests verify
   catalog integrity and human slot replacement.
-- **Not activated:** no server AI simulation, network replication,
-  combat/respawn, authoritative score validation or bot navigation.
-  The room lobby correctly continues to say bots are not active.
-  `docs/BOT_PERSONAS.md` records dependencies before activation.
+- Added deterministic `server/botBrain.js` target selection,
+  reaction/cooldown gates, short-range approach/retreat/strafing intent,
+  friendly-team exclusion and optional navigation waypoint injection.
+  A missing or failed path adapter prevents through-wall movement/attack.
+- Added `server/botSession.js` to reconcile planned slots after human joins,
+  retain valid bot state, require a trusted spawn provider, and plan
+  death/respawn transitions. No damage or movement is committed by these pure
+  modules. **19 simulated bot foundation tests pass.**
+- **Not activated:** `server/server.js` does not import botBrain/botSession.
+  No server AI movement execution, real navigation, replication, verified
+  damage, scores, snapshots or human-visible player bots yet. Lobby correctly
+  says bots are inactive. See `docs/BOT_PERSONAS.md`.
 
 ### Priority 17: Melee completion — after the currently approved gameplay priorities
 
