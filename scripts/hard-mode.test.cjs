@@ -57,6 +57,14 @@ test('Nightmare combines modifier multipliers and protects boss group counts',as
   assert.equal(modified[0].count,6);
   assert.equal(modified[1].count,2);
 });
+test('Nightmare unlocks only after a Hard boss clear on that map',async()=>{
+  const {canUnlockNightmare}=await import(lib);
+  assert.equal(canUnlockNightmare({bossWaveClears_city:1},'city'),false);
+  assert.equal(canUnlockNightmare({bossWaveClearsHard_city:1},'city'),true);
+  assert.equal(canUnlockNightmare({bossWaveClearsHard_city:1},'jungle'),false);
+  assert.equal(canUnlockNightmare({maxWaveHard_city:10},'city'),true);
+  assert.equal(canUnlockNightmare({maxWaveHard_city:9},'city'),false);
+});
 test('invalid waves and tiers are rejected',async()=>{
   const {getRunHardWaveRules}=await import(lib);
   assert.throws(()=>getRunHardWaveRules('city',0,'hard'));
