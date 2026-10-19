@@ -4,7 +4,7 @@ import { scene, camera, navPlugin } from './scene.js';
 import { M, fireTex } from './textures.js';
 import { explosiveBarrels, walkableMeshes, isBarrelMesh, detonateBarrelByMesh } from './level.js';
 import { WDEFS, curWep } from './weapons.js';
-import { projs, enemies, cb } from './gameState.js';
+import { projs, enemies, player, cb } from './gameState.js';
 import { spawnSparks } from './particles.js';
 import { sfx } from './audio.js';
 import { applyExplosionImpulse } from './player.js';
@@ -182,16 +182,19 @@ export function hitscan(meshToEnemy, spread = 0, dmg = 20, range = 90, falloff =
   const endPos = camera.position.clone().add(_rcDir.scale(endDist));
   
   //Use CreateTube instead of CreateLines for visible thickness
-  const isBeam = curWep === 'ELECTRON' || curWep === 'ION';
+  // Plasma's sniper trigger is hitscan (there is no traveling projectile).
+  // A bright persistent blue beam makes the exact aim line and impact clear.
+  const plasmaSniper=curWep==='PLASMA' && !!player.plasmaAltMode;
+  const isBeam = plasmaSniper || curWep === 'ELECTRON' || curWep === 'ION';
   const tracer = BABYLON.MeshBuilder.CreateTube('tracer', {
       path: [flashPos, endPos],
-      radius: isBeam ? 0.06 : 0.015, // Thicker beam for energy weapons
+      radius: plasmaSniper ? 0.1 : isBeam ? 0.06 : 0.015,
       updatable: false
   }, scene);
   
   // Use emissive color for the beam to make it glow
   const tracerMat = new BABYLON.StandardMaterial('tracerMat', scene);
-  tracerMat.emissiveColor = flashColor;
+  tracerMat.emissiveColor = plasmaSniper ? new BABYLON.Color3(.25,.65,1) : flashColor;
   tracerMat.disableLighting = true;
   tracerMat.alpha = 0.8;
   tracer.material = tracerMat;
@@ -199,7 +202,7 @@ export function hitscan(meshToEnemy, spread = 0, dmg = 20, range = 90, falloff =
   
   // Fade tracer out over ~80ms
   let fadeTimer = 0;
-  const tracerLife = isBeam ? 0.12 : 0.08; // Beams linger slightly longer
+  const tracerLife = plasmaSniper ? 0.28 : isBeam ? 0.12 : 0.08; // Beams linger slightly longer
   const onBeforeRender = () => {
       fadeTimer += scene.getEngine().getDeltaTime() / 1000;
       tracer.material.alpha = 1.0 - (fadeTimer / tracerLife);
