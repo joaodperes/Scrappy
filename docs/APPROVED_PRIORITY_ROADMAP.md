@@ -16,7 +16,7 @@ Moon Base is a distinct low-gravity/jetpack game experience.
 | 5 | **Jungle repair** | A real below-surface mine/dungeon, not a perforated floor; solid ceilings/platforms/walls, correct excavation entrances, ramps/lifts, mine lighting/Lantern/NVG, destructibles and enemy nav; preserve the good surface arena |
 | 6 | **Moon Base rewrite** | Low gravity also affects bot vertical physics/trajectory; every PvP player has jetpack; additional raised weapon/health/armor platforms, exposed side(s) for entry; cover on new/existing platforms and balcony; ramp access and bot navigation to balcony |
 | 7 | **Weapon categories + melee** | Primary / Secondary / Wonder; one Secondary in loadout replaces default Pistol; ammo-free melee timing, special-only slot, blades/hilts skins; Wonder no attachments; backward compatible progression |
-| 8 | **Daily/weekly quests + Scraps rewards only** | Quests keyed by date/timezone UTC, idempotent rewards, weekly Collector cosmetics; duplicate-owned skin grants Scraps; maxed-weapon XP conversion to Scraps; balances and anti-farm constraints; **no shop yet** |
+| 8 | **Daily/weekly quests + Scraps rewards only** | Quests keyed by date/timezone UTC, idempotent rewards; broaden **Collector weapon-skin variants and themed challenges** (e.g., weekly Collector sets, consistent across weapons) and award limited weekly Collector cosmetics. Duplicate-owned skin grants Scraps; maxed-weapon XP conversion to Scraps; balances and anti-farm constraints; **no shop yet** |
 | 9 | **Room creation and browsing** | Production-safe centralized shared server, lobby lifecycle, room visibility/passwords, capacity and mode settings; reconnection, player presence, synchronized readiness |
 | 10 | **Player-model bots** | JSON personalities and loadouts/skins, reusable traversal AI, team awareness, server/local match ownership and slots, bot replacement when people join |
 | 11 | **TDM + FFA** | Locally testable complete matches with bots, team rules, scoreboard, spawns, 5-second respawn, time/score limits, attachments, mode XP |
@@ -25,7 +25,8 @@ Moon Base is a distinct low-gravity/jetpack game experience.
 | 14 | **Co-op Survival** | Exactly 2 players max, authoritative synchronized waves and enemies, pickups, rewards, damage and boss state, disconnect/rejoin |
 | 15 | **Cosmetic shop** | Scraps redeem **only** cosmetics and direct-use weapon XP packs; tiers allowed; atomic purchase ledger and balances |
 | 16 | **Player stats and equipment** | Earned PvE stat bonuses/equipment and respec balance; never bought using Scraps; normalized or disabled in competitive modes |
-| 17 | **Repository cleanup and logical file reorganization** | Audit files before removal; delete genuinely obsolete/support/generated duplicates without destroying needed tests, docs or workflows; group code by purpose, move test/development scripts found under `js/` into `scripts/` when they are not browser runtime modules; update every import, URL, HTML reference, GitHub Actions path and documentation; run complete CI and browser smoke tests after each batch. Preserve functional runtime modules in `js/`, rather than moving files solely because their names contain “script”. |
+| 17 | **Melee/Knife completion and availability** | Current Knife has a model and ammo-free close-range hit and is the last Gun Game weapon, but is not fully integrated as a dedicated melee category or spawned in standard maps. Finish melee input/animation/hit validation, player progression and PvP compatibility, add controlled map/test availability, coordinate with category work in priority 7; avoid claiming the weapon fully implemented until gameplay QA passes. |
+| 18 | **Repository cleanup and logical file reorganization — ALWAYS LAST** | Audit files before removal; delete genuinely obsolete/support/generated duplicates without destroying needed tests, docs or workflows; group code by purpose, move test/development scripts found under `js/` into `scripts/` when they are not browser runtime modules; update every import, URL, HTML reference, GitHub Actions path and documentation; run complete CI and browser smoke tests after each batch. Preserve functional runtime modules in `js/`, rather than moving files solely because their names contain “script”. |
 
 ## Map priorities and design constraints
 
@@ -73,9 +74,9 @@ Moon Base is a distinct low-gravity/jetpack game experience.
 - All active effects multiply the Hard base enemy HP/damage/speed or
   wave enemy count. Boss group counts remain controlled by boss-wave logic.
   Score remains 2×; Normal Survival remains unchanged.
-- Room setup, match mode/map/difficulty, time limit, kill limit, Solo and
-  Room Browser now appear **on one Play page**, with details below the
-  shared settings box; room/lobby functionality retains the existing server.
+- The Play page now uses two top-level choices, Create Room and Browse Rooms;
+  Solo is a suboption in Create Room, with match settings scoped to that
+  submenu. PvP limits use fixed presets and room sizes of 6/10/14.
 - City opaque grey walls, street surfaces and skybridge railings now
   participate in bullet raycasts, while `createGlass` always permits
   shooting through it. Shared collision rules are used by hitscan,
@@ -84,7 +85,7 @@ Moon Base is a distinct low-gravity/jetpack game experience.
   no additional changes now. Monitor future regressions, without reopening
   this milestone preemptively.
 
-### Priority 4: Elites (implemented on shared testing branch; gameplay QA pending)
+### Priority 4: Elites (owner-tested, accepted for now)
 
 - A deterministic `eliteRules.js` encounter planner budgets Elites separately
   from Hard/Nightmare wave modifiers, excluding bosses and summons. Normal
@@ -97,10 +98,8 @@ Moon Base is a distinct low-gravity/jetpack game experience.
   modifiers; they now use the per-wave difficulty multiplier.
 - Pure rules, budgets, invalid inputs, trait combinations and boss damage
   have automated tests. See `docs/ELITE_ENCOUNTERS.md` for precise formulas.
-- **Open gate:** gameplay QA and late-wave performance testing, especially
-  combined native shield mitigation, regen/DOT, boss minions, cleanup and
-  scoring/rewards. Priority 3 is owner-accepted; this remains a priority-4
-  verification gate only.
+- **Owner confirmation:** Elite behavior has been tested and works as expected.
+  Accepted for now; reopen only for specific observed regressions.
 
 ### Priority 5: Jungle dungeon repair — next active development
 
@@ -119,7 +118,15 @@ Moon Base is a distinct low-gravity/jetpack game experience.
 - Test the map in Chromium/Firefox; do not infer reachability from the JSON
   validator alone.
 
-### Priority 17: Repository maintenance — deferred until gameplay priorities 5–16
+### Priority 17: Melee completion — after the currently approved gameplay priorities
+
+- The present Knife is functional as a basic ammo-free close-range attack,
+  with a model and a Gun Game finale; it has no regular map weapon spawn and
+  does not meet the complete melee/skin/category acceptance criteria.
+- Coordinate with priority 7, add proper melee combat verification and a
+  deliberate test/availability path without changing established map balance.
+
+### Priority 18: Repository maintenance — always the final task
 
 - Inventory repo files and ownership (runtime, editor, tests, documentation,
   generated/vendor assets, CI). Build a dependency/reference graph first.
@@ -133,6 +140,37 @@ Moon Base is a distinct low-gravity/jetpack game experience.
   `README.md` still describes a Three.js renderer while the runtime uses
   Babylon.js; do not delete `js/babylon.max.js` without resolving all its
   HTML/editor usage and vendoring/license constraints.
+
+## Follow-up combat and Play screen changes — 19 October 2026
+
+- User reported inconsistent hits against enemies/explosive barrels; projectile
+  collision previously checked only end-of-frame proximity. Shared linear
+  projectiles now sweep the traveled segment and resolve the nearest target
+  vs solid wall. Invisible player collision controller/viewmodels no longer
+  block raycast shots; pure regression tests cover these rules.
+- Plasma Rifle Sniper mode is intentionally hitscan (not a traveling plasma
+  bolt). It now renders a distinct bright blue precision beam for 0.28 seconds
+  to make impacts, missed aim and wall blocking visible.
+- Play uses main-menu green colors, standardized Create/Browse panels,
+  local Solo nested under Create, map/mode/difficulty settings only in Create,
+  unlock prerequisites next to locked difficulty options, collapsible help,
+  context-sensitive PvP controls, room directory table and presets.
+  PvP time limits: unlimited / 5/10/15/20/30 minutes; kills: unlimited /
+  15/30/50/80/100; both may not be unlimited simultaneously.
+  PvP room capacity: 6/10/14 (TDM split evenly). The server supports
+  untimed matches that end by score; legacy custom-duration rooms remain
+  compatible.
+- PvP weapon selection is accessible while creating/joining and in the
+  Loadout screen; saved weapon slots persist in the profile and are used
+  on match start. Gun Game auto-progression and Survival weapon discovery
+  bypass preset weapon selection. Server-authoritative validation is still
+  an outstanding multiplayer priority.
+- Player suit skins are sorted by expected unlock sequence (Standard first).
+  Gladiator's new criterion is 250 PvP kills across competitive modes,
+  contingent on trustworthy PvP kill validation in priority 13.
+- **Remaining verification:** full Node CI, live Firefox/Chromium aiming
+  (especially barrel raycasts, long-distance Plasma Sniper shots and
+  glass/opaque collisions), room-browser connection and match-mode UX.
 
 ## Play-menu and Aegis regression checkpoint — 19 October 2026
 
