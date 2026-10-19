@@ -18,7 +18,7 @@ import { submitScore, renderLeaderboard } from './leaderboard.js';
 import { startFfa, stopFfa, updateFfa, isFfaActive, isFfaInPreLobby, showFfaLobby, isLocalDead, togglePvpScoreboard, checkFfaHitScan } from './pvp.js';
 import { loadProfile, getLevelProgress, levelFromTotalXp } from './progression.js';
 import { showLoadout } from './loadout.js';
-import { getCurrentMap, setCurrentMap, MAPS, getMapMeta, buildMap, isHardModeUnlocked, isMapUnlocked } from './mapManager.js';
+import { getCurrentMap, setCurrentMap, MAPS, getMapMeta, buildMap, isHardModeUnlocked, isMapUnlocked, registerCommunityMaps } from './mapManager.js';
 import { initRoomFlow, showPlayPage } from './roomFlow.js';
 import { showLeaderboardPage } from './leaderboardPage.js';
 
@@ -564,6 +564,16 @@ renderLeaderboard();
 initAttachmentVisuals();
 engine.resize();
 refreshMenuUI();
+// Load community catalog without blocking built-in map startup.
+registerCommunityMaps().then(ids=>{
+  if(!ids.length)return;
+  const before=getCurrentMap();
+  _populateMapDropdown();
+  const dropdown=document.getElementById('mapDropdown');
+  if(dropdown)dropdown.value=before;
+  refreshMenuUI();
+  console.info('[maps] Registered community maps:',ids);
+}).catch(err=>console.warn('[maps] Could not register custom maps:',err));
 window.addEventListener('resize', () => engine.resize());
 
 // Competitive room runtime, using the EXISTING WebSocket and FFA renderer.
