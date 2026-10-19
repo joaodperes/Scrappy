@@ -18,6 +18,7 @@ import { submitScore, renderLeaderboard } from './leaderboard.js';
 import { startFfa, stopFfa, updateFfa, isFfaActive, isFfaInPreLobby, showFfaLobby, isLocalDead, togglePvpScoreboard, checkFfaHitScan } from './pvp.js';
 import { loadProfile, getLevelProgress, levelFromTotalXp } from './progression.js';
 import { showLoadout } from './loadout.js';
+import { selectedSecondary } from './weaponCategories.js';
 import { getCurrentMap, setCurrentMap, MAPS, getMapMeta, buildMap, isMapUnlocked, registerCommunityMaps } from './mapManager.js';
 import { initRoomFlow, showPlayPage } from './roomFlow.js';
 import { setActiveHardWave } from './hardModeRules.js';
@@ -119,7 +120,8 @@ function startGame(startWave = 0, difficulty = 'normal') {
       w.ammo = hasEndless ? Infinity : (w.startAmmo || 0);
     }
   });
-  inventory[2] = 'PISTOL'; inventory[1] = null; inventory[0] = null;
+  inventory[2] = selectedSecondary(WDEFS,profile);
+  inventory[1] = null; inventory[0] = null;
   setActiveSlot(2);
 
   setCurWave(startWave);
