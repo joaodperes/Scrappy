@@ -51,3 +51,53 @@ test('time and death resolve local match; invalid states and kill sources are sa
  const timed=tickLocalArena({...state,secondsLeft:0.1},0.25);
  assert.equal(timed.complete,true);assert.equal(timed.result,'DRAW');
 });
+
+test('Gun Game bots each run independent full weapon ladders; no early score-limit victory',async()=>{
+ const {createLocalArena,localArenaBotKill}=await lib;
+ let state=createLocalArena({mode:'gunGame',scoreLimit:1,seed:42});
+ const guns=state.gunOrder;
+ for(let i=0;i<guns.length-1;i++){
+   state=localArenaBotKill(state,{killerId:'alpha',killerTeam:'BOT_0',victimTeam:'BOT_1',weapon:guns[i]});
+   assert.equal(state.complete,false);
+   assert.equal(state.botGuns.alpha,i+1);
+ }
+ assert.equal(state.botGuns.alpha,guns.length-1);
+ state=localArenaBotKill(state,{killerId:'beta',killerTeam:'BOT_1',victimTeam:'BOT_0',weapon:guns[0]});
+ assert.equal(state.botGuns.beta,1);
+ assert.equal(state.complete,false);
+ const won=localArenaBotKill(state,{killerId:'alpha',killerTeam:'BOT_0',victimTeam:'BOT_1',weapon:'KNIFE'});
+ assert.equal(won.complete,true);
+ assert.equal(won.result,'DEFEAT');
+});
+test('FFA scores unique bot killers; TDM scores team frag and ignores friendly fire',async()=>{
+ const {createLocalArena,localArenaBotKill,localArenaDeath}=await lib;
+ let ffa=createLocalArena({mode:'ffa',scoreLimit:3});
+ ffa=localArenaBotKill(ffa,{killerId:'alpha',killerTeam:'A',victimTeam:'B',weapon:'SMG'});
+ ffa=localArenaBotKill(ffa,{killerId:'beta',killerTeam:'B',victimTeam:'A',weapon:'SHOTGUN'});
+ assert.equal(ffa.opposition,1);
+ assert.equal(ffa.botScores.alpha,1);
+ assert.equal(ffa.botScores.beta,1);
+ ffa=localArenaDeath(ffa,{killerId:'alpha',killerTeam:'A',weapon:'SMG'});
+ assert.equal(ffa.botScores.alpha,2);
+ assert.equal(ffa.deaths,1);
+ let tdm=createLocalArena({mode:'tdm',scoreLimit:2});
+ tdm=localArenaBotKill(tdm,{killerId:'ally',killerTeam:'RED',victimTeam:'BLUE',weapon:'DMR'});
+ assert.equal(tdm.score,1);
+ assert.equal(localArenaBotKill(tdm,{killerId:'ally',killerTeam:'RED',victimTeam:'RED',weapon:'DMR'),tdm);
+ tdm=localArenaBotKill(tdm,{killerId:'foe',killerTeam:'BLUE',victimTeam:'RED',weapon:'SMG'});
+ assert.equal(tdm.opposition,1);
+});
+test('Kill Confirmed bots claim enemy tags, deny friendly tags, and progress by objectives',async()=>{
+ const {createLocalArena,localArenaBotKill,localArenaBotTag}=await lib;
+ let s=createLocalArena({mode:'killConfirmed',scoreLimit:2});
+ s=localArenaBotKill(s,{killerId:'enemy',killerTeam:'BLUE',victimTeam:'RED',weapon:'SMG'});
+ assert.equal(s.score,0);assert.equal(s.opposition,0);
+ assert.equal(localArenaBotTag(s,{collectorId:'blue',collectorTeam:'BLUE',tagTeam:'BLUE'}),s);
+ s=localArenaBotTag(s,{collectorId:'red',collectorTeam:'RED',tagTeam:'BLUE'});
+ assert.equal(s.score,0); // no pending tag in this synthetic test
+ s={...s,pendingTags:1};
+ s=localArenaBotTag(s,{collectorId:'ally',collectorTeam:'RED',tagTeam:'BLUE'});
+ assert.equal(s.score,1);assert.equal(s.pendingTags,0);
+ s=localArenaBotTag(s,{collectorId:'enemy',collectorTeam:'BLUE',tagTeam:'RED'});
+ assert.equal(s.opposition,1);
+});
