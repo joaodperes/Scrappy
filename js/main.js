@@ -18,7 +18,7 @@ import { submitScore, renderLeaderboard } from './leaderboard.js';
 import { startFfa, stopFfa, updateFfa, isFfaActive, isFfaInPreLobby, showFfaLobby, isLocalDead, togglePvpScoreboard, checkFfaHitScan } from './pvp.js';
 import { loadProfile, getLevelProgress, levelFromTotalXp } from './progression.js';
 import { showLoadout } from './loadout.js';
-import { getCurrentMap, setCurrentMap, MAPS, getMapMeta, buildMap, isHardModeUnlocked, isMapUnlocked, registerCommunityMaps } from './mapManager.js';
+import { getCurrentMap, setCurrentMap, MAPS, getMapMeta, buildMap, isMapUnlocked, registerCommunityMaps } from './mapManager.js';
 import { initRoomFlow, showPlayPage } from './roomFlow.js';
 import { setActiveHardWave } from './hardModeRules.js';
 import { showLeaderboardPage } from './leaderboardPage.js';
@@ -333,12 +333,8 @@ function _populateMapDropdown() {
       container.appendChild(db);
     }
 
-    // ── Menu overhaul: Solo/map-dropdown/hard-mode collapse into one PLAY
-    // button → Play page (Create Room / Browse Rooms). Now using the real
-    // index.html structure: #mapSelectSection wraps the map dropdown AND
-    // the hard-mode label/checkbox/description as one block, so hiding
-    // that single container is clean — no stray label text left behind
-    // (pvpBtn is already commented out in the markup, nothing to hide).
+    // The main menu only opens the unified Play configuration; maps,
+    // difficulty, mode and room settings live on that single page.
     const mapSelectSection = document.getElementById('mapSelectSection');
     if (mapSelectSection) mapSelectSection.style.display = 'none';
     startBtn.style.display = 'none';
@@ -458,23 +454,6 @@ wireDeathSubmit((name, score) => {
 // ── UI Refresh ────────────────────────────────────────────────
 function refreshMenuUI() {
   const currentMapId = getCurrentMap();
-  const hasHardMode = isHardModeUnlocked(currentMapId);
-  const lvlData = getLevelProgress();
-  
-  const hardModeToggle = document.getElementById('hardModeToggle');
-  const hardModeDesc = document.getElementById('hardModeDesc');
-  if (hardModeToggle && hardModeDesc) {
-    hardModeToggle.disabled = !hasHardMode;
-    if (hasHardMode) {
-        hardModeDesc.textContent = "Hard modifiers rotate every 3 waves · 2× Score.";
-        hardModeDesc.style.color = "#E85E76";
-    } else {
-        hardModeToggle.checked = false; 
-        hardModeDesc.textContent = "Unlock by clearing a boss wave";
-        hardModeDesc.style.color = "#848591";
-    }
-  }
-
   const pvpBtn = document.getElementById('pvpBtn');
   if (pvpBtn) {
       if (lvlData.level >= 5) {
