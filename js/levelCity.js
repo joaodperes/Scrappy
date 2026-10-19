@@ -225,41 +225,7 @@ function _jp(px,floorY,pz,force=22,rotY=0) {
   jumpPads.push({pos:new BABYLON.Vector3(px,y,pz),force,thrustX:Math.sin(rotY)*(force*0.45),thrustZ:Math.cos(rotY)*(force*0.45)});
 }
 // Ziplines are now data-driven createZipline entities in city.json.
-// Shared helper: rotate a mesh (already positioned) so its local Z axis
-// points along `dir`, WITHOUT rolling it sideways. A single minimal
-// rotation (rotate Z toward dir around their cross product) is fine when
-// dir only tilts in one vertical plane — e.g. the bridges, which just rise
-// or fall along their span — but it does NOT keep "width" level for a
-// genuinely 3D diagonal like the fire-escape flights (which move sideways,
-// outward, AND up all at once); it twists the whole box into the slope.
-// This builds an explicit right/up/forward frame instead — right is always
-// horizontal (perpendicular to world-up and to the travel direction), up
-// tilts ONLY in the vertical plane containing the travel direction — then
-// converts that frame to a quaternion with the standard rotation-matrix
-// formula (right/up/forward as the matrix's three columns).
-function _alignToDir(mesh, dir) {
-  const forward = dir.normalize();
-  let right = BABYLON.Vector3.Cross(BABYLON.Axis.Y, forward);
-  if (right.lengthSquared() < 1e-6) right = BABYLON.Vector3.Cross(BABYLON.Axis.Z, forward);
-  right.normalize();
-  const up = BABYLON.Vector3.Cross(forward, right).normalize();
-  const trace = right.x + up.y + forward.z;
-  let qx,qy,qz,qw;
-  if (trace > 0) {
-    const s = Math.sqrt(trace+1.0)*2;
-    qw = 0.25*s; qx = (up.z-forward.y)/s; qy = (forward.x-right.z)/s; qz = (right.y-up.x)/s;
-  } else if (right.x > up.y && right.x > forward.z) {
-    const s = Math.sqrt(1.0+right.x-up.y-forward.z)*2;
-    qw = (up.z-forward.y)/s; qx = 0.25*s; qy = (up.x+right.y)/s; qz = (forward.x+right.z)/s;
-  } else if (up.y > forward.z) {
-    const s = Math.sqrt(1.0+up.y-right.x-forward.z)*2;
-    qw = (forward.x-right.z)/s; qx = (up.x+right.y)/s; qy = 0.25*s; qz = (forward.y+up.z)/s;
-  } else {
-    const s = Math.sqrt(1.0+forward.z-right.x-up.y)*2;
-    qw = (right.y-up.x)/s; qx = (forward.x+right.z)/s; qy = (forward.y+up.z)/s; qz = 0.25*s;
-  }
-  mesh.rotationQuaternion = new BABYLON.Quaternion(qx,qy,qz,qw);
-}
+// Bridge orientation and its selectable rails are handled by createSkybridge.
 
 // -- Building lighting ---------------------------------------------
 // _building() used to generate an entire building's walls, glass panels,
@@ -283,45 +249,7 @@ function _buildingLight(cx, cz, topSurfY, roofType, label) {
 
 // Rooftop lifts are serialized createRooftopLift entities in city.json.
 
-// Sky bridge between two rooftops. y1/y2 are each building's own topSurfY —
-// when they match the deck is flat (old behaviour); when they differ this
-// builds a sloped ramp instead, using the shared _alignToDir helper.
-function _bridge(cx, cz, spanAxis, spanLen, bridgeW, y1, y2) {
-  const half = spanLen/2;
-  const p1 = spanAxis==='X' ? new BABYLON.Vector3(cx-half,y1,cz) : new BABYLON.Vector3(cx,y1,cz-half);
-  const p2 = spanAxis==='X' ? new BABYLON.Vector3(cx+half,y2,cz) : new BABYLON.Vector3(cx,y2,cz+half);
-  const dist = BABYLON.Vector3.Distance(p1,p2);
-  const mid  = BABYLON.Vector3.Lerp(p1,p2,0.5);
-  const H = 0.35;
-  const dir = p2.subtract(p1).normalize();
-
-  // _alignToDir rotates local Z to `dir`; build the deck/rails with their
-  // long axis along Z (=dist) regardless of spanAxis, then align. Not
-  // routed through createSlab/createWall since the rotation is applied via
-  // rotationQuaternion (not the simple rotX/rotZ that createRamp expects).
-  const deck = BABYLON.MeshBuilder.CreateBox('bridgeDeck',{width:bridgeW,height:H,depth:dist},scene);
-  deck.position.set(mid.x, mid.y-H/2, mid.z); _alignToDir(deck,dir);
-  deck.material=_CONCRETE; deck.checkCollisions=true; deck.isPickable=false;
-  deck.metadata={editable:false,type:'bridge'};
-  walkableMeshes.push(deck);
-
-  [-1,1].forEach(side=>{
-    const rail = BABYLON.MeshBuilder.CreateBox('bridgeRail',{width:0.25,height:1.4,depth:dist},scene);
-    // Offset sideways in the deck's (pre-rotation) local X, then rotate the
-    // offset point itself by reusing the same rotation as the deck.
-    const localOff = new BABYLON.Vector3(side*(bridgeW/2),0.7-H/2,0);
-    let worldOff = localOff;
-    if (deck.rotationQuaternion) {
-      worldOff = new BABYLON.Vector3();
-      localOff.rotateByQuaternionToRef(deck.rotationQuaternion, worldOff);
-    }
-    rail.position.copyFrom(mid).addInPlace(worldOff);
-    rail.rotationQuaternion = deck.rotationQuaternion ? deck.rotationQuaternion.clone() : null;
-    rail.material=_CONCRETE; rail.checkCollisions=true; rail.isPickable=false;
-    rail.metadata={editable:false,type:'bridge_rail'};
-    walkableMeshes.push(rail);
-  });
-}
+// Skybridge geometry now loads from city.json as createSkybridge composites.
 
 // Car wreck — body/cabin still go through createWall (consistent collision
 // + walkableMeshes bookkeeping) but stay editable:false since they're
@@ -538,23 +466,7 @@ export async function buildCityLevel(customScene = null) {
 
   _jp(0,F3_Y,80,20,0);
 
-  // BRIDGES — every span now runs rooftop-to-rooftop (no more mid-floor
-  // decks reachable only from removed interior stairs). y1 is the height
-  // of the building on the p1/negative-axis end, y2 the building on the
-  // p2/positive-axis end; when they differ _bridge() builds a sloped ramp
-  // instead of a flat deck.
-
-  // -- Ring1 <-> Ring2 (E's roof is lower than all 4 neighbours -> ramps)
-  _bridge(-30, 0, 'X', 40, 4, F3_Y, F2_Y);
-  _bridge(30, 0, 'X', 40, 4, F2_Y, F3_Y);
-  _bridge(0, -30, 'Z', 40, 4, F4_Y, F2_Y);
-  _bridge(0, 30, 'Z', 40, 4, F2_Y, F3_Y);
-
-  // -- Ring2 <-> Ring3 (each pair shares the same roof height -> flat decks)
-  _bridge(-70, 0, 'X', 2, 4, F3_Y, F3_Y);
-  _bridge(70, 0, 'X', 2, 4, F3_Y, F3_Y);
-  _bridge(0, -70, 'Z', 2, 4, F4_Y, F4_Y);
-  _bridge(0, 70, 'Z', 2, 4, F3_Y, F3_Y);
+  // JSON bridge entities connect rooftops; no duplicate hardcoded decks.
 
   // -- Ring3 corners <-> Ring3 mid (J,K,L,M <-> N,O,P,Q via relay pads)
   // These are aerial jump-pad hops between rooftops via a floating midpoint
