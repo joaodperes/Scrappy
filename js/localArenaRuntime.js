@@ -116,7 +116,14 @@ function onActorKilled(actor,killer,weapon){
      active.state={...active.state,pendingTags:active.state.pendingTags+1};
  }
  if(killer==='human'){
-   applyResult(localArenaKill(active.state,{weapon,source:'PLAYER'}));
+   const before=active.state;
+   const next=localArenaKill(before,{weapon,source:'PLAYER'});
+   if(before.mode==='gunGame'&&next.gunIndex!==before.gunIndex&&!next.complete){
+     const nextWeapon=next.gunOrder[next.gunIndex];
+     inventory[0]=nextWeapon;setActiveSlot(0);setWeapon(nextWeapon);
+     showHud('WEAPON UP');
+   }
+   applyResult(next);
  }else if(killer&&killer.alive){
    const next=localArenaBotKill(active.state,
      {killerId:killer.id,killerTeam:killer.team,victimTeam:actor.team,weapon});
