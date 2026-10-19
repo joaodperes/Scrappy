@@ -719,11 +719,9 @@ function profileDisplayName(){
   return document.getElementById('playerNameInput')?.value||'PLAYER';
 }
 
-// Survival is the only mode with a real match behind it right now — the
-// Create Room screen hands off a plain {mapId, hardMode} config here, and
-// this just routes it into the existing solo flow. TDM/FFA/Gun Game don't
-// have a hookup yet (their match runtime is a later phase); roomFlow.js
-// tells the player that plainly instead of pretending Start works.
+// Local Play launches Survival or offline robot challenges without sockets.
+// The legacy WebSocket room path is retained but experimental; human PvP
+// and actual bot-versus-bot FFA/TDM are intentionally deferred.
 initRoomFlow({
   onSelectLoadout: (cfg,onChosen)=>{
     showLoadout(slots=>{
