@@ -1,4 +1,6 @@
-# Player-like bot profiles and slot planning — priority 10 foundation
+# Player-like bot profiles and slot planning — deferred network foundation
+
+**Offline-first revision (19 October):** Local Gun Game, Kill Confirmed and FFA/TDM *practice* use the existing Babylon PvE robot AI; they do not import this Node-only planner. The user postponed network rooms/PvP to a later PR. Offline bot factions/personas can eventually adapt the pure profile data and targeting rules, but no feature in this document is evidence that bots fight each other in local FFA/TDM. See [LOCAL_ARENA_MODES.md](LOCAL_ARENA_MODES.md).
 
 **Implemented:** `assets/bot-personalities.json`, `server/botSlots.js`, and `server/botSlots.test.js`.
 
