@@ -4,7 +4,7 @@ import { M, rwCache1, rwCache2 } from './textures.js';
 import { applyExplosionImpulse } from './player.js';
 import { TIER_1, TIER_2, TIER_3, TIER_4, TIER_5, TIER_6 } from './constants.js';
 import {
-  buildStaircase, createJumpPad, setLevelMaterials, registerMaterial, liftY,
+  setLevelMaterials, registerMaterial, liftY,
   loadMapOverride, applyEditableLayout,
 } from './levelHelpers.js';
 
@@ -58,18 +58,9 @@ function getNavPlugin() {
   return { createNavMesh: () => {} };
 }
 
-// ── Structural (non-editable) composite helper ──────────────────────────────
-// Scrapyard's walls/slabs/pillars/barrels now come exclusively from
-// scrapyard.json (via loadMapOverride + applyEditableLayout in buildLevel()
-// below) — this file only keeps the pieces that were never part of that
-// editable-object system to begin with: staircases (many individually-
-// collidable steps forming one composite, not a single draggable object —
-// see buildStaircase's doc comment in levelHelpers.js) and jump pads (raw
-// gameplay data, not a tagged mesh — see makeJumpPad below).
-function stairs(px, py, pz, width, depth, steps, dirX, dirZ) {
-  return buildStaircase(px, py, pz, width, depth, steps, dirX, dirZ, M.concrete, { flareEnds: true });
-}
-
+// Staircases and jump pads are now serialized as composite, editable entities
+// in assets/maps/scrapyard.json. Keep cosmetic lighting and global floor
+// generated here but never duplicate traversal objects from JavaScript.
 // ── Barrel helpers (shared singleton arrays — used by every map) ───────────
 export function isBarrelMesh(mesh) {
   for (const b of explosiveBarrels) {
@@ -148,17 +139,6 @@ export async function buildLevel(customScene = null) {
   const gnd = BABYLON.MeshBuilder.CreateGround('ground', { width: 150, height: 150 }, scene);
   gnd.position.y = -0.06; gnd.material = M.carpet; gnd.checkCollisions = true; gnd.isPickable = false;
 
-  // ── Structural staircases ───────────────────────────────────
-  // Non-editable composites (many individually-collidable steps, not a
-  // single draggable object — see buildStaircase's doc comment in
-  // levelHelpers.js), so these stay as code rather than JSON data.
-  stairs( 32, 0,  14, 6, 11, 12, 0,  1);
-  stairs(-32, 0, -14, 6, 11, 12, 0, -1);
-  stairs( 40, TIER_2,  30, 6, 11, 12, 0, -1);
-  stairs(-40, TIER_2, -30, 6, 11, 12, 0,  1);
-  stairs(-27, TIER_3, 0, 8, 15, 13, 1, 0);
-  stairs( 27, TIER_3, 0, 8, 15, 13, -1, 0);
-
   // Ambient light near the secret summit — cosmetic, not an editable object.
   const secretGlow = new BABYLON.PointLight('secretGlow', new BABYLON.Vector3(0, TIER_5+3, 20), scene);
   secretGlow.diffuse = new BABYLON.Color3(0, 1, 1); secretGlow.intensity = 2.0; secretGlow.range = 20;
@@ -173,24 +153,6 @@ export async function buildLevel(customScene = null) {
   // fetch ever fails.
   const override = await loadMapOverride('scrapyard');
   if (override) applyEditableLayout(override, { hazardZones, destructibleWalls, movingPlatforms, powerSwitches });
-  // Backward compatibility: the existing scrapyard JSON predates pad entities.
-  // The fallback pads are editable and exported, but do not duplicate any
-  // serialized pads on the next JSON roundtrip.
-  if (!override?.some(o => o.generator === 'createJumpPad')) {
-    createJumpPad(-28, TIER_2,  28, 22, Math.PI/4);
-    createJumpPad( 28, TIER_2,  28, 22, 7*Math.PI/4);
-    createJumpPad(-28, TIER_2, -28, 22, 3*Math.PI/4);
-    createJumpPad( 28, TIER_2, -28, 22, 5*Math.PI/4);
-    createJumpPad( 0, TIER_3,  38, 22, Math.PI);
-    createJumpPad( 0, TIER_3, -38, 22, 0);
-    createJumpPad(-36, TIER_3,  12, 24, Math.PI/2);
-    createJumpPad(-36, TIER_3, -12, 24, Math.PI/2);
-    createJumpPad( 36, TIER_3,  12, 24, -Math.PI/2);
-    createJumpPad( 36, TIER_3, -12, 24, -Math.PI/2);
-    createJumpPad(0, TIER_4, 0, 28, Math.PI);
-    createJumpPad(0, TIER_5, 28, 22, Math.PI);
-  }
-
   // ── Build NavMesh ──────────────────────────────────────────
   walkableMeshes.forEach(mesh => mesh.computeWorldMatrix(true));
   navPlugin.createNavMesh(walkableMeshes, NAVMESH_PARAMS);
