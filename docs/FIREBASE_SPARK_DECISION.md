@@ -39,4 +39,4 @@ Keep practical server-side validation of PvP damage, weapon compatibility, death
 2. Build the Spark-compatible transactional profile/shop adapter with offline/conflict tests.
 3. Add cosmetics/weapon XP item catalog and UI, keeping compatibility with existing quest claims and profile save pipeline.
 4. Have the owner verify concurrent purchase, account switching, logout/relogin, insufficient Scraps and duplicate purchase handling in two browsers.
-5. Continue runtime multiplayer/bot/co-op implementation separately; repository cleanup last.
+5. Finish standalone offline bot matches (including genuine bot-vs-bot factions), local maps, melee and documentation cleanup on the existing PR. Schedule online multiplayer, networked bots and co-op for a **separate future PR**. Repository code moves/deletions still wait for offline gameplay QA.
