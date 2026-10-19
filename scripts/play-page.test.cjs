@@ -167,3 +167,13 @@ test('Gun Game and Kill Confirmed launch offline without a WebSocket',()=>{
  assert.equal(second.started.at(-1).mode,'killConfirmed');
  assert.equal(second.sockets.length,0);
 });
+
+test('offline arena loadout can be selected without creating any room socket',()=>{
+ const h=harness();h.context.api.showPlayPage();
+ const mode=h.findSelect('gunGame');
+ mode.value='ffa';mode.fire('change');
+ h.findButton('SELECT ARENA LOADOUT').onclick();
+ assert.equal(h.sockets.length,0);
+ assert.equal(h.chosen.length,1);
+ assert.equal(h.chosen[0].mode,'ffa');
+});
