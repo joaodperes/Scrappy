@@ -10,7 +10,7 @@ import { sfx } from './audio.js';
 import { applyExplosionImpulse } from './player.js';
 import { getCurrentMap, getMapMeta } from './mapManager.js';
 import { getLoadout } from './progression.js';
-import { blocksBullet, closestBulletHit } from './bulletCollision.js';
+import { blocksBullet, closestBulletHit, segmentSphereHit } from './bulletCollision.js';
 
 // ── Player projectiles ────────────────────────────────────────
 export function fireRocket(effSpeed, effSplash, spread = 0) {
@@ -628,89 +628,75 @@ export function updateProjs(dt) {
       continue; 
   }
 
-    // ── All other projectiles: shared linear movement ─────────────
-    const step = p.dir.scale(p.speed * dt);
-    const obj  = p.g || p.mesh;
-    obj.position.addInPlace(step);
-    if (p.light) p.light.position.copyFrom(obj.position);
-    let hit = false;
+    // ── Linear projectiles: swept collision (no tunnelling between frames) ──
+    const obj=p.g || p.mesh;
+    const from=obj.position.clone();
+    const step=p.dir.scale(p.speed*dt);
+    const distance=step.length();
+    const to=from.add(step);
+    const direction=distance>1e-8?step.scale(1/distance):p.dir;
+    const wallHit=distance>1e-8
+      ? scene.pickWithRay(new BABYLON.Ray(from,direction,distance),blocksBullet)
+      : null;
+    let earliest=wallHit?.hit?{kind:'wall',t:Math.min(1,wallHit.distance/distance),point:wallHit.pickedPoint}:null;
 
-    // ── Check explosive barrels ───────────────────────────────
-    let hitBarrel = null;
-    for (const b of explosiveBarrels) {
-      if (!b.alive) continue;
-      if (BABYLON.Vector3.Distance(obj.position, b.pos) < 0.7) {
-        hitBarrel = b;
-        break;
+    // Geometry and targets compete on the same segment. A wall *behind*
+    // an enemy/barrel cannot steal the hit, but a wall in front blocks it.
+    for(const b of explosiveBarrels){
+      if(!b.alive)continue;
+      const t=segmentSphereHit(from,to,b.pos,0.75);
+      if(t!==null && (!earliest || t<earliest.t)){
+        earliest={kind:'barrel',t,barrel:b};
       }
     }
-
-    if (hitBarrel) {
-      hitBarrel.alive = false;
-      for (const m of hitBarrel.meshes) { m.setEnabled(false); m.checkCollisions = false; }
-      boom(hitBarrel.pos.clone(), 3.5, 70, true);
-      hit = true;
-    } else {
-      // ── Check scene collision (walls/floors) for hitscan-style projectile ─
-      const wallRay = new BABYLON.Ray(obj.position.subtract(step), step.normalize(), step.length() + 0.15);
-      const wHit = scene.pickWithRay(wallRay, blocksBullet);
-      if (wHit?.hit) {
-        if (p.type === 'rocket') boom(obj.position.clone(), p.splash, p.dmg, false);
-        else spawnSparks(obj.position.clone(), 0xffaa55, 4);
-        hit = true;
+    if(p.owner==='player' && (p.type==='rocket'||p.type==='player_plasma')){
+      for(const e of enemies){
+        if(!e.alive)continue;
+        const center=e.group.position.clone();
+        center.y+=e.flyH>0?0.5:1;
+        const t=segmentSphereHit(from,to,center,p.type==='rocket'?1.6:1.1);
+        if(t!==null && (!earliest || t<earliest.t))
+          earliest={kind:'enemy',t,enemy:e};
       }
     }
-
-    if (!hit) {
-      if (p.owner === 'player' && p.type === 'rocket') {
-        for (const e of enemies) {
-          if (!e.alive) continue;
-          const bodyCy = e.group.position.y + (e.flyH > 0 ? 0.5 : 1.0);
-          _bodyVec.set(e.group.position.x, bodyCy, e.group.position.z);
-          if (BABYLON.Vector3.Distance(obj.position, _bodyVec) < 1.6) {
-            boom(obj.position.clone(), p.splash, p.dmg, true);
-            hit = true; break;
-          }
-        }
-      } else if (p.owner === 'player' && p.type === 'player_plasma') {
-        for (const e of enemies) {
-          if (!e.alive) continue;
-          const bodyCy = e.group.position.y + (e.flyH > 0 ? 0.5 : 1.0);
-          _bodyVec.set(e.group.position.x, bodyCy, e.group.position.z);
-          if (BABYLON.Vector3.Distance(obj.position, _bodyVec) < 1.1) {
-            cb.hitRobot && cb.hitRobot(e, p.dmg);
-            spawnSparks(obj.position.clone(), 0x4488ff, 8);
-            hit = true; break;
-          }
-        }
-      } else if (p.owner === 'enemy') {
-        // Check barrel hits for enemy projectiles
-        let hitBarrel = false;
-        for (const b of explosiveBarrels) {
-            if (!b.alive) continue;
-            if (BABYLON.Vector3.Distance(obj.position, b.pos) < 0.7) {
-                b.alive = false;
-                for (const m of b.meshes) { m.setEnabled(false); m.checkCollisions = false; }
-                boom(b.pos.clone(), 3.5, 70, true);
-                hitBarrel = true;
-                break;
-            }
-        }
-        if (hitBarrel) {
-            hit = true;
-        } else if (BABYLON.Vector3.Distance(obj.position, camera.position) < .95) {
-            cb.hurtPlayer && cb.hurtPlayer(p.dmg);
-            spawnSparks(obj.position.clone(), 0xff3300, 5);
-            hit = true;
-        }
-      }
+    if(p.owner==='enemy'){
+      const t=segmentSphereHit(from,to,camera.position,0.95);
+      if(t!==null && (!earliest || t<earliest.t))
+        earliest={kind:'player',t};
     }
 
-    if (hit || p.life <= 0) {
-      if (p.g) { p.g.getChildMeshes().forEach(m => m.dispose()); p.g.dispose(); }
-      else if (p.mesh) p.mesh.dispose();
-      if (p.light) p.light.dispose();
-      projs.splice(i, 1);
+    const impact=earliest?from.add(step.scale(earliest.t)):to;
+    obj.position.copyFrom(impact);
+    if(p.light)p.light.position.copyFrom(impact);
+    let hit=false;
+    if(earliest?.kind==='barrel'){
+      const b=earliest.barrel;
+      b.alive=false;
+      for(const m of b.meshes){m.setEnabled(false);m.checkCollisions=false;}
+      boom(b.pos.clone(),3.5,70,true);
+      hit=true;
+    } else if(earliest?.kind==='enemy'){
+      if(p.type==='rocket')boom(impact.clone(),p.splash,p.dmg,true);
+      else{
+        cb.hitRobot?.(earliest.enemy,p.dmg);
+        spawnSparks(impact.clone(),0x4488ff,8);
+      }
+      hit=true;
+    } else if(earliest?.kind==='player'){
+      cb.hurtPlayer?.(p.dmg);
+      spawnSparks(impact.clone(),0xff3300,5);
+      hit=true;
+    } else if(earliest?.kind==='wall'){
+      if(p.type==='rocket')boom(impact.clone(),p.splash,p.dmg,false);
+      else spawnSparks(impact.clone(),0xffaa55,4);
+      hit=true;
+    }
+
+    if(hit || p.life<=0){
+      if(p.g){p.g.getChildMeshes().forEach(m=>m.dispose());p.g.dispose();}
+      else if(p.mesh)p.mesh.dispose();
+      if(p.light)p.light.dispose();
+      projs.splice(i,1);
     }
   }
 }
