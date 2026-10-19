@@ -97,8 +97,27 @@
             city:      { path: '/js/levelCity.js',     buildFn: 'buildCityLevel' },
             terminal:  { path: '/js/levelTerminal.js', buildFn: 'buildTerminalLevel' },
         };
+        const { loadMapCatalog } = await import('/js/mapCatalog.js');
+        let communityMaps=[];
+        try{communityMaps=await loadMapCatalog()}
+        catch(error){console.warn('[editor] Map catalog unavailable:',error)}
+        for(const meta of communityMaps){
+            const link=document.createElement('a');
+            link.href='?map='+encodeURIComponent(meta.id);
+            link.dataset.map=meta.id;
+            link.textContent=(meta.icon||'🗺️')+' '+meta.name;
+            document.getElementById('mapSwitcher').appendChild(link);
+        }
         const mapId = new URLSearchParams(location.search).get('map') || 'jungle';
-        const { path: levelPath, buildFn } = MAP_MODULES[mapId] || MAP_MODULES.jungle;
+        const community=communityMaps.find(m=>m.id===mapId);
+        const mapDef=MAP_MODULES[mapId] ||
+            (community?{path:'/js/levelCommunity.js',buildFn:'buildCommunityLevel'}:null);
+        if(!mapDef){
+            errorEl.textContent='Unknown map ID: '+mapId+'. Register it in assets/maps/catalog.json';
+            errorEl.style.display='block';
+            throw Error('Unknown map ID: '+mapId);
+        }
+        const { path: levelPath, buildFn } = mapDef;
         document.querySelectorAll('#mapSwitcher a').forEach(a => {
             if (a.dataset.map === mapId) a.classList.add('active');
         });
@@ -166,7 +185,7 @@
             // ---- Build the level (every buildXLevel() now takes the same
             // optional customScene param and is async — it awaits its own
             // assets/maps/<mapId>.json fetch before baking the NavMesh) ----
-            await levelMod[buildFn](scene);
+            await levelMod[buildFn](scene,mapId);
 
             // ---- Editor ----
             class StandaloneEditor {
