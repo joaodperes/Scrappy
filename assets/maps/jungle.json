@@ -2,6 +2,7 @@
   "version": 2,
   "objects": [
     {
+      "id": "jungle-entity-0001",
       "generator": "createSlab",
       "params": {
         "px": 0,
@@ -9,7 +10,9 @@
         "pz": 50,
         "sx": 138,
         "sz": 40,
-        "mat": "other"
+        "mat": "concrete",
+        "lift": true,
+        "thickness": 0.8
       },
       "position": {
         "x": 0,
@@ -25,10 +28,10 @@
         "x": 1,
         "y": 1,
         "z": 1
-      },
-      "id": "jungle-entity-0001"
+      }
     },
     {
+      "id": "jungle-entity-0002",
       "generator": "createSlab",
       "params": {
         "px": 0,
@@ -36,12 +39,14 @@
         "pz": -50,
         "sx": 138,
         "sz": 40,
-        "mat": "other"
+        "mat": "concrete",
+        "lift": true,
+        "thickness": 0.8
       },
       "position": {
         "x": 0,
-        "y": -0.4,
-        "z": -50
+        "y": -0.4000000059604645,
+        "z": -52.48514175415039
       },
       "rotation": {
         "x": 0,
@@ -52,10 +57,10 @@
         "x": 1,
         "y": 1,
         "z": 1
-      },
-      "id": "jungle-entity-0002"
+      }
     },
     {
+      "id": "jungle-entity-0003",
       "generator": "createSlab",
       "params": {
         "px": -50,
@@ -63,7 +68,9 @@
         "pz": 0,
         "sx": 40,
         "sz": 60,
-        "mat": "other"
+        "mat": "concrete",
+        "lift": true,
+        "thickness": 0.8
       },
       "position": {
         "x": -50,
@@ -79,10 +86,10 @@
         "x": 1,
         "y": 1,
         "z": 1
-      },
-      "id": "jungle-entity-0003"
+      }
     },
     {
+      "id": "jungle-entity-0004",
       "generator": "createSlab",
       "params": {
         "px": 50,
@@ -90,7 +97,9 @@
         "pz": 0,
         "sx": 40,
         "sz": 60,
-        "mat": "other"
+        "mat": "concrete",
+        "lift": true,
+        "thickness": 0.8
       },
       "position": {
         "x": 50,
@@ -106,10 +115,10 @@
         "x": 1,
         "y": 1,
         "z": 1
-      },
-      "id": "jungle-entity-0004"
+      }
     },
     {
+      "id": "jungle-entity-0005",
       "generator": "createSlab",
       "params": {
         "px": 0,
@@ -117,7 +126,9 @@
         "pz": 0,
         "sx": 8,
         "sz": 8,
-        "mat": "concrete"
+        "mat": "concrete",
+        "lift": true,
+        "thickness": 0.8
       },
       "position": {
         "x": 0,
@@ -133,10 +144,10 @@
         "x": 1,
         "y": 1,
         "z": 1
-      },
-      "id": "jungle-entity-0005"
+      }
     },
     {
+      "id": "jungle-entity-0006",
       "generator": "createSlab",
       "params": {
         "px": -15,
@@ -144,7 +155,9 @@
         "pz": 0,
         "sx": 6,
         "sz": 6,
-        "mat": "concrete"
+        "mat": "concrete",
+        "lift": true,
+        "thickness": 0.8
       },
       "position": {
         "x": -15,
@@ -160,10 +173,10 @@
         "x": 1,
         "y": 1,
         "z": 1
-      },
-      "id": "jungle-entity-0006"
+      }
     },
     {
+      "id": "jungle-entity-0007",
       "generator": "createSlab",
       "params": {
         "px": 15,
@@ -171,7 +184,9 @@
         "pz": 0,
         "sx": 6,
         "sz": 6,
-        "mat": "concrete"
+        "mat": "concrete",
+        "lift": true,
+        "thickness": 0.8
       },
       "position": {
         "x": 15,
@@ -187,10 +202,10 @@
         "x": 1,
         "y": 1,
         "z": 1
-      },
-      "id": "jungle-entity-0007"
+      }
     },
     {
+      "id": "jungle-entity-0008",
       "generator": "createSlab",
       "params": {
         "px": 0,
@@ -198,7 +213,9 @@
         "pz": 15,
         "sx": 6,
         "sz": 6,
-        "mat": "concrete"
+        "mat": "concrete",
+        "lift": true,
+        "thickness": 0.8
       },
       "position": {
         "x": 0,
@@ -214,10 +231,10 @@
         "x": 1,
         "y": 1,
         "z": 1
-      },
-      "id": "jungle-entity-0008"
+      }
     },
     {
+      "id": "jungle-entity-0009",
       "generator": "createSlab",
       "params": {
         "px": 0,
@@ -225,7 +242,9 @@
         "pz": -15,
         "sx": 6,
         "sz": 6,
-        "mat": "concrete"
+        "mat": "concrete",
+        "lift": true,
+        "thickness": 0.8
       },
       "position": {
         "x": 0,
@@ -241,10 +260,10 @@
         "x": 1,
         "y": 1,
         "z": 1
-      },
-      "id": "jungle-entity-0009"
+      }
     },
     {
+      "id": "jungle-entity-0010",
       "generator": "createSlab",
       "params": {
         "px": -24,
@@ -252,7 +271,9 @@
         "pz": 24,
         "sx": 12,
         "sz": 12,
-        "mat": "concrete"
+        "mat": "concrete",
+        "lift": true,
+        "thickness": 0.8
       },
       "position": {
         "x": -24,
@@ -268,10 +289,10 @@
         "x": 1,
         "y": 1,
         "z": 1
-      },
-      "id": "jungle-entity-0010"
+      }
     },
     {
+      "id": "jungle-entity-0011",
       "generator": "createSlab",
       "params": {
         "px": 24,
@@ -279,7 +300,9 @@
         "pz": 24,
         "sx": 12,
         "sz": 12,
-        "mat": "concrete"
+        "mat": "concrete",
+        "lift": true,
+        "thickness": 0.8
       },
       "position": {
         "x": 24,
@@ -295,10 +318,10 @@
         "x": 1,
         "y": 1,
         "z": 1
-      },
-      "id": "jungle-entity-0011"
+      }
     },
     {
+      "id": "jungle-entity-0012",
       "generator": "createSlab",
       "params": {
         "px": -24,
@@ -306,7 +329,9 @@
         "pz": -24,
         "sx": 12,
         "sz": 12,
-        "mat": "concrete"
+        "mat": "concrete",
+        "lift": true,
+        "thickness": 0.8
       },
       "position": {
         "x": -24,
@@ -322,10 +347,10 @@
         "x": 1,
         "y": 1,
         "z": 1
-      },
-      "id": "jungle-entity-0012"
+      }
     },
     {
+      "id": "jungle-entity-0013",
       "generator": "createSlab",
       "params": {
         "px": 24,
@@ -333,7 +358,9 @@
         "pz": -24,
         "sx": 12,
         "sz": 12,
-        "mat": "concrete"
+        "mat": "concrete",
+        "lift": true,
+        "thickness": 0.8
       },
       "position": {
         "x": 24,
@@ -349,10 +376,10 @@
         "x": 1,
         "y": 1,
         "z": 1
-      },
-      "id": "jungle-entity-0013"
+      }
     },
     {
+      "id": "jungle-entity-0014",
       "generator": "createPillar",
       "params": {
         "px": -24,
@@ -376,10 +403,10 @@
         "x": 1,
         "y": 1,
         "z": 1
-      },
-      "id": "jungle-entity-0014"
+      }
     },
     {
+      "id": "jungle-entity-0015",
       "generator": "createPillar",
       "params": {
         "px": 24,
@@ -403,10 +430,10 @@
         "x": 1,
         "y": 1,
         "z": 1
-      },
-      "id": "jungle-entity-0015"
+      }
     },
     {
+      "id": "jungle-entity-0016",
       "generator": "createPillar",
       "params": {
         "px": -24,
@@ -430,10 +457,10 @@
         "x": 1,
         "y": 1,
         "z": 1
-      },
-      "id": "jungle-entity-0016"
+      }
     },
     {
+      "id": "jungle-entity-0017",
       "generator": "createPillar",
       "params": {
         "px": 24,
@@ -457,10 +484,10 @@
         "x": 1,
         "y": 1,
         "z": 1
-      },
-      "id": "jungle-entity-0017"
+      }
     },
     {
+      "id": "jungle-entity-0018",
       "generator": "createPillar",
       "params": {
         "px": -40,
@@ -484,10 +511,10 @@
         "x": 1,
         "y": 1,
         "z": 1
-      },
-      "id": "jungle-entity-0018"
+      }
     },
     {
+      "id": "jungle-entity-0019",
       "generator": "createPillar",
       "params": {
         "px": 40,
@@ -511,10 +538,10 @@
         "x": 1,
         "y": 1,
         "z": 1
-      },
-      "id": "jungle-entity-0019"
+      }
     },
     {
+      "id": "jungle-entity-0020",
       "generator": "createPillar",
       "params": {
         "px": 0,
@@ -538,10 +565,10 @@
         "x": 1,
         "y": 1,
         "z": 1
-      },
-      "id": "jungle-entity-0020"
+      }
     },
     {
+      "id": "jungle-entity-0021",
       "generator": "createPillar",
       "params": {
         "px": 0,
@@ -565,10 +592,10 @@
         "x": 1,
         "y": 1,
         "z": 1
-      },
-      "id": "jungle-entity-0021"
+      }
     },
     {
+      "id": "jungle-entity-0022",
       "generator": "createWall",
       "params": {
         "px": -33.5,
@@ -593,10 +620,10 @@
         "x": 1,
         "y": 1,
         "z": 1
-      },
-      "id": "jungle-entity-0022"
+      }
     },
     {
+      "id": "jungle-entity-0023",
       "generator": "createWall",
       "params": {
         "px": -26.5,
@@ -621,10 +648,10 @@
         "x": 1,
         "y": 1,
         "z": 1
-      },
-      "id": "jungle-entity-0023"
+      }
     },
     {
+      "id": "jungle-entity-0024",
       "generator": "createWall",
       "params": {
         "px": -30,
@@ -649,10 +676,10 @@
         "x": 1,
         "y": 1,
         "z": 1
-      },
-      "id": "jungle-entity-0024"
+      }
     },
     {
+      "id": "jungle-entity-0025",
       "generator": "createWall",
       "params": {
         "px": 26.5,
@@ -677,10 +704,10 @@
         "x": 1,
         "y": 1,
         "z": 1
-      },
-      "id": "jungle-entity-0025"
+      }
     },
     {
+      "id": "jungle-entity-0026",
       "generator": "createWall",
       "params": {
         "px": 33.5,
@@ -705,10 +732,10 @@
         "x": 1,
         "y": 1,
         "z": 1
-      },
-      "id": "jungle-entity-0026"
+      }
     },
     {
+      "id": "jungle-entity-0027",
       "generator": "createWall",
       "params": {
         "px": 30,
@@ -733,10 +760,10 @@
         "x": 1,
         "y": 1,
         "z": 1
-      },
-      "id": "jungle-entity-0027"
+      }
     },
     {
+      "id": "jungle-entity-0028",
       "generator": "createWall",
       "params": {
         "px": 20,
@@ -761,10 +788,10 @@
         "x": 1,
         "y": 1,
         "z": 1
-      },
-      "id": "jungle-entity-0028"
+      }
     },
     {
+      "id": "jungle-entity-0029",
       "generator": "createWall",
       "params": {
         "px": 20,
@@ -789,10 +816,10 @@
         "x": 1,
         "y": 1,
         "z": 1
-      },
-      "id": "jungle-entity-0029"
+      }
     },
     {
+      "id": "jungle-entity-0030",
       "generator": "createWall",
       "params": {
         "px": 12,
@@ -817,10 +844,10 @@
         "x": 1,
         "y": 1,
         "z": 1
-      },
-      "id": "jungle-entity-0030"
+      }
     },
     {
+      "id": "jungle-entity-0031",
       "generator": "createWall",
       "params": {
         "px": -20,
@@ -845,10 +872,10 @@
         "x": 1,
         "y": 1,
         "z": 1
-      },
-      "id": "jungle-entity-0031"
+      }
     },
     {
+      "id": "jungle-entity-0032",
       "generator": "createWall",
       "params": {
         "px": -20,
@@ -873,10 +900,10 @@
         "x": 1,
         "y": 1,
         "z": 1
-      },
-      "id": "jungle-entity-0032"
+      }
     },
     {
+      "id": "jungle-entity-0033",
       "generator": "createWall",
       "params": {
         "px": -12,
@@ -901,10 +928,10 @@
         "x": 1,
         "y": 1,
         "z": 1
-      },
-      "id": "jungle-entity-0033"
+      }
     },
     {
+      "id": "jungle-entity-0034",
       "generator": "createSlab",
       "params": {
         "px": -59,
@@ -912,7 +939,9 @@
         "pz": -59,
         "sx": 20,
         "sz": 20,
-        "mat": "other"
+        "mat": "concrete",
+        "lift": true,
+        "thickness": 0.8
       },
       "position": {
         "x": -59,
@@ -928,10 +957,10 @@
         "x": 1,
         "y": 1,
         "z": 1
-      },
-      "id": "jungle-entity-0034"
+      }
     },
     {
+      "id": "jungle-entity-0035",
       "generator": "createSlab",
       "params": {
         "px": -59,
@@ -939,7 +968,9 @@
         "pz": -39,
         "sx": 20,
         "sz": 20,
-        "mat": "other"
+        "mat": "concrete",
+        "lift": true,
+        "thickness": 0.8
       },
       "position": {
         "x": -59,
@@ -955,10 +986,10 @@
         "x": 1,
         "y": 1,
         "z": 1
-      },
-      "id": "jungle-entity-0035"
+      }
     },
     {
+      "id": "jungle-entity-0036",
       "generator": "createSlab",
       "params": {
         "px": -59,
@@ -966,7 +997,9 @@
         "pz": -19,
         "sx": 20,
         "sz": 20,
-        "mat": "other"
+        "mat": "concrete",
+        "lift": true,
+        "thickness": 0.8
       },
       "position": {
         "x": -59,
@@ -982,10 +1015,10 @@
         "x": 1,
         "y": 1,
         "z": 1
-      },
-      "id": "jungle-entity-0036"
+      }
     },
     {
+      "id": "jungle-entity-0037",
       "generator": "createSlab",
       "params": {
         "px": -59,
@@ -993,7 +1026,9 @@
         "pz": 1,
         "sx": 20,
         "sz": 20,
-        "mat": "other"
+        "mat": "concrete",
+        "lift": true,
+        "thickness": 0.8
       },
       "position": {
         "x": -59,
@@ -1009,10 +1044,10 @@
         "x": 1,
         "y": 1,
         "z": 1
-      },
-      "id": "jungle-entity-0037"
+      }
     },
     {
+      "id": "jungle-entity-0038",
       "generator": "createSlab",
       "params": {
         "px": -59,
@@ -1020,7 +1055,9 @@
         "pz": 21,
         "sx": 20,
         "sz": 20,
-        "mat": "other"
+        "mat": "concrete",
+        "lift": true,
+        "thickness": 0.8
       },
       "position": {
         "x": -59,
@@ -1036,10 +1073,10 @@
         "x": 1,
         "y": 1,
         "z": 1
-      },
-      "id": "jungle-entity-0038"
+      }
     },
     {
+      "id": "jungle-entity-0039",
       "generator": "createSlab",
       "params": {
         "px": -59,
@@ -1047,7 +1084,9 @@
         "pz": 41,
         "sx": 20,
         "sz": 20,
-        "mat": "other"
+        "mat": "concrete",
+        "lift": true,
+        "thickness": 0.8
       },
       "position": {
         "x": -59,
@@ -1063,10 +1102,10 @@
         "x": 1,
         "y": 1,
         "z": 1
-      },
-      "id": "jungle-entity-0039"
+      }
     },
     {
+      "id": "jungle-entity-0040",
       "generator": "createSlab",
       "params": {
         "px": -59,
@@ -1074,7 +1113,9 @@
         "pz": 61,
         "sx": 20,
         "sz": 20,
-        "mat": "other"
+        "mat": "concrete",
+        "lift": true,
+        "thickness": 0.8
       },
       "position": {
         "x": -59,
@@ -1090,10 +1131,10 @@
         "x": 1,
         "y": 1,
         "z": 1
-      },
-      "id": "jungle-entity-0040"
+      }
     },
     {
+      "id": "jungle-entity-0041",
       "generator": "createSlab",
       "params": {
         "px": -39,
@@ -1101,7 +1142,9 @@
         "pz": -59,
         "sx": 20,
         "sz": 20,
-        "mat": "other"
+        "mat": "concrete",
+        "lift": true,
+        "thickness": 0.8
       },
       "position": {
         "x": -39,
@@ -1117,10 +1160,10 @@
         "x": 1,
         "y": 1,
         "z": 1
-      },
-      "id": "jungle-entity-0041"
+      }
     },
     {
+      "id": "jungle-entity-0042",
       "generator": "createSlab",
       "params": {
         "px": -39,
@@ -1128,7 +1171,9 @@
         "pz": -39,
         "sx": 20,
         "sz": 20,
-        "mat": "other"
+        "mat": "concrete",
+        "lift": true,
+        "thickness": 0.8
       },
       "position": {
         "x": -39,
@@ -1144,10 +1189,10 @@
         "x": 1,
         "y": 1,
         "z": 1
-      },
-      "id": "jungle-entity-0042"
+      }
     },
     {
+      "id": "jungle-entity-0043",
       "generator": "createSlab",
       "params": {
         "px": -39,
@@ -1155,7 +1200,9 @@
         "pz": -19,
         "sx": 20,
         "sz": 20,
-        "mat": "other"
+        "mat": "concrete",
+        "lift": true,
+        "thickness": 0.8
       },
       "position": {
         "x": -39,
@@ -1171,10 +1218,10 @@
         "x": 1,
         "y": 1,
         "z": 1
-      },
-      "id": "jungle-entity-0043"
+      }
     },
     {
+      "id": "jungle-entity-0044",
       "generator": "createSlab",
       "params": {
         "px": -39,
@@ -1182,11 +1229,13 @@
         "pz": 1,
         "sx": 20,
         "sz": 20,
-        "mat": "other"
+        "mat": "concrete",
+        "lift": true,
+        "thickness": 0.8
       },
       "position": {
         "x": -39,
-        "y": -7.9,
+        "y": -7.900000095367432,
         "z": 1
       },
       "rotation": {
@@ -1197,11 +1246,11 @@
       "scaling": {
         "x": 1,
         "y": 1,
-        "z": 1
-      },
-      "id": "jungle-entity-0044"
+        "z": 3.110621690750122
+      }
     },
     {
+      "id": "jungle-entity-0045",
       "generator": "createSlab",
       "params": {
         "px": -39,
@@ -1209,7 +1258,9 @@
         "pz": 41,
         "sx": 20,
         "sz": 20,
-        "mat": "other"
+        "mat": "concrete",
+        "lift": true,
+        "thickness": 0.8
       },
       "position": {
         "x": -39,
@@ -1225,10 +1276,10 @@
         "x": 1,
         "y": 1,
         "z": 1
-      },
-      "id": "jungle-entity-0045"
+      }
     },
     {
+      "id": "jungle-entity-0046",
       "generator": "createSlab",
       "params": {
         "px": -39,
@@ -1236,7 +1287,9 @@
         "pz": 61,
         "sx": 20,
         "sz": 20,
-        "mat": "other"
+        "mat": "concrete",
+        "lift": true,
+        "thickness": 0.8
       },
       "position": {
         "x": -39,
@@ -1252,10 +1305,10 @@
         "x": 1,
         "y": 1,
         "z": 1
-      },
-      "id": "jungle-entity-0046"
+      }
     },
     {
+      "id": "jungle-entity-0047",
       "generator": "createSlab",
       "params": {
         "px": -19,
@@ -1263,7 +1316,9 @@
         "pz": -59,
         "sx": 20,
         "sz": 20,
-        "mat": "other"
+        "mat": "concrete",
+        "lift": true,
+        "thickness": 0.8
       },
       "position": {
         "x": -19,
@@ -1279,10 +1334,10 @@
         "x": 1,
         "y": 1,
         "z": 1
-      },
-      "id": "jungle-entity-0047"
+      }
     },
     {
+      "id": "jungle-entity-0048",
       "generator": "createSlab",
       "params": {
         "px": -19,
@@ -1290,11 +1345,13 @@
         "pz": 1,
         "sx": 20,
         "sz": 20,
-        "mat": "other"
+        "mat": "concrete",
+        "lift": true,
+        "thickness": 0.8
       },
       "position": {
         "x": -19,
-        "y": -7.9,
+        "y": -7.900000095367432,
         "z": 1
       },
       "rotation": {
@@ -1305,11 +1362,11 @@
       "scaling": {
         "x": 1,
         "y": 1,
-        "z": 1
-      },
-      "id": "jungle-entity-0048"
+        "z": 4.28643798828125
+      }
     },
     {
+      "id": "jungle-entity-0049",
       "generator": "createSlab",
       "params": {
         "px": -19,
@@ -1317,7 +1374,9 @@
         "pz": 41,
         "sx": 20,
         "sz": 20,
-        "mat": "other"
+        "mat": "concrete",
+        "lift": true,
+        "thickness": 0.8
       },
       "position": {
         "x": -19,
@@ -1333,10 +1392,10 @@
         "x": 1,
         "y": 1,
         "z": 1
-      },
-      "id": "jungle-entity-0049"
+      }
     },
     {
+      "id": "jungle-entity-0050",
       "generator": "createSlab",
       "params": {
         "px": -19,
@@ -1344,7 +1403,9 @@
         "pz": 61,
         "sx": 20,
         "sz": 20,
-        "mat": "other"
+        "mat": "concrete",
+        "lift": true,
+        "thickness": 0.8
       },
       "position": {
         "x": -19,
@@ -1360,10 +1421,10 @@
         "x": 1,
         "y": 1,
         "z": 1
-      },
-      "id": "jungle-entity-0050"
+      }
     },
     {
+      "id": "jungle-entity-0051",
       "generator": "createSlab",
       "params": {
         "px": 1,
@@ -1371,7 +1432,9 @@
         "pz": -59,
         "sx": 20,
         "sz": 20,
-        "mat": "other"
+        "mat": "concrete",
+        "lift": true,
+        "thickness": 0.8
       },
       "position": {
         "x": 1,
@@ -1387,10 +1450,10 @@
         "x": 1,
         "y": 1,
         "z": 1
-      },
-      "id": "jungle-entity-0051"
+      }
     },
     {
+      "id": "jungle-entity-0052",
       "generator": "createSlab",
       "params": {
         "px": 1,
@@ -1398,7 +1461,9 @@
         "pz": -39,
         "sx": 20,
         "sz": 20,
-        "mat": "other"
+        "mat": "concrete",
+        "lift": true,
+        "thickness": 0.8
       },
       "position": {
         "x": 1,
@@ -1414,10 +1479,10 @@
         "x": 1,
         "y": 1,
         "z": 1
-      },
-      "id": "jungle-entity-0052"
+      }
     },
     {
+      "id": "jungle-entity-0053",
       "generator": "createSlab",
       "params": {
         "px": 1,
@@ -1425,10 +1490,505 @@
         "pz": -19,
         "sx": 20,
         "sz": 20,
-        "mat": "other"
+        "mat": "concrete",
+        "lift": true,
+        "thickness": 0.8
       },
       "position": {
         "x": 1,
+        "y": -7.900000095367432,
+        "z": -19
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0.012838572111921132,
+        "z": 0
+      },
+      "scaling": {
+        "x": 0.9999998608878161,
+        "y": 1,
+        "z": 0.9999998608878161
+      }
+    },
+    {
+      "id": "jungle-entity-0054",
+      "generator": "createSlab",
+      "params": {
+        "px": 1,
+        "surfY": -7.5,
+        "pz": 1,
+        "sx": 20,
+        "sz": 20,
+        "mat": "concrete",
+        "lift": true,
+        "thickness": 0.8
+      },
+      "position": {
+        "x": 1,
+        "y": -7.9,
+        "z": 1
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "jungle-entity-0055",
+      "generator": "createSlab",
+      "params": {
+        "px": 1,
+        "surfY": -7.5,
+        "pz": 21,
+        "sx": 20,
+        "sz": 20,
+        "mat": "concrete",
+        "lift": true,
+        "thickness": 0.8
+      },
+      "position": {
+        "x": 1,
+        "y": -7.859883785247803,
+        "z": 21
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "jungle-entity-0056",
+      "generator": "createSlab",
+      "params": {
+        "px": 1,
+        "surfY": -7.5,
+        "pz": 41,
+        "sx": 20,
+        "sz": 20,
+        "mat": "concrete",
+        "lift": true,
+        "thickness": 0.8
+      },
+      "position": {
+        "x": 1,
+        "y": -7.9,
+        "z": 41
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "jungle-entity-0057",
+      "generator": "createSlab",
+      "params": {
+        "px": 1,
+        "surfY": -7.5,
+        "pz": 61,
+        "sx": 20,
+        "sz": 20,
+        "mat": "concrete",
+        "lift": true,
+        "thickness": 0.8
+      },
+      "position": {
+        "x": 1,
+        "y": -7.9,
+        "z": 61
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "jungle-entity-0058",
+      "generator": "createSlab",
+      "params": {
+        "px": 21,
+        "surfY": -7.5,
+        "pz": -59,
+        "sx": 20,
+        "sz": 20,
+        "mat": "concrete",
+        "lift": true,
+        "thickness": 0.8
+      },
+      "position": {
+        "x": 21,
+        "y": -7.9,
+        "z": -59
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "jungle-entity-0059",
+      "generator": "createSlab",
+      "params": {
+        "px": 21,
+        "surfY": -7.5,
+        "pz": -39,
+        "sx": 20,
+        "sz": 20,
+        "mat": "concrete",
+        "lift": true,
+        "thickness": 0.8
+      },
+      "position": {
+        "x": 21,
+        "y": -7.9,
+        "z": -39
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "jungle-entity-0060",
+      "generator": "createSlab",
+      "params": {
+        "px": 21,
+        "surfY": -7.5,
+        "pz": 1,
+        "sx": 20,
+        "sz": 20,
+        "mat": "concrete",
+        "lift": true,
+        "thickness": 0.8
+      },
+      "position": {
+        "x": 21,
+        "y": -7.900000095367432,
+        "z": 1
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 4.107438087463379
+      }
+    },
+    {
+      "id": "jungle-entity-0061",
+      "generator": "createSlab",
+      "params": {
+        "px": 21,
+        "surfY": -7.5,
+        "pz": 61,
+        "sx": 20,
+        "sz": 20,
+        "mat": "concrete",
+        "lift": true,
+        "thickness": 0.8
+      },
+      "position": {
+        "x": 21,
+        "y": -7.9,
+        "z": 61
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "jungle-entity-0062",
+      "generator": "createSlab",
+      "params": {
+        "px": 41,
+        "surfY": -7.5,
+        "pz": -59,
+        "sx": 20,
+        "sz": 20,
+        "mat": "concrete",
+        "lift": true,
+        "thickness": 0.8
+      },
+      "position": {
+        "x": 41,
+        "y": -7.9,
+        "z": -59
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "jungle-entity-0063",
+      "generator": "createSlab",
+      "params": {
+        "px": 41,
+        "surfY": -7.5,
+        "pz": -39,
+        "sx": 20,
+        "sz": 20,
+        "mat": "concrete",
+        "lift": true,
+        "thickness": 0.8
+      },
+      "position": {
+        "x": 41,
+        "y": -7.9,
+        "z": -39
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "jungle-entity-0064",
+      "generator": "createSlab",
+      "params": {
+        "px": 41,
+        "surfY": -7.5,
+        "pz": 1,
+        "sx": 20,
+        "sz": 20,
+        "mat": "concrete",
+        "lift": true,
+        "thickness": 0.8
+      },
+      "position": {
+        "x": 41,
+        "y": -7.900000095367432,
+        "z": 1
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 3.6115036010742188
+      }
+    },
+    {
+      "id": "jungle-entity-0065",
+      "generator": "createSlab",
+      "params": {
+        "px": 41,
+        "surfY": -7.5,
+        "pz": 21,
+        "sx": 20,
+        "sz": 20,
+        "mat": "concrete",
+        "lift": true,
+        "thickness": 0.8
+      },
+      "position": {
+        "x": 41,
+        "y": -7.9,
+        "z": 21
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "jungle-entity-0066",
+      "generator": "createSlab",
+      "params": {
+        "px": 41,
+        "surfY": -7.5,
+        "pz": 41,
+        "sx": 20,
+        "sz": 20,
+        "mat": "concrete",
+        "lift": true,
+        "thickness": 0.8
+      },
+      "position": {
+        "x": 41,
+        "y": -7.9,
+        "z": 41
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "jungle-entity-0067",
+      "generator": "createSlab",
+      "params": {
+        "px": 41,
+        "surfY": -7.5,
+        "pz": 61,
+        "sx": 20,
+        "sz": 20,
+        "mat": "concrete",
+        "lift": true,
+        "thickness": 0.8
+      },
+      "position": {
+        "x": 41,
+        "y": -7.9,
+        "z": 61
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "jungle-entity-0068",
+      "generator": "createSlab",
+      "params": {
+        "px": 61,
+        "surfY": -7.5,
+        "pz": -59,
+        "sx": 20,
+        "sz": 20,
+        "mat": "concrete",
+        "lift": true,
+        "thickness": 0.8
+      },
+      "position": {
+        "x": 61,
+        "y": -7.9,
+        "z": -59
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "jungle-entity-0069",
+      "generator": "createSlab",
+      "params": {
+        "px": 61,
+        "surfY": -7.5,
+        "pz": -39,
+        "sx": 20,
+        "sz": 20,
+        "mat": "concrete",
+        "lift": true,
+        "thickness": 0.8
+      },
+      "position": {
+        "x": 61,
+        "y": -7.9,
+        "z": -39
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "jungle-entity-0070",
+      "generator": "createSlab",
+      "params": {
+        "px": 61,
+        "surfY": -7.5,
+        "pz": -19,
+        "sx": 20,
+        "sz": 20,
+        "mat": "concrete",
+        "lift": true,
+        "thickness": 0.8
+      },
+      "position": {
+        "x": 61,
         "y": -7.9,
         "z": -19
       },
@@ -1441,469 +2001,10 @@
         "x": 1,
         "y": 1,
         "z": 1
-      },
-      "id": "jungle-entity-0053"
+      }
     },
     {
-      "generator": "createSlab",
-      "params": {
-        "px": 1,
-        "surfY": -7.5,
-        "pz": 1,
-        "sx": 20,
-        "sz": 20,
-        "mat": "other"
-      },
-      "position": {
-        "x": 1,
-        "y": -7.9,
-        "z": 1
-      },
-      "rotation": {
-        "x": 0,
-        "y": 0,
-        "z": 0
-      },
-      "scaling": {
-        "x": 1,
-        "y": 1,
-        "z": 1
-      },
-      "id": "jungle-entity-0054"
-    },
-    {
-      "generator": "createSlab",
-      "params": {
-        "px": 1,
-        "surfY": -7.5,
-        "pz": 21,
-        "sx": 20,
-        "sz": 20,
-        "mat": "other"
-      },
-      "position": {
-        "x": 1,
-        "y": -7.9,
-        "z": 21
-      },
-      "rotation": {
-        "x": 0,
-        "y": 0,
-        "z": 0
-      },
-      "scaling": {
-        "x": 1,
-        "y": 1,
-        "z": 1
-      },
-      "id": "jungle-entity-0055"
-    },
-    {
-      "generator": "createSlab",
-      "params": {
-        "px": 1,
-        "surfY": -7.5,
-        "pz": 41,
-        "sx": 20,
-        "sz": 20,
-        "mat": "other"
-      },
-      "position": {
-        "x": 1,
-        "y": -7.9,
-        "z": 41
-      },
-      "rotation": {
-        "x": 0,
-        "y": 0,
-        "z": 0
-      },
-      "scaling": {
-        "x": 1,
-        "y": 1,
-        "z": 1
-      },
-      "id": "jungle-entity-0056"
-    },
-    {
-      "generator": "createSlab",
-      "params": {
-        "px": 1,
-        "surfY": -7.5,
-        "pz": 61,
-        "sx": 20,
-        "sz": 20,
-        "mat": "other"
-      },
-      "position": {
-        "x": 1,
-        "y": -7.9,
-        "z": 61
-      },
-      "rotation": {
-        "x": 0,
-        "y": 0,
-        "z": 0
-      },
-      "scaling": {
-        "x": 1,
-        "y": 1,
-        "z": 1
-      },
-      "id": "jungle-entity-0057"
-    },
-    {
-      "generator": "createSlab",
-      "params": {
-        "px": 21,
-        "surfY": -7.5,
-        "pz": -59,
-        "sx": 20,
-        "sz": 20,
-        "mat": "other"
-      },
-      "position": {
-        "x": 21,
-        "y": -7.9,
-        "z": -59
-      },
-      "rotation": {
-        "x": 0,
-        "y": 0,
-        "z": 0
-      },
-      "scaling": {
-        "x": 1,
-        "y": 1,
-        "z": 1
-      },
-      "id": "jungle-entity-0058"
-    },
-    {
-      "generator": "createSlab",
-      "params": {
-        "px": 21,
-        "surfY": -7.5,
-        "pz": -39,
-        "sx": 20,
-        "sz": 20,
-        "mat": "other"
-      },
-      "position": {
-        "x": 21,
-        "y": -7.9,
-        "z": -39
-      },
-      "rotation": {
-        "x": 0,
-        "y": 0,
-        "z": 0
-      },
-      "scaling": {
-        "x": 1,
-        "y": 1,
-        "z": 1
-      },
-      "id": "jungle-entity-0059"
-    },
-    {
-      "generator": "createSlab",
-      "params": {
-        "px": 21,
-        "surfY": -7.5,
-        "pz": 1,
-        "sx": 20,
-        "sz": 20,
-        "mat": "other"
-      },
-      "position": {
-        "x": 21,
-        "y": -7.9,
-        "z": 1
-      },
-      "rotation": {
-        "x": 0,
-        "y": 0,
-        "z": 0
-      },
-      "scaling": {
-        "x": 1,
-        "y": 1,
-        "z": 1
-      },
-      "id": "jungle-entity-0060"
-    },
-    {
-      "generator": "createSlab",
-      "params": {
-        "px": 21,
-        "surfY": -7.5,
-        "pz": 61,
-        "sx": 20,
-        "sz": 20,
-        "mat": "other"
-      },
-      "position": {
-        "x": 21,
-        "y": -7.9,
-        "z": 61
-      },
-      "rotation": {
-        "x": 0,
-        "y": 0,
-        "z": 0
-      },
-      "scaling": {
-        "x": 1,
-        "y": 1,
-        "z": 1
-      },
-      "id": "jungle-entity-0061"
-    },
-    {
-      "generator": "createSlab",
-      "params": {
-        "px": 41,
-        "surfY": -7.5,
-        "pz": -59,
-        "sx": 20,
-        "sz": 20,
-        "mat": "other"
-      },
-      "position": {
-        "x": 41,
-        "y": -7.9,
-        "z": -59
-      },
-      "rotation": {
-        "x": 0,
-        "y": 0,
-        "z": 0
-      },
-      "scaling": {
-        "x": 1,
-        "y": 1,
-        "z": 1
-      },
-      "id": "jungle-entity-0062"
-    },
-    {
-      "generator": "createSlab",
-      "params": {
-        "px": 41,
-        "surfY": -7.5,
-        "pz": -39,
-        "sx": 20,
-        "sz": 20,
-        "mat": "other"
-      },
-      "position": {
-        "x": 41,
-        "y": -7.9,
-        "z": -39
-      },
-      "rotation": {
-        "x": 0,
-        "y": 0,
-        "z": 0
-      },
-      "scaling": {
-        "x": 1,
-        "y": 1,
-        "z": 1
-      },
-      "id": "jungle-entity-0063"
-    },
-    {
-      "generator": "createSlab",
-      "params": {
-        "px": 41,
-        "surfY": -7.5,
-        "pz": 1,
-        "sx": 20,
-        "sz": 20,
-        "mat": "other"
-      },
-      "position": {
-        "x": 41,
-        "y": -7.9,
-        "z": 1
-      },
-      "rotation": {
-        "x": 0,
-        "y": 0,
-        "z": 0
-      },
-      "scaling": {
-        "x": 1,
-        "y": 1,
-        "z": 1
-      },
-      "id": "jungle-entity-0064"
-    },
-    {
-      "generator": "createSlab",
-      "params": {
-        "px": 41,
-        "surfY": -7.5,
-        "pz": 21,
-        "sx": 20,
-        "sz": 20,
-        "mat": "other"
-      },
-      "position": {
-        "x": 41,
-        "y": -7.9,
-        "z": 21
-      },
-      "rotation": {
-        "x": 0,
-        "y": 0,
-        "z": 0
-      },
-      "scaling": {
-        "x": 1,
-        "y": 1,
-        "z": 1
-      },
-      "id": "jungle-entity-0065"
-    },
-    {
-      "generator": "createSlab",
-      "params": {
-        "px": 41,
-        "surfY": -7.5,
-        "pz": 41,
-        "sx": 20,
-        "sz": 20,
-        "mat": "other"
-      },
-      "position": {
-        "x": 41,
-        "y": -7.9,
-        "z": 41
-      },
-      "rotation": {
-        "x": 0,
-        "y": 0,
-        "z": 0
-      },
-      "scaling": {
-        "x": 1,
-        "y": 1,
-        "z": 1
-      },
-      "id": "jungle-entity-0066"
-    },
-    {
-      "generator": "createSlab",
-      "params": {
-        "px": 41,
-        "surfY": -7.5,
-        "pz": 61,
-        "sx": 20,
-        "sz": 20,
-        "mat": "other"
-      },
-      "position": {
-        "x": 41,
-        "y": -7.9,
-        "z": 61
-      },
-      "rotation": {
-        "x": 0,
-        "y": 0,
-        "z": 0
-      },
-      "scaling": {
-        "x": 1,
-        "y": 1,
-        "z": 1
-      },
-      "id": "jungle-entity-0067"
-    },
-    {
-      "generator": "createSlab",
-      "params": {
-        "px": 61,
-        "surfY": -7.5,
-        "pz": -59,
-        "sx": 20,
-        "sz": 20,
-        "mat": "other"
-      },
-      "position": {
-        "x": 61,
-        "y": -7.9,
-        "z": -59
-      },
-      "rotation": {
-        "x": 0,
-        "y": 0,
-        "z": 0
-      },
-      "scaling": {
-        "x": 1,
-        "y": 1,
-        "z": 1
-      },
-      "id": "jungle-entity-0068"
-    },
-    {
-      "generator": "createSlab",
-      "params": {
-        "px": 61,
-        "surfY": -7.5,
-        "pz": -39,
-        "sx": 20,
-        "sz": 20,
-        "mat": "other"
-      },
-      "position": {
-        "x": 61,
-        "y": -7.9,
-        "z": -39
-      },
-      "rotation": {
-        "x": 0,
-        "y": 0,
-        "z": 0
-      },
-      "scaling": {
-        "x": 1,
-        "y": 1,
-        "z": 1
-      },
-      "id": "jungle-entity-0069"
-    },
-    {
-      "generator": "createSlab",
-      "params": {
-        "px": 61,
-        "surfY": -7.5,
-        "pz": -19,
-        "sx": 20,
-        "sz": 20,
-        "mat": "other"
-      },
-      "position": {
-        "x": 61,
-        "y": -7.9,
-        "z": -19
-      },
-      "rotation": {
-        "x": 0,
-        "y": 0,
-        "z": 0
-      },
-      "scaling": {
-        "x": 1,
-        "y": 1,
-        "z": 1
-      },
-      "id": "jungle-entity-0070"
-    },
-    {
+      "id": "jungle-entity-0071",
       "generator": "createSlab",
       "params": {
         "px": 61,
@@ -1911,7 +2012,9 @@
         "pz": 1,
         "sx": 20,
         "sz": 20,
-        "mat": "other"
+        "mat": "concrete",
+        "lift": true,
+        "thickness": 0.8
       },
       "position": {
         "x": 61,
@@ -1927,10 +2030,10 @@
         "x": 1,
         "y": 1,
         "z": 1
-      },
-      "id": "jungle-entity-0071"
+      }
     },
     {
+      "id": "jungle-entity-0072",
       "generator": "createSlab",
       "params": {
         "px": 61,
@@ -1938,7 +2041,9 @@
         "pz": 21,
         "sx": 20,
         "sz": 20,
-        "mat": "other"
+        "mat": "concrete",
+        "lift": true,
+        "thickness": 0.8
       },
       "position": {
         "x": 61,
@@ -1954,10 +2059,10 @@
         "x": 1,
         "y": 1,
         "z": 1
-      },
-      "id": "jungle-entity-0072"
+      }
     },
     {
+      "id": "jungle-entity-0073",
       "generator": "createSlab",
       "params": {
         "px": 61,
@@ -1965,7 +2070,9 @@
         "pz": 41,
         "sx": 20,
         "sz": 20,
-        "mat": "other"
+        "mat": "concrete",
+        "lift": true,
+        "thickness": 0.8
       },
       "position": {
         "x": 61,
@@ -1981,10 +2088,10 @@
         "x": 1,
         "y": 1,
         "z": 1
-      },
-      "id": "jungle-entity-0073"
+      }
     },
     {
+      "id": "jungle-entity-0074",
       "generator": "createSlab",
       "params": {
         "px": 61,
@@ -1992,7 +2099,9 @@
         "pz": 61,
         "sx": 20,
         "sz": 20,
-        "mat": "other"
+        "mat": "concrete",
+        "lift": true,
+        "thickness": 0.8
       },
       "position": {
         "x": 61,
@@ -2008,10 +2117,10 @@
         "x": 1,
         "y": 1,
         "z": 1
-      },
-      "id": "jungle-entity-0074"
+      }
     },
     {
+      "id": "jungle-entity-0075",
       "generator": "createWall",
       "params": {
         "px": -30,
@@ -2036,10 +2145,10 @@
         "x": 1,
         "y": 1,
         "z": 1
-      },
-      "id": "jungle-entity-0075"
+      }
     },
     {
+      "id": "jungle-entity-0076",
       "generator": "createWall",
       "params": {
         "px": -30,
@@ -2064,10 +2173,10 @@
         "x": 1,
         "y": 1,
         "z": 1
-      },
-      "id": "jungle-entity-0076"
+      }
     },
     {
+      "id": "jungle-entity-0077",
       "generator": "createWall",
       "params": {
         "px": 30,
@@ -2092,10 +2201,10 @@
         "x": 1,
         "y": 1,
         "z": 1
-      },
-      "id": "jungle-entity-0077"
+      }
     },
     {
+      "id": "jungle-entity-0078",
       "generator": "createWall",
       "params": {
         "px": 30,
@@ -2120,10 +2229,10 @@
         "x": 1,
         "y": 1,
         "z": 1
-      },
-      "id": "jungle-entity-0078"
+      }
     },
     {
+      "id": "jungle-entity-0079",
       "generator": "createBarrel",
       "params": {
         "px": -10,
@@ -2131,8 +2240,8 @@
         "yOff": 0
       },
       "position": {
-        "x": -10,
-        "y": 0.46,
+        "x": 9.0877103805542,
+        "y": -6.898937225341797,
         "z": 10
       },
       "rotation": {
@@ -2144,10 +2253,10 @@
         "x": 1,
         "y": 1,
         "z": 1
-      },
-      "id": "jungle-entity-0079"
+      }
     },
     {
+      "id": "jungle-entity-0080",
       "generator": "createBarrel",
       "params": {
         "px": 10,
@@ -2168,10 +2277,10 @@
         "x": 1,
         "y": 1,
         "z": 1
-      },
-      "id": "jungle-entity-0080"
+      }
     },
     {
+      "id": "jungle-entity-0081",
       "generator": "createBarrel",
       "params": {
         "px": -35,
@@ -2192,10 +2301,10 @@
         "x": 1,
         "y": 1,
         "z": 1
-      },
-      "id": "jungle-entity-0081"
+      }
     },
     {
+      "id": "jungle-entity-0082",
       "generator": "createBarrel",
       "params": {
         "px": 35,
@@ -2216,10 +2325,10 @@
         "x": 1,
         "y": 1,
         "z": 1
-      },
-      "id": "jungle-entity-0082"
+      }
     },
     {
+      "id": "jungle-entity-0083",
       "generator": "createBarrel",
       "params": {
         "px": 0,
@@ -2240,8 +2349,7 @@
         "x": 1,
         "y": 1,
         "z": 1
-      },
-      "id": "jungle-entity-0083"
+      }
     },
     {
       "id": "j-border-n",
@@ -2254,6 +2362,21 @@
         "sy": 80,
         "sz": 1.5,
         "mat": "jungleBoundary"
+      },
+      "position": {
+        "x": 0,
+        "y": 20,
+        "z": -69
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
       }
     },
     {
@@ -2267,6 +2390,21 @@
         "sy": 80,
         "sz": 1.5,
         "mat": "jungleBoundary"
+      },
+      "position": {
+        "x": 0,
+        "y": 20,
+        "z": 69
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
       }
     },
     {
@@ -2280,6 +2418,21 @@
         "sy": 80,
         "sz": 138,
         "mat": "jungleBoundary"
+      },
+      "position": {
+        "x": -69,
+        "y": 20,
+        "z": 0
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
       }
     },
     {
@@ -2293,6 +2446,21 @@
         "sy": 80,
         "sz": 138,
         "mat": "jungleBoundary"
+      },
+      "position": {
+        "x": 69,
+        "y": 20,
+        "z": 0
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
       }
     },
     {
@@ -2307,6 +2475,21 @@
         "toY": 0,
         "length": 12,
         "mat": "concrete"
+      },
+      "position": {
+        "x": -20,
+        "y": 2.25,
+        "z": 33
+      },
+      "rotation": {
+        "x": 0.3587706702705722,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
       }
     },
     {
@@ -2321,6 +2504,21 @@
         "toY": 0,
         "length": 12,
         "mat": "concrete"
+      },
+      "position": {
+        "x": 20,
+        "y": 2.25,
+        "z": 33
+      },
+      "rotation": {
+        "x": 0.3587706702705722,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
       }
     },
     {
@@ -2335,6 +2533,21 @@
         "toY": 0,
         "length": 12,
         "mat": "concrete"
+      },
+      "position": {
+        "x": -20,
+        "y": 2.25,
+        "z": -33
+      },
+      "rotation": {
+        "x": -0.3587706702705722,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
       }
     },
     {
@@ -2349,6 +2562,21 @@
         "toY": 0,
         "length": 12,
         "mat": "concrete"
+      },
+      "position": {
+        "x": 20,
+        "y": 2.25,
+        "z": -33
+      },
+      "rotation": {
+        "x": -0.3587706702705722,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
       }
     },
     {
@@ -2356,10 +2584,25 @@
       "generator": "createJumpPad",
       "params": {
         "px": -37,
-        "pz": 37,
         "floorY": 0,
+        "pz": 37,
         "force": 28,
         "rotY": 2.356194490192345
+      },
+      "position": {
+        "x": -37,
+        "y": 0,
+        "z": 37
+      },
+      "rotation": {
+        "x": 0,
+        "y": 2.356194490192345,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
       }
     },
     {
@@ -2367,10 +2610,25 @@
       "generator": "createJumpPad",
       "params": {
         "px": 37,
-        "pz": 37,
         "floorY": 0,
+        "pz": 37,
         "force": 28,
         "rotY": -2.356194490192345
+      },
+      "position": {
+        "x": 37,
+        "y": 0,
+        "z": 37
+      },
+      "rotation": {
+        "x": 0,
+        "y": -2.356194490192345,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
       }
     },
     {
@@ -2378,10 +2636,25 @@
       "generator": "createJumpPad",
       "params": {
         "px": -37,
-        "pz": -37,
         "floorY": 0,
+        "pz": -37,
         "force": 28,
         "rotY": 0.7853981633974483
+      },
+      "position": {
+        "x": -37,
+        "y": 0,
+        "z": -37
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0.7853981633974483,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
       }
     },
     {
@@ -2389,10 +2662,25 @@
       "generator": "createJumpPad",
       "params": {
         "px": 37,
-        "pz": -37,
         "floorY": 0,
+        "pz": -37,
         "force": 28,
         "rotY": -0.7853981633974483
+      },
+      "position": {
+        "x": 37,
+        "y": 0,
+        "z": -37
+      },
+      "rotation": {
+        "x": 0,
+        "y": -0.7853981633974483,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
       }
     },
     {
@@ -2400,10 +2688,25 @@
       "generator": "createJumpPad",
       "params": {
         "px": -15,
-        "pz": 0,
         "floorY": 0,
+        "pz": 0,
         "force": 22,
         "rotY": 1.5707963267948966
+      },
+      "position": {
+        "x": -15,
+        "y": 0,
+        "z": 0
+      },
+      "rotation": {
+        "x": 0,
+        "y": 1.5707963267948966,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
       }
     },
     {
@@ -2411,10 +2714,25 @@
       "generator": "createJumpPad",
       "params": {
         "px": 15,
-        "pz": 0,
         "floorY": 0,
+        "pz": 0,
         "force": 22,
         "rotY": -1.5707963267948966
+      },
+      "position": {
+        "x": 15,
+        "y": 0,
+        "z": 0
+      },
+      "rotation": {
+        "x": 0,
+        "y": -1.5707963267948966,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
       }
     },
     {
@@ -2426,6 +2744,21 @@
         "sx": 8,
         "sz": 8,
         "surfY": -7.5
+      },
+      "position": {
+        "x": -40,
+        "y": -7.56,
+        "z": 43
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
       }
     },
     {
@@ -2437,6 +2770,21 @@
         "sx": 8,
         "sz": 8,
         "surfY": -7.5
+      },
+      "position": {
+        "x": 40,
+        "y": -7.56,
+        "z": -43
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
       }
     },
     {
@@ -2448,6 +2796,21 @@
         "sx": 8,
         "sz": 6,
         "surfY": -7.5
+      },
+      "position": {
+        "x": 0,
+        "y": -7.56,
+        "z": 56
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
       }
     },
     {
@@ -2459,6 +2822,21 @@
         "sx": 5,
         "sz": 4,
         "surfY": 0
+      },
+      "position": {
+        "x": -42,
+        "y": -0.06,
+        "z": 35
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
       }
     },
     {
@@ -2470,6 +2848,21 @@
         "sx": 5,
         "sz": 4,
         "surfY": 0
+      },
+      "position": {
+        "x": 42,
+        "y": -0.06,
+        "z": -35
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
       }
     },
     {
@@ -2481,6 +2874,21 @@
         "sx": 5,
         "sz": 5,
         "surfY": -7.5
+      },
+      "position": {
+        "x": -38,
+        "y": -7.56,
+        "z": -40
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
       }
     },
     {
@@ -2494,6 +2902,21 @@
         "sh": 3,
         "sz": 0.8,
         "hp": 160
+      },
+      "position": {
+        "x": 0,
+        "y": 1.5,
+        "z": 51
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
       }
     },
     {
@@ -2507,6 +2930,21 @@
         "sh": 3,
         "sz": 0.8,
         "hp": 160
+      },
+      "position": {
+        "x": 0.01814429461956024,
+        "y": 1.4999760389328003,
+        "z": -0.19731417298316956
+      },
+      "rotation": {
+        "x": -0.0013683892375529218,
+        "y": -1.5986159798136341,
+        "z": 0.00003806301179063084
+      },
+      "scaling": {
+        "x": 1.0900143466009415,
+        "y": 1.0201727173827453,
+        "z": 1.0201728803643964
       }
     },
     {
@@ -2523,6 +2961,21 @@
         "sz": 5,
         "speed": 0.3,
         "waitTime": 1.8
+      },
+      "position": {
+        "x": -21,
+        "y": -7.1,
+        "z": 0
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
       }
     },
     {
@@ -2539,6 +2992,21 @@
         "sz": 5,
         "speed": 0.3,
         "waitTime": 1.8
+      },
+      "position": {
+        "x": 21,
+        "y": -7.1,
+        "z": 0
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
       }
     },
     {
@@ -2555,6 +3023,21 @@
         "sz": 5,
         "speed": 0.3,
         "waitTime": 1.8
+      },
+      "position": {
+        "x": -18,
+        "y": 4.5,
+        "z": 24
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
       }
     },
     {
@@ -2571,6 +3054,21 @@
         "sz": 5,
         "speed": 0.3,
         "waitTime": 1.8
+      },
+      "position": {
+        "x": -18,
+        "y": 4.5,
+        "z": -24
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
       }
     },
     {
@@ -2584,6 +3082,21 @@
           "j-lift-west",
           "j-lift-east"
         ]
+      },
+      "position": {
+        "x": -15,
+        "y": 0.800000011920929,
+        "z": -1.9926753044128418
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
       }
     },
     {
@@ -2596,6 +3109,21 @@
         "targetPlatformIds": [
           "j-bridge-north"
         ]
+      },
+      "position": {
+        "x": -24,
+        "y": 5.3,
+        "z": 24
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
       }
     },
     {
@@ -2608,6 +3136,21 @@
         "targetPlatformIds": [
           "j-bridge-south"
         ]
+      },
+      "position": {
+        "x": -24,
+        "y": 5.3,
+        "z": -24
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
       }
     }
   ],
