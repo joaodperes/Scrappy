@@ -22,6 +22,12 @@ export const ENTITY_DEFINITIONS = Object.freeze({
     px:number(),py:number(),pz:number(),sx:positive(),sy:positive(),sz:positive(),mat:str(),collides:bool()}},
   createRampBox:{label:'Freeform Ramp',category:'Traversal',fields:{
     px:number(),py:number(),pz:number(),sx:positive(),sy:positive(),sz:positive(),rotX:number(false),rotZ:number(false),mat:str()}},
+  createStaircase:{label:'Staircase (composite)',category:'Traversal',fields:{
+    px:number(),py:number(),pz:number(),width:positive(),depth:positive(),
+    steps:{type:'integer',required:true,min:2,max:80},
+    dirX:{type:'enum',values:[-1,0,1],required:true},
+    dirZ:{type:'enum',values:[-1,0,1],required:true},
+    stepHeight:positive(false),flareEnds:bool(),mat:str()}},
   createRamp:{label:'Rise Ramp',category:'Traversal',fields:{
     cx:number(),cz:number(),dir:{type:'enum',values:['N','S','E','W'],required:true},width:positive(),
     fromY:number(),toY:number(),length:positive(),mat:str()}},
@@ -107,11 +113,18 @@ export function validateMapDocument(input,{expectedMap=null,strictIds=true}={}){
       if(field.type==='number' && (!Number.isFinite(val)||val<field.min||val>field.max))
         errors.push(where+'.params.'+key+' must be a finite number in ['+field.min+', '+field.max+']');
       if(field.type==='boolean' && typeof val!=='boolean')errors.push(where+'.params.'+key+' must be boolean');
+      if(field.type==='integer' && (!Number.isInteger(val)||val<field.min||val>field.max))
+        errors.push(where+'.params.'+key+' must be an integer between '+field.min+' and '+field.max);
       if(field.type==='string' && (typeof val!=='string'||val.length>100))errors.push(where+'.params.'+key+' must be a string <= 100 chars');
       if(field.type==='string[]' && (!Array.isArray(val)||val.some(x=>typeof x!=='string'||!validId.test(x))))
         errors.push(where+'.params.'+key+' must be an array of valid entity IDs');
       if(field.type==='enum' && !field.values.includes(val))
         errors.push(where+'.params.'+key+' must be one of '+field.values.join(', '));
+    }
+    if(o.generator==='createStaircase'){
+      const {dirX,dirZ}=o.params;
+      if(Math.abs(dirX||0)+Math.abs(dirZ||0)!==1)
+        errors.push(where+' staircase must follow exactly one horizontal axis');
     }
     for(const key of ['position','rotation','scaling']){
       if(o[key]!==undefined && !vector(o[key]))errors.push(where+'.'+key+' requires finite x/y/z');
