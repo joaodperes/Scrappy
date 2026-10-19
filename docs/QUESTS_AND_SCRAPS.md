@@ -1,6 +1,6 @@
 # Quests, Scraps & rotating Collector rewards (priority 8)
 
-Status: **Offline/client-side implementation**; economy authority must migrate to the server before trustworthy public PvP/Scraps spending.
+Status: **Offline/client-side implementation** under the approved Firebase Spark friends-only architecture. Client-reported PvE reward integrity is an accepted casual-play compromise; the cosmetic shop still needs UID-scoped Firestore transactions, duplicate-charge protection and cloud-write conflict testing before activation.
 
 ## Periods and event accounting
 
