@@ -11,7 +11,7 @@ import { jumpPads } from './level.js';
 import { getRunHardWaveRules, getActiveHardWave, scaleBossShotDamage } from './hardModeRules.js';
 import { ELITE_TRAITS, getEliteBonuses } from './eliteRules.js';
 import { botTravelTarget, botNavPath } from './botNavigation.js';
-import { getCurrentMap, getWalkableSpawns } from './mapManager.js';
+import { getCurrentMap, getMapMeta, getWalkableSpawns } from './mapManager.js';
 import { recordDamage, isWonderWeaponUnlocked, getLoadout } from './progression.js';
 import { getBossPoolForCurrentMap } from './waves.js';
 
@@ -1717,7 +1717,7 @@ export function updateEnemies(dt) {
                     e._floorY += Math.min(_dy, e.speed * dt * 6.0 + 0.06);
                 } else if (_dy > 0.65 && _dy < 3.5) {
                     // Large ledge: jump
-                    e._yVel = Math.sqrt(2 * 35.0 * _dy) * 1.1;
+                    e._yVel = Math.sqrt(2 * 35.0 * (getMapMeta(getCurrentMap()).gravityMult ?? 1) * _dy) * 1.1;
                     e._hopY = 0.05;
                 } else if (_dy < -0.25) {
                     // Floor has dropped out beneath the bot - initiate fall!
@@ -1732,7 +1732,7 @@ export function updateEnemies(dt) {
         }
         // Apply Gravity 
         if (e._hopY > 0 || e._yVel !== 0) {
-            e._yVel -= 35.0 * dt; 
+            e._yVel -= 35.0 * (getMapMeta(getCurrentMap()).gravityMult ?? 1) * dt; 
             e._hopY += e._yVel * dt;
             if (e._hopY <= 0) {
                 e._hopY = 0;
