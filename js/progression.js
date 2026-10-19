@@ -2341,8 +2341,8 @@ export const UNLOCK_TABLE = [
   { id:'oni',       type:'playerSkin', level:25 },
   { id:'void',      type:'playerSkin', level:30 },
   { id:'gold',      type:'playerSkin', level:40 },
-  { id:'gladiator', type:'playerSkin', challenge:{ event:'KILL', conditions:{ pvp:true }, target:25,
-      desc:'Defeat {target} players in FFA' } },
+  { id:'gladiator', type:'playerSkin', challenge:{ event:'KILL', conditions:{ pvp:true }, target:250,
+      desc:'Get {target} PvP kills across all competitive modes' } },
   
   // Tests
 /*   { id:'credits_1', weapon:'GLOBAL', type:'currency', rewardName:'100 Credits',
