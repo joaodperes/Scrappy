@@ -358,7 +358,7 @@ function _populateMapDropdown() {
       questsBtn.id='questsBtn';
       questsBtn.textContent='📋 QUESTS';
       questsBtn.className='btn';
-      questsBtn.style.cssText='display:none;width:100%;min-width:0;box-sizing:border-box;padding-left:0;padding-right:0;text-align:center';
+      questsBtn.style.cssText='display:none;width:calc(100% - 12px);min-width:0;box-sizing:border-box;padding-left:0;padding-right:0;text-align:center';
       questsBtn.onclick=async()=>{
         if(!window.__scrappyAuthenticated)return;
         document.getElementById('menuScreen').className='screen hidden';
@@ -384,7 +384,7 @@ function _populateMapDropdown() {
       lbBtn.id = 'leaderboardsBtn';
       lbBtn.textContent = '🏆 LEADERBOARDS';
       lbBtn.className = 'btn';
-      lbBtn.style.cssText = 'width:100%;min-width:0;box-sizing:border-box;padding-left:0;padding-right:0;text-align:center;';
+      lbBtn.style.cssText = 'width:calc(100% - 12px);min-width:0;box-sizing:border-box;padding-left:0;padding-right:0;text-align:center;';
       lbBtn.style.display = window.__scrappyAuthenticated ? 'inline-block' : 'none';
       lbBtn.onclick = () => {
         document.getElementById('menuScreen').className = 'screen hidden';
