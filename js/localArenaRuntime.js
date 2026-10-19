@@ -132,6 +132,7 @@ export function localArenaActorHit(actor,dmg,source='PLAYER'){
  if(!isActive()||!actor?.alive||!Number.isFinite(dmg)||dmg<=0)return;
  // Gun Game's ladder cannot be bypassed by another equipped firearm.
  if(active.state.mode==='gunGame'&&curWep!==active.state.gunOrder[active.state.gunIndex])return;
+ if(['tdm','killConfirmed'].includes(active.state.mode)&&actor.team==='RED')return;
  actor.hp=Math.max(0,actor.hp-Math.min(500,dmg));
  if(actor.hp===0)onActorKilled(actor,'human',curWep);
 }
