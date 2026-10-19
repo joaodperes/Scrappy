@@ -211,12 +211,12 @@ function startGame(startWave = 0, difficulty = 'normal', localMode = null) {
         if(panel)panel.className='screen visible';
         const res=document.getElementById('pvpEndResult');
         const labels={gunGame:'GUN GAME',killConfirmed:'KILL CONFIRMED',
-          ffa:'FFA PRACTICE',tdm:'TDM PRACTICE'};
+          ffa:'FREE FOR ALL',tdm:'TEAM DEATHMATCH'};
         if(res)res.textContent=state.result+' · '+(labels[state.mode]||state.mode);
         const scores=document.getElementById('pvpEndScore');
         if(scores)scores.textContent='FRAGS '+state.kills+' · POINTS '+state.score+
           ' · BOT POINTS '+state.opposition+' · DEATHS '+state.deaths;
-      });
+      },damage=>hurtPlayer(damage));
       updateHUD();
     }
     document.getElementById('c').requestPointerLock().catch(()=>{});
@@ -764,6 +764,10 @@ engine.runRenderLoop(() => {
     scene.render();
     return;
   }
+
+  // Arena opponents and match clock continue acting while the human waits
+  // for their five-second respawn; do not pause bot-versus-bot matches.
+  if(!gameRunning&&!paused&&isLocalArenaActive())updateLocalArena(dt);
 
   // Main game updates – skip if game not running, or paused
   if (gameRunning && !paused) {
