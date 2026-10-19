@@ -58,6 +58,13 @@ function equipment(cfg){
  setActiveSlot(0);setWeapon(inventory[0]);
 }
 export function isLocalArenaActive(){return !!isActive()}
+// Read-only diagnostic snapshot for local HUD tests and browser debugging.
+export function getLocalArenaSnapshot(){
+ if(!isActive())return null;
+ return {state:{...active.state,botScores:{...active.state.botScores},botGuns:{...active.state.botGuns}},
+   actors:active.actors.map(a=>({id:a.id,name:a.name,team:a.team,weapon:a.weapon,
+     alive:a.alive,hp:a.hp,kills:a.kills,deaths:a.deaths}))};
+}
 export function startLocalArena(cfg,onFinish,onPlayerHit=()=>{}){
  stopLocalArena();
  const state=createLocalArena({mode:cfg.mode,duration:cfg.duration,
