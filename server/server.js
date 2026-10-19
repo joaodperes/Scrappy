@@ -17,7 +17,8 @@ function validateHostedRoomConfig(input){
   if(!input||typeof input!=='object'||Array.isArray(input))
     return {ok:false,error:'Missing room configuration'};
   if(!VALID_MODES.has(input.mode))return {ok:false,error:'Unsupported game mode'};
-  if(!VALID_MAPS.has(input.mapId))return {ok:false,error:'Unsupported map'};
+  const mapId=input.mapId===undefined?'scrapyard':input.mapId;
+  if(!VALID_MAPS.has(mapId))return {ok:false,error:'Unsupported map'};
   if(!Number.isInteger(input.maxPlayers)||input.maxPlayers<2||input.maxPlayers>14)
     return {ok:false,error:'Invalid room capacity'};
   if(input.mode==='survival'&&input.maxPlayers!==2)
@@ -36,7 +37,7 @@ function validateHostedRoomConfig(input){
     return {ok:false,error:'Invalid room name'};
   const name=(input.name||'Room').trim().slice(0,48)||'Room';
   return {ok:true,config:{
-    directoryRoom:true,mode:input.mode,mapId:input.mapId,
+    directoryRoom:true,mode:input.mode,mapId,
     maxPlayers:input.maxPlayers,roundDuration:duration,scoreLimit:score,
     fillBots:input.mode!=='survival'&&input.fillBots===true,
     name,difficulty:input.mode==='survival'&&['normal','hard','nightmare'].includes(input.difficulty)?input.difficulty:'normal',
