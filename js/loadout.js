@@ -24,7 +24,13 @@ export function showLoadout(onClose, mode = null) {
   document.getElementById('loadoutPanel')?.remove();
   _currentMode = mode;
   _modeSlotTarget = 'primary';
-  _modeSlots = { primary: null, secondary: null };
+  if(mode)_activeTab='attachments';
+  const saved=profile.pvpLoadout||{};
+  _modeSlots = {
+    primary:WDEFS[saved.primary]&&!WDEFS[saved.primary].wonderWeapon?saved.primary:'SMG',
+    secondary:WDEFS[saved.secondary]&&!WDEFS[saved.secondary].wonderWeapon?saved.secondary:'SHOTGUN',
+  };
+  if(_modeSlots.primary===_modeSlots.secondary)_modeSlots.secondary='SHOTGUN';
   document.body.appendChild(_buildPanel(onClose, mode));
   _renderContent();
 }
@@ -175,6 +181,7 @@ function _buildPanel(onClose, mode = null) {
       });
       return;
     }
+    profile.pvpLoadout={...slots};
     saveProfile();
     _currentMode = null;
     hideLoadout();
@@ -241,6 +248,7 @@ topBar.appendChild(deployBtn);
     { id:'skins',       label:'WEAPON SKINS' },
     {id:'player',       label:'PLAYER SKIN'  },
     { id:'progress',    label:'PROGRESS'     },
+    { id:'pvp',         label:'PVP LOADOUT'  },
   ];
   const tabBar = _el('div',
     `display:flex;background:${C.bgMid};border-bottom:1.5px solid ${C.border};padding:0 28px;flex-shrink:0`
@@ -494,7 +502,7 @@ function _renderContent() {
     b.style.cssText = _tabStyle(b.dataset.tabId === _activeTab);
   });
   const sidebar  = document.getElementById('loadoutSidebar');
-  const noSidebar = _activeTab === 'player' || _activeTab === 'progress';
+  const noSidebar = _activeTab === 'player' || _activeTab === 'progress' || _activeTab === 'pvp';
   if (sidebar) sidebar.style.display = noSidebar ? 'none' : 'block';
   sidebar?.querySelectorAll('[data-w-name]').forEach(c => {
     c.style.cssText = _wcardStyle(c.dataset.wName === _activeWeapon);
@@ -505,6 +513,7 @@ function _renderContent() {
   else if (_activeTab === 'skins')       _renderWeaponSkins(main);
   else if (_activeTab === 'player')      _renderPlayerSkins(main);
   else if (_activeTab === 'progress')    _renderProgress(main);
+  else if (_activeTab === 'pvp')         _renderPvpSetup(main);
 }
 
 // ── Weapon level banner ───────────────────────────────────────
@@ -808,11 +817,14 @@ function _renderPlayerSkins(main) {
   };
   updateViewer(PLAYER_SKINS[profile.playerSkin] || PLAYER_SKINS.default);
 
-  const sorted = Object.values(PLAYER_SKINS).sort((a, b) => {
-    const uA = UNLOCK_TABLE.find(u => u.id === a.id && u.type === 'playerSkin');
-    const uB = UNLOCK_TABLE.find(u => u.id === b.id && u.type === 'playerSkin');
-    return (uA?.level || 999) - (uB?.level || 999);
-  });
+  // Present in expected progression order, with Standard fixed first.
+  const unlockRank=skin=>{
+    if(skin.id==='default')return 0;
+    const u=UNLOCK_TABLE.find(entry=>entry.id===skin.id&&entry.type==='playerSkin');
+    return u?.level??(u?.challenge?.conditions?.pvp?250:999);
+  };
+  const sorted=Object.values(PLAYER_SKINS).sort((a,b)=>
+    unlockRank(a)-unlockRank(b)||a.name.localeCompare(b.name));
   sorted.forEach(skin => {
     const isOwned    = isSkinUnlocked(skin.id);
     const isEquipped = profile.playerSkin === skin.id;
@@ -828,7 +840,13 @@ function _renderPlayerSkins(main) {
       <div style="flex:1;background:rgb(${Math.round(vr*255)},${Math.round(vg*255)},${Math.round(vb*255)})"></div>`;
     card.appendChild(sw);
     card.appendChild(_el('div',`font-size:12px;font-weight:bold;color:${isEquipped?C.accentPurple:C.text}`,_esc(skin.name)));
-    if (!isOwned) { const f=_el('div',''); f.innerHTML=_lockHTML(skin.id, null, 'playerSkin'); card.appendChild(f); }
+    if(!isOwned){
+      // Player-level progress is already displayed in Progress: don't
+      // repeat "Reach Level N (you are X)" plus another bar on every suit.
+      const unlock=UNLOCK_TABLE.find(u=>u.id===skin.id&&u.type==='playerSkin');
+      const label=unlock?.level?'🔒 LOCKED': '🔒 '+(unlock?getUnlockHint(unlock):'Locked');
+      card.appendChild(_el('div','font-size:11px;color:'+C.dim,label));
+    }
     else if (isEquipped) card.appendChild(_el('div',`font-size:12px;color:${C.accentGreen};font-weight:bold`,'✓ EQUIPPED'));
     if (isOwned) card.onclick = () => { setPlayerSkin(skin.id); _renderContent(); };
     grid.appendChild(card);
@@ -836,6 +854,25 @@ function _renderPlayerSkins(main) {
   container.appendChild(grid);
   container.appendChild(viewer);
   main.appendChild(container);
+}
+
+// ── PVP LOADOUT tab ──────────────────────────────────────────
+function _renderPvpSetup(main){
+  main.appendChild(_el('h2','color:'+C.accent+';margin:0 0 12px','PVP MATCH LOADOUT'));
+  main.appendChild(_el('p','color:'+C.textDim+';line-height:1.6;max-width:650px',
+    'Choose two different weapons for Free-for-all and Team Deathmatch. Configure each weapon’s attachments in the ATTACHMENTS tab. Survival finds weapons on the map; Gun Game uses its randomized progression.'));
+  const stored=profile.pvpLoadout||{primary:'SMG',secondary:'SHOTGUN'};
+  main.appendChild(_el('p','color:'+C.accentGreen+';font-weight:bold',
+    'SELECTED: '+(stored.primary||'SMG')+' + '+(stored.secondary||'SHOTGUN')));
+  const configure=_el('button',
+    'background:'+C.accent+';color:#10121d;border:0;padding:12px 20px;cursor:pointer;font-weight:bold;font-family:'+F,
+    'CHOOSE PVP WEAPONS');
+  configure.onclick=()=>{
+    // Reuse the same picker already used by Create/Join Room.
+    _activeTab='pvp';
+    showLoadout(()=>{_activeTab='pvp';showLoadout(null);},'ffa');
+  };
+  main.appendChild(configure);
 }
 
 // ── PROGRESS tab ──────────────────────────────────────────────
