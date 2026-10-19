@@ -727,6 +727,7 @@ export function destroyRobot(e, isHeadshot = false, isExplosive = false, source 
   const _killedWithWeapon  = curWep;
   const _killedWhileAir    = !player.onGround;
   const _killedWhileScoped = !!player.isScoped;
+  cb.onRobotDestroyed?.({weapon:_killedWithWeapon,source,position:e.group.position.clone()});
   
   // ── 1. RAYCAST: Find the floor beneath the dying bot using intersectsMesh
   //    (pickWithRay skips isPickable=false meshes, which all our floors are)
