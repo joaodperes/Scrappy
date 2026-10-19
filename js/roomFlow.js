@@ -255,7 +255,7 @@ export function showPlayPage(){
         (opt.value==='nightmare'&&!isNightmareUnlocked(map.value));
     }
     difficulty.disabled=!isSurvival;
-    if(difficulty.options.find(o=>o.value===difficulty.value)?.disabled)
+    if(Array.from(difficulty.options).find(o=>o.value===difficulty.value)?.disabled)
       difficulty.value='normal';
     difficultyHint.textContent=!isSurvival?
       'Difficulty modifiers apply only to Survival. Competitive modes use the room settings below.':
