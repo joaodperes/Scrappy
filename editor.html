@@ -44,6 +44,7 @@
         <button data-action="addStaircase">+ Staircase (composite)</button>
         <button data-action="addBarrel">+ Barrel</button>
         <button data-action="addCrate">+ Crate</button>
+        <button data-action="addCarWreck">+ Car Wreck (roof pad)</button>
         <button data-action="addLava" class="warning">+ Lava</button>
         <button data-action="addDestWall">+ Dest. Wall</button>
         <button data-action="addSpike" class="warning">+ Spikes</button>
@@ -141,7 +142,7 @@
             const {
                 createSlab, createWall, createPillar, createColumn, createGlass,
                 createRampBox, createRamp, createStaircase, createLava, createDestructibleWall, createSpikeTrap,
-                createBarrel, createCrate, createCeiling, createJumpPad, createMovingPlatform, createZipline, createRooftopLift, createSkybridge, createPowerSwitch,
+                createBarrel, createCrate, createCarWreck, createCeiling, createJumpPad, createMovingPlatform, createZipline, createRooftopLift, createSkybridge, createPowerSwitch,
                 applyEditableLayout, loadMapDocument,
             } = await import('/js/levelHelpers.js');
             const { walkableMeshes, explosiveBarrels, jumpPads } = await import('/js/level.js');
@@ -272,6 +273,7 @@
                             else if (action === 'addStaircase') this.addObject('staircase');
                             else if (action === 'addBarrel') this.addObject('barrel');
                             else if (action === 'addCrate') this.addObject('crate');
+                            else if (action === 'addCarWreck') this.addObject('carWreck');
                             else if (action === 'addLava') this.addObject('lava');
                             else if (action === 'addDestWall') this.addObject('destWall');
                             else if (action === 'addSpike') this.addObject('spike');
@@ -398,6 +400,17 @@
                             mesh.metadata.halfWidth=p.sx*Math.abs(mesh.scaling.x)/2;
                         if(Number.isFinite(p.sz))
                             mesh.metadata.halfDepth=p.sz*Math.abs(mesh.scaling.z)/2;
+                    }
+                    if(mesh.metadata?.generator==='createCarWreck' && mesh.metadata.roofPad){
+                        const padMesh=mesh.metadata.roofPad;
+                        padMesh.computeWorldMatrix(true);
+                        const pad=jumpPads.find(p=>p.mesh===padMesh);
+                        if(pad){
+                            pad.pos.copyFrom(padMesh.getAbsolutePosition());
+                            const yaw=this.currentEuler(mesh).y;
+                            pad.thrustX=Math.sin(yaw)*pad.force*.45;
+                            pad.thrustZ=Math.cos(yaw)*pad.force*.45;
+                        }
                     }
                     // Update the runtime objects linked to edited geometry.
                     if(mesh.metadata?.generator==='createJumpPad'){
@@ -656,6 +669,7 @@
                         case 'staircase': mesh = createStaircase(pos.x, y, pos.z, 4, 8, 10, 0, 1, 0.5, false); break;
                         case 'barrel': mesh = createBarrel(pos.x, pos.z, 0); break;
                         case 'crate':  mesh = createCrate(pos.x, y+1, pos.z, 2, 2, 2); break;
+                        case 'carWreck': mesh=createCarWreck(pos.x,pos.z,0);break;
                         case 'lava':   mesh = createLava(pos.x, pos.z, 6, 6, { hazardZones }); break;
                         case 'destWall': mesh = createDestructibleWall(pos.x, y, pos.z, 4, 4, 1, 140, { destructibleWalls }); break;
                         case 'spike':  mesh = createSpikeTrap(pos.x, pos.z, 4, 4, y, { hazardZones }); break;
@@ -712,7 +726,9 @@
                     // nothing stale is left pointing at a disposed mesh.
                     const hzIdx = hazardZones.indexOf(m);
                     if (hzIdx !== -1) hazardZones.splice(hzIdx, 1);
-                    for(let i=jumpPads.length-1;i>=0;i--)if(jumpPads[i].mesh===m)jumpPads.splice(i,1);
+                    const owned=new Set([m,...m.getChildMeshes(false)]);
+                    for(let i=jumpPads.length-1;i>=0;i--)
+                        if(owned.has(jumpPads[i].mesh))jumpPads.splice(i,1);
                     for(const a of [movingPlatforms,powerSwitches]){
                       const ix=a.indexOf(m);if(ix!==-1)a.splice(ix,1);
                     }
