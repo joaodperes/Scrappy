@@ -27332,6 +27332,190 @@
         "y": 1,
         "z": 1
       }
+    },
+    {
+      "id": "city-bridge-EF",
+      "generator": "createSkybridge",
+      "params": {
+        "cx": -30,
+        "cz": 0,
+        "spanAxis": "X",
+        "spanLen": 40,
+        "bridgeW": 4,
+        "y1": 12,
+        "y2": 8
+      },
+      "position": {
+        "x": -30,
+        "y": 9.825,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "city-bridge-EG",
+      "generator": "createSkybridge",
+      "params": {
+        "cx": 30,
+        "cz": 0,
+        "spanAxis": "X",
+        "spanLen": 40,
+        "bridgeW": 4,
+        "y1": 8,
+        "y2": 12
+      },
+      "position": {
+        "x": 30,
+        "y": 9.825,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "city-bridge-EH",
+      "generator": "createSkybridge",
+      "params": {
+        "cx": 0,
+        "cz": -30,
+        "spanAxis": "Z",
+        "spanLen": 40,
+        "bridgeW": 4,
+        "y1": 16,
+        "y2": 8
+      },
+      "position": {
+        "x": 0,
+        "y": 11.825,
+        "z": -30
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "city-bridge-EI",
+      "generator": "createSkybridge",
+      "params": {
+        "cx": 0,
+        "cz": 30,
+        "spanAxis": "Z",
+        "spanLen": 40,
+        "bridgeW": 4,
+        "y1": 8,
+        "y2": 12
+      },
+      "position": {
+        "x": 0,
+        "y": 9.825,
+        "z": 30
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "city-bridge-FN",
+      "generator": "createSkybridge",
+      "params": {
+        "cx": -70,
+        "cz": 0,
+        "spanAxis": "X",
+        "spanLen": 2,
+        "bridgeW": 4,
+        "y1": 12,
+        "y2": 12
+      },
+      "position": {
+        "x": -70,
+        "y": 11.825,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "city-bridge-GO",
+      "generator": "createSkybridge",
+      "params": {
+        "cx": 70,
+        "cz": 0,
+        "spanAxis": "X",
+        "spanLen": 2,
+        "bridgeW": 4,
+        "y1": 12,
+        "y2": 12
+      },
+      "position": {
+        "x": 70,
+        "y": 11.825,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "city-bridge-HP",
+      "generator": "createSkybridge",
+      "params": {
+        "cx": 0,
+        "cz": -70,
+        "spanAxis": "Z",
+        "spanLen": 2,
+        "bridgeW": 4,
+        "y1": 16,
+        "y2": 16
+      },
+      "position": {
+        "x": 0,
+        "y": 15.825,
+        "z": -70
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "city-bridge-IQ",
+      "generator": "createSkybridge",
+      "params": {
+        "cx": 0,
+        "cz": 70,
+        "spanAxis": "Z",
+        "spanLen": 2,
+        "bridgeW": 4,
+        "y1": 12,
+        "y2": 12
+      },
+      "position": {
+        "x": 0,
+        "y": 11.825,
+        "z": 70
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
     }
   ],
   "markers": []
