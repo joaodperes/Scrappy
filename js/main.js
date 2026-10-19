@@ -502,7 +502,7 @@ if (!texturesReady) {
 
 // ── Button bindings ────────────────────────────────────────────
 document.getElementById('startBtn')    ?.addEventListener('click', () => startGame(0));
-document.getElementById('victoryBtn')  ?.addEventListener('click', () => startGame(0));
+document.getElementById('victoryBtn')  ?.addEventListener('click', () => startGame(0,player.difficulty||'normal'));
 const _returnToMenu = () => {
   document.getElementById('deathScreen').className  = 'screen hidden';
   document.getElementById('menuScreen').className   = 'screen visible';
