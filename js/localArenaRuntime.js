@@ -189,7 +189,7 @@ function updateTags(dt){
   removeTag(i);
   if(nearHuman){
    // A human can deny their own fallen tag without gaining score.
-   if(tag.ownerId==='human')continue;
+   if(tag.ownerTeam==='RED')continue;
    applyResult(localArenaTag(active.state));
   }else if(nearBot){
    if(tag.ownerId!==nearBot.id){
