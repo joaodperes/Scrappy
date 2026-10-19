@@ -39,7 +39,7 @@ export function localArenaKill(s,{weapon,source='PLAYER'}={}){
   if(n.gunIndex===n.gunOrder.length-1)return finish(n,'knife');
   n.gunIndex++;
  }else n.score++;
- return n.score>=n.goal?finish(n,'goal'):n;
+ return n.mode!=='gunGame'&&n.score>=n.goal?finish(n,'goal'):n;
 }
 export function localArenaTag(s){
  if(s.complete||s.mode!=='killConfirmed'||s.pendingTags<=0)return s;
