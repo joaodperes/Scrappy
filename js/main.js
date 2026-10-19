@@ -594,8 +594,9 @@ async function launchCompetitiveRoom(cfg,session) {
       if(def.magSize)def.currentMag=def.magSize;
       def.ammo=def.startAmmo||0;
     }
-    inventory[0]=cfg.mode==='gunGame'?'PISTOL':(selectedMatchLoadout.primary||'SMG');
-    inventory[1]=cfg.mode==='gunGame'?null:(selectedMatchLoadout.secondary||'SHOTGUN');
+    const configuredLoadout=profile.pvpLoadout||selectedMatchLoadout;
+    inventory[0]=cfg.mode==='gunGame'?'PISTOL':(configuredLoadout.primary||'SMG');
+    inventory[1]=cfg.mode==='gunGame'?null:(configuredLoadout.secondary||'SHOTGUN');
     inventory[2]=cfg.mode==='gunGame'?null:'PISTOL';
     setActiveSlot(0);
     const name=profileDisplayName();
