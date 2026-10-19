@@ -69,17 +69,18 @@ function scoreByTeam(room){
   for(const p of room.players.values())if(p.team)teams[p.team]+=p.score;
   return teams;
 }
-function finishMatch(room){
+function finishMatch(room,reason=null){
   if(!room.started)return;
   room.started=false;
   if(room.roundTimer)clearTimeout(room.roundTimer);
   const scores=[...room.players.values()].map(p=>({id:p.id,name:p.name,score:p.score,team:p.team}));
   scores.sort((a,b)=>b.score-a.score);
   const teams=scoreByTeam(room);
-  const winner=room.config?.mode==='tdm'
+  const winner=reason==='insufficientPlayers'?'CANCELLED':
+    room.config?.mode==='tdm'
     ? (teams.RED===teams.BLUE?'DRAW':teams.RED>teams.BLUE?'RED':'BLUE')
     : (scores.length>1 && scores[0].score===scores[1].score?'DRAW':scores[0]?.name||'DRAW');
-  _broadcastAll(room,{type:'roundEnd',winner,scores,teams});
+  _broadcastAll(room,{type:'roundEnd',winner,scores,teams,reason});
 }
 
 wss.on('connection', ws => {
@@ -324,6 +325,12 @@ wss.on('connection', ws => {
       room.gunOrder=null;room.gunSeed=null;
       _broadcastAll(room,{type:'roundCancelled',reason:'Not enough connected players'});
     }
+    // Real competitive rounds currently require >=2 humans; if everyone
+    // else leaves, cleanly end the round rather than leave one stranded
+    // waiting for an inaccessible kill/time objective.
+    if(room.started && room.config?.directoryRoom &&
+       room.config.mode!=='survival' && room.players.size<2)
+      finishMatch(room,'insufficientPlayers');
     if (room.players.size === 0){
       clearTimeout(room.countdownTimer);
       clearTimeout(room.roundTimer);
