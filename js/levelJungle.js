@@ -25,12 +25,18 @@ export const mineLights        = [];
 export const SURFACE = 0;
 export const RUINS_Y = 4.5;
 export const M1 = -7.5;
+export const M2 = -15;
+export const M3 = -30;
+export const M4 = -45;
 export const M1C = -2.0;
 
 const lY = liftY; // alias kept for readability at call sites below
 
 export const SURFACE_WALK = lY(SURFACE);
 export const M1_WALK = lY(M1);
+export const M2_WALK = lY(M2);
+export const M3_WALK = lY(M3);
+export const M4_WALK = lY(M4);
 
 export const NAVMESH_PARAMS = {
   cs:0.2, ch:0.2, walkableSlopeAngle:62, walkableHeight:2.7,
@@ -111,20 +117,24 @@ export async function buildJungleLevel(customScene = null) {
   hemi.diffuse = new BABYLON.Color3(.78, .90, .72);
   hemi.groundColor = new BABYLON.Color3(.22, .28, .18);
 
-  // Mine ambient lights — raw PointLights, never meshes, so there's nothing
-  // for the editable/JSON system to capture; these stay hardcoded like
-  // every other map's ambient lighting.
-  const _ml = (x, y, z) => {
-    const l = new BABYLON.PointLight('jML', new BABYLON.Vector3(x, y, z), scene);
-    l.diffuse = new BABYLON.Color3(1.0, .6, .3);
-    l.intensity = 0.8;
-    l.range = 25;
+  // Mine practical lights are positioned by depth; no fake pickable meshes
+  // or permanent daylight fill in chambers. Lantern/NVG remain useful.
+  // Kept as lights (not JSON props) so the shared map editor exports only
+  // geometry, and changing light fixtures does not alter collider layout.
+  const _ml = (x,y,z,power=.85) => {
+    const l=new BABYLON.PointLight('jML',new BABYLON.Vector3(x,y,z),scene);
+    l.diffuse=new BABYLON.Color3(1,.62,.32);
+    l.intensity=power;
+    l.range=26;
     mineLights.push(l);
     return l;
   };
-  _ml(-35, -3, -35);
-  _ml(35, -3, 35);
-  _ml(0, -3, 50);
+  [
+    [-35,-4,-35], [35,-4,35], [0,-4,50],
+    [-27,-11,24], [28,-11,-24], [0,-11,-2],
+    [-29,-24,42], [28,-24,-34], [0,-24,53],
+    [-24,-39,-33], [26,-39,41], [0,-39,5],
+  ].forEach(([x,y,z])=>_ml(x,y,z));
 
   scene.fogMode = BABYLON.Scene.FOGMODE_EXP2;
   scene.fogDensity = 0.01;
