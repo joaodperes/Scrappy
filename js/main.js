@@ -16,9 +16,8 @@ import { updatePlayer, setupInput, hurtPlayer, PH, resetPlayer, resetWeaponHeat,
 import { updateHUD, tickHitMarker, wireDeathSubmit, showHitMarker, hideFfaHUD } from './ui.js';
 import { submitScore, renderLeaderboard } from './leaderboard.js';
 import { startFfa, stopFfa, updateFfa, isFfaActive, isFfaInPreLobby, showFfaLobby, isLocalDead, togglePvpScoreboard, checkFfaHitScan } from './pvp.js';
-import { loadProfile, getLevelProgress, levelFromTotalXp } from './progression.js';
+import { loadProfile, getLevelProgress, levelFromTotalXp, profile } from './progression.js';
 import { showLoadout } from './loadout.js';
-import { selectedSecondary } from './weaponCategories.js';
 import { getCurrentMap, setCurrentMap, MAPS, getMapMeta, buildMap, isMapUnlocked, registerCommunityMaps } from './mapManager.js';
 import { initRoomFlow, showPlayPage } from './roomFlow.js';
 import { setActiveHardWave } from './hardModeRules.js';
@@ -120,7 +119,8 @@ function startGame(startWave = 0, difficulty = 'normal') {
       w.ammo = hasEndless ? Infinity : (w.startAmmo || 0);
     }
   });
-  inventory[2] = selectedSecondary(WDEFS,profile);
+  // Solo Survival always begins with the standard Pistol.
+  inventory[2] = 'PISTOL';
   inventory[1] = null; inventory[0] = null;
   setActiveSlot(2);
 
@@ -352,6 +352,28 @@ function _populateMapDropdown() {
       };
     }
 
+    // Quests are a separate green main-menu destination, not a Loadout tab.
+    if (!document.getElementById('questsBtn')) {
+      const questsBtn=document.createElement('button');
+      questsBtn.id='questsBtn';
+      questsBtn.textContent='📋 QUESTS';
+      questsBtn.className='btn';
+      questsBtn.style.cssText='display:none;width:100%;min-width:0;box-sizing:border-box;padding-left:0;padding-right:0;text-align:center';
+      questsBtn.onclick=async()=>{
+        if(!window.__scrappyAuthenticated)return;
+        document.getElementById('menuScreen').className='screen hidden';
+        try{
+          const {showQuestPage}=await import('./questPage.js');
+          showQuestPage(()=>{
+            document.getElementById('menuScreen').className='screen visible';
+          });
+        }catch(error){
+          console.error('[quests] Unable to open quest page',error);
+          document.getElementById('menuScreen').className='screen visible';
+        }
+      };
+      (playBtn?.parentElement||container).appendChild(questsBtn);
+    }
     // ── Leaderboard moves to its own subpage. #leaderboardSection (the
     // STANDARD/HARD toggle + score list) gets relocated into it on first
     // open rather than duplicated — see leaderboardPage.js.
@@ -362,7 +384,7 @@ function _populateMapDropdown() {
       lbBtn.id = 'leaderboardsBtn';
       lbBtn.textContent = '🏆 LEADERBOARDS';
       lbBtn.className = 'btn';
-      lbBtn.style.cssText = 'width:100%;padding-left:0;padding-right:0;text-align:center;';
+      lbBtn.style.cssText = 'width:100%;min-width:0;box-sizing:border-box;padding-left:0;padding-right:0;text-align:center;';
       lbBtn.style.display = window.__scrappyAuthenticated ? 'inline-block' : 'none';
       lbBtn.onclick = () => {
         document.getElementById('menuScreen').className = 'screen hidden';
