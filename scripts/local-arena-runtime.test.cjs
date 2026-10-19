@@ -30,6 +30,9 @@ function harness(){
  const context={
   window:{BABYLON:B},BABYLON:B,document,camera,scene:{},inventory:[],WDEFS:{PISTOL:{},SMG:{},SHOTGUN:{},KNIFE:{}},
   curWep:'PISTOL',setActiveSlot(){},setWeapon(w){this.curWep=w;guns.push(['human',w])},
+  awards:[],kills:[],damages:[],awardXp(n){this.awards.push(n)},
+  recordKill(type,w,opts){this.kills.push({type,w,opts})},
+  recordDamage(w,d){this.damages.push({w,d})},
   fetchArenaPersonas:()=>Promise.resolve(profiles),
   chooseArenaSpawn:()=>vec(10+idx*3,0,0),
   createArenaActor:(persona,team,pos)=>{
@@ -73,6 +76,9 @@ test('human cannot shoot an ally in TDM, enemy elimination scores team point',as
  h.api.localArenaActorHit(blue,150,'PLAYER');
  assert.equal(blue.alive,false);
  assert.equal(h.api.getLocalArenaSnapshot().state.score,1);
+ assert.deepEqual(h.context.awards,[20]);
+ assert.equal(h.context.kills[0].type,'arena');
+ assert.equal(h.context.damages[0].d,100);
 });
 test('real bot-versus-bot kills score; bot hits against human pass damage callback',async()=>{
  const h=harness();await h.start('ffa');
