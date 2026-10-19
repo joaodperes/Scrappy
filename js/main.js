@@ -23,7 +23,7 @@ import { getCurrentMap, setCurrentMap, MAPS, getMapMeta, buildMap, isMapUnlocked
 import { initRoomFlow, showPlayPage } from './roomFlow.js';
 import { setActiveHardWave } from './hardModeRules.js';
 import { showLeaderboardPage } from './leaderboardPage.js';
-import { startLocalArena,stopLocalArena,isLocalArenaActive,updateLocalArena,localArenaRobotKilled,localArenaPlayerDead } from './localArenaRuntime.js';
+import { startLocalArena,stopLocalArena,isLocalArenaActive,updateLocalArena,localArenaRobotKilled,localArenaActorHit,localArenaPlayerDead } from './localArenaRuntime.js';
 
 let gameRunning = false;
 let paused      = false;
