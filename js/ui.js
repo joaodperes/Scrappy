@@ -1,5 +1,5 @@
 // ui.js – HUD updates, hit marker, leaderboard name modal
-import { player } from './gameState.js';
+import { player, roomConfig } from './gameState.js';
 import { WDEFS, curWep, refreshSlotHUD } from './weapons.js';
 import { getLoadout, hasEnergyConverter, getEffectiveStats } from './progression.js';
 
@@ -224,7 +224,7 @@ export function updateFfaHUD(rows = [], timeLeft = 0, myId = null) {
   _ffaHud.replaceChildren();
   const sec = Math.max(0, Math.floor(Number(timeLeft) || 0));
   const header = document.createElement('div');
-  header.textContent = 'MATCH  ' + Math.floor(sec / 60) + ':' + String(sec % 60).padStart(2, '0');
+  header.textContent = roomConfig.roundDuration===0?'MATCH  NO TIME LIMIT': 'MATCH  ' + Math.floor(sec / 60) + ':' + String(sec % 60).padStart(2, '0');
   header.style.cssText = 'font-weight:bold;margin-bottom:6px;border-bottom:1px solid #557733;padding-bottom:5px';
   _ffaHud.appendChild(header);
   for (const [i, row] of rows.slice(0, 8).entries()) {
