@@ -62,6 +62,7 @@ function harness(){
   vm.createContext(context);
   vm.runInContext(rules+'\n'+source+'\nthis.api={showPlayPage,initRoomFlow}',context);
   context.api.initRoomFlow({
+    onStartLocalMode:cfg=>started.push(cfg),
     onStartSurvival:cfg=>started.push(cfg),
     onSelectLoadout:(cfg,callback)=>{chosen.push(cfg);callback?.({primary:'SMG',secondary:'SHOTGUN'})},
   });
@@ -69,11 +70,11 @@ function harness(){
     findButton:label=>elements.filter(e=>e.tag==='button'&&e.textContent===label).at(-1),
     findSelect:value=>elements.filter(e=>e.tag==='select'&&Array.from(e.options).some(x=>x.value===value)).at(-1)};
 }
-test('Play has only Create/Browse top navigation and Solo nested inside Create',()=>{
+test('Play prioritizes local modes and separates experimental online rooms',()=>{
   const h=harness();h.context.api.showPlayPage();
-  for(const label of ['SINGLE PLAYER','ONLINE ROOM','CREATE ROOM','BROWSE ROOMS','✕ BACK TO MENU','START SOLO SURVIVAL'])
+  for(const label of ['LOCAL MODES','ONLINE (EXPERIMENTAL)','LOCAL PLAY','✕ BACK TO MENU','START LOCAL MATCH'])
     assert.ok(h.findButton(label),label);
-  assert.equal(h.elements.filter(e=>e.tag==='button'&&e.textContent==='SINGLE PLAYER').length,1);
+  assert.equal(h.elements.filter(e=>e.tag==='button'&&e.textContent==='LOCAL MODES').length,1);
   assert.equal(h.sockets.length,0);
   const nightmare=h.findSelect('nightmare');
   assert.equal(Array.from(nightmare.options).find(o=>o.value==='nightmare').disabled,true);
@@ -86,7 +87,7 @@ test('Solo Nightmare launch keeps no-socket path',()=>{
   const difficulty=h.findSelect('nightmare');
   assert.equal(Array.from(difficulty.options).find(o=>o.value==='nightmare').disabled,false);
   difficulty.value='nightmare';
-  h.findButton('START SOLO SURVIVAL').onclick();
+  h.findButton('START LOCAL MATCH').onclick();
   assert.equal(h.sockets.length,0);
   assert.equal(h.started.length,1);
   assert.equal(h.started[0].difficulty,'nightmare');
@@ -94,7 +95,7 @@ test('Solo Nightmare launch keeps no-socket path',()=>{
 });
 test('Online room offers fixed limits and 6/10/14 max; both limits cannot be zero',()=>{
   const h=harness();h.context.api.showPlayPage();
-  h.findButton('ONLINE ROOM').onclick();
+  h.findButton('ONLINE (EXPERIMENTAL)').onclick();
   const map=h.findSelect('jungle');map.value='jungle';map.fire('change');
   const mode=h.findSelect('tdm');mode.value='tdm';mode.fire('change');
   const duration=h.findSelect('1800'),kills=h.findSelect('100');
@@ -121,7 +122,7 @@ test('Online room offers fixed limits and 6/10/14 max; both limits cannot be zer
 });
 test('Browse opens a dynamic room table with capacity and password column',()=>{
   const h=harness();h.context.api.showPlayPage();
-  h.findButton('BROWSE ROOMS').onclick();
+  h.findButton('ONLINE (EXPERIMENTAL)').onclick();
   assert.ok(h.findButton('REFRESH ROOMS'));
   assert.equal(h.sockets.length,1);
   h.sockets[0].onopen();
@@ -150,4 +151,19 @@ test('map and difficulty unlock hints appear only inside selects, aligned and eq
   assert.ok(help);
   assert.ok(h.elements.some(e=>e.tag==='strong'&&e.textContent==='ELITE ENEMIES'));
   assert.ok(h.elements.some(e=>e.tag==='p'&&/Bulwark.*Frenzied.*Regenerator/.test(e.textContent)));
+});
+
+test('Gun Game and Kill Confirmed launch offline without a WebSocket',()=>{
+ const h=harness();h.context.api.showPlayPage();
+ const mode=h.findSelect('gunGame');
+ mode.value='gunGame';mode.fire('change');
+ h.findButton('START LOCAL MATCH').onclick();
+ assert.equal(h.sockets.length,0);
+ assert.equal(h.started.at(-1).mode,'gunGame');
+ const second=harness();second.context.api.showPlayPage();
+ const mode2=second.findSelect('killConfirmed');
+ mode2.value='killConfirmed';mode2.fire('change');
+ second.findButton('START LOCAL MATCH').onclick();
+ assert.equal(second.started.at(-1).mode,'killConfirmed');
+ assert.equal(second.sockets.length,0);
 });
