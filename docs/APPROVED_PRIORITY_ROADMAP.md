@@ -39,6 +39,43 @@ Moon Base is a distinct low-gravity/jetpack game experience.
   and reachable routes from the main ring. Balcony half/full-height cover
   while preserving sightlines. Ramps must be navigable by Recast agents.
 
+## Current implementation checkpoint — 19 October 2026
+
+### Priorities 1–2: architecture and editor
+
+- All four shipped layout files use versioned JSON with stable IDs, shared
+  definitions and validation. Scrapyard staircases/pads and City's 13 ziplines,
+  17 lifts, 8 skybridges, 44 car wrecks and 33 independent roof/relay pads
+  are now represented as JSON entities.
+- Composite cars own another 44 roof jump pads inside their entity; they
+  are not separately serialized so moving a car moves its roof boost.
+- The editor can add and transform all these types, visualize Recast,
+  round-trip JSON and author spawn/pickup markers.
+- A two-file community-map workflow now exists: a `v2` layout plus an
+  entry in `assets/maps/catalog.json`, with runtime/editor discovery and
+  `levelCommunity.js` as the reusable builder.
+- **Remaining verification:** Browser gameplay and editor QA for parented
+  geometry, physics, routes, material treatment and map import/export;
+  documentation is not proof of in-game behavior. Test especially the car
+  roof boosts after moving and reimporting cars.
+
+### Priority 3: Hard Mode rewrite (in progress)
+
+- `js/hardModeRules.js` provides deterministic three-wave mutators:
+  **Reinforced** (+25% enemy HP), **Overclocked** (+20% speed),
+  **Ferocious** (+22% damage), and **Swarm** (+30% counts).
+- A revised baseline applies health, damage, speed and wave-budget modifiers
+  while keeping Hard Mode's existing 2× scoring and per-map unlock rule.
+  Wave announcements show the active modifier. Regular mode remains untouched.
+- **Still to do:** balance runs on all maps, richer player-facing explanations
+  and modifier choices, persistence of exact run modifiers for review/replays,
+  clear reward rules, and compatibility QA with bosses and later Elites.
+
+### Priority 4: Elites
+
+Not started. Elite archetypes, AI traits and their Hard Mode spawn budgets
+depend on the tested priority-3 modifier architecture.
+
 ## Work gates
 
 For each phase, record: implementation files, tests, regression risks, screenshots
