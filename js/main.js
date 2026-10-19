@@ -595,8 +595,13 @@ async function launchCompetitiveRoom(cfg,session) {
       def.ammo=def.startAmmo||0;
     }
     const configuredLoadout=profile.pvpLoadout||selectedMatchLoadout;
-    inventory[0]=cfg.mode==='gunGame'?'PISTOL':(configuredLoadout.primary||'SMG');
-    inventory[1]=cfg.mode==='gunGame'?null:(configuredLoadout.secondary||'SHOTGUN');
+    // Never trust locally stored slots to equip wonder weapons or missing IDs.
+    const validPvPWeapon=id=>WDEFS[id] && !WDEFS[id].wonderWeapon;
+    const mainSlot=validPvPWeapon(configuredLoadout.primary)?configuredLoadout.primary:'SMG';
+    const offSlot=validPvPWeapon(configuredLoadout.secondary)&&configuredLoadout.secondary!==mainSlot
+      ?configuredLoadout.secondary:(mainSlot==='SHOTGUN'?'SMG':'SHOTGUN');
+    inventory[0]=cfg.mode==='gunGame'?'PISTOL':mainSlot;
+    inventory[1]=cfg.mode==='gunGame'?null:offSlot;
     inventory[2]=cfg.mode==='gunGame'?null:'PISTOL';
     setActiveSlot(0);
     const name=profileDisplayName();
