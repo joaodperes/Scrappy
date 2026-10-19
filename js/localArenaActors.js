@@ -28,7 +28,7 @@ export async function fetchArenaPersonas(){
   return json.personalities;
  }catch(err){console.warn('[arena] Persona JSON unavailable; using bundled fallback',err);return FALLBACK_PERSONAS}
 }
-function appearance(id,team,skin){
+function appearance(id,team,skin,displayName){
  const g=new B.TransformNode('arena_'+id,scene);
  const base=palette[team]||palette.BLUE;
  const tint=skin==='forest'?[.37,.51,.25]:skin==='ghost'?[.67,.75,.78]:skin==='void'?[.31,.28,.50]:skin==='oni'?[.78,.32,.24]:base;
@@ -62,7 +62,7 @@ function appearance(id,team,skin){
  canvas.fillStyle='#101810';canvas.fillRect(0,0,256,64);
  canvas.font='bold 26px monospace';canvas.textAlign='center';canvas.textBaseline='middle';
  canvas.fillStyle=team==='RED'?'#ff9c8e':'#9ccaff';
- canvas.fillText(id.replace('arena_','').slice(0,15),128,32);label.update();
+ canvas.fillText(String(displayName||id).slice(0,15),128,32);label.update();
  const nm=new B.StandardMaterial('arena_name_mat_'+id,scene);
  nm.diffuseTexture=label;nm.useAlphaFromDiffuseTexture=true;
  nm.emissiveColor=B.Color3.White();nm.disableLighting=true;
@@ -91,7 +91,7 @@ export function chooseArenaSpawn(existing=[],playerPosition=camera.position){
    const separation=existing.reduce((d,bot)=>bot.alive?Math.min(d,Math.hypot(p[0]-bot.group.position.x,p[2]-bot.group.position.z)):d,100);
    return Math.min(a,25)+Math.min(separation,12)*2+Math.random()*5;
  };
- const best=options.sort((a,b)=>score(b)-score(a))[0];
+ const best=options.map(p=>({p,value:score(p)})).sort((a,b)=>b.value-a.value)[0]?.p;
  if(!best)return null;
  const query=new B.Vector3(best[0],best[1]+1,best[2]);
  let nav=null;try{nav=navPlugin.getClosestPoint(query)}catch{}
@@ -101,7 +101,7 @@ export function chooseArenaSpawn(existing=[],playerPosition=camera.position){
 export function createArenaActor(persona,team,spawn,index){
  if(!valid(spawn))return null;
  const id='arena_'+(++serial);
- const {group,mats,label}=appearance(id,team,persona.skin);
+ const {group,mats,label}=appearance(id,team,persona.skin,persona.name);
  group.position.copyFrom(spawn);
  const actor={id,name:persona.name,persona,team,group,mats,label,alive:true,
   hp:100,maxHp:100,arenaActor:true,weapon:null,gunModel:null,
@@ -164,12 +164,16 @@ function pickTarget(actor,actors,mode,humanAlive){
  }
  return found;
 }
-export function updateArenaActors(actors,dt,mode,{humanAlive=true,onShot,onRespawn}={}){
+export function updateArenaActors(actors,dt,mode,{humanAlive=true,onShot,onRespawn,objectives=[]}={}){
  for(const a of actors){
   if(!a.alive){a.respawnIn-=dt;if(a.respawnIn<=0)onRespawn?.(a);continue}
   a.cooldown=Math.max(0,a.cooldown-dt);
   a.reload=Math.max(0,a.reload-dt);
-  const target=pickTarget(a,actors,mode,humanAlive);
+  const goal=mode==='killConfirmed'?objectives.filter(o=>o&&o.mesh&&!o.mesh.isDisposed?.())
+    .map(o=>({tag:o,d:B.Vector3.Distance(a.group.position,o.mesh.position)}))
+    .filter(o=>o.d<32).sort((x,y)=>x.d-y.d)[0]:null;
+  const target=goal?{id:'tag_'+goal.tag.id,actor:null,point:goal.tag.mesh.position.clone(),visible:true,distance:goal.d,objective:true}:
+    pickTarget(a,actors,mode,humanAlive);
   if(!target){a.targetId=null;continue}
   if(a.targetId!==target.id){a.targetId=target.id;a.reaction=(a.persona.reactionMs||450)/1000}
   a.reaction=Math.max(0,a.reaction-dt);
@@ -177,7 +181,7 @@ export function updateArenaActors(actors,dt,mode,{humanAlive=true,onShot,onRespa
   const dx=targetPos.x-own.x,dz=targetPos.z-own.z;
   const flat=Math.hypot(dx,dz);
   if(flat>.01)a.group.rotation.y=Math.atan2(dx,dz);
-  const preferred=a.weapon==='KNIFE'?1.7:(a.persona.preferredRange||14);
+  const preferred=target.objective?1.1:a.weapon==='KNIFE'?1.7:(a.persona.preferredRange||14);
   const near=flat<preferred*.65,far=flat>preferred*1.15;
   a.walkClock-=dt;
   if(a.walkClock<=0||!a.pathCursor){
@@ -211,7 +215,7 @@ export function updateArenaActors(actors,dt,mode,{humanAlive=true,onShot,onRespa
    }
   }
   const spec=WDEFS[a.weapon]||WDEFS.PISTOL;
-  if(a.reload>0||a.reaction>0||a.cooldown>0||!target.visible)continue;
+  if(target.objective||a.reload>0||a.reaction>0||a.cooldown>0||!target.visible)continue;
   const distance=B.Vector3.Distance(own.add(new B.Vector3(0,1.5,0)),targetPos);
   if(distance>(spec.range||55)||distance>110)continue;
   if(a.ammo<=0){a.reload=Math.max(.7,spec.reloadTime||1.4);a.ammo=Math.max(1,spec.magSize||30);continue}
