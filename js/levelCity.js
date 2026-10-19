@@ -224,39 +224,7 @@ function _jp(px,floorY,pz,force=22,rotY=0) {
   base.parent=pg; base.isPickable=false; base.checkCollisions=false;
   jumpPads.push({pos:new BABYLON.Vector3(px,y,pz),force,thrustX:Math.sin(rotY)*(force*0.45),thrustZ:Math.cos(rotY)*(force*0.45)});
 }
-// Zipline at walking speed (worldSpeedUPS = world units per second).
-// Kept as a direct mesh build (not routed through createSlab) — it carries
-// _moveData (movingPlatforms) that a generic JSON re-import wouldn't
-// reconstruct from a flat slab, so it stays explicitly non-editable.
-function _zipline(name,start,end,worldSpeedUPS,sw,sz) {
-  const dist=BABYLON.Vector3.Distance(start,end);
-  const tSpeed=worldSpeedUPS/dist;
-  const H=0.3, m=BABYLON.MeshBuilder.CreateBox(name,{width:sw,height:H,depth:sz},scene);
-  m.position.set(start.x,start.y-H/2,start.z);
-  const mat=new BABYLON.StandardMaterial(name+'_mat',scene);
-  mat.diffuseColor=new BABYLON.Color3(0.22,0.52,0.92);
-  mat.emissiveColor=new BABYLON.Color3(0.04,0.12,0.28);
-  m.material=mat; m.checkCollisions=true; m.isPickable=false;
-  m.metadata={editable:false,type:'zipline'};
-  m._moveData={start:start.clone(),end:end.clone(),speed:tSpeed,t:0,dir:1,waitTimer:0,waitTime:1.5,paused:false};
-  movingPlatforms.push(m); walkableMeshes.push(m);
-  // Cable
-  const mid=BABYLON.Vector3.Lerp(start,end,0.5);
-  const cable=BABYLON.MeshBuilder.CreateCylinder(name+'_cab',{diameter:0.07,height:dist,tessellation:5},scene);
-  cable.position.copyFrom(mid);
-  const axis=end.subtract(start).normalize();
-  const dot=BABYLON.Vector3.Dot(axis,BABYLON.Axis.Y);
-  if(Math.abs(dot)<0.999){
-    const rot=BABYLON.Vector3.Cross(BABYLON.Axis.Y,axis);
-    cable.rotationQuaternion=BABYLON.Quaternion.RotationAxis(rot.normalize(),Math.acos(dot));
-  }
-  const cmat=new BABYLON.StandardMaterial(name+'_cmat',scene);
-  cmat.diffuseColor=new BABYLON.Color3(0.24,0.28,0.35);
-  cmat.emissiveColor=new BABYLON.Color3(0.03,0.05,0.08);
-  cable.material=cmat; cable.isPickable=false;
-  return m;
-}
-
+// Ziplines are now data-driven createZipline entities in city.json.
 // Shared helper: rotate a mesh (already positioned) so its local Z axis
 // points along `dir`, WITHOUT rolling it sideways. A single minimal
 // rotation (rotate Z toward dir around their cross product) is fine when
@@ -669,26 +637,8 @@ export async function buildCityLevel(customScene = null) {
     _jp(px,py,pz,18,rot);
   });
 
-  // ZIPLINES
-  const ZS = 11.5; // world units/second — faster than before per request
-
-  // Ring1 rooftops
-  _zipline('zip_AB',new BABYLON.Vector3(-26,F5_Y+1,-36),new BABYLON.Vector3(26,F4_Y+1,-36),ZS,4,4);
-  _zipline('zip_AD',new BABYLON.Vector3(-36,F5_Y+1,-26),new BABYLON.Vector3(-36,F3_Y+1,26),ZS,4,4);
-  _zipline('zip_BC',new BABYLON.Vector3(36,F4_Y+1,-26),new BABYLON.Vector3(36,F4_Y+1,26),ZS,4,4);
-  _zipline('zip_CD',new BABYLON.Vector3(26,F4_Y+1,36),new BABYLON.Vector3(-26,F3_Y+1,36),ZS,4,4);
-  _zipline('zip_EA',new BABYLON.Vector3(-7,F2_Y+1,-7),new BABYLON.Vector3(-26,F5_Y+1,-26),ZS,3.5,3.5);
-  // Ring2 to Ring1
-  _zipline('zip_HA',new BABYLON.Vector3(-10,F4_Y+1,-60),new BABYLON.Vector3(-26,F5_Y+1,-44),ZS,3.5,3.5);
-  _zipline('zip_GC',new BABYLON.Vector3(60,F3_Y+1,10),new BABYLON.Vector3(46,F4_Y+1,26),ZS,3.5,3.5);
-  // Ring3 rooftops
-  _zipline('zip_JK',new BABYLON.Vector3(-70,F5_Y+1,-80),new BABYLON.Vector3(70,F4_Y+1,-80),ZS,4,4);
-  _zipline('zip_JM',new BABYLON.Vector3(-80,F5_Y+1,-70),new BABYLON.Vector3(-80,F4_Y+1,70),ZS,4,4);
-  _zipline('zip_KL',new BABYLON.Vector3(80,F4_Y+1,-70),new BABYLON.Vector3(80,F3_Y+1,70),ZS,4,4);
-  _zipline('zip_LM',new BABYLON.Vector3(70,F3_Y+1,80),new BABYLON.Vector3(-70,F4_Y+1,80),ZS,4,4);
-  // Ring3 to Ring2 diagonal
-  _zipline('zip_JP',new BABYLON.Vector3(-70,F5_Y+1,-80),new BABYLON.Vector3(-10,F4_Y+1,-70),ZS,3.5,3.5);
-  _zipline('zip_KP',new BABYLON.Vector3(70,F4_Y+1,-80),new BABYLON.Vector3(10,F4_Y+1,-70),ZS,3.5,3.5);
+  // Cable-car routes are authored in assets/maps/city.json and constructed
+  // by the shared createZipline generator when the JSON layout loads.
 
   // SECRET KIT - Bldg E roof (full health + full armor)
   // Registered for initSecretKits() in pickups.js
