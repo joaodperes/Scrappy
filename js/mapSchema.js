@@ -44,6 +44,10 @@ export const ENTITY_DEFINITIONS = Object.freeze({
     cx:number(),cz:number(),sx:positive(),sz:positive(),surfY:number()}},
   createJumpPad:{label:'Jump Pad',category:'Traversal',fields:{
     px:number(),floorY:number(),pz:number(),force:positive(),rotY:number(false)}},
+  createZipline:{label:'Zipline / Cable Car',category:'Traversal',fields:{
+    name:str(),startX:number(),startY:number(),startZ:number(),
+    endX:number(),endY:number(),endZ:number(),
+    worldSpeed:positive(),width:positive(),depth:positive()}},
   createMovingPlatform:{label:'Moving Platform',category:'Traversal',fields:{
     startX:number(),startY:number(),startZ:number(),endX:number(),endY:number(),endZ:number(),
     sx:positive(),sz:positive(),speed:positive(),waitTime:number(false,0,1000)}},
@@ -120,6 +124,12 @@ export function validateMapDocument(input,{expectedMap=null,strictIds=true}={}){
         errors.push(where+'.params.'+key+' must be an array of valid entity IDs');
       if(field.type==='enum' && !field.values.includes(val))
         errors.push(where+'.params.'+key+' must be one of '+field.values.join(', '));
+    }
+    if(o.generator==='createZipline'){
+      const p=o.params;
+      if([p.startX,p.startY,p.startZ,p.endX,p.endY,p.endZ].every(Number.isFinite)
+        && Math.hypot(p.endX-p.startX,p.endY-p.startY,p.endZ-p.startZ)<0.1)
+        errors.push(where+' zipline endpoints must differ');
     }
     if(o.generator==='createStaircase'){
       const {dirX,dirZ}=o.params;
