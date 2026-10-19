@@ -1,7 +1,7 @@
 // Local robot-arena challenges. No WebSocket, rooms or cloud deployment.
 // Robots use the existing single-player PvE movement/combat controllers.
 // FFA/TDM labels are PRACTICE: bots currently target the human, not peers.
-import { createLocalArena,localArenaKill,localArenaTag,localArenaDeath,tickLocalArena } from './localArenaRules.js';
+import { createLocalArena,localArenaKill,localArenaTag,localArenaTagExpired,localArenaDeath,tickLocalArena } from './localArenaRules.js';
 import { enemies } from './gameState.js';
 import { spawnBot } from './enemies.js';
 import { scene,camera } from './scene.js';
