@@ -26890,6 +26890,448 @@
         "y": 1,
         "z": 1
       }
+    },
+    {
+      "id": "city-lift-A",
+      "generator": "createRooftopLift",
+      "params": {
+        "cx": -36,
+        "cz": -36,
+        "topSurfY": 20,
+        "face": "W",
+        "faceOffset": 0
+      },
+      "position": {
+        "x": -48,
+        "y": -0.15,
+        "z": -36
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "city-lift-B",
+      "generator": "createRooftopLift",
+      "params": {
+        "cx": 36,
+        "cz": -36,
+        "topSurfY": 16,
+        "face": "E",
+        "faceOffset": 0
+      },
+      "position": {
+        "x": 48,
+        "y": -0.15,
+        "z": -36
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "city-lift-C",
+      "generator": "createRooftopLift",
+      "params": {
+        "cx": 36,
+        "cz": 36,
+        "topSurfY": 16,
+        "face": "E",
+        "faceOffset": 0
+      },
+      "position": {
+        "x": 48,
+        "y": -0.15,
+        "z": 36
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "city-lift-D",
+      "generator": "createRooftopLift",
+      "params": {
+        "cx": -36,
+        "cz": 36,
+        "topSurfY": 12,
+        "face": "W",
+        "faceOffset": 0
+      },
+      "position": {
+        "x": -48,
+        "y": -0.15,
+        "z": 36
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "city-lift-E",
+      "generator": "createRooftopLift",
+      "params": {
+        "cx": 0,
+        "cz": 0,
+        "topSurfY": 8,
+        "face": "S",
+        "faceOffset": 4.5
+      },
+      "position": {
+        "x": 4.5,
+        "y": -0.15,
+        "z": 12
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "city-lift-F",
+      "generator": "createRooftopLift",
+      "params": {
+        "cx": -60,
+        "cz": 0,
+        "topSurfY": 12,
+        "face": "N",
+        "faceOffset": 0
+      },
+      "position": {
+        "x": -60,
+        "y": -0.15,
+        "z": -12
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "city-lift-G",
+      "generator": "createRooftopLift",
+      "params": {
+        "cx": 60,
+        "cz": 0,
+        "topSurfY": 12,
+        "face": "N",
+        "faceOffset": 0
+      },
+      "position": {
+        "x": 60,
+        "y": -0.15,
+        "z": -12
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "city-lift-H",
+      "generator": "createRooftopLift",
+      "params": {
+        "cx": 0,
+        "cz": -60,
+        "topSurfY": 16,
+        "face": "E",
+        "faceOffset": 0
+      },
+      "position": {
+        "x": 12,
+        "y": -0.15,
+        "z": -60
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "city-lift-I",
+      "generator": "createRooftopLift",
+      "params": {
+        "cx": 0,
+        "cz": 60,
+        "topSurfY": 12,
+        "face": "E",
+        "faceOffset": 0
+      },
+      "position": {
+        "x": 12,
+        "y": -0.15,
+        "z": 60
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "city-lift-J",
+      "generator": "createRooftopLift",
+      "params": {
+        "cx": -80,
+        "cz": -80,
+        "topSurfY": 20,
+        "face": "N",
+        "faceOffset": 0
+      },
+      "position": {
+        "x": -80,
+        "y": -0.15,
+        "z": -92
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "city-lift-K",
+      "generator": "createRooftopLift",
+      "params": {
+        "cx": 80,
+        "cz": -80,
+        "topSurfY": 16,
+        "face": "N",
+        "faceOffset": 0
+      },
+      "position": {
+        "x": 80,
+        "y": -0.15,
+        "z": -92
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "city-lift-L",
+      "generator": "createRooftopLift",
+      "params": {
+        "cx": 80,
+        "cz": 80,
+        "topSurfY": 12,
+        "face": "S",
+        "faceOffset": 0
+      },
+      "position": {
+        "x": 80,
+        "y": -0.15,
+        "z": 92
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "city-lift-M",
+      "generator": "createRooftopLift",
+      "params": {
+        "cx": -80,
+        "cz": 80,
+        "topSurfY": 16,
+        "face": "S",
+        "faceOffset": 0
+      },
+      "position": {
+        "x": -80,
+        "y": -0.15,
+        "z": 92
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "city-lift-N",
+      "generator": "createRooftopLift",
+      "params": {
+        "cx": -80,
+        "cz": 0,
+        "topSurfY": 12,
+        "face": "W",
+        "faceOffset": 0
+      },
+      "position": {
+        "x": -92,
+        "y": -0.15,
+        "z": 0
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "city-lift-O",
+      "generator": "createRooftopLift",
+      "params": {
+        "cx": 80,
+        "cz": 0,
+        "topSurfY": 12,
+        "face": "E",
+        "faceOffset": 0
+      },
+      "position": {
+        "x": 92,
+        "y": -0.15,
+        "z": 0
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "city-lift-P",
+      "generator": "createRooftopLift",
+      "params": {
+        "cx": 0,
+        "cz": -80,
+        "topSurfY": 16,
+        "face": "N",
+        "faceOffset": 0
+      },
+      "position": {
+        "x": 0,
+        "y": -0.15,
+        "z": -92
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "city-lift-Q",
+      "generator": "createRooftopLift",
+      "params": {
+        "cx": 0,
+        "cz": 80,
+        "topSurfY": 12,
+        "face": "S",
+        "faceOffset": 0
+      },
+      "position": {
+        "x": 0,
+        "y": -0.15,
+        "z": 92
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
     }
   ],
   "markers": []
