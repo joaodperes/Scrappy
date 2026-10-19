@@ -654,7 +654,7 @@ export function updateProjs(dt) {
       // ── Check scene collision (walls/floors) for hitscan-style projectile ─
       const wallRay = new BABYLON.Ray(obj.position.subtract(step), step.normalize(), step.length() + 0.15);
       const wHit = scene.pickWithRay(wallRay, blocksBullet);
-      if (wHit.hit) {
+      if (wHit?.hit) {
         if (p.type === 'rocket') boom(obj.position.clone(), p.splash, p.dmg, false);
         else spawnSparks(obj.position.clone(), 0xffaa55, 4);
         hit = true;
