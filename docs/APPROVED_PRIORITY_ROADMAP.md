@@ -18,7 +18,7 @@ Moon Base is a distinct low-gravity/jetpack game experience.
 | 7 | **Weapon categories + melee** | Primary / Secondary / Wonder; one Secondary in loadout replaces default Pistol; ammo-free melee timing, special-only slot, blades/hilts skins; Wonder no attachments; backward compatible progression. **Partial:** sidearm taxonomy/selection implemented; full melee and slot enforcement remain open. |
 | 8 | **Daily/weekly quests + Scraps rewards only** | Quests keyed by UTC day/week; explicit idempotent local claims; rotating Collector weapon finishes and duplicate-owner Scraps; max-rank PvE XP conversion; **offline MVP implemented**, but secure server-authoritative currency/claim ledger, cross-device consistency and anti-farm remain open; **no shop yet** |
 | 9 | **Room creation and browsing** | Production-safe centralized shared server, lobby lifecycle, room visibility/passwords, capacity and mode settings; reconnection, player presence, synchronized readiness |
-| 10 | **Player-model bots** | JSON personalities and loadouts/skins, reusable traversal AI, team awareness, server/local match ownership and slots, bot replacement when people join |
+| 10 | **Player-model bots** | JSON personalities and loadouts/skins, reusable traversal AI, team awareness, server/local match ownership and slots, bot replacement when people join. **Partial:** six personas, server-owned slot planner and TDM team allocation tested; no live bots yet. |
 | 11 | **TDM + FFA** | Locally testable complete matches with bots, team rules, scoreboard, spawns, 5-second respawn, time/score limits, attachments, mode XP |
 | 12 | **Gun Game** | Shared match seed and unique randomized weapon progression from Pistol to Knife, transitions and kills/challenges, bots |
 | 13 | **PvP humans** | Authoritative server hit/weapon validation, anti-cheat, synchronization, remote skins/loadouts, teams, reconnect and latency tests; deploy & load-test |
@@ -176,6 +176,20 @@ Moon Base is a distinct low-gravity/jetpack game experience.
   races, verified anti-farm/anti-cheat ledger and authoritative PvP accounting.
   The shop (priority 15) must not spend unverified local Scraps.
 
+### Priority 10: Player-model bots (personas and slot allocator only)
+
+- Added six data-driven, bounded bot personality presets to
+  `assets/bot-personalities.json`: name, role, range, aggression,
+  accuracy, reaction, human weapon loadout and player skin.
+- `server/botSlots.js` calculates deterministic prospective bot rosters
+  only in opt-in competitive 6/10/14 rooms, balances TDM slots within each
+  half team, and yields slots to newly joined humans. Unit tests verify
+  catalog integrity and human slot replacement.
+- **Not activated:** no server AI simulation, network replication,
+  combat/respawn, authoritative score validation or bot navigation.
+  The room lobby correctly continues to say bots are not active.
+  `docs/BOT_PERSONAS.md` records dependencies before activation.
+
 ### Priority 17: Melee completion — after the currently approved gameplay priorities
 
 - The present Knife is functional as a basic ammo-free close-range attack,
@@ -256,6 +270,23 @@ Moon Base is a distinct low-gravity/jetpack game experience.
 - **QA outstanding:** live Firefox/Chromium ADS acquisition, 3/6/1
   attachment loadouts, visible targets behind glass vs grey walls,
   reticle moved off the target before firing, magazine/reload edge cases.
+
+## Independent-work execution policy
+
+- Continue source changes and automated tests on
+  `fix/foundations-room-flow-20261018` while awaiting browser playtests.
+- Never mark Moon (6) or Jungle (5) fully accepted without physics, Recast
+  bot routes and Chromium/Firefox gameplay verification.
+- The client-side quest/Scraps prototype (8) is **not** a secure ledger.
+  Do not connect the shop (15), paid unlocks or competitive rewards to it
+  before server-side identity, atomic claims and anti-farm controls.
+- A standalone bot profile/slot planner (10) is safe to implement; **real**
+  networked bots need room authorization, authoritative simulation and
+  multiplayer validation from priorities 9, 11 and 13.
+- PvE stats (16) and competitive balance-affecting effects should await
+  a safe normalization contract with human PvP. Melee timing/asset QA in 17
+  should not be implied by classifying Knife as `melee`.
+- Repository cleanup (18) remains last, regardless of added gameplay work.
 
 ## Work gates
 
