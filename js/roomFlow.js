@@ -242,7 +242,7 @@ function onRoomPacket(data,status,joinData){
    const pane=dom('section',CSS.box);root.appendChild(pane);
    let destination='create',solo=true;
    const createNav=button('LOCAL PLAY',()=>{solo=true;show('create')},true);
-   const browseNav=button('ONLINE (EXPERIMENTAL)',()=>show('browse'),true);
+   const browseNav=button('BROWSE ONLINE (EXPERIMENTAL)',()=>show('browse'),true);
    createNav.style.width=browseNav.style.width='100%';
    nav.appendChild(createNav);nav.appendChild(browseNav);
    function show(where){
