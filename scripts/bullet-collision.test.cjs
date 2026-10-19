@@ -41,3 +41,21 @@ test('projectile and PvP hit paths apply shared solid-geometry blocker',()=>{
   assert.match(pvp,/_remoteMeshMap\.has\(m\) \|\| blocksBullet\(m\)/);
   assert.match(geometry,/m\.isPickable = !!editable \|\|/);
 });
+
+test('swept projectiles detect enemies/barrels crossed between frames',async()=>{
+  const {segmentSphereHit}=await import(uri);
+  const v=(x,y,z)=>({x,y,z});
+  assert.equal(segmentSphereHit(v(-10,0,0),v(10,0,0),v(0,0,0),1),0.45);
+  assert.equal(segmentSphereHit(v(0,0,0),v(10,0,0),v(0,0,0),1),0);
+  assert.equal(segmentSphereHit(v(-10,2,0),v(10,2,0),v(0,0,0),1),null);
+  assert.equal(segmentSphereHit(v(0,0,0),v(0,0,0),v(5,0,0),1),null);
+  assert.equal(segmentSphereHit(v(-10,0,0),v(10,0,0),v(0,0,0),0),null);
+  assert.ok(segmentSphereHit(v(-30,0,0),v(30,0,0),v(0,0,0),0.75)!==null);
+});
+test('shared projectile loop uses segment sweep and first-wall occlusion',()=>{
+  const game=fs.readFileSync(path.join(__dirname,'../js/projectiles.js'),'utf8');
+  assert.match(game,/segmentSphereHit\(from,to,b\.pos,0\.75\)/);
+  assert.match(game,/segmentSphereHit\(from,to,center,/);
+  assert.match(game,/new BABYLON\.Ray\(from,direction,distance\),blocksBullet/);
+  assert.match(game,/plasmaSniper \? 0\.28/);
+});
