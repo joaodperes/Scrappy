@@ -86,3 +86,22 @@ test('server duration expires the round and broadcasts results',()=>{
   assert.equal(advance(60000),1);
   assert.ok(host.latest('roundEnd'));
 });
+
+test('No Limit time works only with a score goal and never schedules a timeout',()=>{
+  const {connect,advance}=harness();
+  const rejected=connect();
+  rejected.emit({type:'join',room:'INVALID',name:'Bad',isHost:true,
+    config:{directoryRoom:true,mode:'ffa',maxPlayers:6,roundDuration:0,scoreLimit:0}});
+  assert.match(rejected.latest('roomError').message,/time limit or a kill limit/);
+
+  const host=connect(),opponent=connect();
+  host.emit({type:'join',room:'UNLIMITED',name:'Host',isHost:true,
+    config:{directoryRoom:true,mode:'ffa',maxPlayers:6,roundDuration:0,scoreLimit:15}});
+  opponent.emit({type:'join',room:'UNLIMITED',name:'Opponent',requireExisting:true});
+  host.emit({type:'hostStartGame'});
+  assert.equal(advance(5000),1);
+  assert.equal(host.latest('roundStart').duration,0);
+  assert.equal(advance(60000),0);
+  assert.equal(advance(1800000),0);
+  assert.equal(host.latest('roundEnd'),undefined);
+});
