@@ -4,7 +4,7 @@ import { player } from './gameState.js';
 import { getCurrentMap } from './mapManager.js';
 import { WDEFS } from './weapons.js';
 import { crossedMilestone, notificationKey, upgradeNotificationHistory } from './milestoneNotifications.js';
-import { questDefinitions, ensureQuestState, trackQuestEvent, questProgress, claimQuest } from './questRules.js';
+import { questDefinitions, ensureQuestState, trackQuestEvent, questProgress, claimQuest, convertMaxedWeaponXp } from './questRules.js';
 
 const XP_BASE = 200, XP_EXP = 1.4;
 export function xpForLevel(level) { return Math.floor(XP_BASE * Math.pow(level, XP_EXP)); }
@@ -2393,6 +2393,7 @@ const _defaultProfile = () => ({
   pveSecondary:'PISTOL',
   scraps:0,
   questProgress:{},
+  weaponScrapRemainders:{},
 
   firebaseUid:null,
   stats:{totalKills:0,pvpKills:0,bossWaveClears:0,maxWave:0,killsOfType:{},killsWith:{},killsWhileJumping:{},killsWhileScoped:{},energyPickups:{},bossKillsWith:{}},
@@ -2780,7 +2781,13 @@ export function emitEvent(eventName, payload) {
           const prevWepLevel = getWeaponLevel(weaponKey);
 
           const wxp = ((WEAPON_XP_GRANTS[botType] || 8) * xpMult);
-          s.weaponXp[weaponKey] = (s.weaponXp[weaponKey] || 0) + wxp;
+          if(botType!=='pvp' && source!=='ENVIRONMENT'){
+            convertMaxedWeaponXp(profile,weaponKey,wxp,WEAPON_LEVEL_THRESHOLDS.at(-1));
+          }else{
+            // PvP currency conversion is disabled until server-authoritative
+            // kill validation and signed economy events are in place.
+            s.weaponXp[weaponKey]=(s.weaponXp[weaponKey]||0)+wxp;
+          }
 
           const newWepLevel = getWeaponLevel(weaponKey);
           if (newWepLevel > prevWepLevel) {
