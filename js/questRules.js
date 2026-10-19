@@ -62,7 +62,7 @@ export function trackQuestEvent(profile,event,payload={},date=new Date()){
 }
 export function questProgress(profile,definition,date=new Date()){
   const periods=questPeriods(date);
-  if(!definition || definition.period!==periods[definition.cadence])return {progress:0,complete:false,claimed:false,expired:true};
+  if(!definition || definition.period!==periods[definition.cadence==='daily'?'day':'week'])return {progress:0,complete:false,claimed:false,expired:true};
   const state=ensureQuestState(profile,date)[definition.cadence];
   const progress=Math.min(definition.target,Math.max(0,Number(state.metrics[definition.metric])||0));
   return {progress,complete:progress>=definition.target,claimed:state.claimed.includes(definition.id),expired:false};
