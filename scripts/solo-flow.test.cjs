@@ -60,7 +60,6 @@ test('single player launches chosen map without creating a WebSocket',()=>{
   context.testUI.showPlayPage();
   const findButton=label=>elements.filter(el=>el.tag==='button'&&el.textContent===label).at(-1);
   assert.ok(findButton('LOCAL MODES'),'Solo button present');
-  findButton('LOCAL MODES').onclick();
   const map=elements.find(el=>el.tag==='select'&&Array.from(el.options).some(o=>o.value==='jungle'));
   assert.equal(map.value,'scrapyard');
   map.value='jungle';map.onchange();
