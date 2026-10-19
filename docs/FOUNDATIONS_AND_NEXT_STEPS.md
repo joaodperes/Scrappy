@@ -1,4 +1,6 @@
-# Scrappy implementation status — October 18, 2026
+# Scrappy implementation status — October 18, 2026 (historical snapshot)
+
+**Superseded:** This is a historical PR checkpoint, not the active work order. The owner changed the scope on October 19 to **offline local modes first, multiplayer in a later PR, documentation cleanup in the current PR**. Use [APPROVED_PRIORITY_ROADMAP.md](APPROVED_PRIORITY_ROADMAP.md) for the active order and [LOCAL_ARENA_MODES.md](LOCAL_ARENA_MODES.md) for the new modes.
 
 Consolidated work on Draft PR #2 (`fix/foundations-room-flow-20261018`).
 PR #1 was closed **without merging** after its navigation approach was integrated
