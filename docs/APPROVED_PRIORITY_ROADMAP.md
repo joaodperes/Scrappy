@@ -17,10 +17,10 @@ Moon Base is a distinct low-gravity/jetpack game experience.
 | 6 | **Moon Base rewrite** | Low gravity also affects bot vertical physics/trajectory; every PvP player has jetpack; additional raised weapon/health/armor platforms, exposed side(s) for entry; cover on new/existing platforms and balcony; ramp access and bot navigation to balcony |
 | 7 | **Weapon categories + melee** | Pistol remains the standard Survival Secondary; Aegis is a Primary weapon. Separate Melee/Wonder categories, animation and exclusive special slot remain to be implemented/validated; no configurable Survival sidearm. |
 | 8 | **Daily/weekly quests + Scraps rewards only** | Quests keyed by UTC day/week; explicit idempotent local claims; rotating Collector weapon finishes and duplicate-owner Scraps; max-rank PvE XP conversion; **offline MVP implemented**, but secure server-authoritative currency/claim ledger, cross-device consistency and anti-farm remain open; **no shop yet** |
-| 9 | **Room creation and browsing** | Production-safe centralized shared server, lobby lifecycle, room visibility/passwords, capacity and mode settings; reconnection, player presence, synchronized readiness |
+| 9 | **Room creation and browsing** | Server room config validation, passwords, capacity, host succession, safe countdown cancellation and client roster feedback implemented at source level. **Open:** authenticated reconnect, real browser/network playtests, shared community-map catalog, durable deployments and abuse controls. |
 | 10 | **Player-model bots** | JSON personalities and loadouts/skins, reusable traversal AI, team awareness, server/local match ownership and slots, bot replacement when people join. **Partial:** six personas, server-owned slot planner and TDM team allocation tested; no live bots yet. |
 | 11 | **TDM + FFA** | Locally testable complete matches with bots, team rules, scoreboard, spawns, 5-second respawn, time/score limits, attachments, mode XP |
-| 12 | **Gun Game** | Shared match seed and unique randomized weapon progression from Pistol to Knife, transitions and kills/challenges, bots |
+| 12 | **Gun Game** | Shared per-match 32-bit seed, deterministic shuffled weapon ladder from Pistol to Knife, synchronized client order, transitions and scoring are source-implemented. **Open:** real-match QA, progression rewards integrity, bots and priority-13 authoritative hit validation. |
 | 13 | **PvP humans** | Authoritative server hit/weapon validation, anti-cheat, synchronization, remote skins/loadouts, teams, reconnect and latency tests; deploy & load-test |
 | 14 | **Co-op Survival** | Exactly 2 players max, authoritative synchronized waves and enemies, pickups, rewards, damage and boss state, disconnect/rejoin |
 | 15 | **Cosmetic shop** | Scraps redeem **only** cosmetics and direct-use weapon XP packs; tiers allowed; atomic purchase ledger and balances |
@@ -207,6 +207,40 @@ Moon Base is a distinct low-gravity/jetpack game experience.
 - **Open gate:** browser profile/Firestore persistence, cross-device claim
   races, verified anti-farm/anti-cheat ledger and authoritative PvP accounting.
   The shop (priority 15) must not spend unverified local Scraps.
+
+### Priority 9: Hosted rooms and lobby robustness (implementation slice)
+
+- New directory-room configurations are validated on the **server** for
+  game mode, built-in map, capacity, time/kill limits and code syntax.
+  Settings from existing hosts cannot be overridden by joiners. Legacy
+  non-directory connections and absent-map Scrapyard fallback remain intact.
+- Consolidated disconnection cleanup to a single WebSocket `close` handler.
+  The five-second countdown has a cancellation generation guard and
+  announces `roundCancelled` if fewer than two humans remain.
+  Room lobby identity/team labels are preserved on presence updates.
+- Clients already transferred into the match runtime now handle cancel
+  packets instead of remaining on a pre-game overlay.
+- **20 simulated Node-style server room/match/bot tests passed** using a
+  JavaScript mocked WebSocket runner; the actual Node suite/CI and live
+  two-browser tests have not run on these new commits.
+- See `server/roomSafety.test.js` and `docs/ROOM_RELIABILITY.md`.
+- **Open:** reconnect with authenticated session ownership, room persistence
+  and provider deployment, real human network sessions, abuse protection,
+  and community catalog registration on the server.
+
+### Priority 12: Seeded Gun Game (independent server portion)
+
+- The host-start transition now creates one 32-bit `gunSeed`, used for a
+  deterministic XorShift32 Fisher-Yates shuffle. The server sends the seed
+  and common full weapon order in `roundCountdown` and `roundStart`.
+  Pistol remains first and Knife last; prior scoring/weapon progression is
+  unchanged. Existing Gun Game mock test reproduces the order from its seed.
+- PvP two-firearm selection excludes Knife and Wonder weapons in the
+  Loadout tab, room picker and final match inventory. Knife remains eligible
+  for Gun Game only. Updated two bot personality presets to use Pistol
+  in their Secondary slot.
+- **Open:** browser weapon progression/respawn QA, verified hit/weapon
+  authority, challenge rewards and real AI bot participants.
 
 ### Priority 10: Player-model bots (personas and slot allocator only)
 
