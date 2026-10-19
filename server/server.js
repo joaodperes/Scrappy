@@ -283,6 +283,10 @@ wss.on('connection', ws => {
   });
 
   ws.on('close', () => {
+    // Keep one close handler for presence, timers and room lifecycle.
+    // This also makes the mocked WebSocket listener model faithfully test
+    // the entire path instead of accidentally overwriting the first handler.
+    clearInterval(stateTick);
     const room = rooms.get(roomId); if (!room) return;
     room.players.delete(id);
     _broadcast(room, id, { type: 'playerLeft', id });
@@ -320,7 +324,7 @@ wss.on('connection', ws => {
     if (ws.readyState === 1) ws.send(JSON.stringify({ type: 'state', players }));
   }, 50);
 
-  ws.on('close', () => clearInterval(stateTick));
+
 });
 
 function _broadcast(room, excludeId, msg) {
