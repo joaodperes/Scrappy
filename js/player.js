@@ -456,8 +456,12 @@ export function shoot() {
       break;
     case 'PLASMA':
       if (!hasSuppressor('PLASMA')) sfx.plasma();
-      if (player.plasmaAltMode) { hitscan(_meshToEnemy, spread * spreadMult, modDmg, range, 0); }
-      else { firePlasma(modDmg); }
+      if (player.plasmaAltMode) {
+        hitscan(_meshToEnemy, spread * spreadMult, modDmg, range, 0,
+          new BABYLON.Color3(.27,.53,1),0x4488ff,0x335577);
+      } else {
+        firePlasma(modDmg,EW.speed);
+      }
       break;
     case 'ROCKET':
       if (!hasSuppressor('ROCKET')) sfx.rocket();
