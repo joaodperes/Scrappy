@@ -55,7 +55,7 @@ test('single player launches chosen map without creating a WebSocket',()=>{
   const findButton=label=>elements.filter(el=>el.tag==='button'&&el.textContent===label).at(-1);
   assert.ok(findButton('SINGLE PLAYER'),'Solo button present');
   findButton('SINGLE PLAYER').onclick();
-  const map=elements.filter(el=>el.tag==='select').at(-1);
+  const map=elements.find(el=>el.tag==='select'&&el.options.some(o=>o.value==='jungle'));
   assert.equal(map.value,'scrapyard');
   map.value='jungle';map.onchange();
   const checkbox=elements.filter(el=>el.tag==='input'&&el.type==='checkbox').at(-1);
@@ -66,4 +66,5 @@ test('single player launches chosen map without creating a WebSocket',()=>{
   assert.equal(started.length,1);
   assert.equal(started[0].mapId,'jungle');
   assert.equal(started[0].hardMode,true);
+  assert.equal(started[0].hardModifier,'auto');
 });
