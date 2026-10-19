@@ -690,6 +690,8 @@ function profileDisplayName(){
 initRoomFlow({
   onSelectLoadout: (cfg,onChosen)=>{
     showLoadout(slots=>{
+      // BACK cancels selection while leaving the room view underneath intact.
+      if(!slots)return;
       selectedMatchLoadout=slots;
       onChosen?.(slots);
     },cfg.mode);
