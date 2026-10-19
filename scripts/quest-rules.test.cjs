@@ -19,6 +19,10 @@ test('events count PvE kills, waves and damage; not PvP kills or negative damage
  trackQuestEvent(p,'KILL',{botType:'pvp'},d);
  trackQuestEvent(p,'KILL',{botType:'scout'},d);
  trackQuestEvent(p,'KILL',{botType:'scout',source:'ENVIRONMENT'},d);
+ trackQuestEvent(p,'DAMAGE_DEALT',{amount:1500,source:'PVP'},d);
+ trackQuestEvent(p,'DAMAGE_DEALT',{amount:1100,source:'ENVIRONMENT'},d);
+ trackQuestEvent(p,'KILL',{botType:'scout',source:'PVP'},d);
+ trackQuestEvent(p,'WAVE_COMPLETE',{waveNum:9,source:'PVP'},d);
  trackQuestEvent(p,'DAMAGE_DEALT',{amount:3000},d);
  trackQuestEvent(p,'DAMAGE_DEALT',{amount:-100},d);
  trackQuestEvent(p,'WAVE_COMPLETE',{waveNum:1},d);
