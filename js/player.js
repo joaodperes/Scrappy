@@ -859,6 +859,7 @@ function _showAegisLockCount(count,max,visible){
 function _clearAegisLocks(){
   paintedTargets=[];
   _aegisHl?.removeAllMeshes();
+  _aegisHighlighted.clear();
   _showAegisLockCount(0,3,false);
 }
 function _updateAegisTargeting(){
