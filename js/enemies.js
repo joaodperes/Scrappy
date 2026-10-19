@@ -547,7 +547,7 @@ export function spawnBot(type, _x, _spawnY, _z, scale = 1.0) {
   let speedMod = scale;
     
   if (player.hardMode) {
-    const rules=getActiveHardWave()||getRunHardWaveRules(mapId,1);
+    const rules=getActiveHardWave()||getRunHardWaveRules(mapId,1,player.difficulty||'hard');
     hpMod *= rules.hp;
     dmgMod *= rules.damage;
     speedMod *= rules.speed;
