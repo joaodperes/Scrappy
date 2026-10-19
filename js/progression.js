@@ -2385,6 +2385,7 @@ const _defaultProfile = () => ({
     RIVETER:{skin:'default',attachments:{}},PHALANX:{skin:'default',attachments:{}},AEGIS:{skin:'default',attachments:{}},
   },
   playerSkin:'default',
+  pvpLoadout:{primary:'SMG',secondary:'SHOTGUN'},
   firebaseUid:null,
   stats:{totalKills:0,pvpKills:0,bossWaveClears:0,maxWave:0,killsOfType:{},killsWith:{},killsWhileJumping:{},killsWhileScoped:{},energyPickups:{},bossKillsWith:{}},
   maxWaveHard: 0,
