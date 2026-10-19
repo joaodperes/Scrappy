@@ -1,6 +1,6 @@
 // levelJungle.js – uses globals for scene & navPlugin
 const BABYLON = window.BABYLON;
-import { M } from './textures.js';
+import { createJungleMaterials } from './jungleMaterials.js';
 import { jumpPads, explosiveBarrels, walkableMeshes } from './level.js';
 import {
   setLevelMaterials,
@@ -64,19 +64,6 @@ function getNavPlugin() {
 // ---- Materials (stored globally per build) ----
 let _S, _D, _R, _W;
 
-function _mkMat(id, r, g, b, scene) {
-  const mat = new BABYLON.StandardMaterial(id + '_jM', scene);
-  const tex = new BABYLON.NoiseProceduralTexture(id + '_jT', 128, scene);
-  tex.animationSpeedFactor = 0;
-  tex.octaves = 3;
-  tex.persistence = 0.5;
-  mat.diffuseColor = new BABYLON.Color3(r/255, g/255, b/255);
-  mat.diffuseTexture = tex;
-  mat.specularColor = new BABYLON.Color3(0.02, 0.02, 0.02);
-  mat.maxSimultaneousLights = 6;
-  return mat;
-}
-
 // ---- Main build function ----
 export async function buildJungleLevel(customScene = null) {
   const scene = customScene || getScene();
@@ -92,10 +79,13 @@ export async function buildJungleLevel(customScene = null) {
   spikeTrapZones.length = 0;
   mineLights.length = 0;
 
-  _S = _mkMat('jSt', 44, 40, 34, scene);
-  _D = _mkMat('jDt', 34, 28, 16, scene);
-  _R = _mkMat('jRk', 22, 18, 14, scene);
-  _W = _mkMat('jWd', 28, 16,  6, scene);
+  // Real Quake-style texture images replace the old almost-black procedural
+  // noise. JSON material keys are explicit; original geometry is untouched.
+  const palette=createJungleMaterials(scene,BABYLON);
+  _S=palette.jungleRuinStone;
+  _D=palette.jungleMineFloor;
+  _R=palette.jungleMineWall;
+  _W=palette.jungleIron;
 
   // Registered so assets/maps/jungle.json's mat keys resolve correctly —
   // every wall/slab/pillar/ramp/lava/spike/destructible-wall placement in
@@ -105,7 +95,8 @@ export async function buildJungleLevel(customScene = null) {
   // been JSON-driven since before this editor-compatible refactor even
   // started; this file's only job is materials, lighting, fog, and NavMesh.
   setLevelMaterials(_S, _D, _R, _W);
-  registerMaterial('mossy', _R);
+  registerMaterial('mossy',_R); // legacy editor exports remain readable
+  for(const [key,mat] of Object.entries(palette))registerMaterial(key,mat);
   const bmat = new BABYLON.StandardMaterial('jBnd', scene);
   bmat.diffuseColor = new BABYLON.Color3(0.02, 0.02, 0.03);
   bmat.disableLighting = true;
