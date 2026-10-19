@@ -6,8 +6,8 @@
 
 From signed-in Home, choose **PLAY → LOCAL MODES**, then select:
 - Survival (unchanged original endless waves, Normal/Hard/Nightmare).
-- Gun Game (vs robots).
-- Kill Confirmed (vs robots).
+- Gun Game (human plus five bots with individual Pistol→Knife progression).
+- Kill Confirmed (RED human + two bot allies versus three BLUE bots; score enemy tags, deny friendly tags).
 - Free-for-all (human plus 5 independent player-like bots).
 - Team Deathmatch (human plus 2 RED allies versus 3 BLUE bots).
 
