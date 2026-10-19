@@ -9,7 +9,7 @@
 - Normal Survival: no Elites. Hard/Nightmare: first eligible wave is **5**.
 - Trait-point budget starts at 1 (waves 5–12), then 2 (13–20), 3 (21–28) and 4 (29+); never more than 3 Elite enemies, and never more than 25% of eligible non-boss/non-swarm-host units.
 - Every trait costs one point; at **wave 25+**, the first selected Elite receives two distinct traits when the budget permits. On boss waves the limit is **one single-trait Elite minion** if enough eligible units exist, and boss counts are never modified.
-- `giantbot` and `swarm_host` are never Elite. `medic_bot` cannot receive Frenzied. Summoned boss/swam-host minions are not automatically Elite.
+- `giantbot` and `swarm_host` are never Elite. `medic_bot` cannot receive Frenzied. Summoned boss/swarm-host minions are not automatically Elite.
 - The same map, wave, difficulty and composition yields the same assignments. The map's random composition can still differ from one run to the next. `getEliteSpawnPlan` returns a frozen, read-only plan.
 
 ## Trait behaviors
