@@ -15,8 +15,8 @@ Moon Base is a distinct low-gravity/jetpack game experience.
 | 4 | **Elite enemies for Hard Mode** | Typed Elite modifiers/traits, AI behaviors, visuals, encounter budget, loot, boss interactions; test combinatorial interactions and performance |
 | 5 | **Jungle repair** | A real below-surface mine/dungeon, not a perforated floor; solid ceilings/platforms/walls, correct excavation entrances, ramps/lifts, mine lighting/Lantern/NVG, destructibles and enemy nav; preserve the good surface arena |
 | 6 | **Moon Base rewrite** | Low gravity also affects bot vertical physics/trajectory; every PvP player has jetpack; additional raised weapon/health/armor platforms, exposed side(s) for entry; cover on new/existing platforms and balcony; ramp access and bot navigation to balcony |
-| 7 | **Weapon categories + melee** | Primary / Secondary / Wonder; one Secondary in loadout replaces default Pistol; ammo-free melee timing, special-only slot, blades/hilts skins; Wonder no attachments; backward compatible progression |
-| 8 | **Daily/weekly quests + Scraps rewards only** | Quests keyed by date/timezone UTC, idempotent rewards; broaden **Collector weapon-skin variants and themed challenges** (e.g., weekly Collector sets, consistent across weapons) and award limited weekly Collector cosmetics. Duplicate-owned skin grants Scraps; maxed-weapon XP conversion to Scraps; balances and anti-farm constraints; **no shop yet** |
+| 7 | **Weapon categories + melee** | Primary / Secondary / Wonder; one Secondary in loadout replaces default Pistol; ammo-free melee timing, special-only slot, blades/hilts skins; Wonder no attachments; backward compatible progression. **Partial:** sidearm taxonomy/selection implemented; full melee and slot enforcement remain open. |
+| 8 | **Daily/weekly quests + Scraps rewards only** | Quests keyed by UTC day/week; explicit idempotent local claims; rotating Collector weapon finishes and duplicate-owner Scraps; max-rank PvE XP conversion; **offline MVP implemented**, but secure server-authoritative currency/claim ledger, cross-device consistency and anti-farm remain open; **no shop yet** |
 | 9 | **Room creation and browsing** | Production-safe centralized shared server, lobby lifecycle, room visibility/passwords, capacity and mode settings; reconnection, player presence, synchronized readiness |
 | 10 | **Player-model bots** | JSON personalities and loadouts/skins, reusable traversal AI, team awareness, server/local match ownership and slots, bot replacement when people join |
 | 11 | **TDM + FFA** | Locally testable complete matches with bots, team rules, scoreboard, spawns, 5-second respawn, time/score limits, attachments, mode XP |
@@ -129,6 +129,52 @@ Moon Base is a distinct low-gravity/jetpack game experience.
   validation, lower-level pickup access, lava/damage tests, Lantern/NVG,
   weapon spawn visibility, performance and editor round-trip. Code-level
   geometry validation alone is not a passed gameplay test.
+
+### Priority 6: Moon Base (source implementation; browser QA pending)
+
+- Existing Moon `gravityMult:0.55` and local player jetpack logic were
+  retained. Bot jumping/falling now respects the map's low-gravity multiplier.
+- Four new y=14 floating platforms have ramp connections from the y=8
+  balcony, plus partial protective barriers and weapon/health/armor pickups.
+  Exposed balcony sides have half-height cover. Previously floating y=28/y=32
+  weapon pickups now have solid high platforms with partial cover; original
+  four y=20 weapon platforms have cover. Invalid y=6 PvP spawn points removed.
+- `scripts/moon-base.test.cjs` validates map schema, geometry, supported
+  pickup positions and gravity/jetpack wiring. Detailed contract:
+  `docs/MOON_BASE.md`.
+- **Open gate:** Babylon/Recast bot reachability on balcony and all y=14
+  ramps, two-client PvP jetpacks, weapon pickups and collision/performance
+  testing in Chromium and Firefox. Do not mark accepted solely from schema.
+
+### Priority 7: Weapons (Secondary-selection slice implemented; melee pending)
+
+- Created `js/weaponCategories.js`: pure Primary / Secondary / Melee /
+  Wonder classification. Pistol and Aegis are Secondary; Knife has a
+  separate, unfinished Melee category; boss-only Wonder guns are excluded.
+- Added a **Secondary** tab in Loadout. After discovering Aegis, players
+  may replace the default Pistol with it as their starting Survival sidearm;
+  this is saved on the profile. Both solo reset paths use the selected
+  Secondary. PvP's two selectable slots and Gun Game are unchanged.
+- **Still open:** authoritative slot enforcement, full Primary/Secondary
+  weapon balancing, finished melee timing/special slot, blades/hilts skins,
+  special slot compatibility and broader end-to-end QA (part overlaps
+  priority 17). The source work does not close the full priority.
+
+### Priority 8: Daily/weekly quests + Scraps (offline MVP implemented)
+
+- UTC 00:00 day reset and Monday 00:00 week reset, quest progress fed
+  by existing PvE kill/damage/wave completion events. A new Loadout tab
+  shows daily/weekly objectives, Scraps balance and explicit claim buttons.
+- A local claim ledger makes payouts idempotent per period; rotating
+  weekly Collector weapon finishes are Aurora, Nebula, Cinder and Tundra
+  across Pistol/SMG/Shotgun/DMR. Duplicate-owned weekly Collector rewards
+  pay Scraps instead; surplus max-rank PvE weapon XP converts to Scraps
+  at a 25:1 rate with retained remainder.
+- See `js/questRules.js`, `scripts/quest-rules.test.cjs` and
+  `docs/QUESTS_AND_SCRAPS.md`.
+- **Open gate:** browser profile/Firestore persistence, cross-device claim
+  races, verified anti-farm/anti-cheat ledger and authoritative PvP accounting.
+  The shop (priority 15) must not spend unverified local Scraps.
 
 ### Priority 17: Melee completion — after the currently approved gameplay priorities
 
