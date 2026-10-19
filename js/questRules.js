@@ -90,3 +90,29 @@ export function claimQuest(profile,id,date=new Date()){
   profile.scraps+=scraps;
   return {ok:true,scraps,skin};
 }
+
+/**
+ * 25 XP above the maximum weapon level converts to 1 Scrap. Carry fractional
+ * progress per weapon; no PvP or synthetic damage source is eligible here.
+ * Called only from the PvE KILL pipeline, not client-supplied PvP rewards.
+ */
+export function convertMaxedWeaponXp(profile,weapon,earned,maxXp=18000){
+  if(!weapon||!Number.isFinite(earned)||earned<=0||!Number.isFinite(maxXp)||maxXp<=0)
+    return 0;
+  const stats=profile.stats||{};
+  const xp=stats.weaponXp||{};
+  const prev=Math.max(0,Math.floor(Number(xp[weapon])||0));
+  const added=Math.max(0,Math.floor(earned));
+  const overshoot=Math.max(0,prev+added-maxXp)-Math.max(0,prev-maxXp);
+  xp[weapon]=Math.min(maxXp,prev+added);
+  stats.weaponXp=xp;
+  profile.stats=stats;
+  if(overshoot<=0)return 0;
+  const carry=profile.weaponScrapRemainders||{};
+  const cumulative=(Math.max(0,Math.floor(carry[weapon]||0))+overshoot);
+  const scraps=Math.floor(cumulative/25);
+  carry[weapon]=cumulative%25;
+  profile.weaponScrapRemainders=carry;
+  if(scraps>0)profile.scraps=(Math.max(0,Math.floor(profile.scraps||0))+scraps);
+  return scraps;
+}
