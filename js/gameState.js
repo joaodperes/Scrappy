@@ -31,6 +31,7 @@ export const player = {
 // Cross-module callbacks registered after module init to avoid circular deps
 export const cb = {
   hitRobot:    null,
+  onRobotDestroyed: null, // optional offline arena kill event
   hurtPlayer:  null,
   markHudDirty: null,
   endGame: null,
