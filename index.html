@@ -47,7 +47,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const nameInput = document.getElementById('nameInput');
     const nameSubmit = document.getElementById('nameSubmit');
     const nameError = document.getElementById('nameError');
-    const mapSelectSection = document.getElementById('mapSelectSection');
     const leaderboardSection = document.getElementById('leaderboardSection');
 
     let currentUser = null;
@@ -97,6 +96,7 @@ document.addEventListener("DOMContentLoaded", () => {
         window.__scrappyAuthenticated = false;
         document.getElementById('playBtn')?.style.setProperty('display', 'none');
         document.getElementById('leaderboardsBtn')?.style.setProperty('display', 'none');
+        document.getElementById('questsBtn')?.style.setProperty('display', 'none');
         // Logged Out State - Hide everything except login
         loginBtn.style.display = 'inline-block';
         logoutBtn.style.display = 'none';
@@ -104,7 +104,6 @@ document.addEventListener("DOMContentLoaded", () => {
         //const pvpBtn = document.getElementById('pvpBtn');
         //pvpBtn.style.display = 'none';
         if (loadoutBtn) loadoutBtn.style.display = 'none';
-        mapSelectSection.style.display = 'none';
         leaderboardSection.style.display = 'none';
       }
     });
@@ -159,14 +158,15 @@ document.addEventListener("DOMContentLoaded", () => {
       window.__scrappyAuthenticated = true;
       startBtn.style.display = 'none';
       const playBtn = document.getElementById('playBtn');
-      if (playBtn) playBtn.style.display = 'inline-block';
+      if (playBtn) playBtn.style.display = 'block';
       //.style.display = 'inline-block';
       if (loadoutBtn) loadoutBtn.style.display = 'inline-block';
-      mapSelectSection.style.display = 'flex';
       // The leaderboard belongs to its own page; do not show the hidden section in the menu.
       leaderboardSection.style.display = 'none';
       const leaderboardsBtn = document.getElementById('leaderboardsBtn');
-      if (leaderboardsBtn) leaderboardsBtn.style.display = 'inline-block';
+      if (leaderboardsBtn) leaderboardsBtn.style.display = 'block';
+      const questsBtn=document.getElementById('questsBtn');
+      if(questsBtn)questsBtn.style.display='block';
        
        const pvpNameField = document.getElementById('pvpName');
        if (pvpNameField) {
@@ -210,17 +210,6 @@ document.addEventListener("DOMContentLoaded", () => {
   <button class="btn" id="loginBtn" style="background:linear-gradient(to bottom,#1a3a50,#081a2a);border-color:#3377aa;color:#aaccff;">&#128273; LOGIN WITH GOOGLE</button>
   <button id="logoutBtn" style="display:none; position:fixed; bottom:15px; right:15px; background:rgba(0,0,0,0.5); border:1px solid #333; color:#7a9940; font-size:11px; padding:6px 12px; cursor:pointer; letter-spacing:1px; z-index:2000; text-transform:uppercase; border-radius:4px; transition:all 0.2s;">Logout</button>  
   
-  <div id="mapSelectSection" style="margin:12px 0;display:none;align-items:center;gap:10px;">
-      <span style="color:#88aa44;font-size:13px;letter-spacing:2px;">MAP:</span>
-      <select id="mapDropdown" style="background:#0d1a05;color:#d8f030;border:1px solid #557733;padding:6px 12px;font-family:'Courier New',monospace;font-size:14px;cursor:pointer;letter-spacing:1px;">
-        <option value="scrapyard">🏭 SCRAPYARD</option>
-        <option value="jungle">🌴 TEMPLE RUINS</option>
-        <option value="city">🏙️ ROOFTOP CITY</option>
-        <!--option value="terminal">🛫 TERMINAL</option-->
-      </select>
-
-    </div>
-    
   <div style="display: flex; flex-direction: column; align-items: stretch; gap: 10px; margin: 10px auto; width: 100%; max-width: 280px;">
     <button class="btn" id="playBtn" style="display:none; padding-left:0; padding-right:0; text-align:center;">▶ PLAY</button>
     <button class="btn" id="startBtn" style="display:none; padding-left:0; padding-right:0; text-align:center;">▶ SOLO RUN</button>
