@@ -342,7 +342,7 @@ function onRoomPacket(data,status,joinData){
          arenaWeapons.style.display=mode.value==='gunGame'?'none':'block';
        });
        offlineDetails.appendChild(dom('p','font-size:12px;color:#bcd1a0;line-height:1.5',
-         'Offline arena modes use existing PvE robots. FFA/TDM are practice variants: bots target you, not one another. Gun Game switches weapons on elimination; Kill Confirmed scores collected tags. No multiplayer server needed.'));
+         'Offline arena modes use player-shaped AI bots. FFA bots fight each other; TDM has RED allies and BLUE opponents. Gun Game gives every participant a Pistol-to-Knife ladder; Kill Confirmed bots score and deny team tags. No multiplayer server needed.'));
      }
      const help=dom('details','border:1px solid #4b6336;border-radius:5px;padding:10px 14px;margin:12px 0;color:#bfd5a3');
      const summary=dom('summary','cursor:pointer;font-weight:bold;color:#c4ea48','HELP: HARD / NIGHTMARE MODIFIERS');
