@@ -9,6 +9,7 @@ import {
 } from './progression.js';
 import { WDEFS, applyLoadoutToScene } from './weapons.js';
 import { MAPS } from './mapManager.js';
+import { SECONDARY_WEAPONS, canUseSecondary, selectedSecondary } from './weaponCategories.js';
 
 let _activeWeapon = 'PISTOL';
 let _activeTab    = 'attachments';
@@ -251,6 +252,7 @@ topBar.appendChild(deployBtn);
     { id:'progress',    label:'PROGRESS'     },
     { id:'pvp',         label:'PVP LOADOUT'  },
     { id:'quests',      label:'QUESTS & SCRAPS' },
+    { id:'secondary',   label:'SECONDARY' },
   ];
   const tabBar = _el('div',
     `display:flex;background:${C.bgMid};border-bottom:1.5px solid ${C.border};padding:0 28px;flex-shrink:0`
@@ -504,7 +506,7 @@ function _renderContent() {
     b.style.cssText = _tabStyle(b.dataset.tabId === _activeTab);
   });
   const sidebar  = document.getElementById('loadoutSidebar');
-  const noSidebar = ['player','progress','pvp','quests'].includes(_activeTab);
+  const noSidebar = ['player','progress','pvp','quests','secondary'].includes(_activeTab);
   if (sidebar) sidebar.style.display = noSidebar ? 'none' : 'block';
   sidebar?.querySelectorAll('[data-w-name]').forEach(c => {
     c.style.cssText = _wcardStyle(c.dataset.wName === _activeWeapon);
@@ -517,6 +519,7 @@ function _renderContent() {
   else if (_activeTab === 'progress')    _renderProgress(main);
   else if (_activeTab === 'pvp')         _renderPvpSetup(main);
   else if (_activeTab === 'quests')      _renderQuests(main);
+  else if (_activeTab === 'secondary')   _renderSecondary(main);
 }
 
 // ── Weapon level banner ───────────────────────────────────────
@@ -865,6 +868,33 @@ function _renderPlayerSkins(main) {
   container.appendChild(grid);
   container.appendChild(viewer);
   main.appendChild(container);
+}
+
+// ── PvE Secondary selection, independent of unfinished melee work ──
+function _renderSecondary(main){
+  main.appendChild(_el('h2','margin:0 0 10px;color:'+C.accent,'SURVIVAL SECONDARY'));
+  main.appendChild(_el('p','font-size:12px;color:'+C.textDim+';line-height:1.6;max-width:680px',
+    'Choose the sidearm you bring into Survival. Unlocked Secondary weapons replace the starting Pistol. Primary guns remain map pickups; Wonder weapons are boss-only. Knife melee will get its own dedicated slot in priority 17.'));
+  const current=selectedSecondary(WDEFS,profile);
+  for(const id of SECONDARY_WEAPONS){
+    const available=canUseSecondary(id,WDEFS,profile);
+    const active=id===current;
+    const button=_el('button',
+      'padding:14px 18px;margin:6px 10px 6px 0;min-width:170px;border-radius:4px;'+
+      'border:1.5px solid '+(active?C.accent:C.border)+';background:'+C.bgCard+';'+
+      'color:'+(active?C.accent:C.textDim)+';cursor:'+(available?'pointer':'not-allowed')+';font-family:'+F,
+      _esc(WDEFS[id].name)+(active?' ✓ EQUIPPED':available?'':' 🔒 DISCOVER FIRST'));
+    button.disabled=!available;
+    button.onclick=()=>{
+      if(!canUseSecondary(id,WDEFS,profile))return;
+      profile.pveSecondary=id;
+      saveProfile();
+      _renderContent();
+    };
+    main.appendChild(button);
+  }
+  main.appendChild(_el('p','font-size:11px;color:'+C.dim+';margin-top:18px',
+    'Attachments and skins for your sidearm are configured in the ATTACHMENTS and WEAPON SKINS tabs.'));
 }
 
 // ── UTC Daily/Weekly Quests: explicit claim, no passive currency mint ──
