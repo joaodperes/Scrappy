@@ -46,11 +46,23 @@ test('Gun Game shares unique ordered weapons and finishes with a Knife kill',()=
   guest.sendPacket({type:'join',room:'GG',name:'Guest',requireExisting:true});
   host.sendPacket({type:'hostStartGame'});
   const order=host.last('roundCountdown').gunOrder;
+  const seed=host.last('roundCountdown').gunSeed;
+  assert.ok(Number.isInteger(seed) && seed>=0 && seed<=0xffffffff);
+  assert.equal(guest.last('roundCountdown').gunSeed,seed);
+  // The ladder can be reproduced from the broadcast seed and same pool.
+  const source=fs.readFileSync(path.join(__dirname,'server.js'),'utf8');
+  const poolLine=source.match(/^const GUN_POOL=.*;$/m)?.[0];
+  const begin=source.indexOf('function randomizedGunOrder(seed){');
+  const end=source.indexOf('\n}',begin)+2;
+  assert.ok(poolLine&&begin>0&&end>begin);
+  const seeded=new Function(poolLine+'\n'+source.slice(begin,end)+'\nreturn randomizedGunOrder;')();
+  assert.deepEqual(seeded(seed),order);
   assert.equal(order[0],'PISTOL');
   assert.equal(order.at(-1),'KNIFE');
   assert.equal(order.length,new Set(order).size);
   advance(5000);
   assert.deepEqual(Array.from(host.last('roundStart').gunOrder),Array.from(order));
+  assert.equal(host.last('roundStart').gunSeed,seed);
   const target=guest.last('welcome').id;
   for(let i=0;i<order.length;i++){
     advance(100);
