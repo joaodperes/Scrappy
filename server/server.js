@@ -97,7 +97,7 @@ wss.on('connection', ws => {
       }
       name = String(msg.name || 'ANON').trim().slice(0,20)||'ANON';
       const requestedId = String(msg.room || 'default').trim().slice(0,20);
-      if(!/^[a-zA-Z0-9_-]{3,20}$/.test(requestedId)){
+      if(!/^[a-zA-Z0-9_-]{2,20}$/.test(requestedId)){
         ws.send(JSON.stringify({type:'roomError',message:'Invalid room code'}));
         return;
       }
