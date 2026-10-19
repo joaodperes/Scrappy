@@ -164,6 +164,11 @@ registration step.
 - Scrapyard's **six staircase composites and 12 jump pads** are now
   serialized in `scrapyard.json`. Stairs are selected and moved as whole
   flights, not as individual mesh steps.
+  Stair end flares are baked into the geometry rather than applied through
+  the parent mesh's scale: otherwise importing `scaling: {x:1,y:1,z:1}`
+  shortens child-step offsets, creating a uniform gap at connected platforms.
+  After adjusting stairs, verify the last step reaches the original landing
+  and run `node --test scripts/staircase-geometry.test.cjs`.
 - Creator-defined maps do not yet provide procedural script hooks from JSON.
   Keep any remaining scene-specific effects in the appropriate level module.
 - Rotation-quaternion-based procedural bridges are not editable as generic
