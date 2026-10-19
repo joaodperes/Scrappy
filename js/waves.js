@@ -15,7 +15,7 @@ export function getWaveComposition(idx) {
   const waveNum = idx + 1;
   const map = getCurrentMap();
   const scenario = getWaveConfig(map);
-  const hardRules=player.hardMode?getRunHardWaveRules(map,waveNum):null;
+  const hardRules=player.hardMode?getRunHardWaveRules(map,waveNum,player.difficulty||'hard'):null;
 
   let currentPool = [...(scenario.botPool || ['scout'])];
   if (player.hardMode && scenario.hardPool) {
@@ -84,13 +84,13 @@ function _sanitizeWave(composition, pool) {
 export function launchWave(idx) {
   const map = getCurrentMap();
   const scenario = getWaveConfig(map);
-  const hardRules=player.hardMode?getRunHardWaveRules(map,idx+1):null;
+  const hardRules=player.hardMode?getRunHardWaveRules(map,idx+1,player.difficulty||'hard'):null;
   setActiveHardWave(hardRules);
   const spawns = scenario.spawns || getWaveConfig('scrapyard').spawns;
   const scale = Math.max(0.40, 0.40 + idx * 0.10);
   const isBoss = _isBossWave(idx);
   const baseLabel = isBoss ? '⚠ BOSS WAVE ' + (idx + 1) + ' ⚠' : 'WAVE ' + (idx + 1);
-  const waveLabel=hardRules?baseLabel+' · '+hardRules.modifier.label:baseLabel;
+  const waveLabel=hardRules?baseLabel+' · '+hardRules.modifiers.map(m=>m.label).join(' + '):baseLabel;
   const comp = getWaveComposition(idx);
   let si = 0;
   for (const grp of comp) {
