@@ -97,12 +97,15 @@ depend on the tested priority-3 modifier architecture.
 - Main-menu Leaderboards uses the same large `.btn` styling, width and
   menu button container as Play and Loadout.
 - **Aegis smart pistol:** ADS paints up to 3 visible enemies (6 with
-  Multi-Thread, 1 with Single-Thread); locks persist after moving the
-  crosshair away, until an enemy dies, leaves effective range or ADS ends.
-  Each trigger pull costs one round and deals the effective per-target
-  damage to **every visible locked enemy**, without requiring the crosshair
-  to face them when firing. Glass is penetrable, solid walls block lock-on
-  and smart shots; when there are no locks, Aegis uses normal hitscan.
+  Multi-Thread, 1 with Single-Thread). Locks persist after moving the
+  crosshair away, but the **entire group clears after firing, any locked
+  enemy's death, weapon swap or exiting ADS**. One trigger pull costs one
+  round and damages every valid locked enemy, regardless of reticle position.
+  After firing, locks may reacquire following the pistol's normal cooldown.
+  Glass remains penetrable; opaque walls block lock acquisition and damage.
+  **Multi-Thread** increases capacity to 6 without reducing damage per
+  target. **Single-Thread** increases damage by **150% (2.5×)**, so its
+  unmodified base Aegis hit rises from 30 to 75.
 - Red highlights and a visible lock-count HUD provide immediate feedback.
   The target-count/damage modifiers still come from the existing
   `getEffectiveStats('AEGIS',...)` weapon attachment system.
