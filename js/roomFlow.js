@@ -1,5 +1,6 @@
-// Room configuration/lobby foundation. Multiplayer match runtimes are not
-// enabled until team replication, bot controllers and authoritative scoring exist.
+// Offline-first Play UI, with the previous network room/lobby prototype
+// isolated behind clearly labeled experimental controls. Local modes run
+// against client-side robots and never open the WebSocket room browser.
 import { MAPS, getRoomCapacity, isModeSupported, getCurrentMap, isMapUnlocked, isHardModeUnlocked, isNightmareUnlocked } from './mapManager.js';
 import { profile } from './progression.js';
 import { HARD_MODE_MODIFIERS } from './hardModeRules.js';
