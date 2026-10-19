@@ -153,8 +153,9 @@ Moon Base is a distinct low-gravity/jetpack game experience.
   separate, unfinished Melee category; boss-only Wonder guns are excluded.
 - Added a **Secondary** tab in Loadout. After discovering Aegis, players
   may replace the default Pistol with it as their starting Survival sidearm;
-  this is saved on the profile. Both solo reset paths use the selected
-  Secondary. PvP's two selectable slots and Gun Game are unchanged.
+  this is saved on the profile. Solo Survival's starting sidearm uses
+  this selection; legacy FFA, PvP's two selected slots and Gun Game remain
+  unchanged.
 - **Still open:** authoritative slot enforcement, full Primary/Secondary
   weapon balancing, finished melee timing/special slot, blades/hilts skins,
   special slot compatibility and broader end-to-end QA (part overlaps
