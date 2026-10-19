@@ -101,22 +101,34 @@ Moon Base is a distinct low-gravity/jetpack game experience.
 - **Owner confirmation:** Elite behavior has been tested and works as expected.
   Accepted for now; reopen only for specific observed regressions.
 
-### Priority 5: Jungle dungeon repair — next active development
+### Priority 5: Jungle dungeon repair (source reconstruction; gameplay QA pending)
 
-- Preserve the good surface arena and shared v2 JSON/editor system.
-- **Source audit:** `assets/maps/jungle.json` currently has 112 entities,
-  including only a single discontinuous underground slab layer at `surfY:-7.5`
-  (and no `createCeiling` entities); the central surface is a few isolated
-  pads between the perimeter slabs. `mapManager.js` defines Jungle weapons at
-  y=-15/-30/-45 despite the missing corresponding mine levels. Treat these
-  as geometry/layout inconsistencies, not isolated texture defects.
-- Rebuild underground geometry with solid surface/ceilings and clear
-  excavated entrances rather than broad holes, plus correctly connected
-  ramps from surface through all intended mine depths and collidable lava/spikes.
-- Validate bot Recast routes, mine lighting and Lantern/NVG, destructible
-  placement and border barriers before marking complete.
-- Test the map in Chromium/Firefox; do not infer reachability from the JSON
-  validator alone.
+- Previously the map had 112 editable entities with perforated central ground
+  and only a single underground level at −7.5. Deep pickups at −15/−30/−45
+  were unsupported; old floor tiles/walls and one southern gate were misplaced.
+- **Implemented in `assets/maps/jungle.json`:** 161 editable entities;
+  continuous surface (two deliberate excavated entrances), M1 at −7.5,
+  M2 at −15, M3 at −30, M4 at −45. Two guarded surface ramps plus one
+  guarded ramp per deeper transition; openings cut from upper floor slabs.
+  Guarded ramps preserve independent walkable geometry and slight floor
+  overlaps so Recast can connect modular slabs.
+- Added each stratum's enclosing perimeter, solid overhead ceiling sections,
+  cover, optional side-room destructibles, solid lava and spikes. Corrected
+  southern gate and displaced mine barrel. The established surface ruins,
+  jump pads, lift switches and map borders remain intact.
+- `js/mapManager.js`: bot and PvP spawns moved onto actual walkable floors
+  with no spawn in a ramp shaft. Deep enemy positions at −28 and −43.
+  `js/player.js`: respects Jungle-specific fall reset below the deepest
+  floor (−58) and returns to map spawn on actual fall. `js/levelJungle.js`:
+  light fixtures now cover all four mine depths.
+- `scripts/jungle-dungeon.test.cjs`: schema, shafts, guarded ramps,
+  upper/lower landing, deep weapon floor support, layer walls/ceilings,
+  bot/PvP spawn support and navigable planar room routes. Full instructions
+  and exact route coordinates: `docs/JUNGLE_DUNGEON.md`.
+- **Open gate:** Chromium/Firefox collision and in-game Recast bot route
+  validation, lower-level pickup access, lava/damage tests, Lantern/NVG,
+  weapon spawn visibility, performance and editor round-trip. Code-level
+  geometry validation alone is not a passed gameplay test.
 
 ### Priority 17: Melee completion — after the currently approved gameplay priorities
 
@@ -153,7 +165,7 @@ Moon Base is a distinct low-gravity/jetpack game experience.
   to make impacts, missed aim and wall blocking visible.
 - Play uses main-menu green colors, standardized Create/Browse panels,
   local Solo nested under Create, map/mode/difficulty settings only in Create,
-  unlock prerequisites next to locked difficulty options, collapsible help,
+  unlock prerequisites only in their respective dropdown options, aligned 42px\n  Map/Difficulty selects, collapsible help including Elite rules,
   context-sensitive PvP controls, room directory table and presets.
   PvP time limits: unlimited / 5/10/15/20/30 minutes; kills: unlimited /
   15/30/50/80/100; both may not be unlimited simultaneously.
