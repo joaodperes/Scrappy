@@ -345,7 +345,7 @@ function _wireEvents(onRoundEnd, onGameStart) {
   });
 
   on('damageConfirmed',msg=>{
-    if(Number(msg.damage)>0) emitEvent('DAMAGE_DEALT',{weaponKey:msg.weapon||curWep,amount:msg.damage});
+    if(Number(msg.damage)>0) emitEvent('DAMAGE_DEALT',{weaponKey:msg.weapon||curWep,amount:msg.damage,source:'PVP'});
   });
 
   on('respawn', msg => {
