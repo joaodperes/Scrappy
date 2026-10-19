@@ -70,7 +70,7 @@ function appearance(id,team,skin,displayName){
  return {group:g,mats,label};
 }
 function gunVisual(actor,weapon){
- if(actor.gunModel){actor.gunModel.dispose(false,true);actor.gunModel=null}
+ if(actor.gunModel){actor.gunModel.dispose(false,false);actor.gunModel=null}
  if(!WDEFS[weapon])return;
  const gun=makeScaledWeaponModel(weapon,0.55);
  gun.parent=actor.group;gun.position.set(.47,1.25,.38);gun.rotation.y=0;
