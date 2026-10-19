@@ -1,0 +1,46 @@
+# Offline arena modes — initial development slice (October 19, 2026)
+
+**Scope:** single browser, no WebSocket service and no new Firebase services. All modes run against the existing local PvE robots. This is new work requiring Firefox/Chromium gameplay review, **not a declaration that the complete FFA/TDM bots milestone is done**.
+
+## Entry and settings
+
+From signed-in Home, choose **PLAY → LOCAL MODES**, then select:
+- Survival (unchanged original endless waves, Normal/Hard/Nightmare).
+- Gun Game (vs robots).
+- Kill Confirmed (vs robots).
+- FFA Practice (vs robots).
+- TDM Practice (1 human vs robots).
+
+Select a built-in map, arena duration (5/10/15 minutes) and point goal (10/15/25/50), then click **START LOCAL MATCH**. Arena settings are disabled/hidden for Survival and difficulty is only selectable for Survival. No local path calls the WebSocket room-browser functions.
+
+## Implemented local mechanics
+
+- `js/localArenaRules.js`: deterministic 12-weapon ladder (Pistol, ten shuffled firearms, Knife); only eliminations using the current ladder gun count. Local Gun Game finishes with the last Knife kill regardless of selected point goal.
+- `js/localArenaRuntime.js`: uses existing local `spawnBot()`, `updateEnemies()` and `hitRobot()`/robot-destruction events. Up to five living local robots are replenished in a timed match; dead entries are removed periodically. Arena match HUD shows countdown, score, opposing side points and current gun.
+- Kill Confirmed spawns glowing physical golden dog tags at defeated enemy positions. A frag increments unconfirmed tags but earns **no points** until the player approaches a tag. Tags expire after 20 seconds, reducing the pending tag count without awarding points.
+- A local death grants one opposing point and triggers a 5-second respawn if the match continues. Reaching a point goal (FFA/TDM/KC) or running out of time finishes with a results screen. Gun Game wins only with Knife; timer can end it.
+- Saved PvP two-firearm selection is reused as a *local practice loadout* outside Gun Game, with Knife and Wonder weapons excluded from standard selection. Survival retains its fixed Pistol Secondary. No Firestore shop or online room required.
+
+## Deliberate limitations and follow-up engineering
+
+- **FFA/TDM practice is not true FFA/TDM:** robots all target the human and do not fight other bots or each other; the "opposition" score is based on the human's deaths. Add local bot-player teams, ally selection, AI-vs-AI targeting, friendly-fire filtering, skins and equip/respawn before renaming these as completed real game modes.
+- Robots still use existing PvE model/weapon behavior, not the six player-style personality models defined in `assets/bot-personalities.json`. The Node `server/botBrain.js` and `server/botSession.js` are **not** imported into browser local modes. A future browser-friendly adapter can reuse those personality rules with correct Babylon navmesh and movement/physics.
+- Local arena kills currently go through the existing PvE progression pipeline. The user has accepted client-reported progression for a friends-only game, but their impact on daily PvE quests and XP balancing should be checked before acceptance.
+- Local Gun Game has no server-side synchronized weapon seed because **only one browser participates**. Weapon spawn interference and rapid swapping/reloading must be browser-tested.
+- Death timer and time-limit pause semantics, projectile collision in vertical maps, and UI layout/pointer lock after respawn still require real gameplay QA. A source test passing is not a physics test.
+- Do not connect local modes to networking as part of this PR. Human PvP, network bots, rooms/rejoin, production servers and co-op are a separate future scope.
+
+## Manual playtest
+
+1. Stop the Node server entirely. Start the static site; confirm all five local modes are selectable and the browser makes no WebSocket requests on launch.
+2. Gun Game: start with Pistol, kill robots until ten intermediate guns and final Knife, verify no premature score-limit win and no wrong-gun progression.
+3. Kill Confirmed: kill a robot, see one gold dog tag, watch score remain unchanged, collect the tag, see score +1. Let a tag expire and verify it cannot score.
+4. Practice FFA/TDM: verify timed HUD, living bot count, enemy respawns, your death and 5-second return, match finish/result. Remember that opponent score is a practice abstraction.
+5. Escape → Quit to Menu, choose another arena mode, then Survival. No orphaned tags, timers, overlays or stale weapons.
+6. Test Scrapyard, City, Jungle mine and Moon Base ramps, physics and graphics in Chromium and Firefox; inspect the game tab's F12 Console.
+
+## Tests
+
+`node --test scripts/local-arena-rules.test.cjs scripts/play-page.test.cjs scripts/solo-flow.test.cjs`
+
+The three tests only exercise pure rules and DOM simulation. Browser movement/rendering must still be validated. The [owner validation checklist](OWNER_VALIDATION_TODO.md) is the acceptance gate.
