@@ -23,6 +23,7 @@ import { getCurrentMap, setCurrentMap, MAPS, getMapMeta, buildMap, isMapUnlocked
 import { initRoomFlow, showPlayPage } from './roomFlow.js';
 import { setActiveHardWave } from './hardModeRules.js';
 import { showLeaderboardPage } from './leaderboardPage.js';
+import { startLocalArena,stopLocalArena,isLocalArenaActive,updateLocalArena,localArenaRobotKilled,localArenaPlayerDead } from './localArenaRuntime.js';
 
 let gameRunning = false;
 let paused      = false;
@@ -34,6 +35,7 @@ loadProfile();
 
 // ── Callbacks ──────────────────────────────────────────────────
 cb.hitRobot      = hitRobot;
+cb.onRobotDestroyed = localArenaRobotKilled;
 cb.hurtPlayer    = hurtPlayer;
 cb.markHudDirty  = () => updateHUD();
 cb.endGame       = endGame;
@@ -95,7 +97,8 @@ function _hideAllScreens() {
 }
 
 // ── Solo PvE ───────────────────────────────────────────────────
-function startGame(startWave = 0, difficulty = 'normal') {
+function startGame(startWave = 0, difficulty = 'normal', localMode = null) {
+  stopLocalArena();
   document.getElementById('startupErrorNotice')?.remove();
   if(!['normal','hard','nightmare'].includes(difficulty))difficulty='normal';
   player.difficulty=difficulty;
@@ -195,12 +198,41 @@ function startGame(startWave = 0, difficulty = 'normal') {
     gameRunning = true;
     paused = false;
     initSecretKits();
-    initWeaponSpawns();
-    document.getElementById('c').requestPointerLock();
+    if(!localMode || localMode.mode!=='gunGame')initWeaponSpawns();
+    if(localMode){
+      const chosen=normalizeCompetitiveLoadout(profile.pvpLoadout||selectedMatchLoadout,WDEFS);
+      startLocalArena({...localMode,loadout:chosen},state=>{
+        gameRunning=false;
+        document.exitPointerLock();
+        document.getElementById('hud').style.display='none';
+        _hideAllScreens();
+        const panel=document.getElementById('pvpEndScreen');
+        if(panel)panel.className='screen visible';
+        const res=document.getElementById('pvpEndResult');
+        if(res)res.textContent=state.result+' · '+state.mode.toUpperCase()+' PRACTICE';
+        const scores=document.getElementById('pvpEndScore');
+        if(scores)scores.textContent='FRAGS '+state.kills+' · POINTS '+state.score+
+          ' · BOT POINTS '+state.opposition+' · DEATHS '+state.deaths;
+      });
+      updateHUD();
+    }
+    document.getElementById('c').requestPointerLock().catch(()=>{});
   }
 }
 
 function endGame() {
+    if(isLocalArenaActive()){
+      gameRunning=false;
+      const accepted=localArenaPlayerDead(()=>{
+        if(!isLocalArenaActive())return;
+        const meta=getMapMeta(getCurrentMap());
+        resetPlayer(meta.spawn.x,PH+meta.spawn.yOffset,meta.spawn.z);
+        player.hp=100;player.armor=0;
+        gameRunning=true;paused=false;
+        updateHUD();
+      });
+      if(accepted)return;
+    }
     gameRunning = false;
     document.exitPointerLock();
     document.getElementById('hud').style.display = 'none';
@@ -471,6 +503,7 @@ function _populateMapDropdown() {
       qb.onclick = () => {
           paused = false;
           gameRunning = false;
+          stopLocalArena();
           document.exitPointerLock();
           document.getElementById('pauseOverlay').style.display = 'none';
           document.getElementById('hud').style.display = 'none';
@@ -705,6 +738,10 @@ initRoomFlow({
     setCurrentMap(cfg.mapId);
     startGame(0,cfg.difficulty||((cfg.hardMode)?'hard':'normal'));
   },
+  onStartLocalMode: cfg=>{
+    setCurrentMap(cfg.mapId);
+    startGame(0,'normal',cfg);
+  },
 });
 
 // ── Game loop ──────────────────────────────────────────────────
@@ -741,7 +778,8 @@ engine.runRenderLoop(() => {
       updateProjs(dt);
       updatePickups(dt);
       updateWeaponDrops(dt);
-      updateWaves(dt, gameRunning);
+      if(isLocalArenaActive())updateLocalArena(dt);
+      else updateWaves(dt, gameRunning);
       updateBarrels(dt);
     }
     updateParticles(dt);
