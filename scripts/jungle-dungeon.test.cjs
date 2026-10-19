@@ -92,3 +92,44 @@ test('Survival and PvP Jungle spawns stand on supported strata, never shaft hole
     }
   }
 });
+
+test('each ramp network has a continuous floor route despite room partitions',()=>{
+  const walls=layout.objects.filter(o=>['createWall','createDestructibleWall'].includes(o.generator));
+  function gridFor(y){
+    const walkable=new Set();
+    const obstacles=walls.filter(o=>{
+      const sy=o.params.sy||o.params.sh;
+      return o.position.y-sy/2<y+1 && o.position.y+sy/2>y+1.6;
+    });
+    for(let x=-64;x<=64;x++)for(let z=-64;z<=64;z++){
+      if(!floorAt(x,z,y))continue;
+      const blocked=obstacles.some(o=>
+        Math.abs(x-o.position.x)<o.params.sx/2+.45 &&
+        Math.abs(z-o.position.z)<o.params.sz/2+.45);
+      if(!blocked)walkable.add(x+','+z);
+    }
+    return walkable;
+  }
+  const networks=[
+    [0,[15,-55],[-24,-19]],
+    [-7.5,[-24,7],[0,43]],[-7.5,[24,-7],[0,43]],
+    [-15,[0,9],[-34,-45]],
+    [-30,[-34,11],[34,45]],
+    [-45,[34,-11],[28,57]],
+  ];
+  for(const [y,start,finish] of networks){
+    const grid=gridFor(y),q=[start],seen=new Set([start.join(',')]);
+    assert.ok(grid.has(start.join(',')) && grid.has(finish.join(',')),
+      'Both route endpoints must be navigable on floor '+y);
+    let connected=false;
+    for(let i=0;i<q.length;i++){
+      const [x,z]=q[i];
+      if(x===finish[0]&&z===finish[1]){connected=true;break}
+      for(const [nx,nz] of [[x+1,z],[x-1,z],[x,z+1],[x,z-1]]){
+        const key=nx+','+nz;
+        if(grid.has(key)&&!seen.has(key)){seen.add(key);q.push([nx,nz]);}
+      }
+    }
+    assert.ok(connected,'No route on floor '+y+' from '+start+' to '+finish);
+  }
+});
