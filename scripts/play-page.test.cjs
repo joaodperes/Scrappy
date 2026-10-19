@@ -72,7 +72,7 @@ function harness(){
 }
 test('Play prioritizes local modes and separates experimental online rooms',()=>{
   const h=harness();h.context.api.showPlayPage();
-  for(const label of ['LOCAL MODES','ONLINE (EXPERIMENTAL)','LOCAL PLAY','✕ BACK TO MENU','START LOCAL MATCH'])
+  for(const label of ['LOCAL MODES','ONLINE (EXPERIMENTAL)','BROWSE ONLINE (EXPERIMENTAL)','LOCAL PLAY','✕ BACK TO MENU','START LOCAL MATCH'])
     assert.ok(h.findButton(label),label);
   assert.equal(h.elements.filter(e=>e.tag==='button'&&e.textContent==='LOCAL MODES').length,1);
   assert.equal(h.sockets.length,0);
@@ -122,7 +122,7 @@ test('Online room offers fixed limits and 6/10/14 max; both limits cannot be zer
 });
 test('Browse opens a dynamic room table with capacity and password column',()=>{
   const h=harness();h.context.api.showPlayPage();
-  h.findButton('ONLINE (EXPERIMENTAL)').onclick();
+  h.findButton('BROWSE ONLINE (EXPERIMENTAL)').onclick();
   assert.ok(h.findButton('REFRESH ROOMS'));
   assert.equal(h.sockets.length,1);
   h.sockets[0].onopen();
