@@ -19,8 +19,20 @@
         <div style="font-size:11px; color:#aaa; margin-bottom:8px;">
             <kbd>F4</kbd> toggle &nbsp;|&nbsp; <kbd>G</kbd> <kbd>R</kbd> <kbd>S</kbd> mode<br>
             <kbd>P</kbd> print &nbsp;|&nbsp; <kbd>Del</kbd> delete<br>
-            <kbd>←↑↓→</kbd> nudge &nbsp; <kbd>PgUp/PgDn</kbd> Y
+            <kbd>←↑↓→</kbd> nudge &nbsp; <kbd>PgUp/PgDn</kbd> Y<br>
+            Gizmo handles constrain movement to X / Y / Z axes.
         </div>
+        <fieldset id="editorSnapControls">
+            <legend>Alignment / Snapping</legend>
+            <label><input id="gridSnapEnabled" type="checkbox"> Snap position to grid</label>
+            <label>Grid units <input id="gridSnapStep" type="number" min="0.05" max="100" step="0.25" value="1"></label>
+            <label><input id="angleSnapEnabled" type="checkbox"> Snap rotation to angle</label>
+            <label>Degrees <input id="angleSnapStep" type="number" min="1" max="180" step="1" value="15"></label>
+            <div class="editorSnapActions">
+                <button id="alignPosBtn" type="button">Align position</button>
+                <button id="alignRotBtn" type="button">Align rotation</button>
+            </div>
+        </fieldset>
         <hr>
         <button data-action="addSlab">+ Slab</button>
         <button data-action="addWall">+ Wall</button>
@@ -95,14 +107,21 @@
 
             const engine = new BABYLON.Engine(canvas, true);
             const scene = new BABYLON.Scene(engine);
-            scene.clearColor = new BABYLON.Color3(0.1, 0.1, 0.15);
+            // Editor-only neutral fill, independent of a map's artistic lighting.
+            scene.clearColor = new BABYLON.Color4(0.26, 0.30, 0.35, 1);
 
             const camera = new BABYLON.ArcRotateCamera('camera', -Math.PI/2, Math.PI/3, 120, BABYLON.Vector3.Zero(), scene);
             camera.attachControl(canvas, true);
-            camera.wheelPrecision = 50;
+            camera.wheelPrecision = 12; // Faster scroll-wheel zoom.
+            camera.wheelDeltaPercentage = 0.05; // Scale zoom speed with distance.
+            camera.lowerRadiusLimit = 2;
+            camera.upperRadiusLimit = 600;
 
             const light = new BABYLON.HemisphericLight('light', new BABYLON.Vector3(0, 1, 0), scene);
-            light.intensity = 0.8;
+            light.intensity = 1.3;
+            const editorFill = new BABYLON.HemisphericLight('editorFill',
+                new BABYLON.Vector3(0, -1, 0), scene);
+            editorFill.intensity = 0.55;
 
             // ---- Set globals for the level builder ----
             window.__levelScene = scene;
@@ -125,6 +144,8 @@
             const { MAP_SCHEMA_VERSION, validateMapDocument, serializeEditableMesh,
                 ENTITY_DEFINITIONS, MARKER_DEFINITIONS } = await import('/js/mapSchema.js');
             const { getLoadedMapDocument } = await import('/js/mapLayoutStore.js');
+            const { RAD_TO_DEG, DEG_TO_RAD, snapVector,
+                validateTransformGroup } = await import('/js/editorTransforms.js');
             // hazardZones/destructibleWalls are declared PER MAP (each level*.js
             // owns its own array, same as walkableMeshes is shared/global but
             // these aren't) — pull whichever ones this specific map exports.
@@ -152,6 +173,11 @@
                     this.markerMeshes = [];
                     this.baseDocument = getLoadedMapDocument(mapId);
                     this.navDebugMesh = null;
+                    this.transformInputs = null;
+                    this.gridSnapEnabled = false;
+                    this.gridSnapStep = 1;
+                    this.angleSnapEnabled = false;
+                    this.angleSnapDegrees = 15;
                     this.gizmoManager = new BABYLON.GizmoManager(scene);
                     this.gizmoManager.positionGizmoEnabled = true;
                     this.gizmoManager.rotationGizmoEnabled = true;
@@ -161,6 +187,7 @@
                     this.setupPicking();
                     this.setupKeys();
                     this.setupUI();
+                    this.configureSnapping();
                     this.loadMarkers(this.baseDocument?.markers || []);
                 }
 
@@ -217,7 +244,11 @@
                             case 'PageUp':    this.selectedMesh.position.y += step; moved = true; break;
                             case 'PageDown':  this.selectedMesh.position.y -= step; moved = true; break;
                         }
-                        if (moved) e.preventDefault();
+                        if (moved) {
+                            e.preventDefault();
+                            this.applyTransformSnap('position');
+                            this.finishTransform();
+                        }
                     });
                 }
 
@@ -261,6 +292,160 @@
                                 this.navDebugMesh.isEnabled()?'Hide NavMesh':'Show NavMesh';
                         }
                     };
+                }
+
+                configureSnapping() {
+                    const grid=document.getElementById('gridSnapEnabled');
+                    const step=document.getElementById('gridSnapStep');
+                    const angle=document.getElementById('angleSnapEnabled');
+                    const degrees=document.getElementById('angleSnapStep');
+                    const update=()=>{
+                        const newStep=Number(step.value);
+                        const newAngle=Number(degrees.value);
+                        if(!Number.isFinite(newStep)||newStep<0.05||newStep>100||
+                            !Number.isFinite(newAngle)||newAngle<1||newAngle>180) {
+                            this.status('Grid must be 0.05–100; rotation 1–180 degrees',true);
+                            return;
+                        }
+                        this.gridSnapEnabled=grid.checked;
+                        this.gridSnapStep=newStep;
+                        this.angleSnapEnabled=angle.checked;
+                        this.angleSnapDegrees=newAngle;
+                        const g=this.gizmoManager.gizmos;
+                        for(const axis of ['xGizmo','yGizmo','zGizmo']){
+                            if(g.positionGizmo?.[axis])
+                                g.positionGizmo[axis].snapDistance=this.gridSnapEnabled?newStep:0;
+                            if(g.rotationGizmo?.[axis])
+                                g.rotationGizmo[axis].snapDistance=this.angleSnapEnabled
+                                    ?newAngle*DEG_TO_RAD:0;
+                        }
+                    };
+                    for(const el of [grid,step,angle,degrees]){
+                        el.addEventListener('change',update);
+                    }
+                    document.getElementById('alignPosBtn').onclick=()=>{
+                        if(!this.selectedMesh)return this.status('Select an object first',true);
+                        this.applyTransformSnap('position',true);
+                        this.finishTransform();
+                    };
+                    document.getElementById('alignRotBtn').onclick=()=>{
+                        if(!this.selectedMesh)return this.status('Select an object first',true);
+                        this.applyTransformSnap('rotation',true);
+                        this.finishTransform();
+                    };
+                    update();
+                    // Each Babylon gizmo axis constrains drag to its own axis.
+                    // Snapping on release guarantees absolute world-grid alignment,
+                    // not merely multiples of the drag distance.
+                    for(const [kind,gizmo] of [
+                        ['position',this.gizmoManager.gizmos.positionGizmo],
+                        ['rotation',this.gizmoManager.gizmos.rotationGizmo],
+                        ['scaling',this.gizmoManager.gizmos.scaleGizmo],
+                    ]){
+                        for(const axis of ['xGizmo','yGizmo','zGizmo']){
+                            gizmo?.[axis]?.dragBehavior?.onDragEndObservable?.add(()=>{
+                                this.applyTransformSnap(kind);
+                                this.finishTransform();
+                            });
+                        }
+                        gizmo?.uniformScaleGizmo?.dragBehavior?.onDragEndObservable?.add(
+                            ()=>this.finishTransform());
+                    }
+                }
+
+                // Rotation gizmos can store a quaternion. Convert it back to
+                // Euler before saving so JSON round-trips preserve rotations.
+                currentEuler(mesh) {
+                    return mesh.rotationQuaternion?.toEulerAngles() || mesh.rotation;
+                }
+
+                applyTransformSnap(kind,force=false) {
+                    const mesh=this.selectedMesh;
+                    if(!mesh)return;
+                    if(kind==='position' && (force||this.gridSnapEnabled)){
+                        const snapped=snapVector(mesh.position,this.gridSnapStep);
+                        mesh.position.set(snapped.x,snapped.y,snapped.z);
+                    }
+                    if(kind==='rotation') {
+                        const rotation=this.currentEuler(mesh);
+                        if(force||this.angleSnapEnabled){
+                            const deg=snapVector({
+                                x:rotation.x*RAD_TO_DEG,
+                                y:rotation.y*RAD_TO_DEG,
+                                z:rotation.z*RAD_TO_DEG,
+                            },this.angleSnapDegrees);
+                            mesh.rotationQuaternion=null;
+                            mesh.rotation.set(deg.x*DEG_TO_RAD,deg.y*DEG_TO_RAD,deg.z*DEG_TO_RAD);
+                        }
+                    }
+                }
+
+                finishTransform(){
+                    const mesh=this.selectedMesh;
+                    if(!mesh)return;
+                    mesh.computeWorldMatrix(true);
+                    if(mesh.metadata?.hazard){
+                        const p=mesh.metadata.params||{};
+                        if(Number.isFinite(p.sx))
+                            mesh.metadata.halfWidth=p.sx*Math.abs(mesh.scaling.x)/2;
+                        if(Number.isFinite(p.sz))
+                            mesh.metadata.halfDepth=p.sz*Math.abs(mesh.scaling.z)/2;
+                    }
+                    // Update the runtime objects linked to edited geometry.
+                    if(mesh.metadata?.generator==='createJumpPad'){
+                        const pad=jumpPads.find(p=>p.mesh===mesh);
+                        if(pad){
+                            pad.pos.copyFrom(mesh.position);
+                            const rot=this.currentEuler(mesh).y;
+                            pad.thrustX=Math.sin(rot)*pad.force*0.45;
+                            pad.thrustZ=Math.cos(rot)*pad.force*0.45;
+                        }
+                    }
+                    if(mesh._moveData){
+                        const data=mesh._moveData;
+                        const delta=mesh.position.subtract(data.start);
+                        data.start.addInPlace(delta);
+                        data.end.addInPlace(delta);
+                    }
+                    this.refreshTransformFields();
+                }
+
+                refreshTransformFields(){
+                    if(!this.selectedMesh||!this.transformInputs)return;
+                    const mesh=this.selectedMesh;
+                    const rotation=this.currentEuler(mesh);
+                    const groups={
+                        position:mesh.position,
+                        rotation:{x:rotation.x*RAD_TO_DEG,y:rotation.y*RAD_TO_DEG,z:rotation.z*RAD_TO_DEG},
+                        scaling:mesh.scaling,
+                    };
+                    for(const [group,axes] of Object.entries(this.transformInputs)){
+                        for(const axis of ['x','y','z']){
+                            if(document.activeElement===axes[axis])continue;
+                            axes[axis].value=Number(groups[group][axis].toFixed(4));
+                        }
+                    }
+                }
+
+                applyExactTransform(){
+                    const mesh=this.selectedMesh;
+                    if(!mesh||!this.transformInputs)return;
+                    try{
+                        const entries={};
+                        for(const [group,axes] of Object.entries(this.transformInputs)){
+                            const values=Object.fromEntries(['x','y','z'].map(axis=>[axis,axes[axis].value]));
+                            entries[group]=validateTransformGroup(group,values);
+                        }
+                        mesh.position.set(entries.position.x,entries.position.y,entries.position.z);
+                        mesh.rotationQuaternion=null;
+                        mesh.rotation.set(entries.rotation.x*DEG_TO_RAD,
+                            entries.rotation.y*DEG_TO_RAD,entries.rotation.z*DEG_TO_RAD);
+                        mesh.scaling.set(entries.scaling.x,entries.scaling.y,entries.scaling.z);
+                        this.applyTransformSnap('position');
+                        this.applyTransformSnap('rotation');
+                        this.finishTransform();
+                        this.status('Exact transform applied; export JSON to save changes');
+                    }catch(e){this.status(e.message,true)}
                 }
 
                 toggle() {
