@@ -176,7 +176,7 @@ function updateTags(dt){
   if(tag.lifetime<=0){
    removeTag(i);
    // Only tags dropped by a human kill count toward human pending confirms.
-   if(tag.ownerId!=='human' && active.state.pendingTags>0)
+   if(tag.ownerTeam==='BLUE' && active.state.pendingTags>0)
      active.state=localArenaTagExpired(active.state);
    continue;
   }
