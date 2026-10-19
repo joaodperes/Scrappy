@@ -191,11 +191,17 @@ export function updateArenaActors(actors,dt,mode,{humanAlive=true,onShot,onRespa
    a.pathCursor=route?.points?.[1]||(!target.visible?null:targetFeet);
    a.walkClock=.4+Math.random()*.25;
   }
-  if(near||far||!target.visible){
+  if(near||far||!target.visible||(!target.objective&&flat>1.5)){
    const navGoal=a.pathCursor;
    if(navGoal&&valid(navGoal)){
     const off=new B.Vector3(navGoal.x-own.x,0,navGoal.z-own.z);
     if(near&&target.visible)off.scaleInPlace(-1);
+    else if(!far&&target.visible&&!target.objective){
+      // Flank/strafe at a comfortable weapon range, but still use the same
+      // navmesh and solid-geometry checks as chasing/retreating.
+      const side=((a.id.length+a.name.length)%2)?1:-1;
+      off.set(side*(targetPos.z-own.z),0,-side*(targetPos.x-own.x));
+    }
     const d=off.length();
     if(d>.25){
      off.scaleInPlace(1/d);
@@ -224,6 +230,13 @@ export function updateArenaActors(actors,dt,mode,{humanAlive=true,onShot,onRespa
   if(Math.random()>chance)continue;
   const raw=spec.dmg*(a.weapon==='SHOTGUN'?.75:1);
   const dmg=clamp(raw,1,110);
+  const muzzle=own.add(new B.Vector3(0,1.45,0));
+  const tracer=B.MeshBuilder.CreateLines('arena_fire_'+a.id,
+    {points:[muzzle,targetPos]},scene);
+  tracer.isPickable=false;
+  tracer.color=a.team==='RED'
+    ?new B.Color3(1,.40,.27):new B.Color3(.27,.68,1);
+  setTimeout(()=>{if(!tracer.isDisposed?.())tracer.dispose()},110);
   onShot?.(a,target.actor,dmg,a.weapon,targetPos.clone());
  }
 }
