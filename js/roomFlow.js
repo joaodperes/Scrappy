@@ -329,6 +329,18 @@ function onRoomPacket(data,status,joinData){
        offlineScore=selector([['10','10 points'],['15','15 points'],['25','25 points'],['50','50 points']],'25');
        row(offlineDetails,'Arena duration',offlineDuration);
        row(offlineDetails,'Points to win',offlineScore);
+       const arenaLoadout=button('SELECT ARENA LOADOUT',()=>{
+         actions.onSelectLoadout?.({mode:'ffa'},slots=>{
+           if(slots)arenaWeapons.textContent='Current local weapons: '+slots.primary+' / '+slots.secondary;
+         });
+       },true);
+       offlineDetails.appendChild(arenaLoadout);
+       const arenaWeapons=dom('p','font-size:12px;color:#bcd1a0','Gun Game uses its own fixed weapon ladder.');
+       offlineDetails.appendChild(arenaWeapons);
+       mode.addEventListener('change',()=>{
+         arenaLoadout.style.display=mode.value==='gunGame'?'none':'inline-block';
+         arenaWeapons.style.display=mode.value==='gunGame'?'none':'block';
+       });
        offlineDetails.appendChild(dom('p','font-size:12px;color:#bcd1a0;line-height:1.5',
          'Offline arena modes use existing PvE robots. FFA/TDM are practice variants: bots target you, not one another. Gun Game switches weapons on elimination; Kill Confirmed scores collected tags. No multiplayer server needed.'));
      }
