@@ -15,7 +15,7 @@ Moon Base is a distinct low-gravity/jetpack game experience.
 | 4 | **Elite enemies for Hard Mode** | Typed Elite modifiers/traits, AI behaviors, visuals, encounter budget, loot, boss interactions; test combinatorial interactions and performance |
 | 5 | **Jungle repair** | A real below-surface mine/dungeon, not a perforated floor; solid ceilings/platforms/walls, correct excavation entrances, ramps/lifts, mine lighting/Lantern/NVG, destructibles and enemy nav; preserve the good surface arena |
 | 6 | **Moon Base rewrite** | Low gravity also affects bot vertical physics/trajectory; every PvP player has jetpack; additional raised weapon/health/armor platforms, exposed side(s) for entry; cover on new/existing platforms and balcony; ramp access and bot navigation to balcony |
-| 7 | **Weapon categories + melee** | Primary / Secondary / Wonder; one Secondary in loadout replaces default Pistol; ammo-free melee timing, special-only slot, blades/hilts skins; Wonder no attachments; backward compatible progression. **Partial:** sidearm taxonomy/selection implemented; full melee and slot enforcement remain open. |
+| 7 | **Weapon categories + melee** | Pistol remains the standard Survival Secondary; Aegis is a Primary weapon. Separate Melee/Wonder categories, animation and exclusive special slot remain to be implemented/validated; no configurable Survival sidearm. |
 | 8 | **Daily/weekly quests + Scraps rewards only** | Quests keyed by UTC day/week; explicit idempotent local claims; rotating Collector weapon finishes and duplicate-owner Scraps; max-rank PvE XP conversion; **offline MVP implemented**, but secure server-authoritative currency/claim ledger, cross-device consistency and anti-farm remain open; **no shop yet** |
 | 9 | **Room creation and browsing** | Production-safe centralized shared server, lobby lifecycle, room visibility/passwords, capacity and mode settings; reconnection, player presence, synchronized readiness |
 | 10 | **Player-model bots** | JSON personalities and loadouts/skins, reusable traversal AI, team awareness, server/local match ownership and slots, bot replacement when people join. **Partial:** six personas, server-owned slot planner and TDM team allocation tested; no live bots yet. |
@@ -101,6 +101,24 @@ Moon Base is a distinct low-gravity/jetpack game experience.
 - **Owner confirmation:** Elite behavior has been tested and works as expected.
   Accepted for now; reopen only for specific observed regressions.
 
+### October 19 owner-test regression fixes — applied before further rollout
+
+- Owner reported all-map play startup failure: `js/main.js` referenced an
+  unimported `profile` in the now-reverted Survival Secondary initialization.
+  Restored standard Pistol start and imported `profile` for the existing PvP
+  flow; added visible error feedback if map building fails.
+- Replaced nested PvP Loadout picker with inline selectors to prevent Back
+  and Close from dropping the active menu callback. Room picker cancellation
+  no longer overwrites the selected match loadout.
+- Removed the redundant Home map dropdown; normalized Home menu buttons,
+  moved Quests to Home, and queued completion/reward toasts.
+- Fixed Collector Aurora's undefined `parentMesh` branch and implemented
+  distinct animated emissive palettes for all four Collector finishes.
+- **Open gate:** owner must verify actual Firefox/Chromium gameplay and
+  browser Console diagnostics. The supplied Firefox Browser Console dump
+  consists largely of browser/extension service messages rather than a
+  game-page stack trace.
+
 ### Priority 5: Jungle dungeon repair (source reconstruction; gameplay QA pending)
 
 - Previously the map had 112 editable entities with perforated central ground
@@ -146,16 +164,15 @@ Moon Base is a distinct low-gravity/jetpack game experience.
   ramps, two-client PvP jetpacks, weapon pickups and collision/performance
   testing in Chromium and Firefox. Do not mark accepted solely from schema.
 
-### Priority 7: Weapons (Secondary-selection slice implemented; melee pending)
+### Priority 7: Weapons (category groundwork only; melee pending)
 
-- Created `js/weaponCategories.js`: pure Primary / Secondary / Melee /
-  Wonder classification. Pistol and Aegis are Secondary; Knife has a
-  separate, unfinished Melee category; boss-only Wonder guns are excluded.
-- Added a **Secondary** tab in Loadout. After discovering Aegis, players
-  may replace the default Pistol with it as their starting Survival sidearm;
-  this is saved on the profile. Solo Survival's starting sidearm uses
-  this selection; legacy FFA, PvP's two selected slots and Gun Game remain
-  unchanged.
+- Created `js/weaponCategories.js` as groundwork for Primary / Secondary /
+  Melee / Wonder taxonomy. **Aegis stays Primary; Pistol is the standard
+  Survival Secondary.** The unwanted Survival Secondary picker and saved
+  sidearm customization were removed after owner testing.
+- PvP competitive weapon selection now occurs **inline within Loadout**;
+  the previous nested picker broke Back and Close. Two distinct weapons
+  save directly to the existing `pvpLoadout` profile setting.
 - **Still open:** authoritative slot enforcement, full Primary/Secondary
   weapon balancing, finished melee timing/special slot, blades/hilts skins,
   special slot compatibility and broader end-to-end QA (part overlaps
@@ -164,10 +181,12 @@ Moon Base is a distinct low-gravity/jetpack game experience.
 ### Priority 8: Daily/weekly quests + Scraps (offline MVP implemented)
 
 - UTC 00:00 day reset and Monday 00:00 week reset, quest progress fed
-  by existing PvE kill/damage/wave completion events. A new Loadout tab
-  shows daily/weekly objectives, Scraps balance and explicit claim buttons.
+  by existing PvE kill/damage/wave completion events. The **Home → QUESTS**
+  page now shows objectives, Scraps balance and claim buttons; the former
+  Loadout tab was removed. Quest completions and claims display in-game
+  toasts using the existing challenge notification queue.
 - A local claim ledger makes payouts idempotent per period; rotating
-  weekly Collector weapon finishes are Aurora, Nebula, Cinder and Tundra
+  weekly **animated** Collector weapon finishes are Aurora, Nebula, Cinder and Tundra
   across Pistol/SMG/Shotgun/DMR. Duplicate-owned weekly Collector rewards
   pay Scraps instead; surplus max-rank PvE weapon XP converts to Scraps
   at a 25:1 rate with retained remainder.
