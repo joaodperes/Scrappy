@@ -148,7 +148,12 @@ export function serializeEditableMesh(mesh){
     generator:m.generator,
     params:JSON.parse(JSON.stringify(m.params)),
     position:{x:mesh.position.x,y:mesh.position.y,z:mesh.position.z},
-    rotation:{x:mesh.rotation.x,y:mesh.rotation.y,z:mesh.rotation.z},
+    // Babylon rotation gizmos often use a quaternion. Persist their actual
+    // orientation instead of silently exporting stale Euler values.
+    rotation:(()=>{
+      const euler=mesh.rotationQuaternion?.toEulerAngles?.() || mesh.rotation;
+      return {x:euler.x,y:euler.y,z:euler.z};
+    })(),
     scaling:{x:mesh.scaling.x,y:mesh.scaling.y,z:mesh.scaling.z},
   };
 }
