@@ -242,7 +242,7 @@ function onRoomPacket(data,status,joinData){
      const makeChoice=(label,choices,value)=>row(content,label,selector(choices,value));
      if(where==='browse'){
        const url=input('url',endpoint());
-       makeField('Room server',url);
+       row(content,'Room server',url);
        const loadoutAction=button('SELECT PVP LOADOUT',()=>{
          actions.onSelectLoadout?.({mode:'ffa'},()=>message(status,'PvP weapon selection saved for this match.'));
        },true);
