@@ -407,9 +407,15 @@ remains priority 18 and must **not** be started prematurely.
   `fix/foundations-room-flow-20261018` while awaiting browser playtests.
 - Never mark Moon (6) or Jungle (5) fully accepted without physics, Recast
   bot routes and Chromium/Firefox gameplay verification.
-- The client-side quest/Scraps prototype (8) is **not** a secure ledger.
-  Do not connect the shop (15), paid unlocks or competitive rewards to it
-  before server-side identity, atomic claims and anti-farm controls.
+- **Owner decision, 19 October 2026:** build for a small friends-only game
+  using the existing Firebase Spark project, Google sign-in and Firestore;
+  avoid Cloud Functions, Cloud Run, paid infrastructure and mandatory
+  server-verified PvE rewards. Keep Firestore owner-scoped security rules,
+  atomic transaction-based shop purchases and idempotent quest claims.
+  Client-reported PvE progression/earnings are an explicitly accepted
+  anti-cheat compromise; never pretend they are server verified.
+  Multiplayer hit validation should still run on the existing Node WS server
+  for fair matches, hosted locally or on another owner-approved free host.
 - A standalone bot profile/slot planner (10) is safe to implement; **real**
   networked bots need room authorization, authoritative simulation and
   multiplayer validation from priorities 9, 11 and 13.
@@ -424,6 +430,22 @@ For each phase, record: implementation files, tests, regression risks, screensho
 or short recordings of behavior, and remaining known issues. Test both Firefox
 and Chromium for geometry and editor work. CI's JS syntax/map schema checks
 are necessary but not sufficient to pass movement/combat acceptance tests.
+
+## Approved friends-only Firebase Spark plan — 19 October 2026
+
+The owner approved no-cost Firebase Authentication/Firestore as the sole
+persistence and account service. The repository already uses Firebase Google
+Authentication and writes player profiles to `player_profiles/{uid}`.
+Design further quest/skin/shop persistence around those existing accounts,
+not a new authentication provider. Use Firestore Security Rules to scope each
+player's profile to their signed-in UID, and Firestore transactions for
+concurrent balance/ownership changes. Never use publicly writable shared
+wallet documents; do not equate client ownership with cheatproof rewards.
+Favor no-cost client-accessible functionality and minimal writes. Do not
+activate pay-as-you-go cloud services, deploy billable resources or upload
+secret service-account credentials. The existing standalone WebSocket server
+still needs a compatible runtime independent of Firebase Hosting. This
+approval supersedes the stricter *proposal* below wherever they conflict.
 
 ## Hosting architecture (proposal, not deployed)
 
