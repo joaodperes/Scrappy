@@ -199,7 +199,7 @@ function updateTags(dt){
      // If this was an unclaimed tag from a human elimination, clear it.
      applyResult(tag.ownerTeam==='BLUE'?
        localArenaTagExpired(s):s);
-   }else if(tag.ownerId!=='human'){
+   }else if(tag.ownerTeam==='BLUE'){
      active.state=localArenaTagExpired(active.state);
    }
   }
