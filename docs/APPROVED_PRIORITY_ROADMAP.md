@@ -262,7 +262,7 @@ Moon Base is a distinct low-gravity/jetpack game experience.
 - Added `server/botSession.js` to reconcile planned slots after human joins,
   retain valid bot state, require a trusted spawn provider, and plan
   death/respawn transitions. No damage or movement is committed by these pure
-  modules. **19 simulated bot foundation tests pass.**
+  modules. **20 simulated bot foundation tests pass.**
 - **Not activated:** `server/server.js` does not import botBrain/botSession.
   No server AI movement execution, real navigation, replication, verified
   damage, scores, snapshots or human-visible player bots yet. Lobby correctly
