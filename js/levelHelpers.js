@@ -639,6 +639,43 @@ export function createSkybridge(cx,cz,spanAxis,spanLen,bridgeW,y1,y2) {
   return deck;
 }
 
+// City street car wreck with a roof-mounted jump pad. One editable root
+// owns every collision/visual mesh and its gameplay pad, avoiding the old
+// hardcoded pad drifting away whenever the vehicle is repositioned.
+export function createCarWreck(cx,cz,rotY=0) {
+  const scene=getScene();
+  const mat=new BABYLON.StandardMaterial('carBody_'+cx+'_'+cz,scene);
+  // Stable variation instead of a new color on every JSON import.
+  const tint=(Math.sin(cx*12.9898+cz*78.233)*43758.5453)%1;
+  const h=Math.abs(tint);
+  mat.diffuseColor=new BABYLON.Color3(0.1+h*0.5,0.08+h*0.25,0.06+h*0.18);
+  mat.specularColor=new BABYLON.Color3(0.05,0.05,0.05);
+  const root=createWall(cx,0.5,cz,2,0.9,4.4,mat,{editable:true});
+  root.name='carWreck';
+  root.rotation.y=rotY;
+  const cabin=createWall(0,0.78,0,1.8,0.7,2.2,mat,{editable:false});
+  cabin.parent=root;
+  cabin.isPickable=false;
+  const wheelMat=new BABYLON.StandardMaterial('carWheelMat',scene);
+  wheelMat.diffuseColor=new BABYLON.Color3(.08,.08,.08);
+  for(const [wx,wz] of [[-1.1,-1.4],[-1.1,1.4],[1.1,-1.4],[1.1,1.4]]){
+    const wheel=BABYLON.MeshBuilder.CreateCylinder('carWheel',
+      {diameter:0.7,height:0.25,tessellation:10},scene);
+    wheel.parent=root;
+    wheel.rotation.z=Math.PI/2;
+    wheel.position.set(wx,-0.3,wz);
+    wheel.material=wheelMat;
+    wheel.isPickable=false;
+  }
+  const roofPad=createJumpPad(cx,1.63,cz,24,rotY);
+  roofPad.setParent(root); // Preserve world position/heading at construction.
+  roofPad.isPickable=false;
+  roofPad.metadata.editable=false; // Part of car entity, not a second export.
+  _tagMeta(root,'car_wreck','createCarWreck',{cx,cz,rotY},true,null);
+  root.metadata.roofPad=roofPad;
+  return root;
+}
+
 // ── JSON layout pipeline ─────────────────────────────────────────
 // This is the single source of truth for turning a JSON "objects" array
 // (the exact shape editor.html's "Export JSON" produces) back into real
@@ -690,6 +727,7 @@ const _generators = {
                               p.faceOffset||0,{movingPlatforms:t?.movingPlatforms}),
   createSkybridge:        p => createSkybridge(p.cx,p.cz,p.spanAxis,p.spanLen,
                               p.bridgeW,p.y1,p.y2),
+  createCarWreck:         p => createCarWreck(p.cx,p.cz,p.rotY??0),
 };
 
 /** Re-creates one editable prop from its generator name + params. `targets`
@@ -822,6 +860,19 @@ export function applyEditableLayout(objects, targets = null) {
       const p = mesh.metadata.params;
       if (typeof p?.sx === 'number') mesh.metadata.halfWidth = p.sx * Math.abs(mesh.scaling.x) / 2;
       if (typeof p?.sz === 'number') mesh.metadata.halfDepth = p.sz * Math.abs(mesh.scaling.z) / 2;
+    }
+  }
+  // A composite car moves its roof pad with the body. The jump-pad
+  // collision registry uses world positions, so re-sync after each import.
+  for(const pad of jumpPads) {
+    if(!pad.mesh || pad.mesh.isDisposed())continue;
+    pad.mesh.computeWorldMatrix(true);
+    if(pad.mesh.parent){
+      pad.pos.copyFrom(pad.mesh.getAbsolutePosition());
+      const owner=pad.mesh.parent;
+      const angle=(owner.rotationQuaternion?.toEulerAngles()?.y??owner.rotation.y) || 0;
+      pad.thrustX=Math.sin(angle)*pad.force*.45;
+      pad.thrustZ=Math.cos(angle)*pad.force*.45;
     }
   }
   // Resolve switch links only after all referenced platform entities exist.
