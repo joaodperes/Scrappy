@@ -22,7 +22,7 @@ Select **PLAY → LOCAL MODES**, choose a map and:
 - **Survival:** normal, Hard or Nightmare endless waves and Elites; uses the standard starting Pistol.
 - **Gun Game (vs robots):** deterministic shuffled weapon ladder, Pistol first and Knife final; score a robot elimination with the current weapon to advance.
 - **Kill Confirmed (vs robots):** eliminate robots, then physically collect the glowing dog tag; a frag alone does not award a point.
-- **FFA Practice / TDM Practice:** timed player-versus-robot practice. These do **not yet represent complete multi-team bot-vs-bot matches**: existing PvE robots focus on the human player. The team and free-for-all rules need a future full offline bot-faction implementation.
+- **Free-for-all / Team Deathmatch:** local player-shaped bot opponents use their own weapon loadouts, spawn/respawn, acquire each other as targets and score independent frags (FFA) or RED/BLUE team frags (TDM). TDM includes two allied bots on RED alongside the human against three BLUE bots.
 
 Offline arena modes support configurable match time and point targets, local opponent replenishment and respawn after death. They reuse the existing PvE enemy models and physics. These new modes still require owner gameplay QA and are not yet considered accepted.
 
