@@ -18,6 +18,7 @@ import { submitScore, renderLeaderboard } from './leaderboard.js';
 import { startFfa, stopFfa, updateFfa, isFfaActive, isFfaInPreLobby, showFfaLobby, isLocalDead, togglePvpScoreboard, checkFfaHitScan } from './pvp.js';
 import { loadProfile, getLevelProgress, levelFromTotalXp, profile } from './progression.js';
 import { showLoadout } from './loadout.js';
+import { normalizeCompetitiveLoadout } from './weaponCategories.js';
 import { getCurrentMap, setCurrentMap, MAPS, getMapMeta, buildMap, isMapUnlocked, registerCommunityMaps } from './mapManager.js';
 import { initRoomFlow, showPlayPage } from './roomFlow.js';
 import { setActiveHardWave } from './hardModeRules.js';
@@ -635,12 +636,11 @@ async function launchCompetitiveRoom(cfg,session) {
       if(def.magSize)def.currentMag=def.magSize;
       def.ammo=def.startAmmo||0;
     }
-    const configuredLoadout=profile.pvpLoadout||selectedMatchLoadout;
-    // Never trust locally stored slots to equip wonder weapons or missing IDs.
-    const validPvPWeapon=id=>WDEFS[id] && !WDEFS[id].wonderWeapon;
-    const mainSlot=validPvPWeapon(configuredLoadout.primary)?configuredLoadout.primary:'SMG';
-    const offSlot=validPvPWeapon(configuredLoadout.secondary)&&configuredLoadout.secondary!==mainSlot
-      ?configuredLoadout.secondary:(mainSlot==='SHOTGUN'?'SMG':'SHOTGUN');
+    // Normalize persisted PvP selections so Melee/Wonder guns cannot be
+    // smuggled into standard two-firearm rooms. Gun Game keeps its Knife finale.
+    const configuredLoadout=normalizeCompetitiveLoadout(profile.pvpLoadout||selectedMatchLoadout,WDEFS);
+    const mainSlot=configuredLoadout.primary;
+    const offSlot=configuredLoadout.secondary;
     inventory[0]=cfg.mode==='gunGame'?'PISTOL':mainSlot;
     inventory[1]=cfg.mode==='gunGame'?null:offSlot;
     inventory[2]=cfg.mode==='gunGame'?null:'PISTOL';
