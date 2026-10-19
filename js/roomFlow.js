@@ -2,6 +2,7 @@
 // enabled until team replication, bot controllers and authoritative scoring exist.
 import { MAPS, getRoomCapacity, isModeSupported, getCurrentMap, isHardModeUnlocked } from './mapManager.js';
 import { profile } from './progression.js';
+import { HARD_MODE_MODIFIERS } from './hardModeRules.js';
 
 const MODES = [
   ['survival', 'Survival (solo / co-op planned)'],
@@ -214,25 +215,31 @@ function soloPage() {
     'Choose a map and start a local Survival run. No room or multiplayer server is required.'));
   const map=selector(Object.values(MAPS).map(m=>[m.id,m.icon+' '+m.name]),getCurrentMap());
   const hard=input('checkbox');
+  const modifier=selector([['auto','Automatic (map-specific starting rule)'],
+      ...HARD_MODE_MODIFIERS.map(m=>[m.id,m.label+' — '+m.desc])],'auto');
   const hardHint=dom('p','color:#adaeb5;font-size:12px');
   row(box,'Map',map);
   row(box,'Hard mode',hard);
+  row(box,'First Hard modifier',modifier);
   box.appendChild(hardHint);
   function refresh(){
     const unlocked=isHardModeUnlocked(map.value);
     hard.disabled=!unlocked;
     if(!unlocked)hard.checked=false;
+    modifier.disabled=!unlocked||!hard.checked;
     hardHint.textContent=unlocked
-      ? 'Hard Mode unlocked for this map.'
+      ? 'Hard modifiers rotate every three waves. Choose the first one or use Automatic.'
       : 'Defeat a boss wave on this map to unlock Hard Mode.';
   }
   map.onchange=refresh;
+  hard.onchange=refresh;
   refresh();
   const actionsRow=dom('div',CSS.row);
   box.appendChild(actionsRow);
   const start=button('START SOLO SURVIVAL',()=>{
     start.disabled=true;
-    const cfg={mapId:map.value,hardMode:!hard.disabled&&hard.checked};
+    const cfg={mapId:map.value,hardMode:!hard.disabled&&hard.checked,
+      hardModifier:!hard.disabled&&hard.checked?modifier.value:'auto'};
     closePage();
     actions.onStartSurvival?.(cfg);
   });
