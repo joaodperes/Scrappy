@@ -695,11 +695,15 @@ export function shoot() {
           cb.hitRobot?.(e,modDmg,false,false,'AEGIS');
           spawnSparks(_aegisTargetPoint(e),0xff3333,8);
         }
-        // Preserve locks for follow-up shots until ADS is released, target
-        // dies or goes out of range. Do not silently aim at a new enemy.
+        // Each smart-pistol discharge consumes the entire lock queue.
+        // A fresh acquisition is required for subsequent smart shots.
       } else {
         hitscan(_meshToEnemy,spread*spreadMult,modDmg,range,falloff);
       }
+      _clearAegisLocks();
+      // Keep the reset visible and prevent an immediate same-frame relock.
+      // The next ADS scan may acquire a fresh group after the pistol cooldown.
+      _aegisReacquireDelay=Math.max(_aegisReacquireDelay,EW.cd||W.cd||0.3);
       break;
     }
     case 'DMR':
@@ -858,6 +862,7 @@ function _showAegisLockCount(count,max,visible){
     if(visible)hud.textContent='AEGIS LOCKS '+count+' / '+max;
   }
 }
+let _aegisReacquireDelay=0;
 function _clearAegisLocks(){
   paintedTargets=[];
   _aegisHl?.removeAllMeshes();
@@ -873,6 +878,16 @@ function _updateAegisTargeting(){
   }
   const EW=getEffectiveStats('AEGIS',WDEFS.AEGIS);
   const cap=Math.max(1,Math.floor(EW.maxTargets||3));
+  // A dead former lock invalidates the whole painted group, even when
+  // other targets are still alive. The player must reacquire those targets.
+  if(paintedTargets.some(e=>!e.alive || e.group?.isDisposed?.())){
+    _clearAegisLocks();
+    _aegisReacquireDelay=Math.max(_aegisReacquireDelay,EW.cd||WDEFS.AEGIS.cd||0.3);
+  }
+  if(_aegisReacquireDelay>0){
+    _showAegisLockCount(0,cap,true);
+    return;
+  }
   const cone=EW.lockCone??0.95;
   const forward=getCameraForward();
   const prior=paintedTargets;
@@ -908,8 +923,15 @@ function _updateAegisTargeting(){
 let _aegisHighlighted=new Set();
 
 export let paintedTargets = [];
+// Weapon switching lives in weapons.js; register a synchronous hook so
+// clearing doesn't depend on the existing asynchronous setScope(false).
+cb.clearAegisLocks=()=>{
+  _clearAegisLocks();
+  _aegisReacquireDelay=0;
+};
 
 export function updatePlayer(dt, gameRunning, paused) {
+  _aegisReacquireDelay=Math.max(0,_aegisReacquireDelay-dt);
   for (const key in player.buffs) { 
     if (player.buffs[key] > 0) { 
       player.buffs[key] -= dt; 
@@ -1257,6 +1279,10 @@ export function updatePlayer(dt, gameRunning, paused) {
   export function setScope(enable) {
     const overlay = document.getElementById('scopeOverlay');
     if (enable && isAkimbo(curWep)) return;
+    if(!enable && (paintedTargets.length||_aegisHighlighted.size||_aegisHudVisible)){
+      _clearAegisLocks();
+      _aegisReacquireDelay=0;
+    }
     isScoped = enable;
     player.isScoped = enable; 
     
