@@ -36,6 +36,7 @@ loadProfile();
 // ── Callbacks ──────────────────────────────────────────────────
 cb.hitRobot      = hitRobot;
 cb.onRobotDestroyed = localArenaRobotKilled;
+cb.onArenaActorHit = localArenaActorHit;
 cb.hurtPlayer    = hurtPlayer;
 cb.markHudDirty  = () => updateHUD();
 cb.endGame       = endGame;
