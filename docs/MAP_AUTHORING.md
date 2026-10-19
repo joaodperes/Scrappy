@@ -67,8 +67,8 @@ the shared runtime are listed in `js/mapSchema.js` under
 Geometry: floors, walls, columns/pillars, glass, free-form ramps, rise ramps,
 ceilings, crates and barrels.
 
-Gameplay: lava, spike traps, destructible walls, jump pads, moving platforms
-and activation switches. Give moving platforms stable IDs and list those IDs
+Gameplay: lava, spike traps, destructible walls, jump pads, moving platforms,
+zipline cable cars, rooftop lifts, skybridges, staircase flights and activation switches. Give moving platforms stable IDs and list those IDs
 in the connected switch's `targetPlatformIds` parameter.
 
 ### Spawn and pickup markers
@@ -152,11 +152,18 @@ registration step.
 
 ### Current exceptions and known limitations
 
-- City has legacy procedural ziplines, lifts, skybridges and decorative cars.
-  Their geometry is not fully captured by `city.json`. Moving a generic
-  serialized City wall does not move the corresponding procedural systems.
-- Scrapyard's staircase composites remain procedural. Its jump pads are now
-  exportable, but the default file did not originally contain them.
+- City now serializes **13 ziplines, 17 rooftop lifts and 8 skybridges**
+  as composite, selectable entities. Edit zipline **start/end coordinates**
+  or bridge endpoints in the inspector for route changes. Moving their
+  anchors translates linked geometry; rotating a moving car alone does
+  not redefine its movement path. Verify that cable and endpoint
+  positions remain consistent after export/reimport.
+- City's decorative **car wrecks, rooftop/relay jump pads and some
+  boundaries** are still procedural. Finish migrating those before
+  describing the City layout as fully JSON-authoritative.
+- Scrapyard's **six staircase composites and 12 jump pads** are now
+  serialized in `scrapyard.json`. Stairs are selected and moved as whole
+  flights, not as individual mesh steps.
 - Creator-defined maps do not yet provide procedural script hooks from JSON.
   Keep any remaining scene-specific effects in the appropriate level module.
 - Rotation-quaternion-based procedural bridges are not editable as generic
