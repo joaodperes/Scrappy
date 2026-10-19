@@ -32,6 +32,25 @@ export function getHardWaveRules(mapId,waveNumber){
     count:modifier.count,
   });
 }
+let openingModifierId=null;
+// Optional player choice controls the first 3-wave modifier. Later blocks
+// rotate predictably through the other modes; 'auto' uses the map seed.
+export function setHardModeOpeningModifier(id='auto'){
+  const selected=id||'auto';
+  if(selected!=='auto'&&!HARD_MODE_MODIFIERS.some(m=>m.id===selected))
+    throw Error('Unknown Hard Mode modifier: '+selected);
+  openingModifierId=selected==='auto'?null:selected;
+}
+export function getRunHardWaveRules(mapId,waveNumber){
+  const auto=getHardWaveRules(mapId,waveNumber);
+  if(!openingModifierId)return auto;
+  const start=HARD_MODE_MODIFIERS.findIndex(m=>m.id===openingModifierId);
+  const index=(start+Math.floor((waveNumber-1)/3))%HARD_MODE_MODIFIERS.length;
+  const mod=HARD_MODE_MODIFIERS[index];
+  return Object.freeze({...auto,modifier:mod,
+    hp:HARD_MODE_BASE.hp*mod.hp,damage:HARD_MODE_BASE.damage*mod.damage,
+    speed:HARD_MODE_BASE.speed*mod.speed,count:mod.count});
+}
 export function applyHardWaveCount(composition,rules){
   if(!rules || rules.count===1)return composition.map(row=>({...row}));
   return composition.map(row=>({...row,
