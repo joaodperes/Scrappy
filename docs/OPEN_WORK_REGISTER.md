@@ -1,49 +1,41 @@
-# Remaining engineering work — ordered blockers, not an acceptance claim
+# Remaining work register — offline first
 
-**Current branch:** `fix/foundations-room-flow-20261018`.
+**Owner revision:** October 19, 2026. Work stays on `fix/foundations-room-flow-20261018` (draft PR #2). **Human PvP and network co-op are deferred to a separate PR**, not acceptance blockers for offline work. Follow the [current roadmap](APPROVED_PRIORITY_ROADMAP.md), not the historic October 18 list below it.
 
-**Updated architecture approval (19 October):** the owner selected **Firebase
-Spark / friends-only**. Reuse existing Google sign-in and Firestore profiles;
-allow player-reported PvE rewards as an accepted casual-play compromise,
-while retaining UID-scoped Firestore rules, duplicate-claim protection and
-transaction-safe purchases. No paid Firebase Functions/Cloud Run or new
-backend is required for the shop. The older strict anti-cheat deployment
-gates below are superseded where they conflict with this approval.
-  
-**Companion owner test list:** [OWNER_VALIDATION_TODO.md](OWNER_VALIDATION_TODO.md).  
-Do not merge a partial system or activate money/rewards solely because static tests pass. This register lists the open engineering work after the 19 October implementation pass, with code entry points.
+## Current PR — gameplay and product work
 
-## Implement / integrate before requesting acceptance
+1. **Map QA** (`assets/maps/jungle.json`, `js/levelJungle.js`, `js/jungleMaterials.js`, `js/levelTerminal.js`, `js/mapManager.js`): owner must test Jungle's underground strata, lava, ceiling/ramps, Lantern/NVG, enemy traversal and textured materials; Moon Base's low gravity, platforms, balcony and local bot routes in Chromium + Firefox. Scrapyard/City remain regression baselines.
 
-1. **Priorities 5–6: map runtime QA and source corrections.** Browser-confirm Jungle geometry, textured materials, mine ramps and Recast bots, and Moon Base low-gravity, jetpack and balcony routes. Relevant modules: `js/levelJungle.js`, `js/jungleMaterials.js`, `assets/maps/jungle.json`, `js/levelTerminal.js`, `js/mapManager.js`; behavioral docs `JUNGLE_DUNGEON.md`, `MOON_BASE.md`. Do not redesign until owner records failures.
+2. **Melee / weapon categories** (`js/weapons.js`, `js/weaponCategories.js`, `js/player.js`, `js/projectiles.js`, `js/loadout.js`): actual dedicated Knife/special slot, animations and hit windows, regular-map availability and cosmetics. Gun Game finale currently uses the existing Knife through PvE hitscan; browser test it before approving.
 
-2. **Priorities 7/17: actual dedicated Knife/melee gameplay.** Introduce a real special/melee slot and input/action animation while keeping Gun Game Knife finale. Enforce melee target/range/timing consistently for PvE and PvP, add controlled map availability/unlock and cosmetic progression; respect Aegis Primary/Pistol Secondary. Relevant: `js/weaponCategories.js`, `js/weapons.js`, `js/player.js`, `js/projectiles.js`, `js/loadout.js`, `js/pvp.js`; validate with Firefox/Chromium. Current melee call already passes through `hitscan()`, which delegates to PvP when applicable; do not create a duplicate damage path.
+3. **Offline game modes** (`js/localArenaRules.js`, `js/localArenaRuntime.js`, `js/roomFlow.js`, `js/main.js`, `js/enemies.js`): Gun Game and Kill Confirmed robot matches have source-level runtime implementations and tests; finish browser QA and fix collision, pickups, score, respawn and weapon progress issues. FFA/TDM are explicitly labeled **Practice** because bots target the human, not each other.
 
-3. **Priority 8: friends-only quests/Scraps persistence.** Reuse Firebase UID-owned profiles and transaction-based claim/purchase persistence; client-reported PvE progress is acceptable. The offline MVP is `js/questRules.js` + `js/progression.js` + `js/questPage.js`. `server/economyLedger.js` is a standalone idempotent state machine, **not** deployed or authenticated. Add trusted event receipts, cross-device reconciliations, anti-farm validation and database transactions. Do not spend provisional local Scraps in the shop.
+4. **Full local FFA/TDM factions and bot personas** (`js/enemies.js`, `js/botNavigation.js`, `js/gameState.js`, `assets/bot-personalities.json`): introduce friendly/opposing local bot groups, bot-vs-bot target/weapon/HP simulation, team kill attribution and balanced score/respawn. Reuse the six personality presets where practical, while keeping server-only Node helpers out of browser imports. This is needed before removing PRACTICE labeling.
 
-4. **Priority 9: production rooms.** The current in-memory WS server is `server/server.js`; browser UI is `js/roomFlow.js`, `js/network.js`. Implement authenticated identity/token verification, reconnection/reclaiming player ID and host rights, rate limiting/heartbeat, server-side validation of catalog custom maps, multi-instance shared directory and deployment. Existing disconnect paths end an active PvP round after losing its last opponent, intentionally **not** seamless rejoin. Do not deploy paid infrastructure without owner approval.
+5. **Progression/quests** (`js/questRules.js`, `js/progression.js`, `js/questPage.js`): test UTC resets, local/offline arena kill credit and balances, duplicate Collector handling, Firestore sync during two concurrent signed-in browsers. Casual client-reported PvE progress is accepted, but account separation and loss/duplication prevention are still required.
 
-5. **Priority 10: visible networked bots.** Existing `server/botSlots.js`, `botBrain.js`, `botSession.js` only plan authoritative bot intent; create real collision-safe server navmesh/map spawn adapters, simulate movement/weapons, validate damage and LOS, replicate human-like player model/skin/equipment, fill vacancies, yield slots to humans and synchronize score/respawn. No bot packet should be trusted as a browser client. Only activate after two-client server tests.
+6. **Free Firebase Spark cosmetic/XP shop** (`js/progression.js`, `js/loadout.js`, `server/economyLedger.js` as optional isolated domain reference): implement user-owned `player_profiles/{uid}` Firestore transaction for whole wallet updates, bounded/idempotent purchase receipts, cosmetic-only and directly applied XP purchases, no purchasable PvE stat bonuses. Account sync writes must not overwrite a newer transaction. Verify deployed Firestore rules and test simultaneous browsers. **No paid Cloud Functions or Cloud Run required.** The existing Node ledger is not a usable player wallet.
 
-6. **Priorities 11–13: competitive match completion.** `server/server.js` has lobby, countdown, scoring, seeded Gun Game and HP/kill events. `js/pvp.js` has client rendering/UI. The server still accepts `msg.dmg` with basic numerical/range throttles, rather than authoritative weapon/aim/geometry verification. `server/pvpIntegrity.js` is a *fail-closed validation contract* with tests, **not wired**. Replace the old hit path with server-owned equip, ammo, aim, verified movement snapshots and collision LOS. Verify hit registration, remote player loadouts/skins/attachments, reward anti-forgery, spectator/death states, latency/lag compensation and TDM team score. Source-level Gun Game order is deterministic but human multi-browser Knife finale must be tested.
+7. **Earned PvE stats/equipment** (`js/pveStatsRules.js`, `js/progression.js`, `js/player.js`): hook tested pure rules to persistence, an explicit allocation/respec UI and Survival effects, excluding local competitive modes if stats create imbalance; owner approves the balance. No Scraps purchases for earned stats.
 
-7. **Priority 14: 2-player authoritative co-op Survival.** No live co-op runtime exists. Create server-owned wave director, unique enemy IDs/ownership, shared difficulty/boss states, replicated projectiles/damage, pickup and quest rewards, safe reconnect, per-player score, and strict 2-human maximum. Existing `js/waves.js`, `js/enemies.js`, `js/roomFlow.js` are currently solo or competitive and must not be called 'working co-op' from a room UI alone.
+8. **Documentation/reference cleanup**: done in part: README now correctly describes Babylon.js, local Play flow and dependencies. `LOCAL_DEVELOPMENT.md`, `LOCAL_ARENA_MODES.md`, `OWNER_VALIDATION_TODO.md` and this register reflect the new scope; historic `FOUNDATIONS_AND_NEXT_STEPS.md` is labeled superseded. Before PR close, audit links, references, unused assets and possible developer-script moves. Preserve browser-imported modules and vendored Babylon; postpone risky deletions/reorganization until the owner confirms offline gameplay.
 
-8. **Priority 15: actual cosmetics/XP-pack shop.** After UID-scoped persistence and atomic wallet writes (not contingent on strict PvE anti-cheat), define approved cosmetic art/catalog and tier costs, actual UI in `js/loadout.js` or separate Home screen, atomic database purchases and refunds/duplicates, direct-use XP-pack caps and account recovery. Test balance and item ownership in two concurrent sessions. `server/economyLedger.js` is **in-memory single-process**, meant only as domain logic to adapt to trusted storage.
+9. **Final offline acceptance**: run Node test suite and GitHub CI on final HEAD, then owner walks the [offline checklist](OWNER_VALIDATION_TODO.md) in Firefox and Chromium. Only merge or close draft PR #2 on explicit owner instruction.
 
-9. **Priority 16: applied PvE-only stats/equipment.** `js/pveStatsRules.js` is a tested pure allocation/respec/earned-gear rules engine, not yet hooked into `profile`, user-facing menus, stat effects or `js/player.js`. Review balance with owner and wire chosen modifiers to *Survival only*; assert PvP normalization and never price these upgrades in Scraps.
+## Later / separate PR — not prerequisites for current offline features
 
-10. **Priority 18: cleanup LAST.** Only after the above is genuinely accepted: audit `js/` against browser imports and `editor.html`, `.github/workflows/quality.yml`, tests, map assets and vendored `js/babylon.max.js`. Update `README.md` from obsolete Three.js instructions to Babylon. Make moves/delete in small batches with automated and both-browser smoke tests. Do not prune tests/docs/runtime modules preemptively.
+- Hosted public/private room discovery, WebSocket authentication, reconnect, hosting and observability (`js/roomFlow.js`, `js/network.js`, `server/server.js`).
+- Human FFA, TDM, Gun Game, Kill Confirmed over the network, plus server-authoritative hits, ammo, movement and synchronized remote skins/attachments (`server/pvpIntegrity.js` is pure groundwork, not active).
+- Networked bot actors/replication, server collision/navmesh and round lifecycle (`server/botBrain.js`, `server/botSession.js` are not connected).
+- Strict two-human synchronized co-op Survival: waves, enemies, bosses, pickups, per-user rewards and rejoin.
+- Production deployment decisions, costs and paid cloud services. No paid infrastructure has been authorized.
 
-## Current source/test baseline
+## Current source-level validation
 
-- `server/roomSafety.test.js` covers live opponent departure; `scripts/pvp-sync-regressions.test.cjs` verifies server-applied damage is not multiplied twice client-side and matches end only on the server result.
-- `server/pvpIntegrity.test.js`: 7 isolated combat-contract cases.
-- `server/economyLedger.test.js`: 7 isolated economy-domain cases.
-- `scripts/pve-stats-rules.test.cjs`: 5 pure PvE-stat cases.
-- Existing server room, Gun Game and bot tests continue to run in the same test glob.
-- Local mocked execution of server tests passed **50/50**; pure PvE stats passed **5/5** and PvP sync passed **2/2**. Run the actual Node test suite and GitHub CI on the current branch, then do game/browser validation. These local mocked checks do not prove production correctness.
+- `scripts/local-arena-rules.test.cjs` — Gun Game ladder, Knife finale, Kill Confirmed tags, expired tags and time/death rules.
+- `scripts/local-arena-runtime.test.cjs` — mocked local robot replenishment, tag collection and weapon switching.
+- `scripts/play-page.test.cjs` / `scripts/solo-flow.test.cjs` — local-first UI with no WebSocket launch, Survivor Hard/Nightmare selection and clearly separated experimental online controls.
+- Existing map, weapon, quests, server/room and Firebase progression tests should remain in CI as **regression coverage**, even when network work is deferred.
+- A V8-based simulated execution of the four new/updated suites passed **16/16** cases; this is not actual Node CI or a real Babylon browser playthrough. Confirm with `node --test scripts/*.test.cjs` and `node --test server/*.test.js` before merge.
 
-## Blocking environment/deployment decisions
-
-Cloud Run/Firebase Admin credentials, Firestore security rules, hosting topology, durable shared room storage, budget approval and real multi-client test infrastructure are not available in this development session. Do **not** fake authentication or enable shop/payout/bot combat with client-trusted state as a shortcut. The owner should test ready features in `OWNER_VALIDATION_TODO.md`, then reopen failures or explicitly approve deployment/provisioning when implementation prerequisites are satisfied.
+**Work policy:** avoid scope creep into new multiplayer or cloud-hosting features before the owner signs off on offline gameplay; never claim that a bot-practice arena is full TDM/FFA until actual bot factions fight.
