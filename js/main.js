@@ -462,7 +462,7 @@ function refreshMenuUI() {
   if (hardModeToggle && hardModeDesc) {
     hardModeToggle.disabled = !hasHardMode;
     if (hasHardMode) {
-        hardModeDesc.textContent = "Tougher enemies, 2x Score.";
+        hardModeDesc.textContent = "Hard modifiers rotate every 3 waves · 2× Score.";
         hardModeDesc.style.color = "#E85E76";
     } else {
         hardModeToggle.checked = false; 
