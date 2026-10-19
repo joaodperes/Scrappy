@@ -3058,7 +3058,7 @@
       "id": "moon-floater-armor-west-north",
       "type": "armorPickup",
       "position": {
-        "x": -20,
+        "x": -23,
         "y": 14.9,
         "z": 24
       },
@@ -3070,7 +3070,7 @@
       "id": "moon-floater-health-east-north",
       "type": "healthPickup",
       "position": {
-        "x": 20,
+        "x": 23,
         "y": 14.9,
         "z": 24
       },
@@ -3082,7 +3082,7 @@
       "id": "moon-floater-health-west-south",
       "type": "healthPickup",
       "position": {
-        "x": -20,
+        "x": -23,
         "y": 14.9,
         "z": -24
       },
@@ -3094,7 +3094,7 @@
       "id": "moon-floater-armor-east-south",
       "type": "armorPickup",
       "position": {
-        "x": 20,
+        "x": 23,
         "y": 14.9,
         "z": -24
       },
