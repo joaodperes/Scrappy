@@ -46,9 +46,21 @@ function validateHostedRoomConfig(input){
   }};
 }
 
-function randomizedGunOrder(){
+// One seed per match, shared with every client. A replay can reproduce
+// the exact weapon ladder independently of arrival order or RNG timing.
+function randomizedGunOrder(seed){
+  let state=(seed>>>0)||0x9e3779b9;
+  const nextRandom=()=>{
+    state ^= state << 13;
+    state ^= state >>> 17;
+    state ^= state << 5;
+    return (state>>>0)/4294967296;
+  };
   const others=GUN_POOL.slice();
-  for(let i=others.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[others[i],others[j]]=[others[j],others[i]]}
+  for(let i=others.length-1;i>0;i--){
+    const j=Math.floor(nextRandom()*(i+1));
+    [others[i],others[j]]=[others[j],others[i]];
+  }
   return ['PISTOL',...others,'KNIFE'];
 }
 
@@ -124,7 +136,7 @@ wss.on('connection', ws => {
           started: false,
           hostId:  null,
           password: typeof msg.password === 'string' ? msg.password.slice(0,100) : '',
-          gunOrder:null, preparing:false,
+          gunOrder:null, gunSeed:null, preparing:false,
         });
       }
       const room = rooms.get(requestedId);
@@ -163,7 +175,7 @@ wss.on('connection', ws => {
         config:  roomCfg,
         isHost:  room.hostId === id,
         started: room.started,
-        team,gunOrder:room.gunOrder,
+        team,gunOrder:room.gunOrder,gunSeed:room.gunSeed,
       }));
 
       // Add this player to the room
@@ -198,8 +210,10 @@ wss.on('connection', ws => {
       room.preparing=true;
       room.countdownVersion=(room.countdownVersion||0)+1;
       const countdownVersion=room.countdownVersion;
-      room.gunOrder=room.config?.mode==='gunGame'?randomizedGunOrder():null;
-      _broadcastAll(room,{type:'roundCountdown',startsAt:Date.now()+5000,gunOrder:room.gunOrder});
+      room.gunSeed=room.config?.mode==='gunGame'?Math.floor(Math.random()*4294967296)>>>0:null;
+      room.gunOrder=room.gunSeed===null?null:randomizedGunOrder(room.gunSeed);
+      _broadcastAll(room,{type:'roundCountdown',startsAt:Date.now()+5000,
+        gunOrder:room.gunOrder,gunSeed:room.gunSeed});
       room.countdownTimer=setTimeout(()=>{
         // A disconnected player might have canceled this countdown while
         // the callback was already in the event queue.
@@ -218,7 +232,8 @@ wss.on('connection', ws => {
         const configured=room.config?.roundDuration;
         const parsed=configured===undefined?600:Number(configured);
         const duration=Number.isFinite(parsed)?Math.max(0,Math.min(1800,parsed)):600;
-        _broadcastAll(room,{type:'roundStart',duration,mode:room.config?.mode,gunOrder:room.gunOrder});
+        _broadcastAll(room,{type:'roundStart',duration,mode:room.config?.mode,
+          gunOrder:room.gunOrder,gunSeed:room.gunSeed});
         room.roundTimer=duration>0?setTimeout(()=>finishMatch(room),duration*1000):null;
       },5000);
     }
@@ -306,7 +321,7 @@ wss.on('connection', ws => {
       clearTimeout(room.countdownTimer);
       room.countdownTimer=null;room.preparing=false;
       room.countdownVersion=(room.countdownVersion||0)+1;
-      room.gunOrder=null;
+      room.gunOrder=null;room.gunSeed=null;
       _broadcastAll(room,{type:'roundCancelled',reason:'Not enough connected players'});
     }
     if (room.players.size === 0){
