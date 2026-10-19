@@ -29,6 +29,35 @@ that object rather than only changing its metadata.
 Do not change a parameter ID to refer to a missing platform. The exporter
 validates switch references and blocks invalid exports.
 
+### Camera and alignment controls
+
+The editor uses brighter neutral lighting and a readable, scrollable inspector
+without changing the final game's materials or atmosphere.
+
+- **Zoom:** mouse wheel is faster and adjusts speed according to distance.
+  Zooming changes the editor camera, not the map geometry.
+- **Axis-constrained gizmos:** press **G** to move, **R** to rotate or **S**
+  to scale. Drag a red X, green Y, or blue Z handle for single-axis editing.
+- **Snap position to grid:** enable the checkbox under *Alignment / Snapping*
+  and set grid units (default 1). Gizmo movement and keyboard nudges snap
+  to exact world-grid positions when committed.
+- **Snap rotation to angle:** enable separately, set the angle in degrees
+  (default 15°). Rotation gizmos snap to that increment; the **Align
+  rotation** button aligns the selected object explicitly.
+- **Align position:** explicitly rounds the current X/Y/Z coordinates to
+  the chosen grid, even when automatic snapping is off.
+- **Exact transform:** select an object and edit numeric **Position** (world
+  units), **Rotation** (degrees) and **Scale** (multipliers). Click *Apply
+  exact transform* or press Enter. Only finite, nonzero scale factors are
+  accepted, and currently enabled snap rules still apply.
+- **Reset scale (1, 1, 1):** restores all three scaling multipliers to 1.
+  This **does not** overwrite an entity's underlying dimensions, such as
+  a wall's `sx`, `sy` or `sz` parameters. Edit those separately in the
+  JSON parameter inspector when you intend to change the generated size.
+
+After changing structure, click **Rebuild NavMesh** and check **Show NavMesh**.
+Finish by exporting and re-importing to verify transforms persist.
+
 ### Add geometry or gameplay objects
 
 Select the corresponding `+` button. The objects currently supported by
