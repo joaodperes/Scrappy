@@ -21,7 +21,7 @@ Select **PLAY → LOCAL MODES**, choose a map and:
 
 - **Survival:** normal, Hard or Nightmare endless waves and Elites; uses the standard starting Pistol.
 - **Gun Game (vs AI players):** deterministic shuffled weapon ladder, Pistol first and Knife final. Both the human and every bot advance independently by defeating opponents with their currently equipped gun.
-- **Kill Confirmed (vs robots):** eliminate robots, then physically collect the glowing dog tag; a frag alone does not award a point.
+- **Kill Confirmed (teams vs AI players):** RED/BLUE teams collect enemy tags to score and can deny points by recovering friendly tags. Bots actively pursue dropped tags.
 - **Free-for-all / Team Deathmatch:** local player-shaped bot opponents use their own weapon loadouts, spawn/respawn, acquire each other as targets and score independent frags (FFA) or RED/BLUE team frags (TDM). TDM includes two allied bots on RED alongside the human against three BLUE bots.
 
 Offline arena modes support configurable match time and point targets and five computer-controlled contestants. Their player-shaped meshes and firearm rules are separate from Survival robots. Shots use the real weapon definitions for range, damage and cooldown with simplified bot hit resolution (special projectile/attachment effects are not yet one-to-one identical to the human versions). These new modes still require owner gameplay QA and are not yet considered accepted.
