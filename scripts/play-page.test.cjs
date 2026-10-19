@@ -44,8 +44,10 @@ function harness(){
     document,window:{},MAPS:{
       scrapyard:{id:'scrapyard',name:'Scrapyard',icon:'🏭'},
       jungle:{id:'jungle',name:'Jungle',icon:'🌿'},
+      locked:{id:'locked',name:'Locked Map',icon:'🔒',unlockHint:'Beat a Jungle boss'},
     },
     isModeSupported:()=>true,getRoomCapacity:()=>8,
+    isMapUnlocked:id=>id!=='locked',
     getCurrentMap:()=> 'scrapyard',
     isHardModeUnlocked:id=>id==='jungle',
     isNightmareUnlocked:id=>id==='jungle',
@@ -131,4 +133,21 @@ test('Browse opens a dynamic room table with capacity and password column',()=>{
   assert.ok(h.elements.some(e=>e.tag==='td'&&e.textContent==='Arena'));
   assert.ok(h.elements.some(e=>e.tag==='td'&&e.textContent==='10'));
   assert.ok(h.findButton('JOIN'));
+});
+test('map and difficulty unlock hints appear only inside selects, aligned and equally high',()=>{
+  const h=harness();h.context.api.showPlayPage();
+  const map=h.findSelect('locked'),difficulty=h.findSelect('nightmare');
+  const lockedMap=Array.from(map.options).find(o=>o.value==='locked');
+  assert.equal(lockedMap.disabled,true);
+  assert.match(lockedMap.textContent,/Beat a Jungle boss/);
+  assert.equal(map.style.height,'42px');
+  assert.equal(difficulty.style.height,'42px');
+  assert.ok(h.elements.filter(e=>e.tag==='span'&&e.textContent==='Map').length>0);
+  assert.ok(h.elements.filter(e=>e.tag==='span'&&e.textContent==='Survival difficulty').length>0);
+  const repeated=h.elements.filter(e=>e.tag==='p'&&/Nightmare.*Clear a Hard boss|Beat a Jungle boss/.test(e.textContent));
+  assert.equal(repeated.length,0);
+  const help=h.elements.find(e=>e.tag==='details');
+  assert.ok(help);
+  assert.ok(h.elements.some(e=>e.tag==='strong'&&e.textContent==='ELITE ENEMIES'));
+  assert.ok(h.elements.some(e=>e.tag==='p'&&/Bulwark.*Frenzied.*Regenerator/.test(e.textContent)));
 });
