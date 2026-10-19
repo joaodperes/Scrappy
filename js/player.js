@@ -9,6 +9,8 @@ import { hitscan, fireRocket, firePlasma, fireGrenade, fireFlame, spawnLightning
 import { _meshToEnemy } from './enemies.js';
 import { spawnSparks } from './particles.js';
 import { getCurrentMap, getMapMeta } from './mapManager.js';
+import { blocksBullet } from './bulletCollision.js';
+import { updateAegisLocks, getAegisFireTargets } from './aegisTargeting.js';
 
 // Static imports eradicate the Promise crashes in the shoot/input loop!
 import {
@@ -679,33 +681,26 @@ export function shoot() {
       });
       break;
 
-    case 'AEGIS':
+    case 'AEGIS': {
       if (!hasSuppressor('AEGIS')) sfx.pistol();
-      
-      if (paintedTargets.length > 0) {
-        const hasInfinite = player.buffs['infinite_ammo'] > 0;
-        let shotsFired = 0;
-        
-        for (const e of paintedTargets) {
-          if (!e.alive) continue;
-          
-          // Ensure we don't shoot more targets than we have bullets 
-          // (ballisticCost already deducted 1 bullet at the top of shoot())
-          if (!hasInfinite && W.currentMag <= 0 && shotsFired > 0) break;
-          
-          if (!hasInfinite && shotsFired > 0) W.currentMag--; 
-          shotsFired++;
-          
-          cb.hitRobot(e, modDmg, false, false, 'AEGIS');
-          spawnSparks(e.group.position.clone().add(new BABYLON.Vector3(0, 1.0, 0)), 0xff3333, 8);
+      // Each trigger pull consumes one pistol round (deducted above), but
+      // hits every still-visible ADS lock. Crosshair direction at firing time
+      // deliberately does not affect locked targets.
+      if (isScoped && paintedTargets.length) {
+        const targets=getAegisFireTargets(paintedTargets,
+          e=>_aegisIsValid(e,EW.range||range),
+          e=>_aegisHasLineOfSight(e));
+        for(const e of targets){
+          cb.hitRobot?.(e,modDmg,false,false,'AEGIS');
+          spawnSparks(_aegisTargetPoint(e),0xff3333,8);
         }
-        
-        paintedTargets = []; // Clear queue so the auto-painter can grab them again if LMB is held
-        if (_aegisHl) _aegisHl.removeAllMeshes();
+        // Preserve locks for follow-up shots until ADS is released, target
+        // dies or goes out of range. Do not silently aim at a new enemy.
       } else {
-        hitscan(_meshToEnemy, spread * spreadMult, modDmg, range, falloff);
+        hitscan(_meshToEnemy,spread*spreadMult,modDmg,range,falloff);
       }
       break;
+    }
     case 'DMR':
       if (!hasSuppressor('DMR')) sfx.railgun(); // Using railgun sfx as a placeholder for a heavy rifle sound
       hitscan(_meshToEnemy, spread * spreadMult, modDmg, range, falloff);
@@ -828,42 +823,86 @@ export function resetWeaponHeat(wName) {
   markHudDirty();
 }
 
-function _updateAegisTargeting() {
-  if (curWep !== 'AEGIS' || !isScoped) {
-    paintedTargets = [];
-    if (_aegisHl) _aegisHl.removeAllMeshes();
-    return;
+function _aegisTargetPoint(e){
+  // Keep a stable center-of-mass aim point; smart bullets do not depend on
+  // the reticle's current direction after an ADS lock has been acquired.
+  return e.group.getAbsolutePosition().add(new BABYLON.Vector3(0,1,0));
+}
+function _aegisIsValid(e,range){
+  return !!(e?.alive && e.group && !e.group.isDisposed?.() &&
+    BABYLON.Vector3.Distance(camera.position,_aegisTargetPoint(e))<=range);
+}
+function _aegisHasLineOfSight(e){
+  const dest=_aegisTargetPoint(e),delta=dest.subtract(camera.position);
+  const length=delta.length();
+  if(length<0.1)return true;
+  const ray=new BABYLON.Ray(camera.position.clone(),delta.scale(1/length),Math.max(.01,length-.15));
+  const block=scene.pickWithRay(ray,blocksBullet);
+  return !block?.hit;
+}
+function _showAegisLockCount(count,max,visible){
+  let hud=document.getElementById('aegisLockHud');
+  if(!hud && visible){
+    hud=document.createElement('div');
+    hud.id='aegisLockHud';
+    hud.style.cssText='position:fixed;top:60%;left:50%;transform:translateX(-50%);'+
+      'z-index:720;pointer-events:none;color:#ff7474;background:rgba(15,16,24,.75);'+
+      'border:1px solid #e45b5b;border-radius:5px;padding:5px 11px;'+
+      'font:700 13px monospace;letter-spacing:1px;text-shadow:0 0 6px #a00000;';
+    document.body.appendChild(hud);
   }
-  if (!_aegisHl) {
-    _aegisHl = new BABYLON.HighlightLayer('aegisHl', scene);
-    _aegisHl.outerGlow = true;
-    _aegisHl.innerGlow = true;
-  }
-  const EW = getEffectiveStats('AEGIS', WDEFS.AEGIS);
-  const maxTargets  = EW.maxTargets || 3;
-  const requiredDot = EW.lockCone ?? 0.95;
-  const fwd = getCameraForward();
-
-  for (const e of enemies) {
-    if (!e.alive) continue;
-    if (paintedTargets.includes(e)) {
-      e.group.getChildMeshes().forEach(m => {
-        if (!_aegisHl.hasMesh(m)) _aegisHl.addMesh(m, new BABYLON.Color3(1, 0, 0));
-      });
-      continue;
-    }
-    if (paintedTargets.length >= maxTargets) continue;
-    
-    // Shift target up by 1 unit to test against Center of Mass instead of toes
-    const enemyCenter = e.group.position.add(new BABYLON.Vector3(0, 1.0, 0));
-    const toEnemy = enemyCenter.subtract(camera.position).normalize();
-    
-    if (BABYLON.Vector3.Dot(fwd, toEnemy) > requiredDot) {
-      paintedTargets.push(e);
-      sfx.pickup();
-    }
+  if(hud){
+    hud.style.display=visible?'block':'none';
+    if(visible)hud.textContent='AEGIS LOCKS '+count+' / '+max;
   }
 }
+function _clearAegisLocks(){
+  paintedTargets=[];
+  _aegisHl?.removeAllMeshes();
+  _showAegisLockCount(0,3,false);
+}
+function _updateAegisTargeting(){
+  if(curWep!=='AEGIS'||!isScoped){_clearAegisLocks();return;}
+  if(!_aegisHl){
+    _aegisHl=new BABYLON.HighlightLayer('aegisHl',scene);
+    _aegisHl.outerGlow=true;
+    _aegisHl.innerGlow=true;
+  }
+  const EW=getEffectiveStats('AEGIS',WDEFS.AEGIS);
+  const cap=Math.max(1,Math.floor(EW.maxTargets||3));
+  const cone=EW.lockCone??0.95;
+  const forward=getCameraForward();
+  const prior=paintedTargets;
+  const valid=e=>_aegisIsValid(e,EW.range||WDEFS.AEGIS.range);
+  const canAcquire=e=>{
+    const delta=_aegisTargetPoint(e).subtract(camera.position).normalize();
+    return BABYLON.Vector3.Dot(forward,delta)>=cone && _aegisHasLineOfSight(e);
+  };
+  // Prioritize the nearest reticle alignment, rather than spawn-array order,
+  // while keeping already acquired locks even if the crosshair moves away.
+  const candidates=enemies.filter(valid).sort((a,b)=>{
+    const da=BABYLON.Vector3.Dot(forward,_aegisTargetPoint(a).subtract(camera.position).normalize());
+    const db=BABYLON.Vector3.Dot(forward,_aegisTargetPoint(b).subtract(camera.position).normalize());
+    return db-da;
+  });
+  paintedTargets=updateAegisLocks(prior,candidates,cap,valid,canAcquire);
+  if(paintedTargets.some(e=>!prior.includes(e)))sfx.pickup();
+  const wanted=new Set();
+  for(const e of paintedTargets){
+    for(const mesh of e.group.getChildMeshes(false)){
+      if(mesh.isDisposed?.())continue;
+      wanted.add(mesh);
+      if(!_aegisHl.hasMesh(mesh))_aegisHl.addMesh(mesh,new BABYLON.Color3(1,0,0));
+    }
+  }
+  // Remove stale highlights (dead targets, swapped targets, despawned bots).
+  for(const mesh of _aegisHighlighted){
+    if(!wanted.has(mesh)&&!mesh.isDisposed?.())_aegisHl.removeMesh(mesh);
+  }
+  _aegisHighlighted=wanted;
+  _showAegisLockCount(paintedTargets.length,cap,true);
+}
+let _aegisHighlighted=new Set();
 
 export let paintedTargets = [];
 
@@ -918,11 +957,8 @@ export function updatePlayer(dt, gameRunning, paused) {
       markHudDirty();
     }
   }
-  if (curWep === 'AEGIS' && isScoped) {
-     _updateAegisTargeting();
-  } else {
-      paintedTargets = []; // Clear if we drop ADS or swap weapons
-  }
+  if(curWep==='AEGIS'&&isScoped)_updateAegisTargeting();
+  else if(paintedTargets.length||document.getElementById('aegisLockHud'))_clearAegisLocks();
 
   // ── Background Weapon Heat & Scope Heating Loop ──
     for (const wName in WDEFS) {
