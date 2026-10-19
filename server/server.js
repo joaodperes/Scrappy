@@ -153,9 +153,13 @@ wss.on('connection', ws => {
         for(const p of room.players.values()){
           p.score=0;p.hp=100;p.deadUntil=0;p.lastHitAt=0;p.weaponIndex=0;
         }
-        const duration=Math.max(60,Math.min(1800,Number(room.config?.roundDuration)||600));
+        // 0 = unlimited clock: the score limit alone ends the round.
+        // Preserve old custom durations for already-created rooms.
+        const configured=room.config?.roundDuration;
+        const parsed=configured===undefined?600:Number(configured);
+        const duration=Number.isFinite(parsed)?Math.max(0,Math.min(1800,parsed)):600;
         _broadcastAll(room,{type:'roundStart',duration,mode:room.config?.mode,gunOrder:room.gunOrder});
-        room.roundTimer=setTimeout(()=>finishMatch(room),duration*1000);
+        room.roundTimer=duration>0?setTimeout(()=>finishMatch(room),duration*1000):null;
       },5000);
     }
 
