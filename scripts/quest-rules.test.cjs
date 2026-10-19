@@ -77,3 +77,37 @@ test('surplus maximum-level PvE weapon XP converts at 25:1 and carries remainder
  assert.equal(convertMaxedWeaponXp(p,'KNIFE',-5),0);
  assert.equal(p.scraps,3);
 });
+
+test('partial cloud quest state is repaired without resetting valid progress',async()=>{
+ const {ensureQuestState,questDefinitions,claimQuest,trackQuestEvent}=await mod;
+ const d=date('2026-10-19T18:00:00Z');
+ const p={scraps:60,questProgress:{
+  daily:{key:'2026-10-19',metrics:{pveKills:17},claimed:'corrupt'},
+  weekly:{key:'2026-10-19',metrics:null,claimed:null},
+ }};
+ ensureQuestState(p,d);
+ assert.equal(p.questProgress.daily.metrics.pveKills,17);
+ assert.equal(p.questProgress.daily.metrics.damage,0);
+ assert.deepEqual(p.questProgress.daily.claimed,[]);
+ assert.equal(p.questProgress.weekly.metrics.pveKills,0);
+ for(let i=0;i<3;i++)trackQuestEvent(p,'KILL',{botType:'scout'},d);
+ assert.equal(claimQuest(p,'daily-pve-kills',d).scraps,40);
+ assert.equal(claimQuest(p,'daily-pve-kills',d).ok,false);
+ assert.equal(p.scraps,100);
+});
+test('malformed Collector ownership list cannot crash or double-award quest skin',async()=>{
+ const {questDefinitions,trackQuestEvent,claimQuest}=await mod;
+ const d=date('2026-10-19T18:00:00Z');
+ const q=questDefinitions(d).find(x=>x.id==='weekly-collector');
+ const p={unlockedWeaponSkins:{[q.reward.weapon]:42}};
+ for(let i=0;i<220;i++)trackQuestEvent(p,'KILL',{botType:'scout'},d);
+ const first=claimQuest(p,q.id,d);
+ assert.equal(first.ok,true);
+ assert.equal(first.scraps,0);
+ assert.deepEqual(p.unlockedWeaponSkins[q.reward.weapon],[q.reward.skin]);
+ assert.equal(claimQuest(p,q.id,d).ok,false);
+});
+test('confirmed multiplayer damage explicitly identifies its PvP source',()=>{
+ const pvp=fs.readFileSync(path.join(__dirname,'../js/pvp.js'),'utf8');
+ assert.match(pvp,/emitEvent\('DAMAGE_DEALT',\{weaponKey:msg\.weapon\|\|curWep,amount:msg\.damage,source:'PVP'\}\)/);
+});
