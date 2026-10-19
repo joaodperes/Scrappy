@@ -23,7 +23,7 @@ Select a built-in map, arena duration (5/10/15 minutes) and point goal (10/15/25
 
 ## Deliberate limitations and follow-up engineering
 
-- **FFA/TDM practice is not true FFA/TDM:** robots all target the human and do not fight other bots or each other; the "opposition" score is based on the human's deaths. Add local bot-player teams, ally selection, AI-vs-AI targeting, friendly-fire filtering, skins and equip/respawn before renaming these as completed real game modes.
+- **FFA/TDM source-level rules now implement bot-versus-bot competition.** FFA scores individual bot kills; TDM has RED/BLUE teams, ally filtering and team score, not simply the human's death count. Bot weapon effects approximate actual `WDEFS` damage/range/rate rather than fully reproducing specialized projectile, heat, attachment or reload behavior. All maps and slopes require browser/navmesh QA before acceptance.
 - Robots still use existing PvE model/weapon behavior, not the six player-style personality models defined in `assets/bot-personalities.json`. The Node `server/botBrain.js` and `server/botSession.js` are **not** imported into browser local modes. A future browser-friendly adapter can reuse those personality rules with correct Babylon navmesh and movement/physics.
 - Local arena kills currently go through the existing PvE progression pipeline. The user has accepted client-reported progression for a friends-only game, but their impact on daily PvE quests and XP balancing should be checked before acceptance.
 - Local Gun Game has no server-side synchronized weapon seed because **only one browser participates**. Weapon spawn interference and rapid swapping/reloading must be browser-tested.
