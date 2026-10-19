@@ -8,7 +8,7 @@ import { spawnSparks } from './particles.js';
 import { fireEnemyShot, createYellowEMPStunArc } from './projectiles.js';
 import { sfx } from './audio.js';
 import { jumpPads } from './level.js';
-import { getRunHardWaveRules, getActiveHardWave } from './hardModeRules.js';
+import { getRunHardWaveRules, getActiveHardWave, scaleBossShotDamage } from './hardModeRules.js';
 import { ELITE_TRAITS, getEliteBonuses } from './eliteRules.js';
 import { botTravelTarget, botNavPath } from './botNavigation.js';
 import { getCurrentMap, getWalkableSpawns } from './mapManager.js';
@@ -554,6 +554,7 @@ export function spawnBot(type, _x, _spawnY, _z, scale = 1.0, eliteTraits = null)
     speedMod *= rules.speed;
     e.score *= rules.score;
     e.hardModifier=rules.modifier.id;
+    if (type === 'giantbot') e._hardBossDamageMultiplier=rules.damage;
   }
 
   e.hp = Math.round(e.hp * hpMod); 
@@ -1795,7 +1796,9 @@ export function updateEnemies(dt) {
         if (e.type === 'giantbot') {
             const weps = ['rocket', 'plasma', 'heavy'];
             const pt = weps[Math.floor(Date.now() / 3500) % 3];
-            const bossDmg = pt === 'rocket' ? 45 : (pt === 'plasma' ? 20 : 12);
+            const bossDmg = scaleBossShotDamage(
+              pt === 'rocket' ? 45 : (pt === 'plasma' ? 20 : 12),
+              e._hardBossDamageMultiplier||1);
             const bossSpd = pt === 'rocket' ? 20 : (pt === 'plasma' ? 45 : 60);
             const rightVec = BABYLON.Vector3.Cross(BABYLON.Axis.Y, dir).normalize();
             
