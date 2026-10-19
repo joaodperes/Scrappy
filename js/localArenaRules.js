@@ -67,6 +67,7 @@ export function localArenaBotKill(s,{killerId,killerTeam='BLUE',victimTeam='RED'
    }
    botGuns[killerId]=rung+1;
    n.opposition=Math.max(s.opposition,botScores[killerId]);
+   return n; // Gun Game ignores general score limits: only Knife wins.
  }else if(s.mode==='tdm'){
    n= killerTeam==='RED'?{...n,score:s.score+1}:
      {...n,opposition:s.opposition+1};
