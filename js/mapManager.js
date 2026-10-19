@@ -108,6 +108,8 @@ export const MAP_CONFIG = {
       desc: 'Ancient jungle temple. Lava rivers, moving platforms, and destructible ruins.',
       levelModule: './levelJungle.js', buildFn: 'buildJungleLevel',
       spawn: { x: 15, yOffset: 1, z: -55 },
+      // The deepest Jungle chamber is at y=-45; do not reset mid-dungeon.
+      fallResetY: -58,
       unlockHint: 'Defeat a Boss in Scrapyard',
     },
     wave: { 
