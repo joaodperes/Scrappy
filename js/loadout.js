@@ -255,11 +255,12 @@ topBar.appendChild(deployBtn);
     { id:'secondary',   label:'SECONDARY' },
   ];
   const tabBar = _el('div',
-    `display:flex;background:${C.bgMid};border-bottom:1.5px solid ${C.border};padding:0 28px;flex-shrink:0`
+    `display:flex;background:${C.bgMid};border-bottom:1.5px solid ${C.border};padding:0 28px;flex-shrink:0;overflow-x:auto;white-space:nowrap`
   );
   if (mode) tabBar.style.display = 'none'; // hide tabs in mode context
   tabs.forEach(t => {
     const b = _el('button', _tabStyle(_activeTab === t.id), t.label);
+    b.style.flexShrink='0'; // Quests/Secondary tabs can scroll on narrow screens.
     b.dataset.tabId = t.id;
     b.onclick = () => { _activeTab = t.id; _renderContent(); };
     tabBar.appendChild(b);
