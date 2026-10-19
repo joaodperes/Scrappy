@@ -359,14 +359,14 @@ function _populateMapDropdown() {
       const lbBtn = document.createElement('button');
       lbBtn.id = 'leaderboardsBtn';
       lbBtn.textContent = '🏆 LEADERBOARDS';
-      lbBtn.className = 'btn-sm';
-      lbBtn.style.marginTop = '8px';
+      lbBtn.className = 'btn';
+      lbBtn.style.cssText = 'width:100%;padding-left:0;padding-right:0;text-align:center;';
       lbBtn.style.display = window.__scrappyAuthenticated ? 'inline-block' : 'none';
       lbBtn.onclick = () => {
         document.getElementById('menuScreen').className = 'screen hidden';
         showLeaderboardPage();
       };
-      container.appendChild(lbBtn);
+      (playBtn?.parentElement || container).appendChild(lbBtn);
     }
   }
   
