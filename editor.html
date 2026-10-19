@@ -49,6 +49,7 @@
         <button data-action="addSpike" class="warning">+ Spikes</button>
         <button data-action="addJumpPad">+ Jump Pad</button>
         <button data-action="addMovingPlatform">+ Moving Platform</button>
+        <button data-action="addZipline">+ Zipline / Cable Car</button>
         <button data-action="addPowerSwitch">+ Power Switch</button>
         <button data-action="addCeiling">+ Ceiling</button>
         <hr>
@@ -138,7 +139,7 @@
             const {
                 createSlab, createWall, createPillar, createColumn, createGlass,
                 createRampBox, createRamp, createStaircase, createLava, createDestructibleWall, createSpikeTrap,
-                createBarrel, createCrate, createCeiling, createJumpPad, createMovingPlatform, createPowerSwitch,
+                createBarrel, createCrate, createCeiling, createJumpPad, createMovingPlatform, createZipline, createPowerSwitch,
                 applyEditableLayout, loadMapDocument,
             } = await import('/js/levelHelpers.js');
             const { walkableMeshes, explosiveBarrels, jumpPads } = await import('/js/level.js');
@@ -274,6 +275,7 @@
                             else if (action === 'addSpike') this.addObject('spike');
                             else if (action === 'addJumpPad') this.addObject('jumpPad');
                             else if (action === 'addMovingPlatform') this.addObject('movingPlatform');
+                            else if (action === 'addZipline') this.addObject('zipline');
                             else if (action === 'addPowerSwitch') this.addObject('powerSwitch');
                             else if (action === 'addCeiling') this.addObject('ceiling');
                             else if (action === 'delete') this.deleteSelected();
@@ -408,6 +410,7 @@
                         const delta=mesh.position.subtract(data.start);
                         data.start.addInPlace(delta);
                         data.end.addInPlace(delta);
+                        mesh.metadata?.auxiliaryMeshes?.forEach(cable=>cable.position.addInPlace(delta));
                     }
                     this.refreshTransformFields();
                 }
@@ -655,6 +658,8 @@
                         case 'jumpPad': mesh=createJumpPad(pos.x,y,pos.z,24,0);break;
                         case 'movingPlatform': mesh=createMovingPlatform(pos.x,y,pos.z,pos.x,y+8,pos.z,
                           5,5,0.25,1.5,{movingPlatforms});break;
+                        case 'zipline': mesh=createZipline('custom_zipline',pos.x,y,pos.z,
+                          pos.x+15,y,pos.z,11.5,4,4,{movingPlatforms});break;
                         case 'powerSwitch': mesh=createPowerSwitch(pos.x,y,pos.z,[],{powerSwitches});break;
                         case 'ceiling': mesh=createCeiling(pos.x,y,pos.z,5,5);break;
                     }
@@ -708,6 +713,9 @@
                     const dwIdx = destructibleWalls.indexOf(m);
                     if (dwIdx !== -1) destructibleWalls.splice(dwIdx, 1);
 
+                    m.metadata?.auxiliaryMeshes?.forEach(aux=>{
+                        if(!aux.isDisposed())aux.dispose();
+                    });
                     // Spike trap child spikes are parented to the floor mesh and
                     // dispose automatically (Babylon's dispose() recurses into
                     // children by default), so no extra cleanup needed for them.
