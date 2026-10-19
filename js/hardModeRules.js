@@ -70,14 +70,14 @@ export function getDifficultyWaveRules(mapId,waveNumber,difficulty='hard'){
   });
 }
 // Boss weapons use authored projectile damage rather than e.dmg.
- // Apply only the Hard/Nightmare multiplier; preserve Normal's baseline.
- export function scaleBossShotDamage(baseDamage,hardDamageMultiplier=1){
-   if(!Number.isFinite(baseDamage)||baseDamage<0 ||
-       !Number.isFinite(hardDamageMultiplier)||hardDamageMultiplier<=0)
-     throw Error('Invalid boss damage');
-   return Math.max(0,Math.round(baseDamage*hardDamageMultiplier));
- }
- // Compatibility for existing callers; Hard means one rotating modifier.
+// Apply only the Hard/Nightmare multiplier; preserve Normal's baseline.
+export function scaleBossShotDamage(baseDamage,hardDamageMultiplier=1){
+  if(!Number.isFinite(baseDamage)||baseDamage<0 ||
+      !Number.isFinite(hardDamageMultiplier)||hardDamageMultiplier<=0)
+    throw Error('Invalid boss damage');
+  return Math.max(0,Math.round(baseDamage*hardDamageMultiplier));
+}
+// Compatibility for existing callers; Hard means one rotating modifier.
 export function getHardWaveRules(mapId,waveNumber){
   return getDifficultyWaveRules(mapId,waveNumber,'hard');
 }
