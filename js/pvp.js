@@ -316,7 +316,9 @@ function _wireEvents(onRoundEnd, onGameStart) {
   });
 
   on('hit', msg => {
-    if (msg.targetId === getMyId()) hurtPlayer(msg.dmg * (roomConfig.damageMult ?? 1));
+    // The server has already applied room damage scaling and HP clamping.
+    // Multiplying again here made client HP diverge from the server state.
+    if (msg.targetId === getMyId()) hurtPlayer(msg.dmg);
   });
 
   on('killed', msg => {
@@ -338,9 +340,9 @@ function _wireEvents(onRoundEnd, onGameStart) {
         awardXp(50);
       }
       updateFfaHUD(_buildScoreRows(), timeLeft, getMyId());
-      if (roomConfig.scoreLimit > 0 && (msg.killerScore ?? 0) >= roomConfig.scoreLimit) {
-        _handleRoundEnd({ winner: msg.killerName ?? 'Someone', scores: msg.scores }, onRoundEnd);
-      }
+      // Do not infer the winner from this one kill. TDM uses aggregated
+      // team score, Gun Game has a Knife finale, and only the server's
+      // roundEnd packet decides whether/time/how the match concluded.
     }
   });
 
