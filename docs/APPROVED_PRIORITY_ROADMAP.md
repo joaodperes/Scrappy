@@ -42,6 +42,53 @@ Moon Base is a distinct low-gravity/jetpack game experience.
   and reachable routes from the main ring. Balcony half/full-height cover
   while preserving sightlines. Ramps must be navigable by Recast agents.
 
+## Additional independent implementation checkpoint — October 19, 2026
+
+The owner asked to continue across all remaining milestones before a broad
+playtest. This request cannot truthfully close priorities 7–18 while the
+multiplayer server is unauthenticated, not production-deployed, and the
+browser/physics tests are pending. The following components were added
+without prematurely activating insecure gameplay systems:
+
+- **Priority 9 / match lifecycle:** live human matches now broadcast a clean
+  canceled round result when their last opponent disconnects; the remaining
+  player returns to a match-ended state rather than waiting alone for the
+  timer. New `server/roomSafety.test.js` regression.
+- **Priority 13, foundational only:** `server/pvpIntegrity.js` is a
+  fail-closed pure hit-validation contract. It requires server-owned weapon
+  specs, verified positions/aim, trusted collision LOS, team and cooldown
+  validation, and computes damage itself. Seven isolated tests pass. It is
+  **not wired into the existing `server/server.js` hit path**, which still
+  uses untrusted client-supplied damage; therefore live PvP is **not secure**
+  and this priority is not complete.
+- **Priority 15 / 8, foundational only:** `server/economyLedger.js`
+  models immutable item definitions, owner-scoped verified Scraps grants,
+  deduplicated receipts, cosmetic-only/direct-use XP purchases, bounded XP
+  and per-process atomic balance updates. Seven isolated tests pass. There
+  is deliberately **no shop UI, authenticated caller, persisted database or
+  trusted reward verifier**. This is **not a real spendable player wallet**;
+  connecting client-owned `profile.scraps` to it would be insecure.
+- **Priority 16, foundational only:** `js/pveStatsRules.js` defines bounded
+  earned PvE point awards, stat allocation/respec, wave-earned equipment,
+  and a competitive normalization contract. Five isolated tests pass.
+  It is **not currently connected** to the player, loadout, persistence,
+  or the game HUD. PvP must continue to ignore PvE bonuses.
+- **Priority 10:** `server/botBrain.js`, `server/botSession.js` and their
+  earlier 20 simulated tests remain source-only. No live bot actors.
+- **Regression QA:** 50 mocked/simulated server tests pass, in addition to
+  5 isolated PvE stat cases; these are **not a substitute for actual Node CI,
+  WebSocket service testing or browser gameplay**. The existing GitHub
+  workflow already runs server and script test globs when triggered.
+- **Owner checklist:** `docs/OWNER_VALIDATION_TODO.md` lists concrete
+  browser checks and separate non-ready engineering gates across all 18
+  priorities. See this checklist before accepting a PR.
+
+**Not completed:** live server-side anti-cheat, authenticated durable
+economy/currency, integrated bot combat, production rooms/reconnect, full
+co-op Survival, approved shop, applied PvE equipment, complete Knife special
+slot/skins, deployment, browser QA and final repository cleanup. Cleanup
+remains priority 18 and must **not** be started prematurely.
+
 ## Current implementation checkpoint — 19 October 2026
 
 ### Priorities 1–2: architecture and editor (owner-tested; accepted for now)
