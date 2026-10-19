@@ -95,7 +95,10 @@ function _tagMeta(m, type, generator, params, editable, extraMeta) {
   m.metadata = editable
     ? { editable: true, type, generator, params, ...(extraMeta || {}) }
     : { editable: false, type, ...(extraMeta || {}) };
-  m.isPickable = !!editable; // Required for editor picking.
+  // Babylon ray picking also requires isPickable. Solid non-editable
+  // walls must remain bullet blockers; editable glass is visually pickable
+  // in the editor but excluded from bullets by bulletCollision.js.
+  m.isPickable = !!editable || (!!m.checkCollisions && m.metadata.type !== 'glass');
   return m;
 }
 
