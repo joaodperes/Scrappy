@@ -10,6 +10,7 @@ import { sfx } from './audio.js';
 import { applyExplosionImpulse } from './player.js';
 import { getCurrentMap, getMapMeta } from './mapManager.js';
 import { getLoadout } from './progression.js';
+import { blocksBullet, closestBulletHit } from './bulletCollision.js';
 
 // ── Player projectiles ────────────────────────────────────────
 export function fireRocket(effSpeed, effSplash, spread = 0) {
@@ -169,10 +170,15 @@ export function hitscan(meshToEnemy, spread = 0, dmg = 20, range = 90, falloff =
   }
   const ray  = new BABYLON.Ray(camera.position, _rcDir, range);
   const barrelHit = scene.pickWithRay(ray, m => m.isEnabled() && isBarrelMesh(m));
-  const hits = scene.multiPickWithRay(ray, m => meshToEnemy.has(m));
+  const wallHit = scene.pickWithRay(ray, blocksBullet);
+  const hits = scene.multiPickWithRay(ray, m => meshToEnemy.has(m)) || [];
   hits.sort((a,b) => a.distance - b.distance);
-
-  const endDist = (hits.length > 0) ? hits[0].distance : (barrelHit?.hit ? barrelHit.distance : range);
+  const nearest=closestBulletHit([
+    {kind:'barrel',hit:barrelHit},
+    {kind:wallHit?.pickedMesh?.metadata?.destructible?'destructible':'wall',hit:wallHit},
+    {kind:'enemy',hit:hits.length?{...hits[0],hit:true}:null},
+  ]);
+  const endDist=nearest?.hit.distance ?? range;
   const endPos = camera.position.clone().add(_rcDir.scale(endDist));
   
   //Use CreateTube instead of CreateLines for visible thickness
@@ -205,21 +211,19 @@ export function hitscan(meshToEnemy, spread = 0, dmg = 20, range = 90, falloff =
   };
   scene.onBeforeRenderObservable.add(onBeforeRender);
 
-  if (barrelHit?.hit) {
-    const enemyDist = hits.length > 0 ? hits[0].distance : Infinity;
-    if (barrelHit.distance <= enemyDist) {
-      const boomPos = detonateBarrelByMesh(barrelHit.pickedMesh);
-      if (boomPos) {
-        boom(boomPos, 3.6, 78, true);
-        spawnSparks(boomPos, 0xffaa44, 9);
-        return { hit: true, barrel: true };
-      }
+  if(nearest?.kind==='barrel'){
+    const boomPos=detonateBarrelByMesh(nearest.hit.pickedMesh);
+    if(boomPos){
+      boom(boomPos,3.6,78,true);
+      spawnSparks(boomPos,0xffaa44,9);
+      return {hit:true,barrel:true};
     }
+    return {hit:false,blocked:true};
   }
 
-  // destructible wall check — hitscan deals dmg, destroys at hp<=0
-  const dWallHit = scene.pickWithRay(ray, m => m.metadata?.destructible && m.isEnabled());
-  if (dWallHit?.hit) {
+  // Destructible walls take damage only when they're the first obstruction.
+  if(nearest?.kind==='destructible'){
+      const dWallHit=nearest.hit;
       const wall = dWallHit.pickedMesh;
       // Apply damage
       wall.metadata.hp -= dmg;
@@ -248,7 +252,11 @@ export function hitscan(meshToEnemy, spread = 0, dmg = 20, range = 90, falloff =
       return { hit: true, destructible: true };
   }
 
-  if (hits.length > 0) {
+  if(nearest?.kind==='wall'){
+    spawnSparks(nearest.hit.pickedPoint ?? endPos,missSparkColor,3);
+    return {hit:false,blocked:true};
+  }
+  if (nearest?.kind==='enemy') {
     spawnSparks(hits[0].pickedPoint, hitSparkColor, 5);
     const pickedMesh = hits[0].pickedMesh;
     const e = meshToEnemy.get(pickedMesh);
@@ -346,7 +354,8 @@ export function updateProjs(dt) {
 
       // Raycast in velocity direction for collisions
       const gRay = new BABYLON.Ray(p.mesh.position, moveDir, speed * dt + 0.3);
-      const gHit = scene.pickWithRay(gRay, m => m.checkCollisions && m.isEnabled());
+      const gHit = scene.pickWithRay(gRay, m => blocksBullet(m) ||
+        (m.isEnabled() && m.metadata?.enemy));
 
       if (gHit?.hit) {
         if (gHit.pickedMesh.metadata?.enemy || gHit.pickedMesh.name === '_playerBody') {
