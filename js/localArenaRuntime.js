@@ -86,6 +86,12 @@ export function updateLocalArena(dt){
  if(active.state.complete){finish();return}
  active.spawnCooldown-=dt;
  if(active.spawnCooldown<=0){
+  // Survival normally resets its roster each wave. Arena matches run
+  // continuously, so prune disposed dead robots instead of accumulating
+  // thousands of stale entries throughout a long timed match.
+  for(let i=enemies.length-1;i>=0;i--){
+   if(!enemies[i].alive)enemies.splice(i,1);
+  }
   const living=enemies.filter(e=>e.alive&&e.type!=='giantbot').length;
   const missing=active.spawnCount-living;
   for(let i=0;i<Math.min(2,Math.max(0,missing));i++){
