@@ -281,63 +281,7 @@ function _buildingLight(cx, cz, topSurfY, roofType, label) {
   }
 }
 
-// -- Rooftop lift: a flat car riding straight up a shaft, ground -> roof --
-// Bolted to one wall face, standing LIFT_STAND off the wall. Uses the exact
-// same moving-platform mechanism as the ziplines (movingPlatforms + main.js
-// already carries the player along anything in that array) — the car just
-// moves on Y instead of across a horizontal span. Static landings at both
-// ends mean there's always solid ground to wait on even when the car itself
-// is parked at the other end. faceOffset shifts the shaft along the wall —
-// only needed for hub building E, whose every face already carries a
-// bridge deck.
-function _lift(cx, cz, topSurfY, face, faceOffset=0) {
-  const HALF = 10; // matches every building's 20x20 footprint (BW=BD=20 in _building)
-  const alongX = (face==='N' || face==='S');
-  const wall    = alongX ? (cz + (face==='N'?-HALF:HALF)) : (cx + (face==='E'?HALF:-HALF));
-  const outSign = (face==='N' || face==='W') ? -1 : 1; // points away from the building
-  const anchor  = (alongX ? cx : cz) + faceOffset;
-  const out     = wall + outSign*LIFT_STAND;
-  const shaftX  = alongX ? anchor : out;
-  const shaftZ  = alongX ? out    : anchor;
-  const half    = LIFT_W/2;
-
-  // Static landing floor at the bottom is now part of assets/maps/city.json
-  // (a plain LIFT_W×LIFT_W slab, same as any other editable floor patch) —
-  // everything below this point is the actual moving mechanism, which has
-  // no equivalent in the JSON system (it carries _moveData/collision state
-  // a flat prop can't represent).
-
-  // Corner support poles, ground to roof — purely cosmetic shaft framing.
-  const poleH = topSurfY + 1.2;
-  [[-half,-half],[half,-half],[-half,half],[half,half]].forEach(([dx,dz])=>{
-    const pole = BABYLON.MeshBuilder.CreateCylinder('liftPole',{diameter:0.16,height:poleH},scene);
-    pole.position.set(shaftX+dx, poleH/2, shaftZ+dz);
-    pole.material=_STEEL; pole.isPickable=false;
-  });
-
-  // The moving car itself — carries _moveData, stays non-editable.
-  const H = 0.3;
-  const plat = BABYLON.MeshBuilder.CreateBox('liftPlat',{width:LIFT_W,height:H,depth:LIFT_W},scene);
-  plat.position.set(shaftX, -H/2, shaftZ);
-  plat.material=_STEEL; plat.checkCollisions=true; plat.isPickable=false;
-  plat.metadata={editable:false,type:'lift'};
-  walkableMeshes.push(plat);
-
-  // Low rim rail, parented so it rides with the car automatically.
-  [-1,1].forEach(s=>{
-    const rail = BABYLON.MeshBuilder.CreateBox('liftRail',
-      {width: alongX?LIFT_W:0.15, height:1.0, depth: alongX?0.15:LIFT_W}, scene);
-    rail.position.set(alongX?0:s*half, 0.5+H/2, alongX?s*half:0);
-    rail.material=_STEEL; rail.isPickable=false; rail.parent=plat;
-  });
-
-  plat._moveData = {
-    start: new BABYLON.Vector3(shaftX, -H/2, shaftZ),
-    end:   new BABYLON.Vector3(shaftX, topSurfY-H/2, shaftZ),
-    speed: LIFT_SPEED/topSurfY, t:0, dir:1, waitTimer:0, waitTime:LIFT_WAIT, paused:false,
-  };
-  movingPlatforms.push(plat);
-}
+// Rooftop lifts are serialized createRooftopLift entities in city.json.
 
 // Sky bridge between two rooftops. y1/y2 are each building's own topSurfY —
 // when they match the deck is flat (old behaviour); when they differ this
@@ -525,73 +469,73 @@ export async function buildCityLevel(customScene = null) {
 
   // RING 1 BUILDINGS
   _buildingLight(-36,-36,F5_Y,'open','A');
-  _lift(-36,-36,F5_Y,'W');
+
   _jp(-36,F5_Y,-36,24,Math.PI*5/4);
 
   _buildingLight(36,-36,F4_Y,'garden','B');
-  _lift(36,-36,F4_Y,'E');
+
   _jp(36,F4_Y,-36,22,Math.PI+Math.PI/4);
 
   _buildingLight(36,36,F4_Y,'open','C');
-  _lift(36,36,F4_Y,'E');
+
   _jp(36,F4_Y,36,22,-Math.PI/4);
 
   _buildingLight(-36,36,F3_Y,'garden','D');
-  _lift(-36,36,F3_Y,'W');
+
   _jp(-36,F3_Y,36,22,Math.PI/4);
 
   _buildingLight(0,0,F2_Y,'open','E');
-  _lift(0,0,F2_Y,'S',4.5);
+
   _jp(0,F2_Y,0,22,0);
 
   // RING 2 - wall-adjacent towers
   _buildingLight(-60,0,F3_Y,'open','F');
-  _lift(-60,0,F3_Y,'N');
+
   _jp(-60,F3_Y,0,20,Math.PI/2);
 
   _buildingLight(60,0,F3_Y,'garden','G');
-  _lift(60,0,F3_Y,'N');
+
   _jp(60,F3_Y,0,20,-Math.PI/2);
 
   _buildingLight(0,-60,F4_Y,'open','H');
-  _lift(0,-60,F4_Y,'E');
+
   _jp(0,F4_Y,-60,22,Math.PI);
 
   _buildingLight(0,60,F3_Y,'garden','I');
-  _lift(0,60,F3_Y,'E');
+
   _jp(0,F3_Y,60,20,0);
 
   // RING 3 - expanded outer buildings
   _buildingLight(-80,-80,F5_Y,'open','J');
-  _lift(-80,-80,F5_Y,'N');
+
   _jp(-80,F5_Y,-80,24,Math.PI*5/4);
 
   _buildingLight(80,-80,F4_Y,'garden','K');
-  _lift(80,-80,F4_Y,'N');
+
   _jp(80,F4_Y,-80,22,Math.PI+Math.PI/4);
 
   _buildingLight(80,80,F3_Y,'open','L');
-  _lift(80,80,F3_Y,'S');
+
   _jp(80,F3_Y,80,20,-Math.PI/4);
 
   _buildingLight(-80,80,F4_Y,'garden','M');
-  _lift(-80,80,F4_Y,'S');
+
   _jp(-80,F4_Y,80,22,Math.PI/4);
 
   _buildingLight(-80,0,F3_Y,'open','N');
-  _lift(-80,0,F3_Y,'W');
+
   _jp(-80,F3_Y,0,20,Math.PI/2);
 
   _buildingLight(80,0,F3_Y,'garden','O');
-  _lift(80,0,F3_Y,'E');
+
   _jp(80,F3_Y,0,20,-Math.PI/2);
 
   _buildingLight(0,-80,F4_Y,'open','P');
-  _lift(0,-80,F4_Y,'N');
+
   _jp(0,F4_Y,-80,22,Math.PI);
 
   _buildingLight(0,80,F3_Y,'garden','Q');
-  _lift(0,80,F3_Y,'S');
+
   _jp(0,F3_Y,80,20,0);
 
   // BRIDGES — every span now runs rooftop-to-rooftop (no more mid-floor
