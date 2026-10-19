@@ -27516,6 +27516,1920 @@
         "y": 1,
         "z": 1
       }
+    },
+    {
+      "id": "city-car-01",
+      "generator": "createCarWreck",
+      "params": {
+        "cx": -14,
+        "cz": -8,
+        "rotY": 0.2
+      },
+      "position": {
+        "x": -14,
+        "y": 0.5,
+        "z": -8
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0.2,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "city-car-02",
+      "generator": "createCarWreck",
+      "params": {
+        "cx": 14,
+        "cz": -8,
+        "rotY": -0.1
+      },
+      "position": {
+        "x": 14,
+        "y": 0.5,
+        "z": -8
+      },
+      "rotation": {
+        "x": 0,
+        "y": -0.1,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "city-car-03",
+      "generator": "createCarWreck",
+      "params": {
+        "cx": -14,
+        "cz": 8,
+        "rotY": 3.291592653589793
+      },
+      "position": {
+        "x": -14,
+        "y": 0.5,
+        "z": 8
+      },
+      "rotation": {
+        "x": 0,
+        "y": 3.291592653589793,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "city-car-04",
+      "generator": "createCarWreck",
+      "params": {
+        "cx": 14,
+        "cz": 8,
+        "rotY": 2.941592653589793
+      },
+      "position": {
+        "x": 14,
+        "y": 0.5,
+        "z": 8
+      },
+      "rotation": {
+        "x": 0,
+        "y": 2.941592653589793,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "city-car-05",
+      "generator": "createCarWreck",
+      "params": {
+        "cx": 0,
+        "cz": -22,
+        "rotY": 1.5707963267948966
+      },
+      "position": {
+        "x": 0,
+        "y": 0.5,
+        "z": -22
+      },
+      "rotation": {
+        "x": 0,
+        "y": 1.5707963267948966,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "city-car-06",
+      "generator": "createCarWreck",
+      "params": {
+        "cx": 0,
+        "cz": 22,
+        "rotY": -1.4707963267948965
+      },
+      "position": {
+        "x": 0,
+        "y": 0.5,
+        "z": 22
+      },
+      "rotation": {
+        "x": 0,
+        "y": -1.4707963267948965,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "city-car-07",
+      "generator": "createCarWreck",
+      "params": {
+        "cx": -22,
+        "cz": 0,
+        "rotY": 0.05
+      },
+      "position": {
+        "x": -22,
+        "y": 0.5,
+        "z": 0
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0.05,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "city-car-08",
+      "generator": "createCarWreck",
+      "params": {
+        "cx": 22,
+        "cz": 0,
+        "rotY": 0.5235987755982988
+      },
+      "position": {
+        "x": 22,
+        "y": 0.5,
+        "z": 0
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0.5235987755982988,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "city-car-09",
+      "generator": "createCarWreck",
+      "params": {
+        "cx": -6,
+        "cz": -16,
+        "rotY": 0.7853981633974483
+      },
+      "position": {
+        "x": -6,
+        "y": 0.5,
+        "z": -16
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0.7853981633974483,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "city-car-10",
+      "generator": "createCarWreck",
+      "params": {
+        "cx": 6,
+        "cz": 16,
+        "rotY": -1.0471975511965976
+      },
+      "position": {
+        "x": 6,
+        "y": 0.5,
+        "z": 16
+      },
+      "rotation": {
+        "x": 0,
+        "y": -1.0471975511965976,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "city-car-11",
+      "generator": "createCarWreck",
+      "params": {
+        "cx": -48,
+        "cz": 8,
+        "rotY": 0.3
+      },
+      "position": {
+        "x": -48,
+        "y": 0.5,
+        "z": 8
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0.3,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "city-car-12",
+      "generator": "createCarWreck",
+      "params": {
+        "cx": 48,
+        "cz": -8,
+        "rotY": -0.25
+      },
+      "position": {
+        "x": 48,
+        "y": 0.5,
+        "z": -8
+      },
+      "rotation": {
+        "x": 0,
+        "y": -0.25,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "city-car-13",
+      "generator": "createCarWreck",
+      "params": {
+        "cx": -22,
+        "cz": -50,
+        "rotY": 1.6707963267948966
+      },
+      "position": {
+        "x": -22,
+        "y": 0.5,
+        "z": -50
+      },
+      "rotation": {
+        "x": 0,
+        "y": 1.6707963267948966,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "city-car-14",
+      "generator": "createCarWreck",
+      "params": {
+        "cx": 22,
+        "cz": 50,
+        "rotY": -1.6707963267948966
+      },
+      "position": {
+        "x": 22,
+        "y": 0.5,
+        "z": 50
+      },
+      "rotation": {
+        "x": 0,
+        "y": -1.6707963267948966,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "city-car-15",
+      "generator": "createCarWreck",
+      "params": {
+        "cx": -50,
+        "cz": 22,
+        "rotY": 0.4
+      },
+      "position": {
+        "x": -50,
+        "y": 0.5,
+        "z": 22
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0.4,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "city-car-16",
+      "generator": "createCarWreck",
+      "params": {
+        "cx": 50,
+        "cz": -22,
+        "rotY": -0.35
+      },
+      "position": {
+        "x": 50,
+        "y": 0.5,
+        "z": -22
+      },
+      "rotation": {
+        "x": 0,
+        "y": -0.35,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "city-car-17",
+      "generator": "createCarWreck",
+      "params": {
+        "cx": 0,
+        "cz": -42,
+        "rotY": 0.1
+      },
+      "position": {
+        "x": 0,
+        "y": 0.5,
+        "z": -42
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0.1,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "city-car-18",
+      "generator": "createCarWreck",
+      "params": {
+        "cx": 0,
+        "cz": 42,
+        "rotY": -0.1
+      },
+      "position": {
+        "x": 0,
+        "y": 0.5,
+        "z": 42
+      },
+      "rotation": {
+        "x": 0,
+        "y": -0.1,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "city-car-19",
+      "generator": "createCarWreck",
+      "params": {
+        "cx": -42,
+        "cz": 0,
+        "rotY": 1.7707963267948965
+      },
+      "position": {
+        "x": -42,
+        "y": 0.5,
+        "z": 0
+      },
+      "rotation": {
+        "x": 0,
+        "y": 1.7707963267948965,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "city-car-20",
+      "generator": "createCarWreck",
+      "params": {
+        "cx": 42,
+        "cz": 0,
+        "rotY": -1.7707963267948965
+      },
+      "position": {
+        "x": 42,
+        "y": 0.5,
+        "z": 0
+      },
+      "rotation": {
+        "x": 0,
+        "y": -1.7707963267948965,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "city-car-21",
+      "generator": "createCarWreck",
+      "params": {
+        "cx": -68,
+        "cz": -20,
+        "rotY": 0.25
+      },
+      "position": {
+        "x": -68,
+        "y": 0.5,
+        "z": -20
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0.25,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "city-car-22",
+      "generator": "createCarWreck",
+      "params": {
+        "cx": 68,
+        "cz": 20,
+        "rotY": -0.25
+      },
+      "position": {
+        "x": 68,
+        "y": 0.5,
+        "z": 20
+      },
+      "rotation": {
+        "x": 0,
+        "y": -0.25,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "city-car-23",
+      "generator": "createCarWreck",
+      "params": {
+        "cx": -68,
+        "cz": 20,
+        "rotY": 3.241592653589793
+      },
+      "position": {
+        "x": -68,
+        "y": 0.5,
+        "z": 20
+      },
+      "rotation": {
+        "x": 0,
+        "y": 3.241592653589793,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "city-car-24",
+      "generator": "createCarWreck",
+      "params": {
+        "cx": 68,
+        "cz": -20,
+        "rotY": 3.041592653589793
+      },
+      "position": {
+        "x": 68,
+        "y": 0.5,
+        "z": -20
+      },
+      "rotation": {
+        "x": 0,
+        "y": 3.041592653589793,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "city-car-25",
+      "generator": "createCarWreck",
+      "params": {
+        "cx": -20,
+        "cz": -68,
+        "rotY": 1.7707963267948965
+      },
+      "position": {
+        "x": -20,
+        "y": 0.5,
+        "z": -68
+      },
+      "rotation": {
+        "x": 0,
+        "y": 1.7707963267948965,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "city-car-26",
+      "generator": "createCarWreck",
+      "params": {
+        "cx": 20,
+        "cz": 68,
+        "rotY": -1.7707963267948965
+      },
+      "position": {
+        "x": 20,
+        "y": 0.5,
+        "z": 68
+      },
+      "rotation": {
+        "x": 0,
+        "y": -1.7707963267948965,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "city-car-27",
+      "generator": "createCarWreck",
+      "params": {
+        "cx": -20,
+        "cz": 68,
+        "rotY": 1.0471975511965976
+      },
+      "position": {
+        "x": -20,
+        "y": 0.5,
+        "z": 68
+      },
+      "rotation": {
+        "x": 0,
+        "y": 1.0471975511965976,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "city-car-28",
+      "generator": "createCarWreck",
+      "params": {
+        "cx": 20,
+        "cz": -68,
+        "rotY": -1.0471975511965976
+      },
+      "position": {
+        "x": 20,
+        "y": 0.5,
+        "z": -68
+      },
+      "rotation": {
+        "x": 0,
+        "y": -1.0471975511965976,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "city-car-29",
+      "generator": "createCarWreck",
+      "params": {
+        "cx": -90,
+        "cz": 0,
+        "rotY": 1.5707963267948966
+      },
+      "position": {
+        "x": -90,
+        "y": 0.5,
+        "z": 0
+      },
+      "rotation": {
+        "x": 0,
+        "y": 1.5707963267948966,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "city-car-30",
+      "generator": "createCarWreck",
+      "params": {
+        "cx": 90,
+        "cz": 0,
+        "rotY": -1.5707963267948966
+      },
+      "position": {
+        "x": 90,
+        "y": 0.5,
+        "z": 0
+      },
+      "rotation": {
+        "x": 0,
+        "y": -1.5707963267948966,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "city-car-31",
+      "generator": "createCarWreck",
+      "params": {
+        "cx": 0,
+        "cz": -90,
+        "rotY": 0.05
+      },
+      "position": {
+        "x": 0,
+        "y": 0.5,
+        "z": -90
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0.05,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "city-car-32",
+      "generator": "createCarWreck",
+      "params": {
+        "cx": 0,
+        "cz": 90,
+        "rotY": -0.05
+      },
+      "position": {
+        "x": 0,
+        "y": 0.5,
+        "z": 90
+      },
+      "rotation": {
+        "x": 0,
+        "y": -0.05,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "city-car-33",
+      "generator": "createCarWreck",
+      "params": {
+        "cx": -68,
+        "cz": -68,
+        "rotY": 0.7853981633974483
+      },
+      "position": {
+        "x": -68,
+        "y": 0.5,
+        "z": -68
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0.7853981633974483,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "city-car-34",
+      "generator": "createCarWreck",
+      "params": {
+        "cx": 68,
+        "cz": 68,
+        "rotY": -0.7853981633974483
+      },
+      "position": {
+        "x": 68,
+        "y": 0.5,
+        "z": 68
+      },
+      "rotation": {
+        "x": 0,
+        "y": -0.7853981633974483,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "city-car-35",
+      "generator": "createCarWreck",
+      "params": {
+        "cx": 68,
+        "cz": -68,
+        "rotY": 2.356194490192345
+      },
+      "position": {
+        "x": 68,
+        "y": 0.5,
+        "z": -68
+      },
+      "rotation": {
+        "x": 0,
+        "y": 2.356194490192345,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "city-car-36",
+      "generator": "createCarWreck",
+      "params": {
+        "cx": -68,
+        "cz": 68,
+        "rotY": 3.9269908169872414
+      },
+      "position": {
+        "x": -68,
+        "y": 0.5,
+        "z": 68
+      },
+      "rotation": {
+        "x": 0,
+        "y": 3.9269908169872414,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "city-car-37",
+      "generator": "createCarWreck",
+      "params": {
+        "cx": -85,
+        "cz": -30,
+        "rotY": 0.3
+      },
+      "position": {
+        "x": -85,
+        "y": 0.5,
+        "z": -30
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0.3,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "city-car-38",
+      "generator": "createCarWreck",
+      "params": {
+        "cx": 85,
+        "cz": 30,
+        "rotY": -0.3
+      },
+      "position": {
+        "x": 85,
+        "y": 0.5,
+        "z": 30
+      },
+      "rotation": {
+        "x": 0,
+        "y": -0.3,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "city-car-39",
+      "generator": "createCarWreck",
+      "params": {
+        "cx": -30,
+        "cz": -85,
+        "rotY": 1.7207963267948965
+      },
+      "position": {
+        "x": -30,
+        "y": 0.5,
+        "z": -85
+      },
+      "rotation": {
+        "x": 0,
+        "y": 1.7207963267948965,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "city-car-40",
+      "generator": "createCarWreck",
+      "params": {
+        "cx": 30,
+        "cz": 85,
+        "rotY": -1.7207963267948965
+      },
+      "position": {
+        "x": 30,
+        "y": 0.5,
+        "z": 85
+      },
+      "rotation": {
+        "x": 0,
+        "y": -1.7207963267948965,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "city-car-41",
+      "generator": "createCarWreck",
+      "params": {
+        "cx": -85,
+        "cz": 30,
+        "rotY": 2.941592653589793
+      },
+      "position": {
+        "x": -85,
+        "y": 0.5,
+        "z": 30
+      },
+      "rotation": {
+        "x": 0,
+        "y": 2.941592653589793,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "city-car-42",
+      "generator": "createCarWreck",
+      "params": {
+        "cx": 85,
+        "cz": -30,
+        "rotY": 0.2
+      },
+      "position": {
+        "x": 85,
+        "y": 0.5,
+        "z": -30
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0.2,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "city-car-43",
+      "generator": "createCarWreck",
+      "params": {
+        "cx": 30,
+        "cz": -85,
+        "rotY": 1.4707963267948965
+      },
+      "position": {
+        "x": 30,
+        "y": 0.5,
+        "z": -85
+      },
+      "rotation": {
+        "x": 0,
+        "y": 1.4707963267948965,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "city-car-44",
+      "generator": "createCarWreck",
+      "params": {
+        "cx": -30,
+        "cz": 85,
+        "rotY": -1.4707963267948965
+      },
+      "position": {
+        "x": -30,
+        "y": 0.5,
+        "z": 85
+      },
+      "rotation": {
+        "x": 0,
+        "y": -1.4707963267948965,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "city-pad-01",
+      "generator": "createJumpPad",
+      "params": {
+        "px": -36,
+        "floorY": 20,
+        "pz": -36,
+        "force": 36,
+        "rotY": 3.9269908169872414
+      },
+      "position": {
+        "x": -36,
+        "y": 20.22,
+        "z": -36
+      },
+      "rotation": {
+        "x": 0,
+        "y": 3.9269908169872414,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "city-pad-02",
+      "generator": "createJumpPad",
+      "params": {
+        "px": 36,
+        "floorY": 16,
+        "pz": -36,
+        "force": 33,
+        "rotY": 3.9269908169872414
+      },
+      "position": {
+        "x": 36,
+        "y": 16.22,
+        "z": -36
+      },
+      "rotation": {
+        "x": 0,
+        "y": 3.9269908169872414,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "city-pad-03",
+      "generator": "createJumpPad",
+      "params": {
+        "px": 36,
+        "floorY": 16,
+        "pz": 36,
+        "force": 33,
+        "rotY": -0.7853981633974483
+      },
+      "position": {
+        "x": 36,
+        "y": 16.22,
+        "z": 36
+      },
+      "rotation": {
+        "x": 0,
+        "y": -0.7853981633974483,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "city-pad-04",
+      "generator": "createJumpPad",
+      "params": {
+        "px": -36,
+        "floorY": 12,
+        "pz": 36,
+        "force": 33,
+        "rotY": 0.7853981633974483
+      },
+      "position": {
+        "x": -36,
+        "y": 12.22,
+        "z": 36
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0.7853981633974483,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "city-pad-05",
+      "generator": "createJumpPad",
+      "params": {
+        "px": 0,
+        "floorY": 8,
+        "pz": 0,
+        "force": 33,
+        "rotY": 0
+      },
+      "position": {
+        "x": 0,
+        "y": 8.22,
+        "z": 0
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "city-pad-06",
+      "generator": "createJumpPad",
+      "params": {
+        "px": -60,
+        "floorY": 12,
+        "pz": 0,
+        "force": 30,
+        "rotY": 1.5707963267948966
+      },
+      "position": {
+        "x": -60,
+        "y": 12.22,
+        "z": 0
+      },
+      "rotation": {
+        "x": 0,
+        "y": 1.5707963267948966,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "city-pad-07",
+      "generator": "createJumpPad",
+      "params": {
+        "px": 60,
+        "floorY": 12,
+        "pz": 0,
+        "force": 30,
+        "rotY": -1.5707963267948966
+      },
+      "position": {
+        "x": 60,
+        "y": 12.22,
+        "z": 0
+      },
+      "rotation": {
+        "x": 0,
+        "y": -1.5707963267948966,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "city-pad-08",
+      "generator": "createJumpPad",
+      "params": {
+        "px": 0,
+        "floorY": 16,
+        "pz": -60,
+        "force": 33,
+        "rotY": 3.141592653589793
+      },
+      "position": {
+        "x": 0,
+        "y": 16.22,
+        "z": -60
+      },
+      "rotation": {
+        "x": 0,
+        "y": 3.141592653589793,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "city-pad-09",
+      "generator": "createJumpPad",
+      "params": {
+        "px": 0,
+        "floorY": 12,
+        "pz": 60,
+        "force": 30,
+        "rotY": 0
+      },
+      "position": {
+        "x": 0,
+        "y": 12.22,
+        "z": 60
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "city-pad-10",
+      "generator": "createJumpPad",
+      "params": {
+        "px": -80,
+        "floorY": 20,
+        "pz": -80,
+        "force": 36,
+        "rotY": 3.9269908169872414
+      },
+      "position": {
+        "x": -80,
+        "y": 20.22,
+        "z": -80
+      },
+      "rotation": {
+        "x": 0,
+        "y": 3.9269908169872414,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "city-pad-11",
+      "generator": "createJumpPad",
+      "params": {
+        "px": 80,
+        "floorY": 16,
+        "pz": -80,
+        "force": 33,
+        "rotY": 3.9269908169872414
+      },
+      "position": {
+        "x": 80,
+        "y": 16.22,
+        "z": -80
+      },
+      "rotation": {
+        "x": 0,
+        "y": 3.9269908169872414,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "city-pad-12",
+      "generator": "createJumpPad",
+      "params": {
+        "px": 80,
+        "floorY": 12,
+        "pz": 80,
+        "force": 30,
+        "rotY": -0.7853981633974483
+      },
+      "position": {
+        "x": 80,
+        "y": 12.22,
+        "z": 80
+      },
+      "rotation": {
+        "x": 0,
+        "y": -0.7853981633974483,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "city-pad-13",
+      "generator": "createJumpPad",
+      "params": {
+        "px": -80,
+        "floorY": 16,
+        "pz": 80,
+        "force": 33,
+        "rotY": 0.7853981633974483
+      },
+      "position": {
+        "x": -80,
+        "y": 16.22,
+        "z": 80
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0.7853981633974483,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "city-pad-14",
+      "generator": "createJumpPad",
+      "params": {
+        "px": -80,
+        "floorY": 12,
+        "pz": 0,
+        "force": 30,
+        "rotY": 1.5707963267948966
+      },
+      "position": {
+        "x": -80,
+        "y": 12.22,
+        "z": 0
+      },
+      "rotation": {
+        "x": 0,
+        "y": 1.5707963267948966,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "city-pad-15",
+      "generator": "createJumpPad",
+      "params": {
+        "px": 80,
+        "floorY": 12,
+        "pz": 0,
+        "force": 30,
+        "rotY": -1.5707963267948966
+      },
+      "position": {
+        "x": 80,
+        "y": 12.22,
+        "z": 0
+      },
+      "rotation": {
+        "x": 0,
+        "y": -1.5707963267948966,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "city-pad-16",
+      "generator": "createJumpPad",
+      "params": {
+        "px": 0,
+        "floorY": 16,
+        "pz": -80,
+        "force": 33,
+        "rotY": 3.141592653589793
+      },
+      "position": {
+        "x": 0,
+        "y": 16.22,
+        "z": -80
+      },
+      "rotation": {
+        "x": 0,
+        "y": 3.141592653589793,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "city-pad-17",
+      "generator": "createJumpPad",
+      "params": {
+        "px": 0,
+        "floorY": 12,
+        "pz": 80,
+        "force": 30,
+        "rotY": 0
+      },
+      "position": {
+        "x": 0,
+        "y": 12.22,
+        "z": 80
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "city-pad-18",
+      "generator": "createJumpPad",
+      "params": {
+        "px": -74,
+        "floorY": 12,
+        "pz": -40,
+        "force": 27,
+        "rotY": 1.5707963267948966
+      },
+      "position": {
+        "x": -74,
+        "y": 12.22,
+        "z": -40
+      },
+      "rotation": {
+        "x": 0,
+        "y": 1.5707963267948966,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "city-pad-19",
+      "generator": "createJumpPad",
+      "params": {
+        "px": -40,
+        "floorY": 12,
+        "pz": -74,
+        "force": 27,
+        "rotY": 3.141592653589793
+      },
+      "position": {
+        "x": -40,
+        "y": 12.22,
+        "z": -74
+      },
+      "rotation": {
+        "x": 0,
+        "y": 3.141592653589793,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "city-pad-20",
+      "generator": "createJumpPad",
+      "params": {
+        "px": 40,
+        "floorY": 12,
+        "pz": -74,
+        "force": 27,
+        "rotY": 3.141592653589793
+      },
+      "position": {
+        "x": 40,
+        "y": 12.22,
+        "z": -74
+      },
+      "rotation": {
+        "x": 0,
+        "y": 3.141592653589793,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "city-pad-21",
+      "generator": "createJumpPad",
+      "params": {
+        "px": 74,
+        "floorY": 12,
+        "pz": -40,
+        "force": 27,
+        "rotY": -1.5707963267948966
+      },
+      "position": {
+        "x": 74,
+        "y": 12.22,
+        "z": -40
+      },
+      "rotation": {
+        "x": 0,
+        "y": -1.5707963267948966,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "city-pad-22",
+      "generator": "createJumpPad",
+      "params": {
+        "px": 74,
+        "floorY": 12,
+        "pz": 40,
+        "force": 27,
+        "rotY": -1.5707963267948966
+      },
+      "position": {
+        "x": 74,
+        "y": 12.22,
+        "z": 40
+      },
+      "rotation": {
+        "x": 0,
+        "y": -1.5707963267948966,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "city-pad-23",
+      "generator": "createJumpPad",
+      "params": {
+        "px": 40,
+        "floorY": 12,
+        "pz": 74,
+        "force": 27,
+        "rotY": 0
+      },
+      "position": {
+        "x": 40,
+        "y": 12.22,
+        "z": 74
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "city-pad-24",
+      "generator": "createJumpPad",
+      "params": {
+        "px": -40,
+        "floorY": 12,
+        "pz": 74,
+        "force": 27,
+        "rotY": 0
+      },
+      "position": {
+        "x": -40,
+        "y": 12.22,
+        "z": 74
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "city-pad-25",
+      "generator": "createJumpPad",
+      "params": {
+        "px": -74,
+        "floorY": 12,
+        "pz": 40,
+        "force": 27,
+        "rotY": 1.5707963267948966
+      },
+      "position": {
+        "x": -74,
+        "y": 12.22,
+        "z": 40
+      },
+      "rotation": {
+        "x": 0,
+        "y": 1.5707963267948966,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "city-pad-26",
+      "generator": "createJumpPad",
+      "params": {
+        "px": -15,
+        "floorY": 12,
+        "pz": -45,
+        "force": 27,
+        "rotY": -2.356194490192345
+      },
+      "position": {
+        "x": -15,
+        "y": 12.22,
+        "z": -45
+      },
+      "rotation": {
+        "x": 0,
+        "y": -2.356194490192345,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "city-pad-27",
+      "generator": "createJumpPad",
+      "params": {
+        "px": 18,
+        "floorY": 12,
+        "pz": -48,
+        "force": 27,
+        "rotY": -3.9269908169872414
+      },
+      "position": {
+        "x": 18,
+        "y": 12.22,
+        "z": -48
+      },
+      "rotation": {
+        "x": 0,
+        "y": -3.9269908169872414,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "city-pad-28",
+      "generator": "createJumpPad",
+      "params": {
+        "px": -18,
+        "floorY": 8,
+        "pz": 48,
+        "force": 27,
+        "rotY": 0.7853981633974483
+      },
+      "position": {
+        "x": -18,
+        "y": 8.22,
+        "z": 48
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0.7853981633974483,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "city-pad-29",
+      "generator": "createJumpPad",
+      "params": {
+        "px": 18,
+        "floorY": 8,
+        "pz": 48,
+        "force": 27,
+        "rotY": -0.7853981633974483
+      },
+      "position": {
+        "x": 18,
+        "y": 8.22,
+        "z": 48
+      },
+      "rotation": {
+        "x": 0,
+        "y": -0.7853981633974483,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "city-pad-30",
+      "generator": "createJumpPad",
+      "params": {
+        "px": -48,
+        "floorY": 8,
+        "pz": -18,
+        "force": 27,
+        "rotY": 0.25
+      },
+      "position": {
+        "x": -48,
+        "y": 8.22,
+        "z": -18
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0.25,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "city-pad-31",
+      "generator": "createJumpPad",
+      "params": {
+        "px": 48,
+        "floorY": 8,
+        "pz": -18,
+        "force": 27,
+        "rotY": 2.891592653589793
+      },
+      "position": {
+        "x": 48,
+        "y": 8.22,
+        "z": -18
+      },
+      "rotation": {
+        "x": 0,
+        "y": 2.891592653589793,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "city-pad-32",
+      "generator": "createJumpPad",
+      "params": {
+        "px": -48,
+        "floorY": 8,
+        "pz": 18,
+        "force": 27,
+        "rotY": 0.6283185307179586
+      },
+      "position": {
+        "x": -48,
+        "y": 8.22,
+        "z": 18
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0.6283185307179586,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "city-pad-33",
+      "generator": "createJumpPad",
+      "params": {
+        "px": 45,
+        "floorY": 8,
+        "pz": 15,
+        "force": 27,
+        "rotY": -0.6283185307179586
+      },
+      "position": {
+        "x": 45,
+        "y": 8.22,
+        "z": 15
+      },
+      "rotation": {
+        "x": 0,
+        "y": -0.6283185307179586,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
     }
   ],
   "markers": []
