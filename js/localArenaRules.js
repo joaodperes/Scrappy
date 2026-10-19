@@ -18,12 +18,12 @@ export function createLocalArena(config={}){
  return {
   mode,secondsLeft:seconds,goal,score:0,opposition:0,deaths:0,
   gunOrder:localGunOrder(seed),gunIndex:0,pendingTags:0,
-  complete:false,result:null,kills:0,
+  complete:false,result:null,kills:0,botScores:{},botGuns:{},
  };
 }
 function finish(s,reason){
  let result='DRAW';
- if(s.mode==='gunGame')result=reason==='knife'?'VICTORY':'TIME';
+ if(s.mode==='gunGame')result=reason==='knife'?'VICTORY':s.score>s.opposition?'VICTORY':s.score<s.opposition?'DEFEAT':'DRAW';
  else if(s.score>s.opposition)result='VICTORY';
  else if(s.opposition>s.score)result='DEFEAT';
  else if(reason==='goal')result='VICTORY';
@@ -50,9 +50,48 @@ export function localArenaTagExpired(s){
  if(s.complete||s.mode!=='killConfirmed'||s.pendingTags<=0)return s;
  return {...s,pendingTags:s.pendingTags-1};
 }
-export function localArenaDeath(s){
+// Each bot competes independently in FFA/Gun Game; TDM scores by team.
+// Confirmed tags (rather than raw kills) score Kill Confirmed.
+export function localArenaBotKill(s,{killerId,killerTeam='BLUE',victimTeam='RED',weapon}={}){
+ if(s.complete||!killerId||killerTeam===victimTeam&&s.mode==='tdm')return s;
+ const botScores={...s.botScores},botGuns={...s.botGuns};
+ let n={...s,botScores,botGuns};
+ if(s.mode==='killConfirmed')return n; // tags decide points
+ if(s.mode==='gunGame'){
+   const rung=botGuns[killerId]||0;
+   if(weapon!==s.gunOrder[rung])return s;
+   botScores[killerId]=(botScores[killerId]||0)+1;
+   if(rung===s.gunOrder.length-1){
+     n.opposition=Math.max(s.opposition,botScores[killerId]);
+     return {...n,complete:true,result:'DEFEAT'};
+   }
+   botGuns[killerId]=rung+1;
+   n.opposition=Math.max(s.opposition,botScores[killerId]);
+ }else if(s.mode==='tdm'){
+   n= killerTeam==='RED'?{...n,score:s.score+1}:
+     {...n,opposition:s.opposition+1};
+ }else {
+   botScores[killerId]=(botScores[killerId]||0)+1;
+   n.opposition=Math.max(s.opposition,botScores[killerId]);
+ }
+ return n.score>=n.goal||n.opposition>=n.goal?finish(n,'goal'):n;
+}
+export function localArenaBotTag(s,{collectorId,collectorTeam='BLUE',tagTeam='RED'}={}){
+ if(s.complete||s.mode!=='killConfirmed')return s;
+ // Picking up your OWN side's fallen tag denies it but earns no points.
+ if(collectorTeam===tagTeam)return s;
+ if(collectorTeam==='RED')return localArenaTag({...s,pendingTags:s.pendingTags+1});
+ const botScores={...s.botScores};
+ if(collectorId)botScores[collectorId]=(botScores[collectorId]||0)+1;
+ const n={...s,botScores,opposition:s.opposition+1};
+ return n.opposition>=n.goal?finish(n,'goal'):n;
+}
+export function localArenaDeath(s,{killerId=null,weapon=null,killerTeam='BLUE'}={}){
  if(s.complete)return s;
- const n={...s,deaths:s.deaths+1,opposition:s.opposition+1};
+ let n={...s,deaths:s.deaths+1};
+ if(s.mode==='killConfirmed')return n; // opponents must collect the player's tag
+ if(killerId)return localArenaBotKill(n,{killerId,killerTeam,victimTeam:'RED',weapon});
+ n={...n,opposition:n.opposition+1};
  return n.opposition>=n.goal?finish(n,'goal'):n;
 }
 export function tickLocalArena(s,dt){
