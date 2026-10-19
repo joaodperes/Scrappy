@@ -437,7 +437,7 @@ export function updateProjs(dt) {
     // ── STICKY FUEL: Check if flame hits the ground/wall ──
     if (p.isSticky) {
         const ray = new BABYLON.Ray(p.mesh.position, p.dir, p.speed * dt + 0.2);
-        const pick = scene.pickWithRay(ray, (m) => m.isPickable && !m.metadata?.enemy && m.name !== '_playerBody');
+        const pick = scene.pickWithRay(ray, m => blocksBullet(m) && m.name !== '_playerBody');
         if (pick && pick.hit) {
             const n = pick.getNormal(true);
             
@@ -577,7 +577,7 @@ export function updateProjs(dt) {
 
       // 3. WALL BOUNCING
       const wallRay = new BABYLON.Ray(p.mesh.position, p.dir, step.length() + 0.2);
-      const wHit = scene.pickWithRay(wallRay, m => m.checkCollisions && !m.metadata?.enemy && m.isEnabled());
+      const wHit = scene.pickWithRay(wallRay, blocksBullet);
       
       if (wHit?.hit) {
           if (p.bounces > 0) {
@@ -653,7 +653,7 @@ export function updateProjs(dt) {
     } else {
       // ── Check scene collision (walls/floors) for hitscan-style projectile ─
       const wallRay = new BABYLON.Ray(obj.position.subtract(step), step.normalize(), step.length() + 0.15);
-      const wHit = scene.pickWithRay(wallRay, m => m.checkCollisions && !m.metadata?.enemy && m.isEnabled());
+      const wHit = scene.pickWithRay(wallRay, blocksBullet);
       if (wHit.hit) {
         if (p.type === 'rocket') boom(obj.position.clone(), p.splash, p.dmg, false);
         else spawnSparks(obj.position.clone(), 0xffaa55, 4);
