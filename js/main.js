@@ -209,7 +209,9 @@ function startGame(startWave = 0, difficulty = 'normal', localMode = null) {
         const panel=document.getElementById('pvpEndScreen');
         if(panel)panel.className='screen visible';
         const res=document.getElementById('pvpEndResult');
-        if(res)res.textContent=state.result+' · '+state.mode.toUpperCase()+' PRACTICE';
+        const labels={gunGame:'GUN GAME',killConfirmed:'KILL CONFIRMED',
+          ffa:'FFA PRACTICE',tdm:'TDM PRACTICE'};
+        if(res)res.textContent=state.result+' · '+(labels[state.mode]||state.mode);
         const scores=document.getElementById('pvpEndScore');
         if(scores)scores.textContent='FRAGS '+state.kills+' · POINTS '+state.score+
           ' · BOT POINTS '+state.opposition+' · DEATHS '+state.deaths;
