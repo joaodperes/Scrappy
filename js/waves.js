@@ -3,6 +3,7 @@ import { spawnBot } from './enemies.js';
 import { sfx } from './audio.js';
 import { getCurrentMap, getWaveConfig } from './mapManager.js';
 import { getRunHardWaveRules, applyHardWaveCount, setActiveHardWave } from './hardModeRules.js';
+import { getEliteSpawnPlan } from './eliteRules.js';
 
 export let curWave = 0, waveOn = false, waveDly = 1.8;
 export function setCurWave(v)  { curWave  = v; }
@@ -90,10 +91,13 @@ export function launchWave(idx) {
   const scale = Math.max(0.40, 0.40 + idx * 0.10);
   const isBoss = _isBossWave(idx);
   const baseLabel = isBoss ? '⚠ BOSS WAVE ' + (idx + 1) + ' ⚠' : 'WAVE ' + (idx + 1);
-  const waveLabel=hardRules?baseLabel+' · '+hardRules.modifiers.map(m=>m.label).join(' + '):baseLabel;
   const comp = getWaveComposition(idx);
+  const elitePlan = hardRules ? getEliteSpawnPlan(map,idx+1,player.difficulty||'hard',comp) : [];
+  const eliteSlots = new Map(elitePlan.map(slot => [slot.groupIndex+':'+slot.unitIndex,slot.traits]));
+  const waveLabel=(hardRules?baseLabel+' · '+hardRules.modifiers.map(m=>m.label).join(' + '):baseLabel)+
+    (elitePlan.length?' · '+elitePlan.length+' ELITE'+(elitePlan.length>1?'S':''):'');
   let si = 0;
-  for (const grp of comp) {
+  for (const [groupIndex, grp] of comp.entries()) {
     if (grp.type === 'giantbot' && grp.count > 1) {
       for (let i = 0; i < grp.count; i++) {
         setTimeout(() => {
@@ -104,7 +108,8 @@ export function launchWave(idx) {
     } else {
       for (let i = 0; i < grp.count; i++) {
         const sp = spawns[si % spawns.length];
-        spawnBot(grp.type, sp[0]+(Math.random()-.5)*2, sp[1], sp[2]+(Math.random()-.5)*2, scale);
+        spawnBot(grp.type, sp[0]+(Math.random()-.5)*2, sp[1], sp[2]+(Math.random()-.5)*2,
+          scale, eliteSlots.get(groupIndex+':'+i)||null);
         si++;
       }
     }
