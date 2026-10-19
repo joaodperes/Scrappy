@@ -53,6 +53,18 @@ test('no server map or path adapter means no through-wall movement or fire',()=>
  assert.ok(nav.command.move.x>0);
  assert.equal(nav.command.fire,false);
 });
+test('failed navigation and line-of-sight services fail closed',()=>{
+ const x=brain();
+ const actorList=[actor('enemy',1,18,'RED')];
+ const result=botThink(x,{
+  mode:'tdm',actors:actorList,
+  lineOfSight:()=>{throw Error('navmesh not ready')},
+  nextWaypoint:()=>{throw Error('navmesh unavailable')},
+ },600);
+ assert.equal(result.command.fire,false);
+ assert.deepEqual(result.command.move,{x:0,z:0});
+ assert.equal(result.command.behavior,'seek');
+});
 test('personality preferred distance chooses approach, retreat and strafe',()=>{
  let x=brain();
  x={...x,yaw:0,nextDecisionAt:0,nextFireAt:1};
