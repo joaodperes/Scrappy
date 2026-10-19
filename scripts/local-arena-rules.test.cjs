@@ -30,6 +30,17 @@ test('Kill Confirmed demands tag pickup for points and disallows double pickup',
  assert.equal(state.score,1);assert.equal(state.complete,true);
  assert.equal(localArenaTag(state),state);
 });
+test('expired Kill Confirmed tags clear outstanding token counts',async()=>{
+ const {createLocalArena,localArenaKill,localArenaTagExpired,localArenaTag}=await lib;
+ let state=createLocalArena({mode:'killConfirmed',scoreLimit:2});
+ state=localArenaKill(state,{weapon:'SMG'});
+ assert.equal(state.pendingTags,1);
+ state=localArenaTagExpired(state);
+ assert.equal(state.pendingTags,0);
+ assert.equal(localArenaTagExpired(state),state);
+ assert.equal(localArenaTag(state),state);
+ assert.equal(state.score,0);
+});
 test('time and death resolve local match; invalid states and kill sources are safe',async()=>{
  const {createLocalArena,localArenaDeath,tickLocalArena,localArenaKill}=await lib;
  const state=createLocalArena({mode:'tdm',duration:60,scoreLimit:2});
