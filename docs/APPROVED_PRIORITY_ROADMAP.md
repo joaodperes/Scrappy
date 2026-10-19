@@ -1,9 +1,10 @@
 # Approved development order — October 18, 2026
 
 This replaces the previous ordering in FOUNDATIONS_AND_NEXT_STEPS.md.
-Stay on Draft PR #2 only for foundation work; later large systems may be
-reviewed independently when the branch stabilizes. **Do not merge unfinished
-systems because CI passes static checks.** Scrapyard is A+, City is A−.
+All development and testing now takes place on the single branch
+`fix/foundations-room-flow-20261018` (Draft PR #2). Do not split feature work
+into new development branches unless the owner changes this instruction.
+**Do not merge unfinished systems because CI passes static checks.** Scrapyard is A+, City is A−.
 Moon Base is a distinct low-gravity/jetpack game experience.
 
 | # | Milestone | Acceptance criteria and technical dependencies |
@@ -24,6 +25,7 @@ Moon Base is a distinct low-gravity/jetpack game experience.
 | 14 | **Co-op Survival** | Exactly 2 players max, authoritative synchronized waves and enemies, pickups, rewards, damage and boss state, disconnect/rejoin |
 | 15 | **Cosmetic shop** | Scraps redeem **only** cosmetics and direct-use weapon XP packs; tiers allowed; atomic purchase ledger and balances |
 | 16 | **Player stats and equipment** | Earned PvE stat bonuses/equipment and respec balance; never bought using Scraps; normalized or disabled in competitive modes |
+| 17 | **Repository cleanup and logical file reorganization** | Audit files before removal; delete genuinely obsolete/support/generated duplicates without destroying needed tests, docs or workflows; group code by purpose, move test/development scripts found under `js/` into `scripts/` when they are not browser runtime modules; update every import, URL, HTML reference, GitHub Actions path and documentation; run complete CI and browser smoke tests after each batch. Preserve functional runtime modules in `js/`, rather than moving files solely because their names contain “script”. |
 
 ## Map priorities and design constraints
 
@@ -41,7 +43,7 @@ Moon Base is a distinct low-gravity/jetpack game experience.
 
 ## Current implementation checkpoint — 19 October 2026
 
-### Priorities 1–2: architecture and editor
+### Priorities 1–2: architecture and editor (owner-tested; accepted for now)
 
 - All four shipped layout files use versioned JSON with stable IDs, shared
   definitions and validation. Scrapyard staircases/pads and City's 13 ziplines,
@@ -54,12 +56,10 @@ Moon Base is a distinct low-gravity/jetpack game experience.
 - A two-file community-map workflow now exists: a `v2` layout plus an
   entry in `assets/maps/catalog.json`, with runtime/editor discovery and
   `levelCommunity.js` as the reusable builder.
-- **Remaining verification:** Browser gameplay and editor QA for parented
-  geometry, physics, routes, material treatment and map import/export;
-  documentation is not proof of in-game behavior. Test especially the car
-  roof boosts after moving and reimporting cars.
+- **Owner confirmation 19 Oct 2026:** priorities 1 and 2 have been tested; no
+  changes are required at present. Reopen only for concrete new regressions.
 
-### Priority 3: Hard/Nightmare rules (implemented, gameplay QA pending)
+### Priority 3: Hard/Nightmare rules (owner-tested; accepted for now)
 
 - All difficulty selection happens in the **single Play configuration screen**.
   The old main-screen checkbox and player-selected mutator are removed.
@@ -80,11 +80,11 @@ Moon Base is a distinct low-gravity/jetpack game experience.
   participate in bullet raycasts, while `createGlass` always permits
   shooting through it. Shared collision rules are used by hitscan,
   PvP raycasts, rockets and other physical projectiles.
-- **Open gate:** Browser QA of bullet impacts from multiple angles, Hard /
-  Nightmare wave transitions and room form behavior. Also complete run
-  balancing/reward rationale before marking priority 3 production-ready.
+- **Owner confirmation 19 Oct 2026:** priority 3 has been tested and requires
+  no additional changes now. Monitor future regressions, without reopening
+  this milestone preemptively.
 
-### Priority 4: Elites (source implementation on follow-up branch; QA pending)
+### Priority 4: Elites (implemented on shared testing branch; gameplay QA pending)
 
 - A deterministic `eliteRules.js` encounter planner budgets Elites separately
   from Hard/Nightmare wave modifiers, excluding bosses and summons. Normal
@@ -99,7 +99,31 @@ Moon Base is a distinct low-gravity/jetpack game experience.
   have automated tests. See `docs/ELITE_ENCOUNTERS.md` for precise formulas.
 - **Open gate:** gameplay QA and late-wave performance testing, especially
   combined native shield mitigation, regen/DOT, boss minions, cleanup and
-  scoring/rewards. This does **not** close priorities 3 or 4 yet.
+  scoring/rewards. Priority 3 is owner-accepted; this remains a priority-4
+  verification gate only.
+
+### Priority 5: Jungle dungeon repair — next active development
+
+- Preserve the good surface arena and shared v2 JSON/editor system.
+- Rebuild underground geometry with solid surface/ceilings and clear
+  excavated entrances rather than broad holes, plus correctly connected
+  ramps from surface through each mine depth and collidable lava/spikes.
+- Validate bot Recast routes, mine lighting and Lantern/NVG, destructible
+  placement and border barriers before marking complete.
+- Test the map in Chromium/Firefox; do not infer reachability from the JSON
+  validator alone.
+
+### Priority 17: Repository maintenance — deferred until gameplay priorities 5–16
+
+- Inventory repo files and ownership (runtime, editor, tests, documentation,
+  generated/vendor assets, CI). Build a dependency/reference graph first.
+- Remove confirmed duplicate/outdated/support artifacts only after checking
+  import usage, asset URLs, workflow scripts, contributor docs and test needs.
+- Move actual developer/test scripts that are misplaced under `js/` to
+  `scripts/`; keep browser ES modules under `js/` even if they implement
+  scripting logic. Update all path references atomically and test each batch.
+- Modernize demonstrably stale documentation and file layout only after
+  behavior-preserving automated and in-browser smoke checks.
 
 ## Play-menu and Aegis regression checkpoint — 19 October 2026
 
