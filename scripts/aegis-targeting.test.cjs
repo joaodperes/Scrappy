@@ -65,6 +65,7 @@ test('Aegis runtime uses exactly one round for a multi-hit trigger pull',()=>{
   assert.match(aegis,/_aegisReacquireDelay=Math\.max\(/);
   assert.match(player,/if\(hasDeadAegisLock\(paintedTargets\)\)/);
   assert.match(player,/cb\.clearAegisLocks=\(\)=>/);
+  assert.match(player,/curWep==='AEGIS' && hasDeadAegisLock\(paintedTargets\)/);
   const weapons=fs.readFileSync(path.join(root,'js/weapons.js'),'utf8');
   assert.match(weapons,/if\(curWep!==name\)cb\.clearAegisLocks\?\.\(\)/);
 });
