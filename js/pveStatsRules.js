@@ -21,7 +21,7 @@ export function normalizedPveBuild(profile){
   const ranks={vitality:0,mobility:0,scavenger:0};
   let used=0;
   for(const key of PVE_STAT_KEYS){
-    const rank=Number(raw.ranks?.[key]);
+    const rank=raw.ranks?.[key];
     const safe=Number.isSafeInteger(rank)&&rank>=0?Math.min(MAX_RANK,rank):0;
     ranks[key]=Math.min(safe,Math.max(0,budget-used));
     used+=ranks[key];
@@ -59,9 +59,11 @@ export function pveModifiers(build,mode='survival'){
   // Never allow profile bonuses in human-versus-human matches.
   if(mode!=='survival')return {maxHp:100,speedMult:1,ammoDropMult:1,startingArmor:0};
   const ranks=build?.ranks||{};
-  const vitality=Math.max(0,Math.min(MAX_RANK,Number(ranks.vitality)||0));
-  const mobility=Math.max(0,Math.min(MAX_RANK,Number(ranks.mobility)||0));
-  const scavenger=Math.max(0,Math.min(MAX_RANK,Number(ranks.scavenger)||0));
+  const bounded=key=>Number.isSafeInteger(ranks[key])
+    ?Math.max(0,Math.min(MAX_RANK,ranks[key])):0;
+  const vitality=bounded('vitality');
+  const mobility=bounded('mobility');
+  const scavenger=bounded('scavenger');
   return {
     maxHp:100+5*vitality,
     speedMult:1+0.012*mobility+(build.equipment==='sprintServos'?0.035:0),
