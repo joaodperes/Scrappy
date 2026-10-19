@@ -34,6 +34,15 @@ test('swarm mutator increases normal bot groups, never boss group counts',async(
     {type:'scout',count:4},{type:'giantbot',count:2}],swarm),
     [{type:'scout',count:6},{type:'giantbot',count:2}]);
 });
+test('chosen opening modifier persists for three waves then rotates',async()=>{
+  const {setHardModeOpeningModifier,getRunHardWaveRules}=await import(lib);
+  setHardModeOpeningModifier('overclocked');
+  assert.equal(getRunHardWaveRules('jungle',1).modifier.id,'overclocked');
+  assert.equal(getRunHardWaveRules('jungle',3).modifier.id,'overclocked');
+  assert.equal(getRunHardWaveRules('jungle',4).modifier.id,'ferocious');
+  setHardModeOpeningModifier('auto');
+  assert.throws(()=>setHardModeOpeningModifier('unknown'));
+});
 test('hard modes reject invalid wave numbers',async()=>{
   const {getHardWaveRules}=await import(lib);
   assert.throws(()=>getHardWaveRules('city',0));
