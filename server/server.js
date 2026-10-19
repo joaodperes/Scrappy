@@ -66,6 +66,12 @@ wss.on('connection', ws => {
         return;
       }
       if (!rooms.has(requestedId)) {
+        const candidate=msg.config||{};
+        if(candidate.directoryRoom && ['tdm','ffa','gunGame'].includes(candidate.mode) &&
+            Number(candidate.roundDuration)===0 && Number(candidate.scoreLimit)===0){
+          ws.send(JSON.stringify({type:'roomError',message:'Choose a time limit or a kill limit'}));
+          return;
+        }
         rooms.set(requestedId, {
           players: new Map(),
           config:  msg.config ?? null,
