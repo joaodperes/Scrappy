@@ -25,7 +25,8 @@ test('pistol fallback and discovered AEGIS guard the PvE Secondary slot',async()
  assert.equal(selectedSecondary(defs,p),'PISTOL');
  assert.equal(canUseSecondary('KNIFE',defs,p),false);
 });
-test('both Survival launch paths read selectedSecondary',()=>{
+test('Solo Survival uses the selected Secondary; legacy PvP keeps its preset weapons',()=>{
  const src=fs.readFileSync(path.join(__dirname,'../js/main.js'),'utf8');
- assert.ok((src.match(/inventory\[2\]\s*=\s*selectedSecondary\(WDEFS,profile\)/g)||[]).length>=2);
+ assert.equal((src.match(/inventory\[2\]\s*=\s*selectedSecondary\(WDEFS,profile\)/g)||[]).length,1);
+ assert.match(src,/inventory\[2\] = 'PISTOL'; inventory\[1\] = null; inventory\[0\] = null/);
 });
