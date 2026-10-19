@@ -150,6 +150,12 @@ export function shoot() {
     return;
   }
   const EW = getEffectiveStats(curWep, W); // Grab effective stats immediately
+  // A kill elsewhere may occur between animation frames. Never fire with
+  // a stale Aegis group that already contains a dead locked enemy.
+  if(curWep==='AEGIS' && hasDeadAegisLock(paintedTargets)){
+    _clearAegisLocks();
+    _aegisReacquireDelay=Math.max(_aegisReacquireDelay,EW.cd||W.cd||0.3);
+  }
 
   const hasInfiniteAmmo = player.buffs['infinite_ammo'] > 0 || EW.ammo === Infinity;
   const isEnergy = W.useHeat || (curWep === 'PLASMA' && hasEnergyConverter());
