@@ -58,15 +58,15 @@ test('single player launches chosen map without creating a WebSocket',()=>{
   context.testUI.initRoomFlow({onStartSurvival:cfg=>started.push(cfg)});
   context.testUI.showPlayPage();
   const findButton=label=>elements.filter(el=>el.tag==='button'&&el.textContent===label).at(-1);
-  assert.ok(findButton('SINGLE PLAYER'),'Solo button present');
-  findButton('SINGLE PLAYER').onclick();
+  assert.ok(findButton('LOCAL MODES'),'Solo button present');
+  findButton('LOCAL MODES').onclick();
   const map=elements.find(el=>el.tag==='select'&&Array.from(el.options).some(o=>o.value==='jungle'));
   assert.equal(map.value,'scrapyard');
   map.value='jungle';map.onchange();
   const difficulty=elements.find(el=>el.tag==='select'&&Array.from(el.options).some(o=>o.value==='nightmare'));
   assert.equal(Array.from(difficulty.options).find(o=>o.value==='nightmare').disabled,false);
   difficulty.value='nightmare';
-  findButton('START SOLO SURVIVAL').onclick();
+  findButton('START LOCAL MATCH').onclick();
   assert.equal(attempts,0);
   assert.equal(started.length,1);
   assert.equal(started[0].mapId,'jungle');
