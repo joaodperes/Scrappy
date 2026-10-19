@@ -9,9 +9,10 @@ import { fireEnemyShot, createYellowEMPStunArc } from './projectiles.js';
 import { sfx } from './audio.js';
 import { jumpPads } from './level.js';
 import { getRunHardWaveRules, getActiveHardWave } from './hardModeRules.js';
+import { ELITE_TRAITS, getEliteBonuses } from './eliteRules.js';
 import { botTravelTarget, botNavPath } from './botNavigation.js';
 import { getCurrentMap, getWalkableSpawns } from './mapManager.js';
-import { recordDamage, isWonderWeaponUnlocked  } from './progression.js';
+import { recordDamage, isWonderWeaponUnlocked, getLoadout } from './progression.js';
 import { getBossPoolForCurrentMap } from './waves.js';
 
 // ── Mesh→enemy lookup ─────────────────────────────────────────
@@ -520,7 +521,7 @@ const DEFAULT_WALKABLE_SPAWNS = [
 
 const MIN_SPAWN_DIST = 16; // Reduced so valid spawns actually work
 
-export function spawnBot(type, _x, _spawnY, _z, scale = 1.0) {
+export function spawnBot(type, _x, _spawnY, _z, scale = 1.0, eliteTraits = null) {
   //console.log(`Attempting to spawn ${type} at ${_x}, ${_spawnY}, ${_z}`); 
   const mapId = getCurrentMap();
   let validSpawns = getWalkableSpawns(mapId); 
@@ -564,6 +565,24 @@ export function spawnBot(type, _x, _spawnY, _z, scale = 1.0) {
     e.speed = e.speed * speedMod * (0.85 + 0.15 * Math.min(scale, 2.0));
   }
   
+  // Elites modify the already-scaled Hard/Nightmare stats, never Normal.
+  // Budget/trait assignment is deterministic in waves.js; boss summons do
+  // not inherit Elite status and cannot cascade into new Elite encounters.
+  if (player.hardMode && type !== 'giantbot' && Array.isArray(eliteTraits) && eliteTraits.length) {
+    const bonus=getEliteBonuses(eliteTraits);
+    e.maxHp=Math.max(1,Math.round(e.maxHp*bonus.hp));
+    e.hp=e.maxHp;
+    e.dmg=Math.max(1,Math.round(e.dmg*bonus.damage));
+    e.speed*=bonus.speed;
+    e.rate*=bonus.rate;
+    e.score=Math.round(e.score*bonus.score);
+    e.elite={
+      traits:[...eliteTraits], damageTaken:bonus.damageTaken,
+      regenRate:bonus.regenPerSecond, regenDelay:0,
+      xpMult:bonus.xp, frenzied:false,
+    };
+  }
+
   e._yaw = Math.random() * Math.PI * 2;
   e._wanderAngle = 0;
   e._wanderTimer = Math.random() * 2.5;
@@ -595,7 +614,25 @@ export function spawnBot(type, _x, _spawnY, _z, scale = 1.0) {
   }
 
   e.group.position.set(px, py + (e.flyH > 0 ? e.flyH : 0), pz);
-  
+  if (e.elite) {
+    // Single low-poly halo per Elite, not an outline draw-call per body part.
+    // Non-collidable, non-pickable and disposed together with the robot.
+    const traits=e.elite.traits;
+    const tint=traits.length>1 ? 0xbc70ff : ELITE_TRAITS[traits[0]].color;
+    const color='#'+tint.toString(16).padStart(6,'0');
+    const mat=new BABYLON.StandardMaterial('eliteHaloMat_'+e.group.name,scene);
+    mat.emissiveColor=BABYLON.Color3.FromHexString(color);
+    mat.disableLighting=true;
+    const ring=BABYLON.MeshBuilder.CreateTorus('eliteHalo',{diameter:1.45,thickness:0.09,tessellation:18},scene);
+    ring.parent=e.group;
+    ring.position.y=2.25;
+    ring.isPickable=false;
+    ring.checkCollisions=false;
+    ring.material=mat;
+    e._eliteHalo=ring;
+    e._eliteHaloMat=mat;
+  }
+
   if (isAngryMode()) { e.dmg = Math.round(e.dmg * 1.6); e.speed *= 1.5; e.score *= 2; _addRedArrow(e); }
   enemies.push(e);
   rebuildMeshMap();
@@ -612,7 +649,7 @@ export function hitRobot(e, dmg, isHeadshot = false, isExplosive = false, source
 
   if (e.type === 'armored' || e.type === 'shield_bot') {
     const W = WDEFS[curWep];
-    const isEnergy = W.useHeat || (curWep === 'PLASMA' && W.ammo === Infinity) || curWep === 'RAILGUN';
+    const isEnergy = !!W?.useHeat || (curWep === 'PLASMA' && W?.ammo === Infinity) || curWep === 'RAILGUN';
     const hasBypass = curWep === 'AEGIS' && getLoadout('AEGIS').attachments?.special === 'bypass_algorithms';
     
     // Check if player is behind the shield (shooting from the side/back)
@@ -638,6 +675,12 @@ export function hitRobot(e, dmg, isHeadshot = false, isExplosive = false, source
     }
 }
 
+  // Bulwark reduces direct hits after the native directional shield check.
+  // DOT damage continues to use the existing damage pipeline unchanged.
+  if (e.elite) {
+    actualDmg=Math.max(0,Math.round(actualDmg*e.elite.damageTaken));
+    if (actualDmg>0)e.elite.regenDelay=4;
+  }
   recordDamage(curWep, actualDmg);
   e.hp -= actualDmg;
   if (cb.showHitMarker) cb.showHitMarker();
@@ -673,6 +716,7 @@ export function hitRobot(e, dmg, isHeadshot = false, isExplosive = false, source
 
 export function destroyRobot(e, isHeadshot = false, isExplosive = false, source = 'PLAYER') {
   e.alive = false;
+  if (e._eliteHaloMat) e._eliteHaloMat.dispose();
   if (e._arrowNode) { e._arrowNode.getChildMeshes().forEach(m => m.dispose()); e._arrowNode.dispose(); }
 
   // ── Capture kill context NOW (synchronously) before any async/microtask delay ──
@@ -721,11 +765,12 @@ export function destroyRobot(e, isHeadshot = false, isExplosive = false, source 
     const xpKey = 'kill' + e.type.charAt(0).toUpperCase() + e.type.slice(1);
     const xp    = XP_GRANTS[xpKey] ?? XP_GRANTS.killScout;
     const xpMult = _doubleXp ? 2 : 1;           // ← same flag, safe in closure
-    awardXp(xp * xpMult);
+    const eliteMult=e.elite?.xpMult||1;
+    awardXp(Math.round(xp * xpMult * eliteMult));
     recordKill(e.type, _killedWithWeapon, {
       isJumping: _killedWhileAir,
       isScoped:  _killedWhileScoped,
-      xpMult,                                    // ← passed through for weapon XP
+      xpMult:xpMult*eliteMult,                    // also applies to weapon XP
       isHeadshot: isHeadshot,
       isExplosiveKill: isExplosive,
       source: source,
@@ -755,13 +800,21 @@ export function destroyRobot(e, isHeadshot = false, isExplosive = false, source 
     rivet_bot: 'Rivet bot dismantled!', enforcer_bot: 'Enforcer bot taken down!', tactician: 'Tactician bot destroyed!',
 };
   const feed = document.getElementById('killFeed');
-  if (feed) { 
-      feed.textContent = (names[e.type] || 'Robot destroyed!') + (_angryMode ? ' [ENRAGED]' : ''); 
+  if (feed) {
+      const eliteLabel=e.elite?' ★ ELITE ['+e.elite.traits.map(id=>ELITE_TRAITS[id].label).join('+')+']':'';
+      feed.textContent = (names[e.type] || 'Robot destroyed!')+eliteLabel+(_angryMode ? ' [ENRAGED]' : ''); 
       clearTimeout(feed._t); 
       feed._t = setTimeout(() => feed.textContent = '', 2200); 
   }
 
   import('./pickups.js').then(({ spawnPickup, spawnWeaponDrop, spawnPowerup, spawnTypedPickup }) => {
+    // Every Elite earns one extra consumable on top of the native bot drops.
+    // Never override guaranteed boss weapons or special enemy loot.
+    if (e.elite) {
+      const reward=e.elite.traits.includes('regenerator')?'health':
+        e.elite.traits.includes('bulwark')?'armor':'ammo';
+      spawnTypedPickup(pos.clone().add(new BABYLON.Vector3(0.5,0,0)),reward);
+    }
    // --- EPIC BOSS LOOT EXPLOSION ---
     if (e.type === 'giantbot') {
         const pTypes = ['quad_damage', 'infinite_ammo', 'haste', 'double_score'];
@@ -865,6 +918,24 @@ export function updateEnemies(dt) {
 
   for (const e of enemies) {
     if (!e.alive) continue;
+    if (e.elite) {
+      const trait=e.elite;
+      trait.regenDelay=Math.max(0,trait.regenDelay-dt);
+      if (trait.regenRate>0 && trait.regenDelay===0 && e.hp>0 && e.hp<e.maxHp &&
+          !e._dots?.length && !e._poisonDots?.length) {
+        e.hp=Math.min(e.maxHp,e.hp+e.maxHp*trait.regenRate*dt);
+      }
+      // One-way threshold to avoid repeatedly multiplying attack stats.
+      if (!trait.frenzied && trait.traits.includes('frenzied') &&
+          e.hp<=e.maxHp*0.4) {
+        trait.frenzied=true;
+        e.speed*=1.30;
+        e.dmg=Math.max(1,Math.round(e.dmg*1.25));
+        e.rate*=0.80;
+        if (e._eliteHaloMat)
+          e._eliteHaloMat.emissiveColor=new BABYLON.Color3(1,0.08,0.12);
+      }
+    }
     // Process DOT effects (Flamethrower burns) and show burning visual
     if (e._dots && e._dots.length > 0) {
         for (let i = e._dots.length - 1; i >= 0; i--) {
