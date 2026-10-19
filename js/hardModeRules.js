@@ -14,6 +14,12 @@ export const HARD_MODE_MODIFIERS=Object.freeze([
   Object.freeze({id:'swarm',label:'SWARM',desc:'More enemies appear each wave.',
     hp:1,damage:1,speed:1,count:1.3}),
 ]);
+// Existing Hard Wave 10+ completion records are accepted for backwards
+// compatibility with profiles created before Nightmare was introduced.
+export function canUnlockNightmare(stats,mapId){
+  return (stats?.[`bossWaveClearsHard_${mapId}`]||0)>0 ||
+    (stats?.[`maxWaveHard_${mapId}`]||0)>=10;
+}
 const validateWave=wave=>{
   if(!Number.isInteger(wave)||wave<1)throw Error('Invalid wave number');
 };
