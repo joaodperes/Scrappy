@@ -158,11 +158,12 @@ export function hitscan(meshToEnemy, spread = 0, dmg = 20, range = 90, falloff =
   // Muzzle flash: bright sphere 0.5m in front
   const flashPos = camera.position.clone().addInPlace(_rcDir.scale(0.5));
   const flash = BABYLON.MeshBuilder.CreateSphere('mflash', { diameter: 0.09, segments: 4 }, scene);
+  flash.position.copyFrom(flashPos);
   const fmat = new BABYLON.StandardMaterial('mflashM', scene);
   fmat.emissiveColor = flashColor;
-  fmat.emissiveColor = new BABYLON.Color3(1, 0.9, 0.4); fmat.disableLighting = true;
+  fmat.disableLighting = true;
   flash.material = fmat; flash.isPickable = false;
-  setTimeout(() => flash.dispose(), 55);
+  setTimeout(() => {flash.dispose();fmat.dispose();}, 55);
   if (spread > 0) {
     _rcDir.x += (Math.random()-.5)*spread*2;
     _rcDir.y += (Math.random()-.5)*spread*2;
