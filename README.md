@@ -20,7 +20,7 @@ Visit **http://localhost:3000** (not `file://`). Sign in using Google and set yo
 Select **PLAY → LOCAL MODES**, choose a map and:
 
 - **Survival:** normal, Hard or Nightmare endless waves and Elites; uses the standard starting Pistol.
-- **Gun Game (vs robots):** deterministic shuffled weapon ladder, Pistol first and Knife final; score a robot elimination with the current weapon to advance.
+- **Gun Game (vs AI players):** deterministic shuffled weapon ladder, Pistol first and Knife final. Both the human and every bot advance independently by defeating opponents with their currently equipped gun.
 - **Kill Confirmed (vs robots):** eliminate robots, then physically collect the glowing dog tag; a frag alone does not award a point.
 - **Free-for-all / Team Deathmatch:** local player-shaped bot opponents use their own weapon loadouts, spawn/respawn, acquire each other as targets and score independent frags (FFA) or RED/BLUE team frags (TDM). TDM includes two allied bots on RED alongside the human against three BLUE bots.
 
