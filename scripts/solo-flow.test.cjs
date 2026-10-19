@@ -21,7 +21,9 @@ test('single player launches chosen map without creating a WebSocket',()=>{
   class Element {
     constructor(tag){
       this.tag=tag;this.children=[];this.style={};this._text='';this.value='';
-      this.disabled=false;this.checked=false;this.options=[];
+      this.disabled=false;this.checked=false;this.options={items:[],get length(){return this.items.length},
+        [Symbol.iterator](){return this.items[Symbol.iterator]()},
+        push(v){this.items.push(v)}};
       elements.push(this);
     }
     set textContent(v){this._text=String(v);this.children=[];}
@@ -58,11 +60,11 @@ test('single player launches chosen map without creating a WebSocket',()=>{
   const findButton=label=>elements.filter(el=>el.tag==='button'&&el.textContent===label).at(-1);
   assert.ok(findButton('SINGLE PLAYER'),'Solo button present');
   findButton('SINGLE PLAYER').onclick();
-  const map=elements.find(el=>el.tag==='select'&&el.options.some(o=>o.value==='jungle'));
+  const map=elements.find(el=>el.tag==='select'&&Array.from(el.options).some(o=>o.value==='jungle'));
   assert.equal(map.value,'scrapyard');
   map.value='jungle';map.onchange();
-  const difficulty=elements.find(el=>el.tag==='select'&&el.options.some(o=>o.value==='nightmare'));
-  assert.equal(difficulty.options.find(o=>o.value==='nightmare').disabled,false);
+  const difficulty=elements.find(el=>el.tag==='select'&&Array.from(el.options).some(o=>o.value==='nightmare'));
+  assert.equal(Array.from(difficulty.options).find(o=>o.value==='nightmare').disabled,false);
   difficulty.value='nightmare';
   findButton('START SOLO SURVIVAL').onclick();
   assert.equal(attempts,0);
