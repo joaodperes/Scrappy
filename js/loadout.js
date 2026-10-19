@@ -746,6 +746,17 @@ function _renderAttachments(main) {
 
 // ── WEAPON SKINS tab ──────────────────────────────────────────
 function _renderWeaponSkins(main) {
+  if(!document.getElementById('collectorPreviewStyles')){
+    const style=document.createElement('style');
+    style.id='collectorPreviewStyles';
+    style.textContent=`
+      @keyframes collectorAurora {0%,100%{filter:hue-rotate(-12deg) brightness(.85)}50%{filter:hue-rotate(38deg) brightness(1.35)}}
+      @keyframes collectorNebula {0%,100%{filter:hue-rotate(0deg) brightness(.85)}50%{filter:hue-rotate(90deg) brightness(1.3)}}
+      @keyframes collectorCinder {0%,100%{filter:brightness(.75)}45%{filter:brightness(1.55)}70%{filter:brightness(.9)}}
+      @keyframes collectorTundra {0%,100%{filter:hue-rotate(-10deg) brightness(1)}50%{filter:hue-rotate(16deg) brightness(1.4)}}
+    `;
+    document.head.appendChild(style);
+  }
   const wName = _activeWeapon;
   const lo    = getLoadout(wName);
   main.appendChild(_weaponLevelBanner(wName));
@@ -781,7 +792,15 @@ function _renderWeaponSkins(main) {
       const sw = _el('div','display:flex;gap:2px;height:13px;border-radius:2px;overflow:hidden');
       sw.innerHTML = `<div style="flex:2;background:rgb(${Math.round(br*255)},${Math.round(bg*255)},${Math.round(bb*255)})"></div>
         <div style="flex:1;background:rgb(${Math.round(ar*255)},${Math.round(ag*255)},${Math.round(ab*255)})"></div>`;
+      if(skin.category==='Collector'){
+        sw.style.height='22px';
+        sw.style.animation='collector'+skin.id[0].toUpperCase()+skin.id.slice(1)+' 2.7s ease-in-out infinite';
+        sw.style.boxShadow='0 0 9px rgba(130,220,255,.35)';
+        sw.style.border='1px solid '+C.accent;
+      }
       card.appendChild(sw);
+      if(skin.category==='Collector')
+        card.appendChild(_el('div','font-size:10px;font-weight:bold;color:'+C.accentGreen,'✦ ANIMATED COLLECTOR'));
       card.appendChild(_el('div',`font-size:11px;font-weight:bold;color:${isEquipped?C.accentPurple:C.text}`,_esc(skin.name)));
       card.appendChild(_el('div',`font-size:11px;color:${C.dim}`,_esc(skin.desc)));
       if (!isOwned) {
