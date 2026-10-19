@@ -2,7 +2,7 @@ import { enemies, player } from './gameState.js';
 import { spawnBot } from './enemies.js';
 import { sfx } from './audio.js';
 import { getCurrentMap, getWaveConfig } from './mapManager.js';
-import { getHardWaveRules, applyHardWaveCount, setActiveHardWave } from './hardModeRules.js';
+import { getRunHardWaveRules, applyHardWaveCount, setActiveHardWave } from './hardModeRules.js';
 
 export let curWave = 0, waveOn = false, waveDly = 1.8;
 export function setCurWave(v)  { curWave  = v; }
@@ -15,7 +15,7 @@ export function getWaveComposition(idx) {
   const waveNum = idx + 1;
   const map = getCurrentMap();
   const scenario = getWaveConfig(map);
-  const hardRules=player.hardMode?getHardWaveRules(map,waveNum):null;
+  const hardRules=player.hardMode?getRunHardWaveRules(map,waveNum):null;
 
   let currentPool = [...(scenario.botPool || ['scout'])];
   if (player.hardMode && scenario.hardPool) {
@@ -84,7 +84,7 @@ function _sanitizeWave(composition, pool) {
 export function launchWave(idx) {
   const map = getCurrentMap();
   const scenario = getWaveConfig(map);
-  const hardRules=player.hardMode?getHardWaveRules(map,idx+1):null;
+  const hardRules=player.hardMode?getRunHardWaveRules(map,idx+1):null;
   setActiveHardWave(hardRules);
   const spawns = scenario.spawns || getWaveConfig('scrapyard').spawns;
   const scale = Math.max(0.40, 0.40 + idx * 0.10);
