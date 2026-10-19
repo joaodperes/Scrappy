@@ -48,6 +48,7 @@ test('single player launches chosen map without creating a WebSocket',()=>{
     isHardModeUnlocked:id=>id==='jungle',
     isNightmareUnlocked:id=>id==='jungle',
     isModeSupported:()=>true,getRoomCapacity:()=>4,
+    isMapUnlocked:()=>true,
     profile:{name:'Tester'},
     HARD_MODE_MODIFIERS:[{id:'reinforced',label:'REINFORCED',desc:'More armor'}],
     WebSocket:class {constructor(){attempts++;throw Error('Offline path must not connect')}},
