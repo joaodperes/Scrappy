@@ -197,7 +197,8 @@ function updateTags(dt){
        collectorId:nearBot.id,collectorTeam:nearBot.team,tagTeam:tag.ownerTeam,
      });
      // If this was an unclaimed tag from a human elimination, clear it.
-     applyResult(tag.ownerTeam==='BLUE'?
+     // A RED teammate already decrements pendingTags when collecting BLUE.
+     applyResult(tag.ownerTeam==='BLUE'&&nearBot.team!=='RED'?
        localArenaTagExpired(s):s);
    }else if(tag.ownerTeam==='BLUE'){
      active.state=localArenaTagExpired(active.state);
