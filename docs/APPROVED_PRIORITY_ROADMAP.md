@@ -10,7 +10,7 @@ Moon Base is a distinct low-gravity/jetpack game experience.
 |---|---|---|
 | 1 | **Full shared map JSON architecture and definitions** | Versioned shared document and entity registry; stable IDs; reliable validation; transform/parameter round-trip; gameplay markers; turn remaining procedural traversal objects into serializable definitions; backward compatibility for all 4 existing maps |
 | 2 | **Complete map editor + contributor guide** | Every intended object selectable and editable; geometry and all runtime behaviors actually update on edit; cross-map material palette; Recast debug and route validation; placement, undo/redo and save/import/export safety; documented creation and testing for community maps |
-| 3 | **Hard Mode rewrite** | Replace the simple 2× scaling with explicit modifier selection, wave scaling, UI explanation, deterministic run modifiers, and player-facing reward expectations; keep default Survival unaffected |
+| 3 | **Hard Mode rewrite** | Replace fixed multipliers with automatic, non-repeating per-wave modifiers; Nightmare stacks persistent modifiers every 10 completed waves; document progression, wave scaling and rewards while keeping Normal Survival unaffected |
 | 4 | **Elite enemies for Hard Mode** | Typed Elite modifiers/traits, AI behaviors, visuals, encounter budget, loot, boss interactions; test combinatorial interactions and performance |
 | 5 | **Jungle repair** | A real below-surface mine/dungeon, not a perforated floor; solid ceilings/platforms/walls, correct excavation entrances, ramps/lifts, mine lighting/Lantern/NVG, destructibles and enemy nav; preserve the good surface arena |
 | 6 | **Moon Base rewrite** | Low gravity also affects bot vertical physics/trajectory; every PvP player has jetpack; additional raised weapon/health/armor platforms, exposed side(s) for entry; cover on new/existing platforms and balcony; ramp access and bot navigation to balcony |
@@ -59,17 +59,30 @@ Moon Base is a distinct low-gravity/jetpack game experience.
   documentation is not proof of in-game behavior. Test especially the car
   roof boosts after moving and reimporting cars.
 
-### Priority 3: Hard Mode rewrite (in progress)
+### Priority 3: Hard/Nightmare rules (implemented, gameplay QA pending)
 
-- `js/hardModeRules.js` provides deterministic three-wave mutators:
-  **Reinforced** (+25% enemy HP), **Overclocked** (+20% speed),
-  **Ferocious** (+22% damage), and **Swarm** (+30% counts).
-- A revised baseline applies health, damage, speed and wave-budget modifiers
-  while keeping Hard Mode's existing 2× scoring and per-map unlock rule.
-  Wave announcements show the active modifier. Regular mode remains untouched.
-- **Still to do:** balance runs on all maps, richer player-facing explanations
-  and modifier choices, persistence of exact run modifiers for review/replays,
-  clear reward rules, and compatibility QA with bosses and later Elites.
+- All difficulty selection happens in the **single Play configuration screen**.
+  The old main-screen checkbox and player-selected mutator are removed.
+- **Hard** unlocks on a normal boss-wave clear on that map. One of four
+  modifiers rotates **each wave**, no consecutive repeat.
+- **Nightmare** unlocks on the first *Hard* boss-wave clear on that same map
+  (past profiles with a Hard wave-10+ clear also qualify).
+  Waves 1–10 play like Hard; waves 11–20 lock the previous modifier and
+  rotate one additional modifier; waves 21–30 lock two and rotate one more;
+  wave 31+ has all four modifiers always active.
+- All active effects multiply the Hard base enemy HP/damage/speed or
+  wave enemy count. Boss group counts remain controlled by boss-wave logic.
+  Score remains 2×; Normal Survival remains unchanged.
+- Room setup, match mode/map/difficulty, time limit, kill limit, Solo and
+  Room Browser now appear **on one Play page**, with details below the
+  shared settings box; room/lobby functionality retains the existing server.
+- City opaque grey walls, street surfaces and skybridge railings now
+  participate in bullet raycasts, while `createGlass` always permits
+  shooting through it. Shared collision rules are used by hitscan,
+  PvP raycasts, rockets and other physical projectiles.
+- **Open gate:** Browser QA of bullet impacts from multiple angles, Hard /
+  Nightmare wave transitions and room form behavior. Also complete run
+  balancing/reward rationale before marking priority 3 production-ready.
 
 ### Priority 4: Elites
 
