@@ -89,6 +89,30 @@ Moon Base is a distinct low-gravity/jetpack game experience.
 Not started. Elite archetypes, AI traits and their Hard Mode spawn budgets
 depend on the tested priority-3 modifier architecture.
 
+## Play-menu and Aegis regression checkpoint — 19 October 2026
+
+- Unified Play setup crash: browser `select.options` is an
+  `HTMLOptionsCollection`, not an Array. `roomFlow.js` converts it to
+  an array before calling `.find()`; new tests use a realistic collection.
+- Main-menu Leaderboards uses the same large `.btn` styling, width and
+  menu button container as Play and Loadout.
+- **Aegis smart pistol:** ADS paints up to 3 visible enemies (6 with
+  Multi-Thread, 1 with Single-Thread); locks persist after moving the
+  crosshair away, until an enemy dies, leaves effective range or ADS ends.
+  Each trigger pull costs one round and deals the effective per-target
+  damage to **every visible locked enemy**, without requiring the crosshair
+  to face them when firing. Glass is penetrable, solid walls block lock-on
+  and smart shots; when there are no locks, Aegis uses normal hitscan.
+- Red highlights and a visible lock-count HUD provide immediate feedback.
+  The target-count/damage modifiers still come from the existing
+  `getEffectiveStats('AEGIS',...)` weapon attachment system.
+- The Aegis changes apply to PvE robot targets. The later authoritative
+  human-PvP implementation will need separate network/remote-player target
+  locking and server hit validation.
+- **QA outstanding:** live Firefox/Chromium ADS acquisition, 3/6/1
+  attachment loadouts, visible targets behind glass vs grey walls,
+  reticle moved off the target before firing, magazine/reload edge cases.
+
 ## Work gates
 
 For each phase, record: implementation files, tests, regression risks, screenshots
