@@ -47,6 +47,8 @@ export const ENTITY_DEFINITIONS = Object.freeze({
   createSkybridge:{label:'Skybridge (composite)',category:'Traversal',fields:{
     cx:number(),cz:number(),spanAxis:{type:'enum',values:['X','Z'],required:true},
     spanLen:positive(),bridgeW:positive(),y1:number(),y2:number()}},
+  createCarWreck:{label:'Street Car Wreck (roof pad)',category:'Prop',fields:{
+    cx:number(),cz:number(),rotY:number(false)}},
   createRooftopLift:{label:'Rooftop Lift',category:'Traversal',fields:{
     cx:number(),cz:number(),topSurfY:positive(),
     face:{type:'enum',values:['N','S','E','W'],required:true},
