@@ -41,6 +41,6 @@ Select a built-in map, arena duration (5/10/15 minutes) and point goal (10/15/25
 
 ## Tests
 
-`node --test scripts/local-arena-rules.test.cjs scripts/play-page.test.cjs scripts/solo-flow.test.cjs`
+`node --test scripts/local-arena-rules.test.cjs scripts/local-arena-runtime.test.cjs scripts/play-page.test.cjs scripts/solo-flow.test.cjs`
 
 The three tests only exercise pure rules and DOM simulation. Browser movement/rendering must still be validated. The [owner validation checklist](OWNER_VALIDATION_TODO.md) is the acceptance gate.
