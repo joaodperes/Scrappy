@@ -22,6 +22,7 @@ const CSS = {
 let root = null, socket = null, config = null, participants = [], host = false, roomId = '';
 let actions = {};
 let welcomePacket = null;
+let selfPlayerId = null;
 let countdown = null;
 
 function dom(tag, css, txt) {
@@ -75,6 +76,7 @@ function clearSocket() {
 function closePage() {
   if(countdown){clearInterval(countdown);countdown=null}
   clearSocket();
+  selfPlayerId=null;
   root?.remove();root=null;
 }
 function back() {
@@ -96,7 +98,7 @@ function randCode() {
 function lobbyRoster(target){
   target.replaceChildren();
   target.appendChild(dom('h3','margin:0 0 12px','PLAYERS IN ROOM'));
-  for(const p of participants){target.appendChild(dom('div','padding:7px 0',p.name + (p.id==='self'?' (YOU)':'')))}
+  for(const p of participants){target.appendChild(dom('div','padding:7px 0',p.name + (p.id===selfPlayerId?' (YOU)':'')))}
   const bots = config?.fillBots && config?.mode !== 'survival'
     ? Math.max(0,(config.maxPlayers||2)-participants.length) : 0;
   if(bots) target.appendChild(dom('p','color:#a8c38b',bots+' potential bot slots (AI players not active yet)'));
@@ -162,7 +164,9 @@ function onRoomPacket(data,status,joinData){
     welcomePacket=data;
     roomId=data.roomId;config=data.config||joinData.config||{};
     host=!!data.isHost;
-    participants=[...data.players.map(p=>({id:p.id,name:p.name})),{id:'self',name:profile.displayName||profile.name||'YOU'}];
+    selfPlayerId=data.id;
+    participants=[...(data.players||[]).map(p=>({id:p.id,name:p.name,team:p.team})),
+      {id:data.id,name:profile.displayName||profile.name||'YOU',team:data.team}];
     lobby();return;
   }
   if(data.type==='roundCountdown' && config?.mode !== 'survival') {
@@ -193,7 +197,7 @@ function onRoomPacket(data,status,joinData){
     return;
   }
   if(data.type==='roomUpdated'){
-    participants=data.players.map(p=>({id:p.id,name:p.name}));
+    participants=(data.players||[]).map(p=>({id:p.id,name:p.name,team:p.team}));
     root?._refreshRoster?.();return;
   }
   if(data.type==='playerJoined'){
@@ -204,6 +208,11 @@ function onRoomPacket(data,status,joinData){
   }
   if(data.type==='hostAssigned'){
     host=true;lobby();
+  }
+  if(data.type==='roundCancelled'){
+    if(countdown){clearInterval(countdown);countdown=null}
+    root?.querySelectorAll('button').forEach(b=>{if(b.textContent==='START MATCH')b.disabled=false});
+    message(root?._status||status,data.reason||'Match countdown cancelled',true);
   }
 }
 
