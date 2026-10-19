@@ -8,8 +8,8 @@ From signed-in Home, choose **PLAY → LOCAL MODES**, then select:
 - Survival (unchanged original endless waves, Normal/Hard/Nightmare).
 - Gun Game (vs robots).
 - Kill Confirmed (vs robots).
-- FFA Practice (vs robots).
-- TDM Practice (1 human vs robots).
+- Free-for-all (human plus 5 independent player-like bots).
+- Team Deathmatch (human plus 2 RED allies versus 3 BLUE bots).
 
 Select a built-in map, arena duration (5/10/15 minutes) and point goal (10/15/25/50), then click **START LOCAL MATCH**. Arena settings are disabled/hidden for Survival and difficulty is only selectable for Survival. No local path calls the WebSocket room-browser functions.
 
