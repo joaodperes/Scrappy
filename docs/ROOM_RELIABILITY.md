@@ -1,4 +1,6 @@
-# Multiplayer room reliability — source-level checkpoint
+# Multiplayer room reliability — source-level checkpoint (deferred)
+
+**Offline-first revision:** This describes retained prototype code, not a prerequisite for accepting PR #2. Human multiplayer, networking and co-op will be discussed in a later PR. Offline local modes run without this server. See [LOCAL_ARENA_MODES.md](LOCAL_ARENA_MODES.md).
 
 **Branch:** `fix/foundations-room-flow-20261018`
 **Roadmap:** Priority 9 (rooms and browsing), independent subset of Priority 12 (Gun Game), isolated Priority 7 weapon-category guard.
