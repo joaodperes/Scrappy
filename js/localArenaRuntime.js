@@ -108,7 +108,13 @@ function onActorKilled(actor,killer,weapon){
  if(!isActive()||!actor.alive)return;
  const pos=actor.group.position.clone();
  killArenaActor(actor);
- if(active.state.mode==='killConfirmed')createTag(pos,actor.team,actor.id);
+ if(active.state.mode==='killConfirmed'){
+   createTag(pos,actor.team,actor.id);
+   // Blue team tags are collectible by the human/RED allies; those
+   // killed by bots still need to appear in the shared pending tally.
+   if(actor.team==='BLUE'&&killer!=='human')
+     active.state={...active.state,pendingTags:active.state.pendingTags+1};
+ }
  if(killer==='human'){
    applyResult(localArenaKill(active.state,{weapon,source:'PLAYER'}));
  }else if(killer&&killer.alive){
