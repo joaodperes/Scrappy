@@ -32,6 +32,7 @@ test('single player launches chosen map without creating a WebSocket',()=>{
       return child;
     }
     replaceChildren(...children){this.children=[...children]}
+    addEventListener(type,callback){this['on'+type]=callback}
     remove(){this.removed=true}
   }
   const body=new Element('body');
@@ -43,6 +44,7 @@ test('single player launches chosen map without creating a WebSocket',()=>{
     document,window:{},MAPS:{scrapyard:{id:'scrapyard',name:'Scrapyard',icon:'🏭'},jungle:{id:'jungle',name:'Jungle',icon:'🌿'}},
     getCurrentMap:()=> 'scrapyard',
     isHardModeUnlocked:id=>id==='jungle',
+    isNightmareUnlocked:id=>id==='jungle',
     isModeSupported:()=>true,getRoomCapacity:()=>4,
     profile:{name:'Tester'},
     HARD_MODE_MODIFIERS:[{id:'reinforced',label:'REINFORCED',desc:'More armor'}],
@@ -59,13 +61,13 @@ test('single player launches chosen map without creating a WebSocket',()=>{
   const map=elements.find(el=>el.tag==='select'&&el.options.some(o=>o.value==='jungle'));
   assert.equal(map.value,'scrapyard');
   map.value='jungle';map.onchange();
-  const checkbox=elements.filter(el=>el.tag==='input'&&el.type==='checkbox').at(-1);
-  assert.equal(checkbox.disabled,false);
-  checkbox.checked=true;
+  const difficulty=elements.find(el=>el.tag==='select'&&el.options.some(o=>o.value==='nightmare'));
+  assert.equal(difficulty.options.find(o=>o.value==='nightmare').disabled,false);
+  difficulty.value='nightmare';
   findButton('START SOLO SURVIVAL').onclick();
   assert.equal(attempts,0);
   assert.equal(started.length,1);
   assert.equal(started[0].mapId,'jungle');
   assert.equal(started[0].hardMode,true);
-  assert.equal(started[0].hardModifier,'auto');
+  assert.equal(started[0].difficulty,'nightmare');
 });
