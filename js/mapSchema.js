@@ -44,6 +44,10 @@ export const ENTITY_DEFINITIONS = Object.freeze({
     cx:number(),cz:number(),sx:positive(),sz:positive(),surfY:number()}},
   createJumpPad:{label:'Jump Pad',category:'Traversal',fields:{
     px:number(),floorY:number(),pz:number(),force:positive(),rotY:number(false)}},
+  createRooftopLift:{label:'Rooftop Lift',category:'Traversal',fields:{
+    cx:number(),cz:number(),topSurfY:positive(),
+    face:{type:'enum',values:['N','S','E','W'],required:true},
+    faceOffset:number(false)}},
   createZipline:{label:'Zipline / Cable Car',category:'Traversal',fields:{
     name:str(),startX:number(),startY:number(),startZ:number(),
     endX:number(),endY:number(),endZ:number(),
