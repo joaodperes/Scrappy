@@ -481,6 +481,54 @@ export function createPowerSwitch(px,py,pz,targetPlatformIds=[],opts={}) {
   return mesh;
 }
 
+// City-style moving cable car: the car and its static guide cable are one
+// serialized gameplay entity. Keep the cable as an auxiliary mesh rather
+// than a child of the car, or it would travel along the route.
+export function createZipline(name, startX, startY, startZ, endX, endY, endZ,
+  worldSpeed = 11.5, width = 4, depth = 4, opts = {}) {
+  const scene=getScene();
+  const start=new BABYLON.Vector3(startX,startY,startZ);
+  const end=new BABYLON.Vector3(endX,endY,endZ);
+  const distance=BABYLON.Vector3.Distance(start,end);
+  if(distance<=0.01)throw Error('Zipline start/end cannot coincide');
+  const H=0.3;
+  const car=BABYLON.MeshBuilder.CreateBox(name||'zipline',
+    {width,height:H,depth},scene);
+  car.position.set(startX,startY-H/2,startZ);
+  const mat=new BABYLON.StandardMaterial('ziplineMat',scene);
+  mat.diffuseColor=new BABYLON.Color3(0.22,0.52,0.92);
+  mat.emissiveColor=new BABYLON.Color3(0.04,0.12,0.28);
+  car.material=mat;
+  car.checkCollisions=true;
+  _tagMeta(car,'zipline','createZipline',
+    {name,startX,startY,startZ,endX,endY,endZ,worldSpeed,width,depth},true,null);
+  car._moveData={
+    start:start.clone(),end:end.clone(),speed:worldSpeed/distance,
+    t:0,dir:1,waitTimer:0,waitTime:1.5,paused:false,
+  };
+  const cable=BABYLON.MeshBuilder.CreateCylinder('ziplineCable',
+    {diameter:0.07,height:distance,tessellation:5},scene);
+  cable.position.copyFrom(BABYLON.Vector3.Lerp(start,end,0.5));
+  const axis=end.subtract(start).normalize();
+  const dot=BABYLON.Vector3.Dot(axis,BABYLON.Axis.Y);
+  if(Math.abs(dot)<0.999){
+    const rot=BABYLON.Vector3.Cross(BABYLON.Axis.Y,axis);
+    cable.rotationQuaternion=BABYLON.Quaternion.RotationAxis(rot.normalize(),Math.acos(dot));
+  }
+  const cableMat=new BABYLON.StandardMaterial('ziplineCableMat',scene);
+  cableMat.diffuseColor=new BABYLON.Color3(0.24,0.28,0.35);
+  cableMat.emissiveColor=new BABYLON.Color3(0.03,0.05,0.08);
+  cable.material=cableMat;
+  cable.isPickable=false;
+  cable.checkCollisions=false;
+  car.metadata.auxiliaryMeshes=[cable];
+  opts.movingPlatforms?.push(car);
+  // Retain the original City NavMesh contribution until dynamic-platform
+  // links are fully modeled in the navigation graph.
+  walkableMeshes.push(car);
+  return car;
+}
+
 // ── JSON layout pipeline ─────────────────────────────────────────
 // This is the single source of truth for turning a JSON "objects" array
 // (the exact shape editor.html's "Export JSON" produces) back into real
@@ -525,6 +573,9 @@ const _generators = {
                                    {powerSwitches:t?.powerSwitches}),
   createStaircase:        p => createStaircase(p.px,p.py,p.pz,p.width,p.depth,p.steps,
                                   p.dirX,p.dirZ,p.stepHeight??0.5,!!p.flareEnds,_matForParams(p)),
+  createZipline:          (p,t) => createZipline(p.name,p.startX,p.startY,p.startZ,
+                              p.endX,p.endY,p.endZ,p.worldSpeed,p.width,p.depth,
+                              {movingPlatforms:t?.movingPlatforms}),
 };
 
 /** Re-creates one editable prop from its generator name + params. `targets`
@@ -562,6 +613,7 @@ export function clearEditableMeshes(targets = null) {
     // Composite entities contain physical child meshes; remove every child
     // from walkableMeshes before Babylon recursively disposes the parent.
     m.getChildMeshes(false).forEach(child=>toRemove.add(child));
+    m.metadata?.auxiliaryMeshes?.forEach(mesh=>toRemove.add(mesh));
   });
 
   for (let i = explosiveBarrels.length - 1; i >= 0; i--) {
@@ -645,6 +697,7 @@ export function applyEditableLayout(objects, targets = null) {
       const offset = mesh.position.subtract(mesh._moveData.start);
       mesh._moveData.start.addInPlace(offset);
       mesh._moveData.end.addInPlace(offset);
+      mesh.metadata?.auxiliaryMeshes?.forEach(aux=>aux.position.addInPlace(offset));
     }
     if (mesh.metadata?.hazard) {
       const p = mesh.metadata.params;
