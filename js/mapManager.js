@@ -266,8 +266,10 @@ export const MAP_CONFIG = {
       ],
     },
     secretKits: () => [
-      { tag: 'secret_health', type: 'secret_health', pos: new BABYLON.Vector3(-15, 6.22 + 1.0, -16) },
-      { tag: 'secret_armor',  type: 'secret_armor',  pos: new BABYLON.Vector3( 15, 6.22 + 1.0, -16) },
+      // Old y=6.22 locations had no support; these kits now sit safely
+      // above the ground concourse (floater kits use v2 JSON markers).
+      { tag: 'secret_health', type: 'secret_health', pos: new BABYLON.Vector3(-15, 1.0, -16) },
+      { tag: 'secret_armor',  type: 'secret_armor',  pos: new BABYLON.Vector3( 15, 1.0, -16) },
     ],
     weaponSpawns: () => [
       { wName: 'FLAMETHROWER',   x:  40, y: 20.77, z:  30 },
