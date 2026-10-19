@@ -40,7 +40,7 @@ function showHud(note=''){
  hud.style.whiteSpace='pre-line';
  hud.textContent=(LABELS[s.mode]||s.mode)+' · '+s.score+' : '+s.opposition+
    ' · '+Math.ceil(s.secondsLeft)+'s'+current+(note?' · '+note:'')+
-   (board?'\\n'+board:'');
+   (board?'\n'+board:'');
  hud.title='Arena standings (team and player scores)';
 }
 function createTag(position,ownerTeam,ownerId){
