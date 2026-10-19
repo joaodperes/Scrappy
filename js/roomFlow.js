@@ -5,6 +5,13 @@ import { profile } from './progression.js';
 import { HARD_MODE_MODIFIERS } from './hardModeRules.js';
 import { TIME_LIMITS, KILL_LIMITS, PVP_ROOM_SIZES, validateMatchSettings } from './roomSettings.js';
 
+const OFFLINE_MODES = [
+  ['survival','Survival (endless waves)'],
+  ['gunGame','Gun Game (vs robots)'],
+  ['killConfirmed','Kill Confirmed (vs robots)'],
+  ['ffa','FFA Practice (vs robots)'],
+  ['tdm','TDM Practice (1 vs robots)'],
+];
 const MODES = [
   ['survival', 'Survival (solo / co-op planned)'],
   ['tdm', 'Team Deathmatch'],
@@ -234,8 +241,8 @@ function onRoomPacket(data,status,joinData){
    root.appendChild(nav);
    const pane=dom('section',CSS.box);root.appendChild(pane);
    let destination='create',solo=true;
-   const createNav=button('CREATE ROOM',()=>show('create'),true);
-   const browseNav=button('BROWSE ROOMS',()=>show('browse'),true);
+   const createNav=button('LOCAL PLAY',()=>{solo=true;show('create')},true);
+   const browseNav=button('ONLINE (EXPERIMENTAL)',()=>show('browse'),true);
    createNav.style.width=browseNav.style.width='100%';
    nav.appendChild(createNav);nav.appendChild(browseNav);
    function show(where){
@@ -244,7 +251,7 @@ function onRoomPacket(data,status,joinData){
      pane.replaceChildren();
      createNav.style.borderColor=where==='create'?'#c4ea48':'#627a3d';
      browseNav.style.borderColor=where==='browse'?'#c4ea48':'#627a3d';
-     pane.appendChild(dom('h2','margin:0 0 16px;color:#c4ea48;font-size:19px',where==='create'?'CREATE ROOM':'BROWSE ROOMS'));
+     pane.appendChild(dom('h2','margin:0 0 16px;color:#c4ea48;font-size:19px',where==='create'?(solo?'PLAY OFFLINE':'ONLINE ROOM (EXPERIMENTAL)'):'ONLINE ROOMS (EXPERIMENTAL)'));
      const content=dom('div');pane.appendChild(content);
      const status=dom('p','min-height:22px;margin:14px 0 0;color:#a8c38b;font-size:12px');
      pane.appendChild(status);
@@ -300,8 +307,8 @@ function onRoomPacket(data,status,joinData){
      // Two choices *within* Create Room, not additional top-level menu cards.
      const choice=dom('div','display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:18px');
      content.appendChild(choice);
-     const soloBtn=button('SINGLE PLAYER',()=>{solo=true;show('create')},true);
-     const onlineBtn=button('ONLINE ROOM',()=>{solo=false;show('create')},true);
+     const soloBtn=button('LOCAL MODES',()=>{solo=true;show('create')},true);
+     const onlineBtn=button('ONLINE (EXPERIMENTAL)',()=>{solo=false;show('create')},true);
      soloBtn.style.width=onlineBtn.style.width='100%';
      soloBtn.style.borderColor=solo?'#c4ea48':'#627a3d';
      onlineBtn.style.borderColor=!solo?'#c4ea48':'#627a3d';
@@ -310,10 +317,20 @@ function onRoomPacket(data,status,joinData){
      const map=makeChoice('Map',Object.values(MAPS).map(m=>[m.id,
        (m.icon||'🗺️')+' '+m.name+(isMapUnlocked(m.id)?'':' 🔒 '+(m.unlockHint||'Not unlocked'))
      ]),getCurrentMap());
-     const mode=solo?null:makeChoice('Game mode',MODES,'survival');
+     const mode=makeChoice('Game mode',solo?OFFLINE_MODES:MODES,'survival');
      const difficulty=makeChoice('Survival difficulty',[
        ['normal','Normal'],['hard','Hard'],['nightmare','Nightmare'],
      ],'normal');
+     const offlineDetails=dom('div');content.appendChild(offlineDetails);
+     let offlineDuration=null,offlineScore=null;
+     if(solo){
+       offlineDuration=selector([['300','5 minutes'],['600','10 minutes'],['900','15 minutes']],'600');
+       offlineScore=selector([['10','10 points'],['15','15 points'],['25','25 points'],['50','50 points']],'25');
+       row(offlineDetails,'Arena duration',offlineDuration);
+       row(offlineDetails,'Points to win',offlineScore);
+       offlineDetails.appendChild(dom('p','font-size:12px;color:#bcd1a0;line-height:1.5',
+         'Offline arena modes use existing PvE robots. FFA/TDM are practice variants: bots target you, not one another. Gun Game switches weapons on elimination; Kill Confirmed scores collected tags. No multiplayer server needed.'));
+     }
      const help=dom('details','border:1px solid #4b6336;border-radius:5px;padding:10px 14px;margin:12px 0;color:#bfd5a3');
      const summary=dom('summary','cursor:pointer;font-weight:bold;color:#c4ea48','HELP: HARD / NIGHTMARE MODIFIERS');
      help.appendChild(summary);
@@ -360,8 +377,9 @@ function onRoomPacket(data,status,joinData){
      }
      const refreshSettings=()=>{
        if(mode){
-         for(const opt of mode.options)opt.disabled=!isModeSupported(map.value,opt.value);
-         if(!isModeSupported(map.value,mode.value))mode.value='survival';
+         const supported=val=>solo&&val!=='survival'||isModeSupported(map.value,val);
+         for(const opt of mode.options)opt.disabled=!supported(opt.value);
+         if(!supported(mode.value))mode.value='survival';
        }
        const currentMode=mode?.value||'survival';
        const survival=currentMode==='survival';
@@ -386,6 +404,7 @@ function onRoomPacket(data,status,joinData){
        }
        if(Array.from(difficulty.options).find(o=>o.value===difficulty.value)?.disabled)difficulty.value='normal';
        if(help)help.style.display=survival?'block':'none';
+       if(offlineDetails)offlineDetails.style.display=solo&&!survival?'block':'none';
        if(pvpDetails)pvpDetails.style.display=survival?'none':'block';
        if(size){
          // Present both team sizes when TDM is selected.
@@ -402,9 +421,16 @@ function onRoomPacket(data,status,joinData){
      refreshSettings();
      const actionRow=dom('div',CSS.row);content.appendChild(actionRow);
      if(solo){
-       actionRow.appendChild(button('START SOLO SURVIVAL',()=>{
-         const cfg={mapId:map.value,mode:'survival',difficulty:difficulty.value,hardMode:difficulty.value!=='normal'};
-         closePage();actions.onStartSurvival?.(cfg);
+       actionRow.appendChild(button('START LOCAL MATCH',()=>{
+         const selected=mode.value;
+         const cfg={mapId:map.value,mode:selected,difficulty:difficulty.value,
+           hardMode:selected==='survival'&&difficulty.value!=='normal',
+           duration:Number(offlineDuration?.value)||600,
+           scoreLimit:Number(offlineScore?.value)||25,
+           seed:Math.floor(Math.random()*0x100000000)};
+         closePage();
+         if(selected==='survival')actions.onStartSurvival?.(cfg);
+         else actions.onStartLocalMode?.(cfg);
        }));
      }else{
        actionRow.appendChild(button('CREATE ROOM',()=>{
