@@ -271,7 +271,7 @@ topBar.appendChild(deployBtn);
   sidebar.id = 'loadoutSidebar';
   Object.keys(WDEFS).forEach(wName => {
     if (WDEFS[wName].wonderWeapon) return;
-    if (_currentMode && wName === 'PISTOL') return;
+    // Pistol is a valid selectable competitive slot; Gun Game stays automatic.
 
     const wxp = profile.stats?.weaponXp?.[wName] || 0;
     const isDiscovered = wxp > 0 || wName === 'PISTOL';
