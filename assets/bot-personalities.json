@@ -1,0 +1,89 @@
+{
+  "version": 1,
+  "personalities": [
+    {
+      "id": "vanguard",
+      "name": "Vanguard",
+      "role": "assault",
+      "aggression": 0.9,
+      "aim": 0.57,
+      "reactionMs": 380,
+      "preferredRange": 13,
+      "loadout": {
+        "primary": "SMG",
+        "secondary": "PISTOL"
+      },
+      "skin": "default"
+    },
+    {
+      "id": "sentinel",
+      "name": "Sentinel",
+      "role": "defense",
+      "aggression": 0.34,
+      "aim": 0.73,
+      "reactionMs": 530,
+      "preferredRange": 24,
+      "loadout": {
+        "primary": "DMR",
+        "secondary": "PISTOL"
+      },
+      "skin": "forest"
+    },
+    {
+      "id": "breacher",
+      "name": "Breacher",
+      "role": "close",
+      "aggression": 0.88,
+      "aim": 0.48,
+      "reactionMs": 310,
+      "preferredRange": 7,
+      "loadout": {
+        "primary": "SHOTGUN",
+        "secondary": "AEGIS"
+      },
+      "skin": "oni"
+    },
+    {
+      "id": "skirmisher",
+      "name": "Skirmisher",
+      "role": "flank",
+      "aggression": 0.65,
+      "aim": 0.61,
+      "reactionMs": 290,
+      "preferredRange": 17,
+      "loadout": {
+        "primary": "COMET",
+        "secondary": "PISTOL"
+      },
+      "skin": "ghost"
+    },
+    {
+      "id": "tracker",
+      "name": "Tracker",
+      "role": "precision",
+      "aggression": 0.4,
+      "aim": 0.8,
+      "reactionMs": 670,
+      "preferredRange": 34,
+      "loadout": {
+        "primary": "RAILGUN",
+        "secondary": "PISTOL"
+      },
+      "skin": "midnight"
+    },
+    {
+      "id": "sparker",
+      "name": "Sparker",
+      "role": "support",
+      "aggression": 0.56,
+      "aim": 0.6,
+      "reactionMs": 440,
+      "preferredRange": 19,
+      "loadout": {
+        "primary": "ELECTRON",
+        "secondary": "AEGIS"
+      },
+      "skin": "default"
+    }
+  ]
+}
