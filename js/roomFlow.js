@@ -99,16 +99,16 @@ function lobbyRoster(target){
   for(const p of participants){target.appendChild(dom('div','padding:7px 0',p.name + (p.id==='self'?' (YOU)':'')))}
   const bots = config?.fillBots && config?.mode !== 'survival'
     ? Math.max(0,(config.maxPlayers||2)-participants.length) : 0;
-  if(bots) target.appendChild(dom('p','color:#adaeb5',bots+' potential bot slots (AI players not active yet)'));
-  target.appendChild(dom('p','color:#adaeb5;font-size:12px;margin-top:14px',participants.length+'/'+(config?.maxPlayers||2)+' human participants; ' + (config?.mode||'survival')));
+  if(bots) target.appendChild(dom('p','color:#a8c38b',bots+' potential bot slots (AI players not active yet)'));
+  target.appendChild(dom('p','color:#a8c38b;font-size:12px;margin-top:14px',participants.length+'/'+(config?.maxPlayers||2)+' human participants; ' + (config?.mode||'survival')));
 }
 function lobby() {
   shell('ROOM LOBBY');
   const box=dom('section',CSS.box);root.appendChild(box);
   box.appendChild(dom('h2','color:#c4ea48',roomId));
-  box.appendChild(dom('p','color:#adaeb5', (config?.name||'Room')+' · '+(config?.mapId||'scrapyard')+' · '+(config?.mode||'survival')));
+  box.appendChild(dom('p','color:#a8c38b', (config?.name||'Room')+' · '+(config?.mapId||'scrapyard')+' · '+(config?.mode||'survival')));
   const roster=dom('div','margin:22px 0');box.appendChild(roster);
-  const status=dom('p','margin:16px 0;color:#adaeb5');box.appendChild(status);
+  const status=dom('p','margin:16px 0;color:#a8c38b');box.appendChild(status);
   const buttons=dom('div',CSS.row);box.appendChild(buttons);
   if(config?.mode === 'ffa' || config?.mode === 'tdm'){
     buttons.appendChild(button('SELECT TWO WEAPONS',()=>{
