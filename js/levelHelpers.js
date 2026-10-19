@@ -635,7 +635,7 @@ export function createSkybridge(cx,cz,spanAxis,spanLen,bridgeW,y1,y2) {
     rail.position.set(side*bridgeW/2,.7,0);
     rail.material=matConcrete;
     rail.checkCollisions=true;
-    rail.isPickable=false;
+    rail.isPickable=true; // Physical railing must also block hitscan shots.
     rail.metadata={editable:false,type:'bridge_rail'};
     walkableMeshes.push(rail);
   }
