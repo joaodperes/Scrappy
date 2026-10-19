@@ -1708,325 +1708,6 @@
       }
     },
     {
-      "id": "j5-surface-01",
-      "generator": "createSlab",
-      "params": {
-        "px": -29,
-        "surfY": 0,
-        "pz": -1.25,
-        "sx": 2,
-        "sz": 62.5,
-        "mat": "mossy",
-        "lift": false,
-        "thickness": 0.8
-      },
-      "position": {
-        "x": -29,
-        "y": -0.4,
-        "z": -1.25
-      },
-      "rotation": {
-        "x": 0,
-        "y": 0,
-        "z": 0
-      },
-      "scaling": {
-        "x": 1,
-        "y": 1,
-        "z": 1
-      }
-    },
-    {
-      "id": "j5-surface-02",
-      "generator": "createSlab",
-      "params": {
-        "px": 0,
-        "surfY": 0,
-        "pz": -1.25,
-        "sx": 40,
-        "sz": 62.5,
-        "mat": "mossy",
-        "lift": false,
-        "thickness": 0.8
-      },
-      "position": {
-        "x": 0,
-        "y": -0.4,
-        "z": -1.25
-      },
-      "rotation": {
-        "x": 0,
-        "y": 0,
-        "z": 0
-      },
-      "scaling": {
-        "x": 1,
-        "y": 1,
-        "z": 1
-      }
-    },
-    {
-      "id": "j5-surface-03",
-      "generator": "createSlab",
-      "params": {
-        "px": 29,
-        "surfY": 0,
-        "pz": -1.25,
-        "sx": 2,
-        "sz": 62.5,
-        "mat": "mossy",
-        "lift": false,
-        "thickness": 0.8
-      },
-      "position": {
-        "x": 29,
-        "y": -0.4,
-        "z": -1.25
-      },
-      "rotation": {
-        "x": 0,
-        "y": 0,
-        "z": 0
-      },
-      "scaling": {
-        "x": 1,
-        "y": 1,
-        "z": 1
-      }
-    },
-    {
-      "id": "j5-surface-04",
-      "generator": "createSlab",
-      "params": {
-        "px": 24,
-        "surfY": 0,
-        "pz": -20.25,
-        "sx": 8,
-        "sz": 24.5,
-        "mat": "mossy",
-        "lift": false,
-        "thickness": 0.8
-      },
-      "position": {
-        "x": 24,
-        "y": -0.4,
-        "z": -20.25
-      },
-      "rotation": {
-        "x": 0,
-        "y": 0,
-        "z": 0
-      },
-      "scaling": {
-        "x": 1,
-        "y": 1,
-        "z": 1
-      }
-    },
-    {
-      "id": "j5-surface-05",
-      "generator": "createSlab",
-      "params": {
-        "px": 24,
-        "surfY": 0,
-        "pz": 25,
-        "sx": 8,
-        "sz": 10,
-        "mat": "mossy",
-        "lift": false,
-        "thickness": 0.8
-      },
-      "position": {
-        "x": 24,
-        "y": -0.4,
-        "z": 25
-      },
-      "rotation": {
-        "x": 0,
-        "y": 0,
-        "z": 0
-      },
-      "scaling": {
-        "x": 1,
-        "y": 1,
-        "z": 1
-      }
-    },
-    {
-      "id": "j5-surface-06",
-      "generator": "createSlab",
-      "params": {
-        "px": -24,
-        "surfY": 0,
-        "pz": -26.25,
-        "sx": 8,
-        "sz": 12.5,
-        "mat": "mossy",
-        "lift": false,
-        "thickness": 0.8
-      },
-      "position": {
-        "x": -24,
-        "y": -0.4,
-        "z": -26.25
-      },
-      "rotation": {
-        "x": 0,
-        "y": 0,
-        "z": 0
-      },
-      "scaling": {
-        "x": 1,
-        "y": 1,
-        "z": 1
-      }
-    },
-    {
-      "id": "j5-surface-07",
-      "generator": "createSlab",
-      "params": {
-        "px": -24,
-        "surfY": 0,
-        "pz": 19,
-        "sx": 8,
-        "sz": 22,
-        "mat": "mossy",
-        "lift": false,
-        "thickness": 0.8
-      },
-      "position": {
-        "x": -24,
-        "y": -0.4,
-        "z": 19
-      },
-      "rotation": {
-        "x": 0,
-        "y": 0,
-        "z": 0
-      },
-      "scaling": {
-        "x": 1,
-        "y": 1,
-        "z": 1
-      }
-    },
-    {
-      "id": "j5-m1-floor-01",
-      "generator": "createSlab",
-      "params": {
-        "px": -33,
-        "surfY": -7.5,
-        "pz": 0,
-        "sx": 58,
-        "sz": 124,
-        "mat": "mossy",
-        "lift": false,
-        "thickness": 0.8
-      },
-      "position": {
-        "x": -33,
-        "y": -7.9,
-        "z": 0
-      },
-      "rotation": {
-        "x": 0,
-        "y": 0,
-        "z": 0
-      },
-      "scaling": {
-        "x": 1,
-        "y": 1,
-        "z": 1
-      }
-    },
-    {
-      "id": "j5-m1-floor-02",
-      "generator": "createSlab",
-      "params": {
-        "px": 33,
-        "surfY": -7.5,
-        "pz": 0,
-        "sx": 58,
-        "sz": 124,
-        "mat": "mossy",
-        "lift": false,
-        "thickness": 0.8
-      },
-      "position": {
-        "x": 33,
-        "y": -7.9,
-        "z": 0
-      },
-      "rotation": {
-        "x": 0,
-        "y": 0,
-        "z": 0
-      },
-      "scaling": {
-        "x": 1,
-        "y": 1,
-        "z": 1
-      }
-    },
-    {
-      "id": "j5-m1-floor-03",
-      "generator": "createSlab",
-      "params": {
-        "px": 0,
-        "surfY": -7.5,
-        "pz": -27,
-        "sx": 8,
-        "sz": 70,
-        "mat": "mossy",
-        "lift": false,
-        "thickness": 0.8
-      },
-      "position": {
-        "x": 0,
-        "y": -7.9,
-        "z": -27
-      },
-      "rotation": {
-        "x": 0,
-        "y": 0,
-        "z": 0
-      },
-      "scaling": {
-        "x": 1,
-        "y": 1,
-        "z": 1
-      }
-    },
-    {
-      "id": "j5-m1-floor-04",
-      "generator": "createSlab",
-      "params": {
-        "px": 0,
-        "surfY": -7.5,
-        "pz": 53,
-        "sx": 8,
-        "sz": 18,
-        "mat": "mossy",
-        "lift": false,
-        "thickness": 0.8
-      },
-      "position": {
-        "x": 0,
-        "y": -7.9,
-        "z": 53
-      },
-      "rotation": {
-        "x": 0,
-        "y": 0,
-        "z": 0
-      },
-      "scaling": {
-        "x": 1,
-        "y": 1,
-        "z": 1
-      }
-    },
-    {
       "id": "j5-m1-wall-west",
       "generator": "createWall",
       "params": {
@@ -2139,122 +1820,6 @@
       }
     },
     {
-      "id": "j5-m2-floor-01",
-      "generator": "createSlab",
-      "params": {
-        "px": -45,
-        "surfY": -15,
-        "pz": 0,
-        "sx": 14,
-        "sz": 104,
-        "mat": "mossy",
-        "lift": false,
-        "thickness": 0.8
-      },
-      "position": {
-        "x": -45,
-        "y": -15.4,
-        "z": 0
-      },
-      "rotation": {
-        "x": 0,
-        "y": 0,
-        "z": 0
-      },
-      "scaling": {
-        "x": 1,
-        "y": 1,
-        "z": 1
-      }
-    },
-    {
-      "id": "j5-m2-floor-02",
-      "generator": "createSlab",
-      "params": {
-        "px": 11,
-        "surfY": -15,
-        "pz": 0,
-        "sx": 82,
-        "sz": 104,
-        "mat": "mossy",
-        "lift": false,
-        "thickness": 0.8
-      },
-      "position": {
-        "x": 11,
-        "y": -15.4,
-        "z": 0
-      },
-      "rotation": {
-        "x": 0,
-        "y": 0,
-        "z": 0
-      },
-      "scaling": {
-        "x": 1,
-        "y": 1,
-        "z": 1
-      }
-    },
-    {
-      "id": "j5-m2-floor-03",
-      "generator": "createSlab",
-      "params": {
-        "px": -34,
-        "surfY": -15,
-        "pz": -49,
-        "sx": 8,
-        "sz": 6,
-        "mat": "mossy",
-        "lift": false,
-        "thickness": 0.8
-      },
-      "position": {
-        "x": -34,
-        "y": -15.4,
-        "z": -49
-      },
-      "rotation": {
-        "x": 0,
-        "y": 0,
-        "z": 0
-      },
-      "scaling": {
-        "x": 1,
-        "y": 1,
-        "z": 1
-      }
-    },
-    {
-      "id": "j5-m2-floor-04",
-      "generator": "createSlab",
-      "params": {
-        "px": -34,
-        "surfY": -15,
-        "pz": 32,
-        "sx": 8,
-        "sz": 40,
-        "mat": "mossy",
-        "lift": false,
-        "thickness": 0.8
-      },
-      "position": {
-        "x": -34,
-        "y": -15.4,
-        "z": 32
-      },
-      "rotation": {
-        "x": 0,
-        "y": 0,
-        "z": 0
-      },
-      "scaling": {
-        "x": 1,
-        "y": 1,
-        "z": 1
-      }
-    },
-    {
       "id": "j5-m2-wall-west",
       "generator": "createWall",
       "params": {
@@ -2354,122 +1919,6 @@
         "x": 0,
         "y": -11.9,
         "z": 52
-      },
-      "rotation": {
-        "x": 0,
-        "y": 0,
-        "z": 0
-      },
-      "scaling": {
-        "x": 1,
-        "y": 1,
-        "z": 1
-      }
-    },
-    {
-      "id": "j5-m3-floor-01",
-      "generator": "createSlab",
-      "params": {
-        "px": -11,
-        "surfY": -30,
-        "pz": 0,
-        "sx": 82,
-        "sz": 126,
-        "mat": "mossy",
-        "lift": false,
-        "thickness": 0.8
-      },
-      "position": {
-        "x": -11,
-        "y": -30.4,
-        "z": 0
-      },
-      "rotation": {
-        "x": 0,
-        "y": 0,
-        "z": 0
-      },
-      "scaling": {
-        "x": 1,
-        "y": 1,
-        "z": 1
-      }
-    },
-    {
-      "id": "j5-m3-floor-02",
-      "generator": "createSlab",
-      "params": {
-        "px": 45,
-        "surfY": -30,
-        "pz": 0,
-        "sx": 14,
-        "sz": 126,
-        "mat": "mossy",
-        "lift": false,
-        "thickness": 0.8
-      },
-      "position": {
-        "x": 45,
-        "y": -30.4,
-        "z": 0
-      },
-      "rotation": {
-        "x": 0,
-        "y": 0,
-        "z": 0
-      },
-      "scaling": {
-        "x": 1,
-        "y": 1,
-        "z": 1
-      }
-    },
-    {
-      "id": "j5-m3-floor-03",
-      "generator": "createSlab",
-      "params": {
-        "px": 34,
-        "surfY": -30,
-        "pz": -37.5,
-        "sx": 8,
-        "sz": 51,
-        "mat": "mossy",
-        "lift": false,
-        "thickness": 0.8
-      },
-      "position": {
-        "x": 34,
-        "y": -30.4,
-        "z": -37.5
-      },
-      "rotation": {
-        "x": 0,
-        "y": 0,
-        "z": 0
-      },
-      "scaling": {
-        "x": 1,
-        "y": 1,
-        "z": 1
-      }
-    },
-    {
-      "id": "j5-m3-floor-04",
-      "generator": "createSlab",
-      "params": {
-        "px": 34,
-        "surfY": -30,
-        "pz": 54.5,
-        "sx": 8,
-        "sz": 17,
-        "mat": "mossy",
-        "lift": false,
-        "thickness": 0.8
-      },
-      "position": {
-        "x": 34,
-        "y": -30.4,
-        "z": 54.5
       },
       "rotation": {
         "x": 0,
@@ -4505,6 +3954,557 @@
         "x": 29.1,
         "y": 0.9,
         "z": 14
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "j5-surface-01",
+      "generator": "createSlab",
+      "params": {
+        "px": -29,
+        "surfY": 0,
+        "pz": -1.25,
+        "sx": 2,
+        "sz": 62.5,
+        "mat": "mossy",
+        "lift": false,
+        "thickness": 0.8
+      },
+      "position": {
+        "x": -29,
+        "y": -0.4,
+        "z": -1.25
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "j5-surface-02",
+      "generator": "createSlab",
+      "params": {
+        "px": 0,
+        "surfY": 0,
+        "pz": -1.25,
+        "sx": 40,
+        "sz": 62.5,
+        "mat": "mossy",
+        "lift": false,
+        "thickness": 0.8
+      },
+      "position": {
+        "x": 0,
+        "y": -0.4,
+        "z": -1.25
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "j5-surface-03",
+      "generator": "createSlab",
+      "params": {
+        "px": 29,
+        "surfY": 0,
+        "pz": -1.25,
+        "sx": 2,
+        "sz": 62.5,
+        "mat": "mossy",
+        "lift": false,
+        "thickness": 0.8
+      },
+      "position": {
+        "x": 29,
+        "y": -0.4,
+        "z": -1.25
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "j5-surface-04",
+      "generator": "createSlab",
+      "params": {
+        "px": 24,
+        "surfY": 0,
+        "pz": -20.25,
+        "sx": 8,
+        "sz": 24.5,
+        "mat": "mossy",
+        "lift": false,
+        "thickness": 0.8
+      },
+      "position": {
+        "x": 24,
+        "y": -0.4,
+        "z": -20.25
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "j5-surface-05",
+      "generator": "createSlab",
+      "params": {
+        "px": 24,
+        "surfY": 0,
+        "pz": 24.25,
+        "sx": 8,
+        "sz": 11.5,
+        "mat": "mossy",
+        "lift": false,
+        "thickness": 0.8
+      },
+      "position": {
+        "x": 24,
+        "y": -0.4,
+        "z": 24.25
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "j5-surface-06",
+      "generator": "createSlab",
+      "params": {
+        "px": -24,
+        "surfY": 0,
+        "pz": -25.5,
+        "sx": 8,
+        "sz": 14,
+        "mat": "mossy",
+        "lift": false,
+        "thickness": 0.8
+      },
+      "position": {
+        "x": -24,
+        "y": -0.4,
+        "z": -25.5
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "j5-surface-07",
+      "generator": "createSlab",
+      "params": {
+        "px": -24,
+        "surfY": 0,
+        "pz": 19,
+        "sx": 8,
+        "sz": 22,
+        "mat": "mossy",
+        "lift": false,
+        "thickness": 0.8
+      },
+      "position": {
+        "x": -24,
+        "y": -0.4,
+        "z": 19
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "j5-m1-floor-01",
+      "generator": "createSlab",
+      "params": {
+        "px": -33,
+        "surfY": -7.5,
+        "pz": 0,
+        "sx": 58,
+        "sz": 124,
+        "mat": "mossy",
+        "lift": false,
+        "thickness": 0.8
+      },
+      "position": {
+        "x": -33,
+        "y": -7.9,
+        "z": 0
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "j5-m1-floor-02",
+      "generator": "createSlab",
+      "params": {
+        "px": 33,
+        "surfY": -7.5,
+        "pz": 0,
+        "sx": 58,
+        "sz": 124,
+        "mat": "mossy",
+        "lift": false,
+        "thickness": 0.8
+      },
+      "position": {
+        "x": 33,
+        "y": -7.9,
+        "z": 0
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "j5-m1-floor-03",
+      "generator": "createSlab",
+      "params": {
+        "px": 0,
+        "surfY": -7.5,
+        "pz": -27,
+        "sx": 8,
+        "sz": 70,
+        "mat": "mossy",
+        "lift": false,
+        "thickness": 0.8
+      },
+      "position": {
+        "x": 0,
+        "y": -7.9,
+        "z": -27
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "j5-m1-floor-04",
+      "generator": "createSlab",
+      "params": {
+        "px": 0,
+        "surfY": -7.5,
+        "pz": 52.25,
+        "sx": 8,
+        "sz": 19.5,
+        "mat": "mossy",
+        "lift": false,
+        "thickness": 0.8
+      },
+      "position": {
+        "x": 0,
+        "y": -7.9,
+        "z": 52.25
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "j5-m2-floor-01",
+      "generator": "createSlab",
+      "params": {
+        "px": -45,
+        "surfY": -15,
+        "pz": 0,
+        "sx": 14,
+        "sz": 104,
+        "mat": "mossy",
+        "lift": false,
+        "thickness": 0.8
+      },
+      "position": {
+        "x": -45,
+        "y": -15.4,
+        "z": 0
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "j5-m2-floor-02",
+      "generator": "createSlab",
+      "params": {
+        "px": 11,
+        "surfY": -15,
+        "pz": 0,
+        "sx": 82,
+        "sz": 104,
+        "mat": "mossy",
+        "lift": false,
+        "thickness": 0.8
+      },
+      "position": {
+        "x": 11,
+        "y": -15.4,
+        "z": 0
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "j5-m2-floor-03",
+      "generator": "createSlab",
+      "params": {
+        "px": -34,
+        "surfY": -15,
+        "pz": -48.25,
+        "sx": 8,
+        "sz": 7.5,
+        "mat": "mossy",
+        "lift": false,
+        "thickness": 0.8
+      },
+      "position": {
+        "x": -34,
+        "y": -15.4,
+        "z": -48.25
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "j5-m2-floor-04",
+      "generator": "createSlab",
+      "params": {
+        "px": -34,
+        "surfY": -15,
+        "pz": 32,
+        "sx": 8,
+        "sz": 40,
+        "mat": "mossy",
+        "lift": false,
+        "thickness": 0.8
+      },
+      "position": {
+        "x": -34,
+        "y": -15.4,
+        "z": 32
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "j5-m3-floor-01",
+      "generator": "createSlab",
+      "params": {
+        "px": -11,
+        "surfY": -30,
+        "pz": 0,
+        "sx": 82,
+        "sz": 126,
+        "mat": "mossy",
+        "lift": false,
+        "thickness": 0.8
+      },
+      "position": {
+        "x": -11,
+        "y": -30.4,
+        "z": 0
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "j5-m3-floor-02",
+      "generator": "createSlab",
+      "params": {
+        "px": 45,
+        "surfY": -30,
+        "pz": 0,
+        "sx": 14,
+        "sz": 126,
+        "mat": "mossy",
+        "lift": false,
+        "thickness": 0.8
+      },
+      "position": {
+        "x": 45,
+        "y": -30.4,
+        "z": 0
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "j5-m3-floor-03",
+      "generator": "createSlab",
+      "params": {
+        "px": 34,
+        "surfY": -30,
+        "pz": -37.5,
+        "sx": 8,
+        "sz": 51,
+        "mat": "mossy",
+        "lift": false,
+        "thickness": 0.8
+      },
+      "position": {
+        "x": 34,
+        "y": -30.4,
+        "z": -37.5
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "j5-m3-floor-04",
+      "generator": "createSlab",
+      "params": {
+        "px": 34,
+        "surfY": -30,
+        "pz": 53.75,
+        "sx": 8,
+        "sz": 18.5,
+        "mat": "mossy",
+        "lift": false,
+        "thickness": 0.8
+      },
+      "position": {
+        "x": 34,
+        "y": -30.4,
+        "z": 53.75
       },
       "rotation": {
         "x": 0,
