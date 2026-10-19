@@ -71,3 +71,17 @@ test('invalid waves and tiers are rejected',async()=>{
   assert.throws(()=>getRunHardWaveRules('city',1.2,'nightmare'));
   assert.throws(()=>getRunHardWaveRules('city',10,'impossible'));
 });
+
+test('boss weapon projectiles respect Hard/Nightmare damage while Normal stays identical',async()=>{
+  const {scaleBossShotDamage,getRunHardWaveRules}=await import(lib);
+  assert.equal(scaleBossShotDamage(45),45);
+  assert.equal(scaleBossShotDamage(20),20);
+  for(const difficulty of ['hard','nightmare']){
+    const rules=getRunHardWaveRules('city',31,difficulty);
+    assert.equal(scaleBossShotDamage(45,rules.damage),Math.round(45*rules.damage));
+    assert.equal(scaleBossShotDamage(20,rules.damage),Math.round(20*rules.damage));
+    assert.ok(scaleBossShotDamage(12,rules.damage)>12);
+  }
+  assert.throws(()=>scaleBossShotDamage(-1));
+  assert.throws(()=>scaleBossShotDamage(10,0));
+});
