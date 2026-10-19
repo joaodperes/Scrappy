@@ -30,17 +30,26 @@ function showHud(note=''){
  const s=active.state;
  const current=s.mode==='gunGame'?' · NEXT '+s.gunOrder[s.gunIndex]:
    s.mode==='killConfirmed'?' · TAGS '+s.pendingTags:'';
- const opponents=active.actors.map(a=>a.name+' '+(s.botScores[a.id]||0));
+ const board=active.actors
+   .map(a=>({label:a.name+(s.mode==='tdm'||s.mode==='killConfirmed'?' ['+a.team+']':''),
+     score:s.mode==='gunGame'?(s.botGuns[a.id]||0):
+       s.mode==='killConfirmed'?(s.botScores[a.id]||0):(s.botScores[a.id]||a.kills),
+     alive:a.alive}))
+   .sort((a,b)=>b.score-a.score)
+   .map(a=>a.label+' '+a.score+(a.alive?'':' ✝')).join('   ');
+ hud.style.whiteSpace='pre-line';
  hud.textContent=(LABELS[s.mode]||s.mode)+' · '+s.score+' : '+s.opposition+
-   ' · '+Math.ceil(s.secondsLeft)+'s'+current+(note?' · '+note:'');
- hud.title=opponents.join(' | ');
+   ' · '+Math.ceil(s.secondsLeft)+'s'+current+(note?' · '+note:'')+
+   (board?'\\n'+board:'');
+ hud.title='Arena standings (team and player scores)';
 }
 function createTag(position,ownerTeam,ownerId){
  if(!isActive())return;
  const mesh=BABYLON.MeshBuilder.CreateCylinder('arena_tag_'+(++tagSerial),
    {diameter:.54,height:.13,tessellation:8},scene);
  const mat=new BABYLON.StandardMaterial('arena_tag_material_'+tagSerial,scene);
- mat.emissiveColor=new BABYLON.Color3(1,.72,.10);
+ mat.emissiveColor=ownerTeam==='RED'
+   ?new BABYLON.Color3(1,.28,.17):new BABYLON.Color3(.14,.70,1);
  mat.disableLighting=true;mesh.material=mat;
  mesh.isPickable=false;mesh.checkCollisions=false;
  mesh.position.copyFrom(position);mesh.position.y+=.65;
