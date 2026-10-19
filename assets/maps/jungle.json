@@ -10,7 +10,7 @@
         "pz": 50,
         "sx": 138,
         "sz": 40,
-        "mat": "concrete",
+        "mat": "jungleSoil",
         "lift": true,
         "thickness": 0.8
       },
@@ -39,7 +39,7 @@
         "pz": -50,
         "sx": 138,
         "sz": 40,
-        "mat": "concrete",
+        "mat": "jungleSoil",
         "lift": true,
         "thickness": 0.8
       },
@@ -68,7 +68,7 @@
         "pz": 0,
         "sx": 40,
         "sz": 60,
-        "mat": "concrete",
+        "mat": "jungleSoil",
         "lift": true,
         "thickness": 0.8
       },
@@ -97,7 +97,7 @@
         "pz": 0,
         "sx": 40,
         "sz": 60,
-        "mat": "concrete",
+        "mat": "jungleSoil",
         "lift": true,
         "thickness": 0.8
       },
@@ -126,7 +126,7 @@
         "pz": 24,
         "sx": 12,
         "sz": 12,
-        "mat": "concrete",
+        "mat": "jungleRuinStone",
         "lift": true,
         "thickness": 0.8
       },
@@ -155,7 +155,7 @@
         "pz": 24,
         "sx": 12,
         "sz": 12,
-        "mat": "concrete",
+        "mat": "jungleRuinStone",
         "lift": true,
         "thickness": 0.8
       },
@@ -184,7 +184,7 @@
         "pz": -24,
         "sx": 12,
         "sz": 12,
-        "mat": "concrete",
+        "mat": "jungleRuinStone",
         "lift": true,
         "thickness": 0.8
       },
@@ -213,7 +213,7 @@
         "pz": -24,
         "sx": 12,
         "sz": 12,
-        "mat": "concrete",
+        "mat": "jungleRuinStone",
         "lift": true,
         "thickness": 0.8
       },
@@ -242,7 +242,7 @@
         "baseY": 0,
         "height": 8,
         "diameter": 1.5,
-        "mat": "concrete"
+        "mat": "jungleRuinStone"
       },
       "position": {
         "x": -24,
@@ -269,7 +269,7 @@
         "baseY": 0,
         "height": 8,
         "diameter": 1.5,
-        "mat": "concrete"
+        "mat": "jungleRuinStone"
       },
       "position": {
         "x": 24,
@@ -296,7 +296,7 @@
         "baseY": 0,
         "height": 8,
         "diameter": 1.5,
-        "mat": "concrete"
+        "mat": "jungleRuinStone"
       },
       "position": {
         "x": -24,
@@ -323,7 +323,7 @@
         "baseY": 0,
         "height": 8,
         "diameter": 1.5,
-        "mat": "concrete"
+        "mat": "jungleRuinStone"
       },
       "position": {
         "x": 24,
@@ -350,7 +350,7 @@
         "baseY": 0,
         "height": 8,
         "diameter": 1.5,
-        "mat": "concrete"
+        "mat": "jungleRuinStone"
       },
       "position": {
         "x": -40,
@@ -377,7 +377,7 @@
         "baseY": 0,
         "height": 8,
         "diameter": 1.5,
-        "mat": "concrete"
+        "mat": "jungleRuinStone"
       },
       "position": {
         "x": 40,
@@ -404,7 +404,7 @@
         "baseY": 0,
         "height": 8,
         "diameter": 1.5,
-        "mat": "concrete"
+        "mat": "jungleRuinStone"
       },
       "position": {
         "x": 0,
@@ -431,7 +431,7 @@
         "baseY": 0,
         "height": 8,
         "diameter": 1.5,
-        "mat": "concrete"
+        "mat": "jungleRuinStone"
       },
       "position": {
         "x": 0,
@@ -459,7 +459,7 @@
         "sx": 1,
         "sy": 1.6,
         "sz": 16,
-        "mat": "concrete"
+        "mat": "jungleRuinStone"
       },
       "position": {
         "x": -33.5,
@@ -487,7 +487,7 @@
         "sx": 1,
         "sy": 1.6,
         "sz": 16,
-        "mat": "concrete"
+        "mat": "jungleRuinStone"
       },
       "position": {
         "x": -26.5,
@@ -515,7 +515,7 @@
         "sx": 8,
         "sy": 1.6,
         "sz": 1,
-        "mat": "concrete"
+        "mat": "jungleRuinStone"
       },
       "position": {
         "x": -30,
@@ -543,7 +543,7 @@
         "sx": 1,
         "sy": 1.6,
         "sz": 16,
-        "mat": "concrete"
+        "mat": "jungleRuinStone"
       },
       "position": {
         "x": 26.5,
@@ -571,7 +571,7 @@
         "sx": 1,
         "sy": 1.6,
         "sz": 16,
-        "mat": "concrete"
+        "mat": "jungleRuinStone"
       },
       "position": {
         "x": 33.5,
@@ -599,7 +599,7 @@
         "sx": 8,
         "sy": 1.6,
         "sz": 1,
-        "mat": "concrete"
+        "mat": "jungleRuinStone"
       },
       "position": {
         "x": 30,
@@ -627,7 +627,7 @@
         "sx": 16,
         "sy": 1.6,
         "sz": 1,
-        "mat": "concrete"
+        "mat": "jungleRuinStone"
       },
       "position": {
         "x": 20,
@@ -655,7 +655,7 @@
         "sx": 16,
         "sy": 1.6,
         "sz": 1,
-        "mat": "concrete"
+        "mat": "jungleRuinStone"
       },
       "position": {
         "x": 20,
@@ -683,7 +683,7 @@
         "sx": 1,
         "sy": 1.6,
         "sz": 8,
-        "mat": "concrete"
+        "mat": "jungleRuinStone"
       },
       "position": {
         "x": 12,
@@ -711,7 +711,7 @@
         "sx": 16,
         "sy": 1.6,
         "sz": 1,
-        "mat": "concrete"
+        "mat": "jungleRuinStone"
       },
       "position": {
         "x": -20,
@@ -739,7 +739,7 @@
         "sx": 16,
         "sy": 1.6,
         "sz": 1,
-        "mat": "concrete"
+        "mat": "jungleRuinStone"
       },
       "position": {
         "x": -20,
@@ -767,7 +767,7 @@
         "sx": 1,
         "sy": 1.6,
         "sz": 8,
-        "mat": "concrete"
+        "mat": "jungleRuinStone"
       },
       "position": {
         "x": -12,
@@ -1028,7 +1028,7 @@
         "fromY": 4.5,
         "toY": 0,
         "length": 12,
-        "mat": "concrete"
+        "mat": "jungleRuinStone"
       },
       "position": {
         "x": -20,
@@ -1057,7 +1057,7 @@
         "fromY": 4.5,
         "toY": 0,
         "length": 12,
-        "mat": "concrete"
+        "mat": "jungleRuinStone"
       },
       "position": {
         "x": 20,
@@ -1086,7 +1086,7 @@
         "fromY": 4.5,
         "toY": 0,
         "length": 12,
-        "mat": "concrete"
+        "mat": "jungleRuinStone"
       },
       "position": {
         "x": -20,
@@ -1115,7 +1115,7 @@
         "fromY": 4.5,
         "toY": 0,
         "length": 12,
-        "mat": "concrete"
+        "mat": "jungleRuinStone"
       },
       "position": {
         "x": 20,
@@ -1717,7 +1717,7 @@
         "sx": 0.95,
         "sy": 6.2,
         "sz": 124,
-        "mat": "mossy"
+        "mat": "jungleMineWall"
       },
       "position": {
         "x": -62,
@@ -1745,7 +1745,7 @@
         "sx": 0.95,
         "sy": 6.2,
         "sz": 124,
-        "mat": "mossy"
+        "mat": "jungleMineWall"
       },
       "position": {
         "x": 62,
@@ -1773,7 +1773,7 @@
         "sx": 124,
         "sy": 6.2,
         "sz": 0.95,
-        "mat": "mossy"
+        "mat": "jungleMineWall"
       },
       "position": {
         "x": 0,
@@ -1801,7 +1801,7 @@
         "sx": 124,
         "sy": 6.2,
         "sz": 0.95,
-        "mat": "mossy"
+        "mat": "jungleMineWall"
       },
       "position": {
         "x": 0,
@@ -1829,7 +1829,7 @@
         "sx": 0.95,
         "sy": 6.2,
         "sz": 126,
-        "mat": "mossy"
+        "mat": "jungleMineWall"
       },
       "position": {
         "x": -52,
@@ -1857,7 +1857,7 @@
         "sx": 0.95,
         "sy": 6.2,
         "sz": 126,
-        "mat": "mossy"
+        "mat": "jungleMineWall"
       },
       "position": {
         "x": 52,
@@ -1885,7 +1885,7 @@
         "sx": 104,
         "sy": 6.2,
         "sz": 0.95,
-        "mat": "mossy"
+        "mat": "jungleMineWall"
       },
       "position": {
         "x": 0,
@@ -1913,7 +1913,7 @@
         "sx": 104,
         "sy": 6.2,
         "sz": 0.95,
-        "mat": "mossy"
+        "mat": "jungleMineWall"
       },
       "position": {
         "x": 0,
@@ -1941,7 +1941,7 @@
         "sx": 0.95,
         "sy": 12,
         "sz": 126,
-        "mat": "mossy"
+        "mat": "jungleDeepWall"
       },
       "position": {
         "x": -52,
@@ -1969,7 +1969,7 @@
         "sx": 0.95,
         "sy": 12,
         "sz": 126,
-        "mat": "mossy"
+        "mat": "jungleDeepWall"
       },
       "position": {
         "x": 52,
@@ -1997,7 +1997,7 @@
         "sx": 104,
         "sy": 12,
         "sz": 0.95,
-        "mat": "mossy"
+        "mat": "jungleDeepWall"
       },
       "position": {
         "x": 0,
@@ -2025,7 +2025,7 @@
         "sx": 104,
         "sy": 12,
         "sz": 0.95,
-        "mat": "mossy"
+        "mat": "jungleDeepWall"
       },
       "position": {
         "x": 0,
@@ -2052,7 +2052,7 @@
         "pz": 0,
         "sx": 100.24,
         "sz": 126.24,
-        "mat": "mossy",
+        "mat": "jungleDeepFloor",
         "lift": false,
         "thickness": 0.8
       },
@@ -2082,7 +2082,7 @@
         "sx": 0.95,
         "sy": 12,
         "sz": 126,
-        "mat": "mossy"
+        "mat": "jungleDeepWall"
       },
       "position": {
         "x": -50,
@@ -2110,7 +2110,7 @@
         "sx": 0.95,
         "sy": 12,
         "sz": 126,
-        "mat": "mossy"
+        "mat": "jungleDeepWall"
       },
       "position": {
         "x": 50,
@@ -2138,7 +2138,7 @@
         "sx": 100,
         "sy": 12,
         "sz": 0.95,
-        "mat": "mossy"
+        "mat": "jungleDeepWall"
       },
       "position": {
         "x": 0,
@@ -2166,7 +2166,7 @@
         "sx": 100,
         "sy": 12,
         "sz": 0.95,
-        "mat": "mossy"
+        "mat": "jungleDeepWall"
       },
       "position": {
         "x": 0,
@@ -2196,7 +2196,7 @@
         "sz": 27.06012,
         "rotX": 0.2808377246212029,
         "rotZ": 0,
-        "mat": "mossy"
+        "mat": "jungleRamp"
       },
       "position": {
         "x": -24,
@@ -2226,7 +2226,7 @@
         "sz": 27.06012,
         "rotX": 0.2808377246212029,
         "rotZ": 0,
-        "mat": "steel"
+        "mat": "jungleIron"
       },
       "position": {
         "x": -27.52,
@@ -2256,7 +2256,7 @@
         "sz": 27.06012,
         "rotX": 0.2808377246212029,
         "rotZ": 0,
-        "mat": "steel"
+        "mat": "jungleIron"
       },
       "position": {
         "x": -20.48,
@@ -2286,7 +2286,7 @@
         "sz": 27.06012,
         "rotX": -0.2808377246212029,
         "rotZ": 0,
-        "mat": "mossy"
+        "mat": "jungleRamp"
       },
       "position": {
         "x": 24,
@@ -2316,7 +2316,7 @@
         "sz": 27.06012,
         "rotX": -0.2808377246212029,
         "rotZ": 0,
-        "mat": "steel"
+        "mat": "jungleIron"
       },
       "position": {
         "x": 20.48,
@@ -2346,7 +2346,7 @@
         "sz": 27.06012,
         "rotX": -0.2808377246212029,
         "rotZ": 0,
-        "mat": "steel"
+        "mat": "jungleIron"
       },
       "position": {
         "x": 27.52,
@@ -2376,7 +2376,7 @@
         "sz": 34.81738,
         "rotX": -0.2171113147349052,
         "rotZ": 0,
-        "mat": "mossy"
+        "mat": "jungleRamp"
       },
       "position": {
         "x": 0,
@@ -2406,7 +2406,7 @@
         "sz": 34.81738,
         "rotX": -0.2171113147349052,
         "rotZ": 0,
-        "mat": "steel"
+        "mat": "jungleIron"
       },
       "position": {
         "x": -3.52,
@@ -2436,7 +2436,7 @@
         "sz": 34.81738,
         "rotX": -0.2171113147349052,
         "rotZ": 0,
-        "mat": "steel"
+        "mat": "jungleIron"
       },
       "position": {
         "x": 3.52,
@@ -2466,7 +2466,7 @@
         "sz": 57.97413,
         "rotX": 0.26171350240120506,
         "rotZ": 0,
-        "mat": "mossy"
+        "mat": "jungleRamp"
       },
       "position": {
         "x": -34,
@@ -2496,7 +2496,7 @@
         "sz": 57.97413,
         "rotX": 0.26171350240120506,
         "rotZ": 0,
-        "mat": "steel"
+        "mat": "jungleIron"
       },
       "position": {
         "x": -37.52,
@@ -2526,7 +2526,7 @@
         "sz": 57.97413,
         "rotX": 0.26171350240120506,
         "rotZ": 0,
-        "mat": "steel"
+        "mat": "jungleIron"
       },
       "position": {
         "x": -30.48,
@@ -2556,7 +2556,7 @@
         "sz": 57.97413,
         "rotX": -0.26171350240120506,
         "rotZ": 0,
-        "mat": "mossy"
+        "mat": "jungleRamp"
       },
       "position": {
         "x": 34,
@@ -2586,7 +2586,7 @@
         "sz": 57.97413,
         "rotX": -0.26171350240120506,
         "rotZ": 0,
-        "mat": "steel"
+        "mat": "jungleIron"
       },
       "position": {
         "x": 30.48,
@@ -2616,7 +2616,7 @@
         "sz": 57.97413,
         "rotX": -0.26171350240120506,
         "rotZ": 0,
-        "mat": "steel"
+        "mat": "jungleIron"
       },
       "position": {
         "x": 37.52,
@@ -2644,7 +2644,7 @@
         "sx": 0.8,
         "sy": 5.2,
         "sz": 28,
-        "mat": "mossy"
+        "mat": "jungleMineWall"
       },
       "position": {
         "x": -15,
@@ -2672,7 +2672,7 @@
         "sx": 0.8,
         "sy": 5.2,
         "sz": 28,
-        "mat": "mossy"
+        "mat": "jungleMineWall"
       },
       "position": {
         "x": 15,
@@ -2700,7 +2700,7 @@
         "sx": 0.8,
         "sy": 5.2,
         "sz": 27,
-        "mat": "mossy"
+        "mat": "jungleMineWall"
       },
       "position": {
         "x": -15,
@@ -2728,7 +2728,7 @@
         "sx": 0.8,
         "sy": 5.2,
         "sz": 27,
-        "mat": "mossy"
+        "mat": "jungleMineWall"
       },
       "position": {
         "x": 15,
@@ -2756,7 +2756,7 @@
         "sx": 26,
         "sy": 5.2,
         "sz": 0.8,
-        "mat": "mossy"
+        "mat": "jungleMineWall"
       },
       "position": {
         "x": -43,
@@ -2784,7 +2784,7 @@
         "sx": 26,
         "sy": 5.2,
         "sz": 0.8,
-        "mat": "mossy"
+        "mat": "jungleMineWall"
       },
       "position": {
         "x": 43,
@@ -2812,7 +2812,7 @@
         "sx": 24,
         "sy": 5.2,
         "sz": 0.8,
-        "mat": "mossy"
+        "mat": "jungleMineWall"
       },
       "position": {
         "x": -42,
@@ -2840,7 +2840,7 @@
         "sx": 24,
         "sy": 5.2,
         "sz": 0.8,
-        "mat": "mossy"
+        "mat": "jungleMineWall"
       },
       "position": {
         "x": 42,
@@ -2868,7 +2868,7 @@
         "sx": 0.8,
         "sy": 5.2,
         "sz": 26,
-        "mat": "mossy"
+        "mat": "jungleMineWall"
       },
       "position": {
         "x": 12,
@@ -2896,7 +2896,7 @@
         "sx": 0.8,
         "sy": 5.2,
         "sz": 26,
-        "mat": "mossy"
+        "mat": "jungleMineWall"
       },
       "position": {
         "x": -12,
@@ -2924,7 +2924,7 @@
         "sx": 24,
         "sy": 5.2,
         "sz": 0.8,
-        "mat": "mossy"
+        "mat": "jungleMineWall"
       },
       "position": {
         "x": -29,
@@ -2952,7 +2952,7 @@
         "sx": 24,
         "sy": 5.2,
         "sz": 0.8,
-        "mat": "mossy"
+        "mat": "jungleMineWall"
       },
       "position": {
         "x": 29,
@@ -2980,7 +2980,7 @@
         "sx": 0.8,
         "sy": 11,
         "sz": 31,
-        "mat": "mossy"
+        "mat": "jungleDeepWall"
       },
       "position": {
         "x": -12,
@@ -3008,7 +3008,7 @@
         "sx": 0.8,
         "sy": 11,
         "sz": 31,
-        "mat": "mossy"
+        "mat": "jungleDeepWall"
       },
       "position": {
         "x": 12,
@@ -3036,7 +3036,7 @@
         "sx": 27,
         "sy": 11,
         "sz": 0.8,
-        "mat": "mossy"
+        "mat": "jungleDeepWall"
       },
       "position": {
         "x": -27,
@@ -3064,7 +3064,7 @@
         "sx": 27,
         "sy": 11,
         "sz": 0.8,
-        "mat": "mossy"
+        "mat": "jungleDeepWall"
       },
       "position": {
         "x": 27,
@@ -3092,7 +3092,7 @@
         "sx": 0.8,
         "sy": 11,
         "sz": 31,
-        "mat": "mossy"
+        "mat": "jungleDeepWall"
       },
       "position": {
         "x": -16,
@@ -3120,7 +3120,7 @@
         "sx": 0.8,
         "sy": 11,
         "sz": 31,
-        "mat": "mossy"
+        "mat": "jungleDeepWall"
       },
       "position": {
         "x": 16,
@@ -3148,7 +3148,7 @@
         "sx": 25,
         "sy": 11,
         "sz": 0.8,
-        "mat": "mossy"
+        "mat": "jungleDeepWall"
       },
       "position": {
         "x": -31,
@@ -3176,7 +3176,7 @@
         "sx": 25,
         "sy": 11,
         "sz": 0.8,
-        "mat": "mossy"
+        "mat": "jungleDeepWall"
       },
       "position": {
         "x": 31,
@@ -3203,7 +3203,7 @@
         "pz": 36,
         "sx": 20,
         "sz": 14,
-        "mat": "mossy",
+        "mat": "jungleMineCeiling",
         "collides": true
       },
       "position": {
@@ -3231,7 +3231,7 @@
         "pz": -36,
         "sx": 20,
         "sz": 14,
-        "mat": "mossy",
+        "mat": "jungleMineCeiling",
         "collides": true
       },
       "position": {
@@ -3259,7 +3259,7 @@
         "pz": 31,
         "sx": 19,
         "sz": 14,
-        "mat": "mossy",
+        "mat": "jungleMineCeiling",
         "collides": true
       },
       "position": {
@@ -3287,7 +3287,7 @@
         "pz": -24,
         "sx": 17,
         "sz": 12,
-        "mat": "mossy",
+        "mat": "jungleMineCeiling",
         "collides": true
       },
       "position": {
@@ -3315,7 +3315,7 @@
         "pz": 39,
         "sx": 20,
         "sz": 15,
-        "mat": "mossy",
+        "mat": "jungleMineCeiling",
         "collides": true
       },
       "position": {
@@ -3343,7 +3343,7 @@
         "pz": -42,
         "sx": 20,
         "sz": 15,
-        "mat": "mossy",
+        "mat": "jungleMineCeiling",
         "collides": true
       },
       "position": {
@@ -3371,7 +3371,7 @@
         "pz": 38,
         "sx": 20,
         "sz": 15,
-        "mat": "mossy",
+        "mat": "jungleMineCeiling",
         "collides": true
       },
       "position": {
@@ -3399,7 +3399,7 @@
         "pz": -38,
         "sx": 18,
         "sz": 15,
-        "mat": "mossy",
+        "mat": "jungleMineCeiling",
         "collides": true
       },
       "position": {
@@ -3428,7 +3428,7 @@
         "sx": 4,
         "sy": 1.6,
         "sz": 1,
-        "mat": "steel"
+        "mat": "jungleIron"
       },
       "position": {
         "x": -38,
@@ -3456,7 +3456,7 @@
         "sx": 4,
         "sy": 1.6,
         "sz": 1,
-        "mat": "steel"
+        "mat": "jungleIron"
       },
       "position": {
         "x": 38,
@@ -3484,7 +3484,7 @@
         "sx": 4,
         "sy": 1.6,
         "sz": 1,
-        "mat": "steel"
+        "mat": "jungleIron"
       },
       "position": {
         "x": 31,
@@ -3512,7 +3512,7 @@
         "sx": 4,
         "sy": 1.6,
         "sz": 1,
-        "mat": "steel"
+        "mat": "jungleIron"
       },
       "position": {
         "x": -20,
@@ -3540,7 +3540,7 @@
         "sx": 4,
         "sy": 1.6,
         "sz": 1,
-        "mat": "steel"
+        "mat": "jungleIron"
       },
       "position": {
         "x": -22,
@@ -3568,7 +3568,7 @@
         "sx": 4,
         "sy": 1.6,
         "sz": 1,
-        "mat": "steel"
+        "mat": "jungleIron"
       },
       "position": {
         "x": 15,
@@ -3596,7 +3596,7 @@
         "sx": 4,
         "sy": 1.6,
         "sz": 1,
-        "mat": "steel"
+        "mat": "jungleIron"
       },
       "position": {
         "x": -25,
@@ -3624,7 +3624,7 @@
         "sx": 4,
         "sy": 1.6,
         "sz": 1,
-        "mat": "steel"
+        "mat": "jungleIron"
       },
       "position": {
         "x": 28,
@@ -3920,7 +3920,7 @@
         "sx": 0.65,
         "sy": 1.8,
         "sz": 10,
-        "mat": "steel"
+        "mat": "jungleIron"
       },
       "position": {
         "x": -29.1,
@@ -3948,7 +3948,7 @@
         "sx": 0.65,
         "sy": 1.8,
         "sz": 10,
-        "mat": "steel"
+        "mat": "jungleIron"
       },
       "position": {
         "x": 29.1,
@@ -3975,7 +3975,7 @@
         "pz": -1.25,
         "sx": 2.24,
         "sz": 62.74,
-        "mat": "mossy",
+        "mat": "jungleMossFloor",
         "lift": false,
         "thickness": 0.8
       },
@@ -4004,7 +4004,7 @@
         "pz": -1.25,
         "sx": 40.24,
         "sz": 62.74,
-        "mat": "mossy",
+        "mat": "jungleMossFloor",
         "lift": false,
         "thickness": 0.8
       },
@@ -4033,7 +4033,7 @@
         "pz": -1.25,
         "sx": 2.24,
         "sz": 62.74,
-        "mat": "mossy",
+        "mat": "jungleMossFloor",
         "lift": false,
         "thickness": 0.8
       },
@@ -4062,7 +4062,7 @@
         "pz": -20.25,
         "sx": 8.24,
         "sz": 24.74,
-        "mat": "mossy",
+        "mat": "jungleMossFloor",
         "lift": false,
         "thickness": 0.8
       },
@@ -4091,7 +4091,7 @@
         "pz": 24.25,
         "sx": 8.24,
         "sz": 11.74,
-        "mat": "mossy",
+        "mat": "jungleMossFloor",
         "lift": false,
         "thickness": 0.8
       },
@@ -4120,7 +4120,7 @@
         "pz": -25.5,
         "sx": 8.24,
         "sz": 14.24,
-        "mat": "mossy",
+        "mat": "jungleMossFloor",
         "lift": false,
         "thickness": 0.8
       },
@@ -4149,7 +4149,7 @@
         "pz": 19,
         "sx": 8.24,
         "sz": 22.24,
-        "mat": "mossy",
+        "mat": "jungleMossFloor",
         "lift": false,
         "thickness": 0.8
       },
@@ -4178,7 +4178,7 @@
         "pz": 0,
         "sx": 58.24,
         "sz": 124.24,
-        "mat": "mossy",
+        "mat": "jungleMineFloor",
         "lift": false,
         "thickness": 0.8
       },
@@ -4207,7 +4207,7 @@
         "pz": 0,
         "sx": 58.24,
         "sz": 124.24,
-        "mat": "mossy",
+        "mat": "jungleMineFloor",
         "lift": false,
         "thickness": 0.8
       },
@@ -4236,7 +4236,7 @@
         "pz": -27,
         "sx": 8.24,
         "sz": 70.24,
-        "mat": "mossy",
+        "mat": "jungleMineFloor",
         "lift": false,
         "thickness": 0.8
       },
@@ -4265,7 +4265,7 @@
         "pz": 52.25,
         "sx": 8.24,
         "sz": 19.74,
-        "mat": "mossy",
+        "mat": "jungleMineFloor",
         "lift": false,
         "thickness": 0.8
       },
@@ -4294,7 +4294,7 @@
         "pz": 0,
         "sx": 82.24,
         "sz": 126.24,
-        "mat": "mossy",
+        "mat": "jungleDeepFloor",
         "lift": false,
         "thickness": 0.8
       },
@@ -4323,7 +4323,7 @@
         "pz": 0,
         "sx": 14.24,
         "sz": 126.24,
-        "mat": "mossy",
+        "mat": "jungleDeepFloor",
         "lift": false,
         "thickness": 0.8
       },
@@ -4352,7 +4352,7 @@
         "pz": -37.5,
         "sx": 8.24,
         "sz": 51.24,
-        "mat": "mossy",
+        "mat": "jungleDeepFloor",
         "lift": false,
         "thickness": 0.8
       },
@@ -4381,7 +4381,7 @@
         "pz": 53.75,
         "sx": 8.24,
         "sz": 18.74,
-        "mat": "mossy",
+        "mat": "jungleDeepFloor",
         "lift": false,
         "thickness": 0.8
       },
@@ -4410,7 +4410,7 @@
         "pz": 0,
         "sx": 14.24,
         "sz": 126.24,
-        "mat": "mossy",
+        "mat": "jungleMineFloor",
         "lift": false,
         "thickness": 0.8
       },
@@ -4439,7 +4439,7 @@
         "pz": 0,
         "sx": 82.24,
         "sz": 126.24,
-        "mat": "mossy",
+        "mat": "jungleMineFloor",
         "lift": false,
         "thickness": 0.8
       },
@@ -4468,7 +4468,7 @@
         "pz": -53.75,
         "sx": 8.24,
         "sz": 18.74,
-        "mat": "mossy",
+        "mat": "jungleMineFloor",
         "lift": false,
         "thickness": 0.8
       },
@@ -4497,7 +4497,7 @@
         "pz": 37.5,
         "sx": 8.24,
         "sz": 51.24,
-        "mat": "mossy",
+        "mat": "jungleMineFloor",
         "lift": false,
         "thickness": 0.8
       },
