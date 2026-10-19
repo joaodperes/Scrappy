@@ -27,6 +27,24 @@ test('Multi-Thread raises cap to six and Single-Thread reduces it to one',async(
   assert.equal(updateAegisLocks([],enemies,6,()=>true,()=>true).length,6);
   assert.equal(updateAegisLocks(enemies.slice(0,6),enemies,1,()=>true,()=>true).length,1);
 });
+test('AEGIS thread attachments set 66% Multi-Thread and 3.5x Single-Thread damage',()=>{
+  const progression=fs.readFileSync(path.join(root,'js/progression.js'),'utf8');
+  const multi=progression.match(/multi_thread:\s*\{[^\n]*mods:\s*\{([^}]*)\}/)?.[1];
+  const single=progression.match(/single_thread:\s*\{[\s\S]*?mods:\s*\{([^}]*)\}/)?.[1];
+  assert.ok(multi,'Multi-Thread attachment definition exists');
+  assert.ok(single,'Single-Thread attachment definition exists');
+  const mod=(source,key)=>Number(source.match(new RegExp('\\b'+key+':\\s*([\\d.]+)'))?.[1]);
+  assert.equal(mod(multi,'maxTargets'),3); // AEGIS base cap is 3, becomes 6.
+  assert.equal(mod(multi,'dmgMult'),0.66);
+  assert.equal(mod(single,'maxTargetsOverride'),1);
+  assert.equal(mod(single,'dmgMult'),3.5);
+  // getEffectiveStats rounds weapon damage before each lock receives modDmg.
+  assert.match(progression,/mod === 'dmgMult'\) out\.dmg = Math\.round\(baseDefs\.dmg \* delta\)/);
+  const player=fs.readFileSync(path.join(root,'js/player.js'),'utf8');
+  assert.match(player,/cb\.hitRobot\?\.\(e,modDmg,false,false,'AEGIS'\)/);
+  assert.equal(Math.round(30*mod(multi,'dmgMult')),20);
+  assert.equal(Math.round(30*mod(single,'dmgMult')),105);
+});
 test('Dead locks are dropped; valid new targets replace them',async()=>{
   const {updateAegisLocks}=await import(url);
   const a={id:1,alive:false},b={id:2,alive:true},c={id:3,alive:true};
