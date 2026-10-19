@@ -10,7 +10,7 @@ import { _meshToEnemy } from './enemies.js';
 import { spawnSparks } from './particles.js';
 import { getCurrentMap, getMapMeta } from './mapManager.js';
 import { blocksBullet } from './bulletCollision.js';
-import { updateAegisLocks, getAegisFireTargets } from './aegisTargeting.js';
+import { updateAegisLocks, getAegisFireTargets, hasDeadAegisLock } from './aegisTargeting.js';
 
 // Static imports eradicate the Promise crashes in the shoot/input loop!
 import {
@@ -880,7 +880,7 @@ function _updateAegisTargeting(){
   const cap=Math.max(1,Math.floor(EW.maxTargets||3));
   // A dead former lock invalidates the whole painted group, even when
   // other targets are still alive. The player must reacquire those targets.
-  if(paintedTargets.some(e=>!e.alive || e.group?.isDisposed?.())){
+  if(hasDeadAegisLock(paintedTargets)){
     _clearAegisLocks();
     _aegisReacquireDelay=Math.max(_aegisReacquireDelay,EW.cd||WDEFS.AEGIS.cd||0.3);
   }
