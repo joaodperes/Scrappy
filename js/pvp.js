@@ -6,6 +6,7 @@ import { connect, disconnect, adoptConnection, send, on, off, sendMoveThrottled,
 import { sfx } from './audio.js';
 import { updateFfaHUD, showRoomConfigBanner, hideFfaHUD } from './ui.js';
 import { hurtPlayer } from './player.js';
+import { blocksBullet } from './bulletCollision.js';
 import { spawnBot, updateEnemies } from './enemies.js';
 import { enemies } from './gameState.js';
 import { profile, emitEvent, awardXp } from './progression.js';
@@ -564,7 +565,7 @@ export function checkFfaHitScan(dmg, range, spread = 0) {
   }
   const ray  = new BABYLON.Ray(camera.position.clone(), fwd, range);
   const hit = scene.pickWithRay(ray,m => m.isEnabled() &&
-    (_remoteMeshMap.has(m) || (m.checkCollisions && m.isPickable && !m.metadata?.enemy)));
+    (_remoteMeshMap.has(m) || blocksBullet(m)));
   if (hit?.hit) {
     const entry = _remoteMeshMap.get(hit.pickedMesh);
     if(entry){
