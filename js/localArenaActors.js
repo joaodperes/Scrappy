@@ -151,7 +151,7 @@ function pickTarget(actor,actors,mode,humanAlive){
  const targets=actors.filter(other=>arenaTeamEnemy(actor,other,mode)).map(a=>({
   id:a.id,actor:a,point:a.group.position.add(new B.Vector3(0,1.45,0))
  }));
- if(humanAlive&&(mode!=='tdm'||actor.team!=='RED'))
+ if(humanAlive&&(!['tdm','killConfirmed'].includes(mode)||actor.team!=='RED'))
    targets.push({id:'human',actor:null,point:camera.position.clone()});
  const me=actor.group.position.add(new B.Vector3(0,1.52,0));
  let found=null,closest=Infinity;
