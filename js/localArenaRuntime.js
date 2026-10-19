@@ -5,6 +5,7 @@ import {createLocalArena,localArenaKill,localArenaBotKill,localArenaTag,
 import {scene,camera} from './scene.js';
 import {inventory,setWeapon,setActiveSlot,curWep,WDEFS} from './weapons.js';
 import {rebuildMeshMap} from './enemies.js';
+import {awardXp,recordKill,recordDamage} from './progression.js';
 import {fetchArenaPersonas,createArenaActor,destroyArenaActors,
   chooseArenaSpawn,setArenaActorWeapon,killArenaActor,respawnArenaActor,
   updateArenaActors} from './localArenaActors.js';
@@ -132,6 +133,10 @@ function onActorKilled(actor,killer,weapon){
      active.state={...active.state,pendingTags:active.state.pendingTags+1};
  }
  if(killer==='human'){
+   // Offline arena eliminations award modest progression, independently
+   // from Survival waves and without any competitive multiplayer claim.
+   awardXp(20);
+   recordKill('arena',weapon,{source:'PLAYER'});
    const before=active.state;
    const next=localArenaKill(before,{weapon,source:'PLAYER'});
    if(before.mode==='gunGame'&&next.gunIndex!==before.gunIndex&&!next.complete){
@@ -156,7 +161,9 @@ export function localArenaActorHit(actor,dmg,source='PLAYER'){
  // Gun Game's ladder cannot be bypassed by another equipped firearm.
  if(active.state.mode==='gunGame'&&curWep!==active.state.gunOrder[active.state.gunIndex])return;
  if(['tdm','killConfirmed'].includes(active.state.mode)&&actor.team==='RED')return;
- actor.hp=Math.max(0,actor.hp-Math.min(500,dmg));
+ const dealt=Math.min(actor.hp,Math.min(500,dmg));
+ actor.hp=Math.max(0,actor.hp-dealt);
+ if(source==='PLAYER')recordDamage(curWep,dealt);
  if(actor.hp===0)onActorKilled(actor,source==='PLAYER'?'human':null,curWep);
 }
 // Legacy Survival robot kills do not score in arena games. No Survival bots
