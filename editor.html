@@ -51,6 +51,7 @@
         <button data-action="addMovingPlatform">+ Moving Platform</button>
         <button data-action="addZipline">+ Zipline / Cable Car</button>
         <button data-action="addRooftopLift">+ Rooftop Lift</button>
+        <button data-action="addSkybridge">+ Skybridge</button>
         <button data-action="addPowerSwitch">+ Power Switch</button>
         <button data-action="addCeiling">+ Ceiling</button>
         <hr>
@@ -140,7 +141,7 @@
             const {
                 createSlab, createWall, createPillar, createColumn, createGlass,
                 createRampBox, createRamp, createStaircase, createLava, createDestructibleWall, createSpikeTrap,
-                createBarrel, createCrate, createCeiling, createJumpPad, createMovingPlatform, createZipline, createRooftopLift, createPowerSwitch,
+                createBarrel, createCrate, createCeiling, createJumpPad, createMovingPlatform, createZipline, createRooftopLift, createSkybridge, createPowerSwitch,
                 applyEditableLayout, loadMapDocument,
             } = await import('/js/levelHelpers.js');
             const { walkableMeshes, explosiveBarrels, jumpPads } = await import('/js/level.js');
@@ -278,6 +279,7 @@
                             else if (action === 'addMovingPlatform') this.addObject('movingPlatform');
                             else if (action === 'addZipline') this.addObject('zipline');
                             else if (action === 'addRooftopLift') this.addObject('rooftopLift');
+                            else if (action === 'addSkybridge') this.addObject('skybridge');
                             else if (action === 'addPowerSwitch') this.addObject('powerSwitch');
                             else if (action === 'addCeiling') this.addObject('ceiling');
                             else if (action === 'delete') this.deleteSelected();
@@ -663,6 +665,7 @@
                         case 'zipline': mesh=createZipline('custom_zipline',pos.x,y,pos.z,
                           pos.x+15,y,pos.z,11.5,4,4,{movingPlatforms});break;
                         case 'rooftopLift': mesh=createRooftopLift(pos.x,pos.z,12,'E',0,{movingPlatforms});break;
+                        case 'skybridge': mesh=createSkybridge(pos.x,pos.z,'X',12,4,y,y);break;
                         case 'powerSwitch': mesh=createPowerSwitch(pos.x,y,pos.z,[],{powerSwitches});break;
                         case 'ceiling': mesh=createCeiling(pos.x,y,pos.z,5,5);break;
                     }
