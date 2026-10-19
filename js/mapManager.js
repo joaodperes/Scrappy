@@ -354,6 +354,11 @@ export function isMapUnlocked(mapId) {
   if (mapId === 'terminal') return true;
   return !!MAP_CONFIG[mapId]; // Catalog-registered maps are publicly playable.
 }
+export function isNightmareUnlocked(mapId){
+  const stats=profile.stats||{};
+  return (stats[`bossWaveClearsHard_${mapId}`]||0)>0 ||
+    (stats[`maxWaveHard_${mapId}`]||0)>=10;
+}
 export function isHardModeUnlocked(mapId) {
   const stats = profile.stats || {};
   return (stats[`bossWaveClears_${mapId}`] || 0) > 0;
