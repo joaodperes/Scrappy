@@ -1,90 +1,182 @@
-body { margin: 0; overflow: hidden; background: #111; }
-        #editorPanel {
-            position: fixed; top: 20px; right: 20px;
-            background: rgba(20,20,30,0.92);
-            color: #ddd;
-            padding: 14px;
-            border-radius: 10px;
-            font-family: monospace;
-            display: none;
-            flex-direction: column;
-            gap: 6px;
-            z-index: 9999;
-            min-width: 170px;
-            border: 1px solid #666;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.6);
-            pointer-events: none;
-        }
-        #editorPanel > * { pointer-events: auto; }
-        #editorPanel button {
-            background: #2a4a6a;
-            border: none;
-            color: white;
-            padding: 6px 10px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-family: inherit;
-        }
-        #editorPanel button:hover { background: #3a6a8a; }
-        #editorPanel .danger { color: #ff6666; }
-        #editorPanel .success { color: #66ff66; }
-        #editorPanel .warning { color: #ffcc66; }
-        #editorPanel .live { color: #66ccff; }
-        #editorPanel kbd {
-            background: #333;
-            padding: 1px 6px;
-            border-radius: 3px;
-            font-size: 11px;
-        }
-        #editorPanel hr {
-            border-color: #555;
-            width: 100%;
-            margin: 4px 0;
-        }
-        #info {
-            position: fixed;
-            bottom: 20px;
-            left: 20px;
-            color: #888;
-            font-family: monospace;
-            font-size: 12px;
-            pointer-events: none;
-            text-shadow: 0 0 10px rgba(0,0,0,0.8);
-        }
-        #mapSwitcher {
-            position: fixed;
-            top: 20px;
-            left: 20px;
-            font-family: monospace;
-            font-size: 11px;
-            color: #888;
-            background: rgba(20,20,30,0.7);
-            padding: 8px 10px;
-            border-radius: 6px;
-            z-index: 9999;
-        }
-        #mapSwitcher a {
-            color: #6af;
-            text-decoration: none;
-            margin-right: 8px;
-        }
-        #mapSwitcher a.active { color: #9f6; font-weight: bold; }
-        #error {
-            position: fixed;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            color: #ff6666;
-            font-family: monospace;
-            background: rgba(0,0,0,0.8);
-            padding: 10px 20px;
-            border-radius: 8px;
-            display: none;
-            z-index: 10000;
-        }
-        #navRebuildBtn {
-            background: #4a6a2a;
-        }
-        #navRebuildBtn:hover {
-            background: #6a8a4a;
-        }
+/* Brighter, legible map authoring UI. Only loaded by editor.html. */
+body {
+    margin: 0;
+    overflow: hidden;
+    background: #354454;
+    color: #e9f0f8;
+}
+#editorPanel {
+    position: fixed;
+    top: 12px;
+    right: 12px;
+    box-sizing: border-box;
+    width: min(300px, calc(100vw - 24px));
+    max-height: calc(100vh - 24px);
+    overflow-y: auto;
+    background: rgba(38, 51, 68, .94);
+    color: #f0f5fb;
+    padding: 14px;
+    border-radius: 10px;
+    font: 12px/1.4 system-ui, sans-serif;
+    display: none;
+    flex-direction: column;
+    gap: 7px;
+    z-index: 9999;
+    border: 1px solid #819ab4;
+    box-shadow: 0 8px 24px rgba(0,0,0,.35);
+}
+#editorPanel button {
+    background: #365b7c;
+    border: 1px solid #7290ae;
+    color: #f7fbff;
+    padding: 7px 9px;
+    border-radius: 5px;
+    cursor: pointer;
+    font: 600 12px/1.3 inherit;
+    text-align: left;
+}
+#editorPanel button:hover, #editorPanel button:focus-visible {
+    background: #46769c;
+    outline: 1px solid #b5e8ff;
+}
+#editorPanel .danger { color: #ffb2b2; }
+#editorPanel .success { color: #aaffb9; }
+#editorPanel .warning { color: #ffe2a1; }
+#editorPanel .live { color: #abeaff; }
+#editorPanel kbd {
+    background: #536477;
+    padding: 1px 5px;
+    border: 1px solid #8595a5;
+    border-radius: 4px;
+    font-size: 11px;
+}
+#editorPanel hr {
+    border: 0;
+    border-top: 1px solid #698096;
+    width: 100%;
+    margin: 5px 0;
+}
+#editorPanel fieldset {
+    border: 1px solid #7890a8;
+    border-radius: 6px;
+    padding: 8px;
+    min-width: 0;
+}
+#editorPanel fieldset legend {
+    color: #d7eaff;
+    font-weight: 700;
+    padding: 0 5px;
+}
+#editorSnapControls {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+#editorSnapControls > label {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    align-items: center;
+}
+#editorSnapControls input[type="checkbox"] {
+    accent-color: #55d5be;
+    width: 16px;
+    height: 16px;
+}
+#editorPanel input[type="number"], #editorPanel textarea {
+    background: #ecf3fb;
+    color: #17283e;
+    border: 1px solid #99b5d0;
+    border-radius: 4px;
+    padding: 5px;
+    font: 12px/1.3 ui-monospace, SFMono-Regular, Consolas, monospace;
+    box-sizing: border-box;
+}
+#editorSnapControls input[type="number"] {
+    width: 68px;
+}
+.editorSnapActions, .transformButtons {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+.editorSnapActions button, .transformButtons button {
+    flex: 1 1 105px;
+}
+.editorTransformHeading {
+    color: #b6e0ff;
+    font-weight: 800;
+    letter-spacing: .04em;
+    margin: 10px 0 1px;
+}
+.transformFieldset {
+    margin: 6px 0;
+}
+.transformAxes {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 5px;
+}
+.transformAxes label {
+    min-width: 0;
+    color: #b9d3ec;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+.transformAxes input {
+    width: 100%;
+    min-width: 0;
+}
+#editorInspector textarea {
+    width: 100%;
+    min-height: 95px;
+    resize: vertical;
+}
+#editorInspector > p {
+    overflow-wrap: anywhere;
+}
+#info {
+    position: fixed;
+    bottom: 16px;
+    left: 16px;
+    color: #e1f2ff;
+    background: rgba(27, 39, 54, .88);
+    padding: 7px 9px;
+    border-radius: 6px;
+    font: 12px/1.3 system-ui, sans-serif;
+    pointer-events: none;
+}
+#mapSwitcher {
+    position: fixed;
+    top: 12px;
+    left: 12px;
+    font: 12px/1.4 system-ui, sans-serif;
+    color: #e4ebf4;
+    background: rgba(31, 44, 60, .93);
+    padding: 10px;
+    border: 1px solid #7189a1;
+    border-radius: 7px;
+    z-index: 9999;
+}
+#mapSwitcher a {
+    color: #a9dbff;
+    text-decoration: none;
+    margin-right: 7px;
+}
+#mapSwitcher a.active { color: #bdf8a3; font-weight: 750; }
+#error {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: #ffc9c9;
+    font: 12px/1.5 ui-monospace, monospace;
+    background: rgba(61, 29, 36, .96);
+    padding: 10px 20px;
+    border-radius: 8px;
+    display: none;
+    z-index: 10000;
+}
+#navRebuildBtn { background: #4b743f !important; }
+#navRebuildBtn:hover { background: #638e55 !important; }
