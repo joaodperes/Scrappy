@@ -127,8 +127,9 @@ function onActorKilled(actor,killer,weapon){
  killArenaActor(actor);
  if(active.state.mode==='killConfirmed'){
    createTag(pos,actor.team,actor.id);
-   // Blue team tags are collectible by the human/RED allies; those
-   // killed by bots still need to appear in the shared pending tally.
+   // Every BLUE death leaves one confirmable tag. localArenaKill adds
+   // the human-kill tag below; bot-caused (or environmental) BLUE deaths
+   // also create an outstanding tag for the RED team to claim.
    if(actor.team==='BLUE'&&killer!=='human')
      active.state={...active.state,pendingTags:active.state.pendingTags+1};
  }
@@ -222,7 +223,7 @@ function updateTags(dt){
   if(!nearHuman&&!nearBot)continue;
   removeTag(i);
   if(nearHuman){
-   // A human can deny their own fallen tag without gaining score.
+   // RED tags are allied denials, BLUE tags are confirmed team points.
    if(tag.ownerTeam==='RED')continue;
    applyResult(localArenaTag(active.state));
   }else if(nearBot){
