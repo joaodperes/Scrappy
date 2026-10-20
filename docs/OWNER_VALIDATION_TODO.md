@@ -5,13 +5,13 @@ postponed human multiplayer, network co-op and networked-bot features until
 a separate later PR. The local game modes below must work without running a
 Node WebSocket service. FFA/TDM are *bot practice*, not full team AI yet.
 
-## First-pass offline game modes (new)
+## Offline player-like AI matches — updated acceptance checks
 
 - [ ] **Local Play navigation:** Home → Play opens LOCAL PLAY; select Local Modes; online controls are clearly marked experimental and not a prerequisite.
-- [ ] **Gun Game start:** choose a map, duration and score setting, launch with **no** Node server running. First weapon is Pistol; each valid robot kill equips the next weapon in one shared deterministic ladder. Swapping to an unintended gun must not advance the ladder.
+- [ ] **Gun Game start:** choose a map, duration and score setting with **no** Node server. Every AI competitor starts with Pistol; when bots kill you or each other, their individual weapon advances. Your valid kills advance your own ladder. Incorrect equipped weapons must not advance.
 - [ ] **Gun Game finish:** after progressing through all guns, a Knife elimination shows VICTORY; reaching a generic point target early must not finish the ladder.
-- [ ] **Kill Confirmed:** kills drop bright golden collectable tags; counter only increases by collecting them. Walk away from a tag until it expires and confirm no phantom points or collectible remains.
-- [ ] **FFA Practice / TDM Practice:** local bots spawn, attack and replenish without a WebSocket service; UI says PRACTICE (bots currently only target you). Score/time conditions and results behave sensibly; don't classify these as full FFA/TDM bot-vs-bot matches.
+- [ ] **Kill Confirmed:** RED/BLUE deaths drop team-colored tags. Eliminations alone do not score. You and RED bot allies collect BLUE tags for team points and deny RED tags; BLUE opponents collect RED tags and deny BLUE tags. Expired/denied tags cannot score twice.
+- [ ] **Offline FFA / TDM:** confirm five player-shaped AI competitors spawn, hold visible weapons, have distinct names/skins and actually shoot **each other**. FFA counts each bot's own kills; TDM has two RED allies and three BLUE opponents, and teammates cannot damage one another. Verify score/time limits and results.
 - [ ] **Local arena loadout:** select local Primary/Secondary weapons without an online room; saved pair persists into FFA/TDM Practice and Kill Confirmed, while Gun Game always overrides with its weapon ladder.
 - [ ] **Local match death/respawn:** after a death, there is a five-second respawn with HP reset and no wave counter reset; if score/time goal ends the match, a single result screen appears.
 - [ ] **Local menu/cleanup:** quit through Pause and return to Menu; retry different local mode/map; no leftover dog tags, HUD overlays, bot entities, duplicate score events or orphaned timers.
