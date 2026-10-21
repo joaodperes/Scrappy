@@ -2724,12 +2724,12 @@ function _nextSyncVersion(uid){
   localStorage.setItem(key,String(next));return next;
  }catch{return Date.now()}
 }
-function _scheduleCloudSync(){
+function _scheduleCloudSync(delay=20000){
  if(_cloudSyncTimer||!_fbReady||!_cloudDirty)return;
  _cloudSyncTimer=setTimeout(()=>{
   _cloudSyncTimer=null;
   void flushProfileToCloud();
- },20000);
+ },delay);
 }
 
 export function checkFirstTimePickup(wName) {
@@ -2813,6 +2813,16 @@ export function loadProfile(){
   document.addEventListener('visibilitychange',()=>{
    if(document.hidden&&_cloudDirty)void flushProfileToCloud();
   });
+ if(typeof window!=='undefined'){
+  window.addEventListener('online',()=>{
+   if(_cloudDirty&&_fbReady)void flushProfileToCloud();
+  });
+  window.addEventListener('pagehide',()=>{
+   // Firestore cannot guarantee completion after pagehide; the recovery
+   // checkpoint was already stored synchronously by saveProfile.
+   if(_cloudDirty)void flushProfileToCloud();
+  });
+ }
 }
 
 /**
@@ -2975,7 +2985,15 @@ export async function flushProfileToCloud(){
   _recovery.inFlight={version:buffer.version,profile:snapshot};
   _saveRecovery(); // checkpoint before a possibly successful cloud commit
   const result=await _saveToFirestore(uid,snapshot,base,buffer);
-  if(!result.ok||uid!==profile.firebaseUid||epoch!==_authEpoch)return;
+  if(!result.ok||uid!==profile.firebaseUid||epoch!==_authEpoch){
+   // A transient network error must not strand the journal forever if the
+   // player remains in the game and earns no additional progression.
+   // Displaced sessions wait until the user explicitly takes control again.
+   if(result.reason!=='SESSION_CONFLICT'&&
+      uid===profile.firebaseUid&&epoch===_authEpoch)
+    _scheduleCloudSync(30000);
+   return;
+  }
   const merged=_deepMerge(_defaultProfile(),result.merged);
   _cloudBase=_copy(merged);
   // Changes made during the network request remain pending.
