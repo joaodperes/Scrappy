@@ -5,7 +5,7 @@ const root=path.join(__dirname,'..');
 const read=p=>fs.readFileSync(path.join(root,p),'utf8')
  .replace(/^import\s*\{[\s\S]*?\}\s*from\s*'[^']+';?\s*/gm,'')
  .replace(/^export\s+/gm,'');
-const source=read('js/localArenaRules.js')+'\n'+read('js/localArenaRuntime.js');
+const source=read('js/killAttribution.js')+'\n'+read('js/localArenaRules.js')+'\n'+read('js/localArenaRuntime.js');
 const vec=(x=0,y=0,z=0)=>({x,y,z,clone(){return vec(this.x,this.y,this.z)},
  copyFrom(p){this.x=p.x;this.y=p.y;this.z=p.z}});
 function harness(){
@@ -150,7 +150,7 @@ test('arena combat source never masquerades as Survival quest damage',async()=>{
  assert.equal(h.context.kills[0].opts.source,'ARENA');
  assert.equal(h.context.damages.length,1);
  const src=fs.readFileSync(path.join(root,'js/localArenaRuntime.js'),'utf8');
- assert.match(src,/recordDamage\(curWep,dealt,'ARENA'\)/);
+ assert.match(src,/recordDamage\(credit\.weaponKey,dealt,'ARENA'\)/);
 });
 
 test('arena runtime clamps background-tab deltas and ignores invalid frames',async()=>{
