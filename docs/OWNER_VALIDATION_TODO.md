@@ -107,3 +107,16 @@ These are developer-owned gates, **not failures you need to reproduce today**.
 When returning test results, include: **SHA**, **browser/device**, **map**, **mode/difficulty**, **pass/fail for each checkbox**, **steps to reproduce failures**, **F12 Console error**, and **screenshot/video if useful**. Short labels such as `J5 ramps FAIL` or `GunGame Knife PASS` are enough to identify the item; attach details only for failures.
 
 **Acceptance rule:** a checkbox in part A is only a source-implemented feature pending your real test, not evidence of passing it. Part B must be implemented, protected by tests and actually browser/network-tested before declaring the full approved roadmap complete.
+
+
+## Offline feature acceptance addendum — October 21, 2026
+
+The following checks are deferred to the owner's later playtest, not claims of successful testing:
+
+- [ ] **Survival reward ledger:** Earn XP on several guns, reach max weapon level, convert overflow to Scraps, claim a quest and finish a run. Death screen separates account XP, weapon XP by weapon, overflow-conversion Scraps by weapon and claimed quest Scraps. Verify that unclaimed quests are not shown as paid, and no arena overflow converts to currency.
+- [ ] **Local match results:** Finish a victory and a defeat in each local mode. Confirm conditional participation/win XP appears once, weapon XP by gun increases, per-bot K/D scoreboard remains visible after actors despawn, and Scraps +0 is accurate.
+- [ ] **Knife timing and animation:** Use slot 4 in Survival/regular offline arenas; swing near an enemy. Damage should happen during the swing's contact window, miss through cover, and cancel if the player dies or switches weapons before impact. Confirm Gun Game cannot use Knife early.
+- [ ] **Arena projectile fidelity:** Face Rocket, Launcher, Riveter, Tesla, Ion and Flamethrower bots. Confirm slow shots are dodgeable and cover-blocked, grenades follow gravity and can bounce once, Riveter ricochets once, Tesla hops attribute kills separately, Ion ramps from its own heat, and burn stops on death.
+- [ ] **Moon Base pad routes:** Low gravity changes bot jump-pad travel time and landings; bots should not assume Jungle/Scrapyard gravity. Check platform boarding/disembark, route failures and suspended-floor combat.
+- [ ] **Jungle Lantern:** In the mine, equip a Lantern sight with several point fixtures visible and verify its camera-directed cone illuminates textures. Switch away and back, ensuring stale spotlights do not stay enabled. Confirm NVG still highlights enemies without lighting the entire mine.
+- [ ] **Challenge credit:** Direct Tesla kill versus secondary TESLA_CHAIN hop must credit weapon TESLA with distinct mechanism label; verify Poison, Dragon's Breath, burn, Riveter and environmental kills follow their registered source definitions. Survival-only daily objectives must not advance from local arena kills.
