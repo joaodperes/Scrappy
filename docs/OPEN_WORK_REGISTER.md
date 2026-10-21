@@ -67,6 +67,13 @@
   weapon XP converts to Scraps; local arena kills still earn weapon XP but
   do not convert excess. Purchased XP bonuses reduce the remaining base XP
   capacity (including zero-capacity cases). Focused conversion checks passed.
+- `js/progression.js`: ordinary profile flushes are serialized in the
+  current tab and tracked with a revision token so a stale, failed or
+  cross-account completion does not silently clear pending local progress.
+  `scripts/profile-cloud-flush.test.cjs` has two focused mocked race checks.
+  **This is not cross-device reconciliation:** simultaneous signed-in
+  browsers can still overwrite ordinary `profile` field snapshots and must
+  be tested against live Firestore before owner acceptance.
 - Next engineering work: browser-navmesh/geometry verification across
   Jungle and Moon Base, human/bot weapon and melee balance, Firestore
   account-switch and concurrent reward/shop tests, full Node/CI runs.
