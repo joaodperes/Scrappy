@@ -46,6 +46,32 @@
   Full Node/GitHub CI and Firefox/Chromium physics remain to be verified.
   No multiplayer code or hosting service changed.
 
+## October 21 offline combat and economy checkpoint
+
+- `js/localArenaActors.js`, `js/localArenaRuntime.js`: local bots
+  use heat/cooling for heat-based firearms, spend burst ammunition, cycle
+  back from an empty sidearm to a reloaded primary, approximate short-range
+  shotgun damage, and render shot tracers even on missed shots. Finished
+  rounds stop updating any remaining bots immediately.
+- `scripts/local-arena-actors.test.cjs`: 12/12 focused mocked V8 checks
+  passed covering team filtering, firefights, navigation/tag pursuit, ammo,
+  heat, burst, visual misses, respawns and match stop. This is **not**
+  a full Node test run or a browser physics playtest.
+- `js/shopRules.js`: owner-profile Firestore transaction receipts now
+  fail closed at 2,048 retained entries, preserving replay idempotency
+  instead of pruning XP receipts. Prototype-mutating receipt IDs are rejected.
+  Targeted pure V8 checks for purchases, caps and duplicates passed.
+  Deployed Firestore owner-only rules and concurrent-browser account writes
+  remain unverified.
+- `js/questRules.js`, `js/progression.js`: only Survival PvE overflow
+  weapon XP converts to Scraps; local arena kills still earn weapon XP but
+  do not convert excess. Purchased XP bonuses reduce the remaining base XP
+  capacity (including zero-capacity cases). Focused conversion checks passed.
+- Next engineering work: browser-navmesh/geometry verification across
+  Jungle and Moon Base, human/bot weapon and melee balance, Firestore
+  account-switch and concurrent reward/shop tests, full Node/CI runs.
+  No multiplayer activation, paid cloud changes, or unsafe code cleanup.
+
 ## Current source-level validation
 
 - `scripts/local-arena-rules.test.cjs` — Gun Game ladder, Knife finale, Kill Confirmed tags, expired tags and time/death rules.
