@@ -634,9 +634,9 @@ function _makeSightLantern(parent, wName) {
     Math.PI / 2.5, 
     25, scene);
   spotLight.priority = 100; // Keep the Lantern ahead of the mine's fixture lights
-  import('./scene.js').then(({ camera }) => {
-      spotLight.parent = camera;
-  });
+  // camera is already imported in this module. Bind immediately so a
+  // newly equipped Lantern cannot briefly aim from world origin.
+  spotLight.parent = camera;
   
   spotLight.diffuse = new BABYLON.Color3(1.0, 0.95, 0.8);
   spotLight.specular = new BABYLON.Color3(1, 1, 1);
