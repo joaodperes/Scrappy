@@ -17,8 +17,8 @@ class Vec {
  set(x,y,z){this.x=x;this.y=y;this.z=z}
  copyFrom(p){this.set(p.x,p.y,p.z)}
 }
-function harness(blocked=false){
- const lines=[];
+function harness(blocked=false,options={}){
+ const lines=[],navTargets=[];
  const B={Vector3:Vec,Ray:class{constructor(o,d,len){this.o=o;this.d=d;this.len=len}},
   MeshBuilder:{CreateLines:(id,opts)=>{const o={id,opts,dispose(){this.disposed=true}};lines.push(o);return o}},
   Color3:class{constructor(r,g,b){this.r=r;this.g=g;this.b=b}}};
@@ -32,17 +32,21 @@ function harness(blocked=false){
  };
  const helper=new Function('window','scene','camera','navPlugin','WDEFS','botNavPath',
   'getWalkableSpawns','getCurrentMap','makeScaledWeaponModel','registerArenaTarget',
-  'unregisterArenaTarget','rebuildMeshMap','setTimeout',source+'\nreturn {arenaTeamEnemy,updateArenaActors,setArenaActorWeapon,FALLBACK_PERSONAS};');
+  'unregisterArenaTarget','rebuildMeshMap','setTimeout',source+'\nreturn {arenaTeamEnemy,updateArenaActors,setArenaActorWeapon,killArenaActor,respawnArenaActor,FALLBACK_PERSONAS};');
  const api=helper({BABYLON:B},scene,camera,navPlugin,WDEFS,
-   (_,from,to)=>({points:[from,to]}),()=>[[10,0,0]],()=> 'scrapyard',
+   (_,from,to)=>{
+     navTargets.push(to.clone());
+     return options.noRoute||to.x===options.unreachableTagX?null:
+       {points:[from,to],length:Vec.Distance(from,to)};
+   },()=>[[10,0,0]],()=> 'scrapyard',
    () => ({position:new Vec(),rotation:{y:0},getChildMeshes:()=>[],dispose(){}}),
    ()=>{},()=>{},()=>{},()=>{});
  const actor=(id,team,x,z,persona=api.FALLBACK_PERSONAS[0])=>({
   id,name:id,team,persona,weapon:persona.loadout.primary,
-  group:{position:new Vec(x,0,z),rotation:{}},alive:true,hp:100,maxHp:100,
+  group:{position:new Vec(x,0,z),rotation:{},setEnabled(v){this.enabled=v}},alive:true,hp:100,maxHp:100,
   targetId:null,walkClock:0,pathCursor:null,reaction:0,cooldown:0,reload:0,ammo:30
  });
- return {api,actor,lines,camera};
+ return {api,actor,lines,camera,navTargets};
 }
 test('TDM/confirmed teammates never count as enemies, FFA everyone else does',()=>{
  const h=harness(),red=h.actor('red','RED',2,0),ally=h.actor('ally','RED',3,0),
@@ -100,4 +104,44 @@ test('bot uses its real sidearm when primary runs empty but Gun Game cannot skip
  rung.ammo=0;
  h.api.updateArenaActors([rung],.1,'gunGame',{humanAlive:false});
  assert.equal(rung.weapon,'SMG');
+});
+
+test('respawns restore primary magazine and clear previous-life DOT and navigation',()=>{
+ const h=harness(),bot=h.actor('respawn','BLUE',4,6);
+ bot.ammo=0;bot.reload=5;bot._dots=[{remaining:4,dmg:15}];
+ bot._poisonDots=[{remaining:8,dps:2}];bot.pathCursor=new Vec(90,0,90);
+ bot.targetId='old';bot.tagTargetId=4;bot.reaction=2;
+ h.api.killArenaActor(bot);
+ assert.equal(bot.alive,false);
+ assert.deepEqual(bot._dots,[]);
+ assert.deepEqual(bot._poisonDots,[]);
+ assert.equal(h.api.respawnArenaActor(bot,new Vec(12,0,14)),true);
+ assert.equal(bot.alive,true);
+ assert.equal(bot.ammo,30);
+ assert.equal(bot.reload,0);
+ assert.equal(bot.reaction,0);
+ assert.equal(bot.pathCursor,null);
+ assert.equal(bot.tagTargetId,null);
+ assert.equal(bot.group.position.x,12);
+ assert.equal(bot.group.enabled,true);
+});
+test('unreachable navmesh segments never become direct bot movement',()=>{
+ const h=harness(false,{noRoute:true});
+ const bot=h.actor('blue','BLUE',0,5),enemy=h.actor('red','RED',0,30);
+ for(let i=0;i<12;i++)
+  h.api.updateArenaActors([bot,enemy],.1,'tdm',{humanAlive:false});
+ assert.equal(bot.group.position.x,0);
+ assert.equal(bot.group.position.z,5);
+ assert.equal(bot.pathCursor,null);
+});
+test('Kill Confirmed favors reachable tags and projects tag targets onto their floor',()=>{
+ const h=harness(false,{unreachableTagX:4});
+ const bot=h.actor('blue','BLUE',0,5),enemy=h.actor('red','RED',0,20);
+ const near={id:11,mesh:{position:new Vec(4,.65,6)}};
+ const reachable={id:12,mesh:{position:new Vec(8,.65,6)}};
+ h.api.updateArenaActors([bot,enemy],.1,'killConfirmed',
+  {humanAlive:false,objectives:[near,reachable]});
+ assert.equal(bot.targetId,'tag_12');
+ assert.ok(h.navTargets.some(to=>to.x===8&&Math.abs(to.y)<.01));
+ assert.ok(h.navTargets.every(to=>to.y>=-.01),'nav queries must not project tags below the floor');
 });
