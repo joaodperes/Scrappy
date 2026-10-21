@@ -134,3 +134,11 @@
 - Kill Confirmed now awards 5 account XP when the human actually confirms an enemy tag, no XP for denying allied tags. Match results distinguish objective XP from elimination XP, participation, and victory bonus; no Scraps reward is introduced in arena modes.
 
 - Persona grip and special-device silhouettes now appear on held bot guns. Remaining specialty interactions and map adjustments need later browser feedback before claiming full weapon parity or verified geometry.
+
+## October 21 cloud-first account session implementation
+
+- Replaced the unscoped full-profile local cache with a UID-specific **pending recovery journal** (baseline, unsynced changes and in-flight receipt), with Firestore as source of truth. Concurrent account XP/stat changes use baseline delta reconciliation, compatible with existing shop bonus caps and monotonic unlocks; never select a complete older profile merely because its total XP is larger.
+- Browser A's game lease remains active until Browser B **starts a game**, not merely signs into Google. The previous browser gets a cooperative flush/yield request, is stopped in the UI and cannot submit successful Firestore progression writes once the lease changes. A dead client cannot prevent takeover.
+- Quest reward claims now transact against the latest cloud claim flag; independent browser retries do not pay the same quest twice. Existing shop receipt transactions remain separate.
+- UI shows cloud sync status. A failed cloud transaction retains the matching UID's pending edits, and an acknowledged receipt is checked on recovery to avoid duplicate rewards after a crash.
+- See [CLOUD_PROFILE_SESSION_ARCHITECTURE.md](CLOUD_PROFILE_SESSION_ARCHITECTURE.md) for protocol, limits and tests. **Live Firebase rules, actual multiple-browser takeovers, reconnect recovery, and all Node/CI suites remain validation gates.** No live rules, hosting or billing changes were made.
