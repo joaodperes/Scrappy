@@ -5,7 +5,7 @@ import { jumpPads } from './level.js';
 import { player, cb, enemies } from './gameState.js';
 import { sfx } from './audio.js';
 import { WDEFS, inventory, activeSlot, curWep, wepCooldown, swingT, AUTO_WEAPONS, setWepCooldown, setSwingT, setActiveSlot, refreshSlotHUD, setWeaponVisibility } from './weapons.js';
-import { hitscan, fireRocket, firePlasma, fireGrenade, fireFlame, spawnLightningArc, fireRivet } from './projectiles.js';
+import { hitscan, meleeStrike, fireRocket, firePlasma, fireGrenade, fireFlame, spawnLightningArc, fireRivet } from './projectiles.js';
 import { _meshToEnemy } from './enemies.js';
 import { spawnSparks } from './particles.js';
 import { getCurrentMap, getMapMeta } from './mapManager.js';
@@ -145,7 +145,7 @@ export function shoot() {
   if(W?.melee){
     setWepCooldown(W.cd);
     setSwingT(1);
-    hitscan(_meshToEnemy,0,W.dmg,W.range,0);
+    meleeStrike(_meshToEnemy,W.dmg,W.range);
     refreshSlotHUD();
     return;
   }
