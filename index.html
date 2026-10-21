@@ -60,11 +60,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // 2. Trigger Logout & Wipe Local Cache
     if (logoutBtn) {
-      logoutBtn.onclick = () => {
+      logoutBtn.onclick = async () => {
+        // Commit pending cloud progress before signing out when connected.
+        // An offline UID-scoped recovery buffer stays intact for this account.
+        try {
+          const progression=await import('./js/progression.js');
+          await progression.stopProfileGameSession();
+        }catch(error){console.warn('[auth] Cloud flush deferred',error)}
         firebase.auth().signOut().then(() => {
-          // Explicitly wipe the local cache to prevent cross-account progress inheritance!
           localStorage.removeItem('botarena_profile');
-          window.location.reload(); 
+          window.location.reload();
         }).catch(console.error);
       };
     }
@@ -81,11 +86,13 @@ document.addEventListener("DOMContentLoaded", () => {
         if (userDoc.exists && userDoc.data().displayName) {
            const dName = userDoc.data().displayName;
            
-           import('./js/progression.js').then(({ profile, saveProfile }) => {
-               profile.displayName = dName;
-               profile.name = dName;
-               saveProfile();
-           });
+           import('./js/progression.js').then(async progression => {
+               await progression.waitForProfileReady(user.uid);
+               if(firebase.auth().currentUser?.uid!==user.uid)return;
+               progression.profile.displayName = dName;
+               progression.profile.name = dName;
+               progression.saveProfile();
+           }).catch(console.error);
            
            enableGame(dName);
         } else {
@@ -137,11 +144,12 @@ document.addEventListener("DOMContentLoaded", () => {
              displayName_lower: name.toLowerCase()
           });
           
-          import('./js/progression.js').then(({ profile, saveProfile }) => {
-              profile.displayName = name;
-              profile.name = name;
-              saveProfile();
-          });
+          import('./js/progression.js').then(async progression => {
+              await progression.waitForProfileReady(currentUser.uid);
+              progression.profile.displayName = name;
+              progression.profile.name = name;
+              progression.saveProfile();
+          }).catch(console.error);
 
           nameModal.classList.remove('visible');
           nameModal.classList.add('hidden');
