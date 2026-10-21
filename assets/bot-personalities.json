@@ -11,7 +11,12 @@
       "preferredRange": 13,
       "loadout": {
         "primary": "SMG",
-        "secondary": "PISTOL"
+        "secondary": "PISTOL",
+        "attachments": {
+          "SMG": {
+            "barrel": "heavy_barrel"
+          }
+        }
       },
       "skin": "default"
     },
@@ -25,7 +30,12 @@
       "preferredRange": 24,
       "loadout": {
         "primary": "DMR",
-        "secondary": "PISTOL"
+        "secondary": "PISTOL",
+        "attachments": {
+          "DMR": {
+            "sight": "acog"
+          }
+        }
       },
       "skin": "forest"
     },
@@ -39,7 +49,12 @@
       "preferredRange": 7,
       "loadout": {
         "primary": "SHOTGUN",
-        "secondary": "PISTOL"
+        "secondary": "PISTOL",
+        "attachments": {
+          "SHOTGUN": {
+            "magazine": "extended_mag"
+          }
+        }
       },
       "skin": "oni"
     },
@@ -53,7 +68,12 @@
       "preferredRange": 17,
       "loadout": {
         "primary": "COMET",
-        "secondary": "PISTOL"
+        "secondary": "PISTOL",
+        "attachments": {
+          "COMET": {
+            "grip": "vertical_grip"
+          }
+        }
       },
       "skin": "ghost"
     },
@@ -67,7 +87,12 @@
       "preferredRange": 34,
       "loadout": {
         "primary": "RAILGUN",
-        "secondary": "PISTOL"
+        "secondary": "PISTOL",
+        "attachments": {
+          "RAILGUN": {
+            "barrel": "extended_barrel"
+          }
+        }
       },
       "skin": "void"
     },
@@ -95,7 +120,12 @@
       "preferredRange": 27,
       "loadout": {
         "primary": "ROCKET",
-        "secondary": "PISTOL"
+        "secondary": "PISTOL",
+        "attachments": {
+          "ROCKET": {
+            "magazine": "quick_swap_mag"
+          }
+        }
       },
       "skin": "oni"
     },
@@ -109,7 +139,12 @@
       "preferredRange": 18,
       "loadout": {
         "primary": "TESLA",
-        "secondary": "PISTOL"
+        "secondary": "PISTOL",
+        "attachments": {
+          "TESLA": {
+            "barrel": "extended_barrel"
+          }
+        }
       },
       "skin": "ghost"
     },
@@ -123,7 +158,12 @@
       "preferredRange": 29,
       "loadout": {
         "primary": "GLAUNCHER",
-        "secondary": "PISTOL"
+        "secondary": "PISTOL",
+        "attachments": {
+          "GLAUNCHER": {
+            "magazine": "extended_mag"
+          }
+        }
       },
       "skin": "forest"
     },
@@ -137,7 +177,12 @@
       "preferredRange": 13,
       "loadout": {
         "primary": "FLAMETHROWER",
-        "secondary": "PISTOL"
+        "secondary": "PISTOL",
+        "attachments": {
+          "FLAMETHROWER": {
+            "barrel": "heavy_barrel"
+          }
+        }
       },
       "skin": "oni"
     }
