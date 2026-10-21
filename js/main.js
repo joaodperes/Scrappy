@@ -266,6 +266,7 @@ async function startGame(startWave = 0, difficulty = 'normal', localMode = null)
         const eliminationXp=Math.max(0,(profile.totalXp||0)-arenaStartXp-objectiveXp);
         if(participation+victory)awardXp(participation+victory);
         gameRunning=false;
+        void stopProfileGameSession();
         document.exitPointerLock();
         document.getElementById('hud').style.display='none';
         _hideAllScreens();
@@ -620,6 +621,7 @@ function _populateMapDropdown() {
           paused = false;
           gameRunning = false;
           stopLocalArena();
+          void stopProfileGameSession();
           document.exitPointerLock();
           document.getElementById('pauseOverlay').style.display = 'none';
           document.getElementById('hud').style.display = 'none';
@@ -697,6 +699,7 @@ document.getElementById('victoryBtn')  ?.addEventListener('click', () => startGa
 const _returnToMenu = () => {
   document.getElementById('deathScreen').className  = 'screen hidden';
   document.getElementById('menuScreen').className   = 'screen visible';
+  void stopProfileGameSession();
   renderLeaderboard();
   refreshMenuUI();
 };
