@@ -88,7 +88,7 @@ export function startLocalArena(cfg,onFinish,onPlayerHit=()=>{}){
    scoreLimit:cfg.scoreLimit,seed:cfg.seed});
  const token=++generation;
  active={state,onFinish,onPlayerHit,actors:[],finished:false,playerDead:false,
-   lastAttacker:null,spawned:false,feed:[],burns:[],projectiles:[]};
+   lastAttacker:null,spawned:false,feed:[],burns:[],projectiles:[],tagXp:0};
  equipment(cfg);
  showHud('DEPLOYING AI PLAYERS');
  fetchArenaPersonas().then(personas=>{
@@ -121,12 +121,13 @@ function finish(){
  if(!isActive())return;
  active.finished=true;
  const {onFinish,state}=active;
+ const activeTagXp=active.tagXp||0;
  const participants=active.actors.map(a=>({
    id:a.id,name:a.name,team:a.team,kills:a.kills,deaths:a.deaths,
    score:state.botScores[a.id]||0
  })).sort((a,b)=>b.score-a.score||b.kills-a.kills);
  stopLocalArena();
- onFinish?.({...state,participants});
+ onFinish?.({...state,participants,tagXp:activeTagXp});
 }
 function applyResult(state){
  if(!isActive())return;
@@ -520,6 +521,9 @@ function updateTags(dt){
    // RED tags are allied denials, BLUE tags are confirmed team points.
    if(tag.ownerTeam==='RED'){addFeed('TAG DENIED');continue}
    addFeed('TAG CONFIRMED');
+   // Objective play gets modest practice XP; ally tag denials pay nothing.
+   active.tagXp+=5;
+   awardXp(5);
    applyResult(localArenaTag(active.state));
   }else if(nearBot){
    if(tag.ownerId!==nearBot.id){
