@@ -42,7 +42,8 @@ function showHud(note=''){
  hud.style.whiteSpace='pre-line';
  hud.textContent=(LABELS[s.mode]||s.mode)+' · '+s.score+' : '+s.opposition+
    ' · '+Math.ceil(s.secondsLeft)+'s'+current+(note?' · '+note:'')+
-   (board?'\n'+board:'');
+   (board?'\n'+board:'')+
+   ((active.feed||[]).length?'\n'+active.feed.filter(e=>e.until>Date.now()).map(e=>e.label).join('   |   '):'');
  hud.title='Arena standings (team and player scores)';
 }
 function createTag(position,ownerTeam,ownerId){
@@ -82,7 +83,7 @@ export function startLocalArena(cfg,onFinish,onPlayerHit=()=>{}){
    scoreLimit:cfg.scoreLimit,seed:cfg.seed});
  const token=++generation;
  active={state,onFinish,onPlayerHit,actors:[],finished:false,playerDead:false,
-   lastAttacker:null,spawned:false};
+   lastAttacker:null,spawned:false,feed:[]};
  equipment(cfg);
  showHud('DEPLOYING AI PLAYERS');
  fetchArenaPersonas().then(personas=>{
@@ -122,6 +123,11 @@ function applyResult(state){
  showHud();
  if(state.complete)finish();
 }
+function addFeed(label){
+ if(!isActive())return;
+ active.feed.push({label,until:Date.now()+4500});
+ if(active.feed.length>4)active.feed.shift();
+}
 function onActorKilled(actor,killer,weapon,killMethod='DIRECT'){
  if(!isActive()||!actor.alive)return;
  const pos=actor.group.position.clone();
@@ -135,10 +141,12 @@ function onActorKilled(actor,killer,weapon,killMethod='DIRECT'){
      active.state={...active.state,pendingTags:active.state.pendingTags+1};
  }
  if(killer==='human'){
+   addFeed('YOU → '+actor.name+' ['+weapon+(killMethod==='DIRECT'?'':' · '+killMethod)+']');
    // Offline arena eliminations award modest progression, independently
    // from Survival waves and without any competitive multiplayer claim.
    awardXp(20);
-   recordKill('arena',weapon,{source:'ARENA',killMethod});
+   recordKill('arena',weapon,{source:'ARENA',killMethod,
+      arenaMode:active.state.mode});
    const before=active.state;
    const next=localArenaKill(before,{weapon,source:'PLAYER'});
    if(before.mode==='gunGame'&&next.gunIndex!==before.gunIndex&&!next.complete){
@@ -148,6 +156,7 @@ function onActorKilled(actor,killer,weapon,killMethod='DIRECT'){
    }
    applyResult(next);
  }else if(killer&&killer.alive){
+   addFeed(killer.name+' → '+actor.name+' ['+weapon+']');
    const next=localArenaBotKill(active.state,
      {killerId:killer.id,killerTeam:killer.team,victimTeam:actor.team,weapon});
    killer.kills++;
@@ -347,7 +356,8 @@ function updateTags(dt){
   removeTag(i);
   if(nearHuman){
    // RED tags are allied denials, BLUE tags are confirmed team points.
-   if(tag.ownerTeam==='RED')continue;
+   if(tag.ownerTeam==='RED'){addFeed('TAG DENIED');continue}
+   addFeed('TAG CONFIRMED');
    applyResult(localArenaTag(active.state));
   }else if(nearBot){
    if(tag.ownerId!==nearBot.id){
