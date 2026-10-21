@@ -211,6 +211,7 @@ export function updatePickups(dt) {
             if (scavAtt?.mods?.scavengerBonus) {
                 bonus = Math.round(bonus * (1 + scavAtt.mods.scavengerBonus));
             }
+            bonus=Math.max(1,Math.ceil(bonus*(player.survivalModifiers?.ammoDropMult||1)));
             if (W.ammo < (W.max || 999)) {
                 W.ammo += bonus;
                 if (W.max) W.ammo = Math.min(W.ammo, W.max);
