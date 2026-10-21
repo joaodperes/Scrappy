@@ -5,6 +5,9 @@
 // purchases or re-credit spent scraps.
 export const SHOP_WEAPON_SKINS=Object.freeze(['patina','volt','emberfall','sunburst']);
 export const SHOP_PLAYER_SKINS=Object.freeze(['scavenger','reclaimer']);
+// Bound Firestore profile document growth without discarding old receipts.
+// Retaining existing receipts preserves idempotency for every completed purchase.
+export const MAX_SHOP_RECEIPTS=2048;
 const PAINTED_WEAPONS=Object.freeze(['PISTOL','SMG','SHOTGUN','CHAINGUN','RAILGUN','ROCKET','GLAUNCHER',
  'ELECTRON','ION','PLASMA','COMET','DMR','FLAMETHROWER','TESLA','CROSSBOW','RIVETER','PHALANX','AEGIS']);
 export const SHOP_ITEMS=Object.freeze([
@@ -49,6 +52,11 @@ export function purchaseShopItem(grossEarned,rawWallet,itemId,requestId,weaponXp
   if(wallet.receipts[requestId]!==itemId)return {ok:false,reason:'Transaction ID collision',wallet};
   return {ok:true,duplicate:true,item,wallet,balance:shopAvailableScraps(grossEarned,wallet)};
  }
+ // Never evict an XP receipt: a retry after history pruning could otherwise
+ // charge the user twice. Keep a bounded ledger and fail closed until a future
+ // migration to a dedicated per-user receipt collection is approved.
+ if(Object.keys(wallet.receipts).length>=MAX_SHOP_RECEIPTS)
+   return {ok:false,reason:'Purchase history full; contact the game owner',wallet};
  if((item.kind==='playerSkin'||item.kind==='weaponSkin')&&wallet.owned.includes(itemId))
   return {ok:false,reason:'Already owned',wallet};
  if(item.kind==='weaponXp'){
