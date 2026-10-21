@@ -98,6 +98,12 @@ function gunVisual(actor,weapon){
  if(attachments.magazine)
   extra('box',{width:.13,height:.24,depth:.13},
     'magazine',0,-.17,.05);
+ if(attachments.grip)
+  extra('box',{width:.085,height:.22,depth:.095},
+    'grip',0,-.18,.32);
+ if(attachments.special)
+  extra('box',{width:.095,height:.085,depth:.12},
+    'special',0,.12,-.16);
  gun.getChildMeshes().forEach(m=>{m.isPickable=false;m.checkCollisions=false});
  actor.gunModel=gun;
 }
