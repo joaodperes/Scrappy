@@ -83,7 +83,7 @@ export function startLocalArena(cfg,onFinish,onPlayerHit=()=>{}){
    scoreLimit:cfg.scoreLimit,seed:cfg.seed});
  const token=++generation;
  active={state,onFinish,onPlayerHit,actors:[],finished:false,playerDead:false,
-   lastAttacker:null,spawned:false,feed:[]};
+   lastAttacker:null,spawned:false,feed:[],burns:[]};
  equipment(cfg);
  showHud('DEPLOYING AI PLAYERS');
  fetchArenaPersonas().then(personas=>{
@@ -156,7 +156,7 @@ function onActorKilled(actor,killer,weapon,killMethod='DIRECT'){
      showHud('WEAPON UP');
    }
    applyResult(next);
- }else if(killer&&killer.alive){
+ }else if(killer){
    addFeed(killer.name+' → '+actor.name+' ['+weapon+']');
    const next=localArenaBotKill(active.state,
      {killerId:killer.id,killerTeam:killer.team,victimTeam:actor.team,weapon});
@@ -263,6 +263,26 @@ function arenaExplosion(shooter,point,damage,weapon,radius){
     weapon,'EXPLOSION');
  }
 }
+function addBotBurn(shooter,victim,spec){
+ if(!isActive()||!hostile(shooter,victim)||
+   (victim&&!victim.alive)||(!victim&&active.playerDead))return;
+ const existing=active.burns.find(b=>b.shooter===shooter&&b.victim===victim);
+ if(existing){existing.remaining=spec.dotDuration||4;return}
+ active.burns.push({shooter,victim,remaining:spec.dotDuration||4,dps:spec.dotDamage||8});
+}
+function updateArenaBotBurns(dt){
+ if(!isActive()||!active.burns.length)return;
+ const next=[];
+ for(const b of active.burns){
+  if(!isActive())return;
+  if((b.victim&&!b.victim.alive)||(!b.victim&&active.playerDead))continue;
+  const seconds=Math.min(dt,b.remaining);
+  botImpact(b.shooter,b.victim,b.dps*seconds,b.shooter.weapon,'FLAME_DOT');
+  b.remaining-=dt;
+  if(b.remaining>0&&(b.victim?b.victim.alive:!active.playerDead))next.push(b);
+ }
+ if(isActive())active.burns=next;
+}
 function actorShoots(shooter,victim,damage,weapon,aimPoint){
  if(!isActive())return;
  const spec=WDEFS[weapon]||WDEFS.PISTOL;
@@ -281,6 +301,23 @@ function actorShoots(shooter,victim,damage,weapon,aimPoint){
   if(!spec.hitscan&&BABYLON.Vector3.Distance(current,point)>1.6)return;
   botImpact(shooter,victim,damage,weapon);
   if(!isActive())return;
+  if(weapon==='FLAMETHROWER')addBotBurn(shooter,victim,spec);
+  if(weapon==='RAILGUN'){
+   const from=shooter.group.position.add(new BABYLON.Vector3(0,1.45,0));
+   const aim=point.subtract(from),aimLen=aim.length();
+   if(aimLen>.1){
+    const dir=aim.scale(1/aimLen);
+    for(const other of arenaTargets(shooter)){
+     if(!isActive())break;
+     if(other.actor===victim)continue;
+     const rel=other.pos.subtract(from),along=BABYLON.Vector3.Dot(rel,dir);
+     if(along<=aimLen||along>(spec.range||130))continue;
+     const miss=rel.subtract(dir.scale(along)).length();
+     if(miss<.8&&arenaSight(point,other.pos))
+       botImpact(shooter,other.actor,damage*.7,weapon,'PIERCE');
+    }
+   }
+  }
   if(weapon==='TESLA'&&spec.chainTargets){
    let last=point.clone(),amount=damage*.65;
    const visited=new Set([victim||'human']);
@@ -402,6 +439,8 @@ export function updateLocalArena(dt){
    },
  });
  updateArenaStatusDamage(dt);
+ if(!isActive())return;
+ updateArenaBotBurns(dt);
  if(!isActive())return;
  updateTags(dt);
  showHud();
