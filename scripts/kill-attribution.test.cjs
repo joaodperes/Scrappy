@@ -37,3 +37,25 @@ test('challenge event records specific method without replacing legacy weapon ki
  assert.match(p,/_bumpPerMap\(s,'killsByWeaponMethod'/);
  assert.match(p,/source === 'TESLA_CHAIN'.*'killsWith'/);
 });
+test('player-shaped arena actor hits retain projectile origin through callback',()=>{
+ const enemies=fs.readFileSync(path.join(__dirname,'../js/enemies.js'),'utf8');
+ const runtime=fs.readFileSync(path.join(__dirname,'../js/localArenaRuntime.js'),'utf8');
+ const projectiles=fs.readFileSync(path.join(__dirname,'../js/projectiles.js'),'utf8');
+ assert.match(enemies,/onArenaActorHit\?\.\(e,dmg,source,weaponOverride,isExplosive\)/);
+ assert.match(runtime,/resolveKillAttribution\(curWep,source,weaponOverride,isExplosive\)/);
+ assert.match(projectiles,/p\.weaponKey\|\|'ROCKET'/);
+ assert.match(projectiles,/p\.weaponKey\|\|'PLASMA'/);
+ assert.match(projectiles,/cb\.getDamageableActors\?\.\(\)/);
+});
+test('only actual explosive barrels count for barrel-destruction challenges',()=>{
+ const src=fs.readFileSync(path.join(__dirname,'../js/projectiles.js'),'utf8');
+ assert.match(src,/if\(barrelDetonation\)import\('\.\/progression\.js'\)/);
+ assert.match(src,/boom\(boomPos,3\.6,78,true,'ENVIRONMENT',true\)/);
+ assert.match(src,/boom\(impact\.clone\(\),p\.splash,p\.dmg,true,p\.weaponKey\|\|'ROCKET'\)/);
+});
+test('Tesla challenge criteria use both weapon and method, preserving old credits',()=>{
+ const src=fs.readFileSync(path.join(__dirname,'../js/progression.js'),'utf8');
+ assert.match(src,/weapon:'TESLA', killMethod:'TESLA_CHAIN'/);
+ assert.match(src,/killsByWeaponMethod\?\.\[c\.weapon\+'_'+c\.killMethod\]/);
+ assert.match(src,/s\.killsWith\?\.TESLA_CHAIN/);
+});
