@@ -587,6 +587,10 @@ export function updateLocalArena(dt){
    isMatchActive:isActive,
    objectives:active.state.mode==='killConfirmed'?tags:[],
    onShot:actorShoots,
+   onKnockCollision:(victim,shooter)=>{
+     if(shooter&&victim.alive&&isActive())
+       botImpact(shooter,victim,Math.min(60,victim.maxHp*.35),'PHALANX','SHATTER');
+   },
    onRespawn:actor=>{
      const spawn=chooseArenaSpawn(active.actors.filter(other=>other!==actor));
      if(respawnArenaActor(actor,spawn)){
