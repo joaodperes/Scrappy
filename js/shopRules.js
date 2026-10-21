@@ -36,7 +36,8 @@ export function normalizeShopWallet(value){
  return {spent,receipts,owned,xpBonuses};
 }
 export function shopAvailableScraps(grossEarned,wallet){
- return Math.max(0,Math.floor(Number(grossEarned)||0)-(normalizeShopWallet(wallet).spent||0));
+ const gross=valid(grossEarned)?grossEarned:0;
+ return Math.max(0,gross-normalizeShopWallet(wallet).spent);
 }
 export function purchaseShopItem(grossEarned,rawWallet,itemId,requestId,weaponXp=0){
  const wallet=normalizeShopWallet(rawWallet);
@@ -53,10 +54,12 @@ export function purchaseShopItem(grossEarned,rawWallet,itemId,requestId,weaponXp
  if(item.kind==='weaponXp'){
   const baseline=Math.max(0,Number(weaponXp)||0);
   const current=wallet.xpBonuses[item.weapon]||0;
-  if(baseline+current>=18000)return {ok:false,reason:'Weapon XP already maxed',wallet};
+  if(baseline+current+item.amount>18000)return {ok:false,reason:'Weapon XP already maxed',wallet};
  }
  if(shopAvailableScraps(grossEarned,wallet)<item.cost)
   return {ok:false,reason:'Not enough Scraps',wallet};
+ if(wallet.spent>Number.MAX_SAFE_INTEGER-item.cost)
+  return {ok:false,reason:'Wallet limit reached',wallet};
  wallet.spent+=item.cost;
  wallet.receipts[requestId]=itemId;
  if(item.kind==='weaponXp'){
