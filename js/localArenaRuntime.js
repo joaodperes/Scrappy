@@ -214,6 +214,36 @@ function actorShoots(shooter,victim,damage,weapon){
    active.onPlayerHit?.(damage);
  }
 }
+// Status damage uses the same source/weapon metadata as direct hits. This
+// prevents Shotgun Dragon's Breath and Riveter superheat kills from becoming
+// generic Flamethrower kills (or disappearing in arena-only opponents).
+function updateArenaStatusDamage(dt){
+ if(!isActive())return;
+ for(const actor of active.actors){
+  if(!actor.alive)continue;
+  if(['tdm','killConfirmed'].includes(active.state.mode)&&actor.team==='RED')continue;
+  for(const [key,poison] of [['_dots',false],['_poisonDots',true]]){
+   const effects=actor[key];
+   if(!Array.isArray(effects)||!effects.length)continue;
+   const remaining=[];
+   for(const effect of effects){
+    if(!actor.alive)break;
+    if(!Number.isFinite(effect.remaining)||effect.remaining<=0)continue;
+    const seconds=Math.min(dt,effect.remaining);
+    const amount=Math.max(0,(poison?effect.dps:effect.dmg)||0)*seconds;
+    const source=poison?'POISON':effect.source||'FLAME_DOT';
+    const credit=resolveKillAttribution(curWep,source,poison?'CROSSBOW':effect.weapon);
+    const dealt=Math.min(actor.hp,Math.min(1000,amount));
+    actor.hp=Math.max(0,actor.hp-dealt);
+    if(credit.weaponKey&&dealt>0)recordDamage(credit.weaponKey,dealt,'ARENA');
+    effect.remaining-=dt;
+    if(actor.hp===0){onActorKilled(actor,'human',credit.weaponKey,credit.killMethod);break}
+    if(effect.remaining>0)remaining.push(effect);
+   }
+   actor[key]=remaining;
+  }
+ }
+}
 function updateTags(dt){
  if(!isActive())return;
  for(let i=tags.length-1;i>=0;i--){
@@ -273,6 +303,8 @@ export function updateLocalArena(dt){
      }
    },
  });
+ updateArenaStatusDamage(dt);
+ if(!isActive())return;
  updateTags(dt);
  showHud();
 }
