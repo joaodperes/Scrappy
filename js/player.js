@@ -715,6 +715,11 @@ export function shoot() {
       _aegisReacquireDelay=Math.max(_aegisReacquireDelay,EW.cd||W.cd||0.3);
       break;
     }
+    case 'KNIFE':
+      // Babylon melee hitbox ray. The final Gun Game rung now does damage.
+      sfx.pistol();
+      hitscan(_meshToEnemy,0,modDmg,Math.min(3,range),0);
+      break;
     case 'DMR':
       if (!hasSuppressor('DMR')) sfx.railgun(); // Using railgun sfx as a placeholder for a heavy rifle sound
       hitscan(_meshToEnemy, spread * spreadMult, modDmg, range, falloff);
@@ -1453,6 +1458,7 @@ export function setupInput(getGameRunning, getPaused, onTogglePause, onPickupWea
     if (e.code === 'Digit1') setActiveSlot(0);
     if (e.code === 'Digit2') setActiveSlot(1);
     if (e.code === 'Digit3') setActiveSlot(2);
+    if (e.code === 'Digit4' && cb.canUseMelee?.()!==false) setActiveSlot(3);
 
     if (e.code === 'KeyQ') {
       let other = activeSlot === 0 ? 1 : 0;
