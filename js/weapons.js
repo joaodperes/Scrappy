@@ -1336,11 +1336,17 @@ export function animWeapon(dt) {
   });
 
   if (swingT > 0 && !_NO_SWING_WEAPONS.has(curWep)) {
-    swingT = Math.max(0, swingT - dt * 7.5);
+    swingT = Math.max(0, swingT - dt * (curWep==='KNIFE'?4.2:7.5));
     const k = Math.sin(swingT * Math.PI);
     // Multiply the physical Z kick and X rotation tilt by the recoil multiplier
     wepGroup.position.z = WPOS[curWep].z - (k * .09 * recoilMult);
-    wepGroup.rotation.x = WROT[curWep].x - (k * 0.15 * recoilMult) + reloadTilt;
+    wepGroup.rotation.x = WROT[curWep].x - (k * (curWep==='KNIFE'?0.5:0.15) * recoilMult) + reloadTilt;
+    if(curWep==='KNIFE'){
+      // A distinct sweeping blade motion, not a firearm-style muzzle kick.
+      wepGroup.rotation.y=WROT[curWep].y+Math.cos(swingT*Math.PI)*.65;
+      wepGroup.rotation.z=WROT[curWep].z-k*.34;
+      wepGroup.position.x=WPOS[curWep].x-k*.12;
+    }
   } else {
     if (_NO_SWING_WEAPONS.has(curWep)) swingT = 0; 
     wepGroup.position.z = WPOS[curWep].z;
