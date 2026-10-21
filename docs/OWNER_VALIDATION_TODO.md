@@ -122,3 +122,11 @@ The following checks are deferred to the owner's later playtest, not claims of s
 - [ ] **Challenge credit:** Direct Tesla kill versus secondary TESLA_CHAIN hop must credit weapon TESLA with distinct mechanism label; verify Poison, Dragon's Breath, burn, Riveter and environmental kills follow their registered source definitions. Survival-only daily objectives must not advance from local arena kills.
 
 - [ ] **Objective XP and physical misses:** Collect a BLUE tag as the human (+5 XP) and deny a RED tag (+0 XP). Inspect the results breakdown. Verify that missed Rockets/Launchers can still splash on real impact, missed direct bolts never inflict phantom player damage, and bot uniforms flash on actual hits.
+
+## Google account session and recovery validation
+
+- [ ] Open account in Browser A and begin Survival. Sign into the same Google account in Browser B without pressing Play; A stays in-game. Start in B; A must save, leave gameplay and show a takeover notice. B sees latest saved progress.
+- [ ] Disconnect A during a match, earn a reward, and start a game in B. A must retain pending unsaved progression locally and not overwrite B; after reconnect/re-taking the lease, verify it reconciles once with no duplicate XP or Scraps.
+- [ ] Claim the same completed quest concurrently from two browsers; exactly one reward transaction succeeds. Verify Google account switch and no profile/recovery inheritance.
+- [ ] Confirm cloud status displays Saved only after acknowledged upload, Pending while buffered, and that a network error does not initialize a fresh zero-XP profile. Verify browser close/reopen recovery on Firefox and Chromium.
+- [ ] Confirm deployed Firestore account-owner rules allow the new session and receipt fields without granting other accounts read/write access. Measure Spark quota impact. Do not deploy rule changes without approval.
