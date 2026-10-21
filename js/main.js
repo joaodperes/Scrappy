@@ -434,6 +434,28 @@ function _populateMapDropdown() {
       (playBtn?.parentElement||container).appendChild(questsBtn);
       questsBtn.style.display=window.__scrappyAuthenticated?'block':'none';
     }
+    // Cosmetic / direct-XP shop uses the same Firebase account and currency
+    // earned from quests, without a separate paid backend.
+    if (!document.getElementById('shopBtn')) {
+      const shopBtn=document.createElement('button');
+      shopBtn.id='shopBtn';
+      shopBtn.textContent='🛒 SCRAPS SHOP';
+      shopBtn.className='btn';
+      shopBtn.style.cssText='display:none;width:calc(100% - 12px);min-width:0;box-sizing:border-box;padding-left:0;padding-right:0;text-align:center';
+      shopBtn.onclick=async()=>{
+        if(!window.__scrappyAuthenticated)return;
+        document.getElementById('menuScreen').className='screen hidden';
+        try{
+          const {showShopPage}=await import('./shopPage.js');
+          showShopPage(()=>{document.getElementById('menuScreen').className='screen visible'});
+        }catch(error){
+          console.error('[shop] Unable to open',error);
+          document.getElementById('menuScreen').className='screen visible';
+        }
+      };
+      (playBtn?.parentElement||container).appendChild(shopBtn);
+      shopBtn.style.display=window.__scrappyAuthenticated?'block':'none';
+    }
     // ── Leaderboard moves to its own subpage. #leaderboardSection (the
     // STANDARD/HARD toggle + score list) gets relocated into it on first
     // open rather than duplicated — see leaderboardPage.js.
