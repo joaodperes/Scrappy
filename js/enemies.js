@@ -13,6 +13,7 @@ import { ELITE_TRAITS, getEliteBonuses } from './eliteRules.js';
 import { botTravelTarget, botNavPath } from './botNavigation.js';
 import { getCurrentMap, getMapMeta, getWalkableSpawns } from './mapManager.js';
 import { recordDamage, isWonderWeaponUnlocked, getLoadout } from './progression.js';
+import { resolveKillAttribution } from './killAttribution.js';
 import { getBossPoolForCurrentMap } from './waves.js';
 
 // ── Mesh→enemy lookup ─────────────────────────────────────────
@@ -647,7 +648,7 @@ export function spawnBot(type, _x, _spawnY, _z, scale = 1.0, eliteTraits = null)
   rebuildMeshMap();
 }
 
-export function hitRobot(e, dmg, isHeadshot = false, isExplosive = false, source = 'PLAYER') {
+export function hitRobot(e, dmg, isHeadshot = false, isExplosive = false, source = 'PLAYER', weaponOverride = null) {
   if (!e.alive) return;
   if(e.arenaActor){cb.onArenaActorHit?.(e,dmg,source);return;}
 
@@ -691,7 +692,8 @@ export function hitRobot(e, dmg, isHeadshot = false, isExplosive = false, source
     actualDmg=Math.max(0,Math.round(actualDmg*e.elite.damageTaken));
     if (actualDmg>0)e.elite.regenDelay=4;
   }
-  recordDamage(curWep, actualDmg);
+  const credit=resolveKillAttribution(curWep,source,weaponOverride,isExplosive);
+  if(credit.weaponKey)recordDamage(credit.weaponKey, actualDmg,source);
   e.hp -= actualDmg;
   if (cb.showHitMarker) cb.showHitMarker();
   sfx.hit();
@@ -721,10 +723,11 @@ export function hitRobot(e, dmg, isHeadshot = false, isExplosive = false, source
       }
   });
  
-  if (e.hp <= 0) destroyRobot(e, isHeadshot, isExplosive, source);
+  if (e.hp <= 0) destroyRobot(e, isHeadshot, isExplosive, source, weaponOverride);
 }
 
-export function destroyRobot(e, isHeadshot = false, isExplosive = false, source = 'PLAYER') {
+export function destroyRobot(e, isHeadshot = false, isExplosive = false, source = 'PLAYER', weaponOverride = null) {
+  if(!e?.alive)return; // one death = one challenge event, including hazards/DOT
   e.alive = false;
   if (e._eliteHaloMat) e._eliteHaloMat.dispose();
   if (e._arrowNode) { e._arrowNode.getChildMeshes().forEach(m => m.dispose()); e._arrowNode.dispose(); }
@@ -733,10 +736,11 @@ export function destroyRobot(e, isHeadshot = false, isExplosive = false, source 
   // Reading curWep via the live ES-module binding is always instant and accurate.
   // The old pattern used nested dynamic imports (2 microtask ticks) so curWep
   // could have changed by the time recordKill ran — e.g. shotgun kill credited to SMG.
-  const _killedWithWeapon  = curWep;
+  const _credit=resolveKillAttribution(curWep,source,weaponOverride,isExplosive);
+  const _killedWithWeapon = _credit.weaponKey;
   const _killedWhileAir    = !player.onGround;
   const _killedWhileScoped = !!player.isScoped;
-  cb.onRobotDestroyed?.({weapon:_killedWithWeapon,source,position:e.group.position.clone()});
+  cb.onRobotDestroyed?.({weapon:_killedWithWeapon,killMethod:_credit.killMethod,source,position:e.group.position.clone()});
   
   // ── 1. RAYCAST: Find the floor beneath the dying bot using intersectsMesh
   //    (pickWithRay skips isPickable=false meshes, which all our floors are)
@@ -785,6 +789,7 @@ export function destroyRobot(e, isHeadshot = false, isExplosive = false, source 
       isHeadshot: isHeadshot,
       isExplosiveKill: isExplosive,
       source: source,
+      killMethod:_credit.killMethod,
     });
 
     // ── Energy Coil: headshot kills on ION vent 40% heat ──────
@@ -1043,7 +1048,7 @@ export function updateEnemies(dt) {
         }
         
         if (e.hp <= 0) {
-            destroyRobot(e, false);
+            destroyRobot(e, false, false, 'FLAME_DOT', 'FLAMETHROWER');
             continue;
         }
     } else {
@@ -1094,7 +1099,7 @@ export function updateEnemies(dt) {
             if (e._poisonAura) e._poisonAura.scaling.setAll(pulse);
             
             if (e.hp <= 0) {
-                destroyRobot(e, false, false, 'POISON');
+                destroyRobot(e, false, false, 'POISON', 'CROSSBOW');
                 continue;
             }
         }
@@ -1161,11 +1166,8 @@ export function updateEnemies(dt) {
         if (ex > hx - halfW && ex < hx + halfW && ez > hz - halfD && ez < hz + halfD && dy > -1 && dy < 2.5) {
             e.hp -= (haz.metadata?.dps || 5) * dt;
             if (e.hp <= 0) { 
-                // Credit the player with an environmental kill!
-                import('./progression.js').then(({ recordKill }) => {
-                    recordKill(e.type, 'ENVIRONMENT', { xpMult: 1 });
-                });
-                destroyRobot(e, false); 
+                // Credit exactly once as environmental; never as the held gun.
+                destroyRobot(e, false, false, 'ENVIRONMENT'); 
                 continue; 
           }
         }
