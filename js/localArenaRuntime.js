@@ -289,6 +289,7 @@ export function updateLocalArena(dt){
  if(!isActive())return;
  updateArenaActors(active.actors,dt,active.state.mode,{
    humanAlive:!active.playerDead,
+   isMatchActive:isActive,
    objectives:active.state.mode==='killConfirmed'?tags:[],
    onShot:actorShoots,
    onRespawn:actor=>{
