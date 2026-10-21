@@ -30,7 +30,8 @@ function notifyLost(message){
  if(hadOwner)onDisplaced?.(message||'Your game was opened in another browser.');
 }
 export function clearSessionOnSignOut(){
- stopLocalOwner();
+ const previous=stopLocalOwner();
+ if(previous)onDisplaced?.('Google authentication ended. Return to login to play.');
 }
 export async function releaseGameSession(){
  const previous=stopLocalOwner();
@@ -46,12 +47,14 @@ export async function releaseGameSession(){
 }
 async function surrenderToNewBrowser(){
  if(surrendering||!owner)return;
+ const yielding=owner;
  surrendering=true;
  try{
   // Keep the old lease while draining unsaved progress. The incoming
   // browser waits briefly, then can take over even if this one is offline.
   await onHandoff?.();
  }catch(err){console.warn('[session] Pending progress buffered for later',err)}
+ if(owner!==yielding)return; // already ended or forcibly replaced
  await releaseGameSession();
  onDisplaced?.('This account started a game in another browser.');
 }
