@@ -16,7 +16,9 @@ Node WebSocket service. Local FFA/TDM now include player-shaped bot factions and
 - [ ] **Local match death/respawn:** after a death, there is a five-second respawn with HP reset and no wave counter reset; if score/time goal ends the match, a single result screen appears.
 - [ ] **Local menu/cleanup:** quit through Pause and return to Menu; retry different local mode/map; no leftover dog tags, HUD overlays, bot entities, duplicate score events or orphaned timers.
 - [ ] **Survival Gear:** Loadout → SURVIVAL GEAR; earn boss-wave points, allocate Vitality/Mobility/Scavenger, equip at wave 10/20/30, unequip, and use free Reset. Verify HP, speed, ammo pickups and armor change in Survival, but never in Gun Game/FFA/TDM/Kill Confirmed.
-- [ ] **Quest separation:** local arena kills, Tesla chains and arena damage grant ordinary XP but do not advance Survival-only PvE kills/damage quests. Survival robot kills and damage still advance those objectives.
+- [ ] **Arena bot weapon fidelity:** during FFA/TDM/Gun Game, watch a heat weapon cool instead of changing to a fake magazine, a COMET fire a burst, primary→sidearm→primary cycling, and misses produce visible tracers without damage. Check shotgun close-range balance and rapid match finish cleanup.
+- [ ] **Quest separation:** local arena kills, Tesla chains and arena damage grant ordinary XP but do not advance Survival-only PvE kills/damage quests **or award weapon-XP-overflow Scraps**. Survival robot kills/damage still advance objectives and eligible max-rank PvE weapon XP converts at 25:1, accounting for any purchased XP bonus.
+- [ ] **Shop safety:** confirm duplicate purchase requests do not debit twice; invalid receipt IDs are rejected and a full bounded receipt history rejects new purchases without losing old receipts. Verify login/logout, two-browser purchases and deployed Firestore owner-only rules before economy acceptance.
 - [ ] **Survival regression:** return to Survival after a Gun Game or Kill Confirmed match; its endless waves, standard Secondary Pistol, difficulty selection and existing quests still work.
 - [ ] **Document checks:** README and LOCAL_DEVELOPMENT instructions match the actual Babylon.js implementation and browser menus.
 
@@ -59,7 +61,7 @@ Node WebSocket service. Local FFA/TDM now include player-shaped bot factions and
 - [ ] **[5] Jungle textures** — soil/moss/ruins/metal/ceiling rock visible with distinct texture patterns; no solid-color placeholders, stretched UVs, missing-image purple patches or jarring seams on tilted ramps. Compare surface sunlight vs mine darkness.
 - [ ] **[5] Jungle visibility** — Lantern noticeably lights mine darkness; NVG makes enemies legible; monster outline effects and performance remain acceptable. Check moving platforms, jumps and bot pursuit between depths.
 - [ ] **[6] Moon Base** — low gravity affects player and enemy movement, exposed raised platforms are reachable, weapon/health/armor pickups rest on solid platforms, balcony cover protects without blocking routes, bot pathing works on ramps.
-- [ ] **[6] Moon Base PvP** — both separate human browsers have jetpacks and can reach floaters and balcony. Confirm landings and reset behavior.
+- [ ] **[6] Moon Base local bots** — verify local AI combat, safe elevated-platform landings and Recast routes in offline modes; human PvP jetpack testing is deferred.
 - [ ] **[Scrapyard/City] Regression** — preserved Scrapyard layout/traversal quality and City rooftops/ziplines/lifts/cars; no collisions or lighting regressions after Jungle/Moon changes.
 
 ### Progression, quests, leaderboards
