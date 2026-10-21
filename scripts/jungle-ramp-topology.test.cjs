@@ -15,7 +15,7 @@ function rampEnds(o){
  const p=o.params,half=p.sz/2,theta=p.rotX||0;
  return [-1,1].map(sign=>({
   x:p.px,z:p.pz+sign*half*Math.cos(theta),
-  y:p.py+sign*half*Math.sin(theta)+p.sy/2*Math.cos(theta),
+  y:p.py-sign*half*Math.sin(theta)+p.sy/2*Math.cos(theta),
   dir:sign*Math.sign(Math.cos(theta))
  }));
 }
@@ -52,7 +52,7 @@ test('excavated ramps never intersect intact horizontal floors or solid walls',(
   const p=ramp.params,half=p.sz/2;
   for(let i=1;i<10;i++){
    const t=-1+2*i/10,z=p.pz+t*half*Math.cos(p.rotX);
-   const y=p.py+t*half*Math.sin(p.rotX)+p.sy/2*Math.cos(p.rotX);
+   const y=p.py-t*half*Math.sin(p.rotX)+p.sy/2*Math.cos(p.rotX);
    for(const slab of slabs){
     if(!inSlab(slab,p.px,z,-.1))continue;
     const other=slab.params.surfY;
