@@ -128,3 +128,5 @@
 
 - Arena bot physical misses now spawn real collision-checked projectile visuals, including explosives with splash at actual impact; missed direct projectiles cannot hit the player accidentally.
 - Moon Base jetpack exhaust now uses its existing particle import synchronously, avoiding per-frame dynamic import promises.
+
+- Both local arena actors and Survival robots now pass their map's gravity multiplier into jump-pad link planning; Moon Base's longer airborne trajectories no longer use the standard-gravity landing prediction.
