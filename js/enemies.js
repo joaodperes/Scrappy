@@ -23,6 +23,7 @@ export const _meshToEnemy = new Map();
 const arenaTargets = new Set();
 export function registerArenaTarget(actor){arenaTargets.add(actor);rebuildMeshMap()}
 export function unregisterArenaTarget(actor){arenaTargets.delete(actor);rebuildMeshMap()}
+export function getDamageableActors(){return [...enemies,...arenaTargets].filter(a=>a.alive)}
 export function rebuildMeshMap() {
   _meshToEnemy.clear();
   for(const actor of arenaTargets){
