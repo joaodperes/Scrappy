@@ -30,6 +30,22 @@
 - Strict two-human synchronized co-op Survival: waves, enemies, bosses, pickups, per-user rewards and rejoin.
 - Production deployment decisions, costs and paid cloud services. No paid infrastructure has been authorized.
 
+## October 21 local AI source checkpoint
+
+- `js/localArenaActors.js`: bot death and respawn now clear fire/poison
+  damage-over-time and obsolete route/target state. Respawning refills the
+  current weapon magazine even when the held gun model does not change.
+- Local bots no longer use a straight-line movement fallback when Recast
+  cannot route to an opponent. Kill Confirmed prioritizes reachable tags
+  by navigable route (with brief path scan caching) rather than pursuing
+  unreachable targets between disconnected floors; tag destinations project
+  to the tag's floor instead of below it.
+- `scripts/local-arena-actors.test.cjs`: three additional regressions cover
+  respawn cleanup, unreachable movement rejection, and navigable tags.
+  All **8/8 actor tests passed in a V8 mocked execution** after this change.
+  Full Node/GitHub CI and Firefox/Chromium physics remain to be verified.
+  No multiplayer code or hosting service changed.
+
 ## Current source-level validation
 
 - `scripts/local-arena-rules.test.cjs` — Gun Game ladder, Knife finale, Kill Confirmed tags, expired tags and time/death rules.
