@@ -373,7 +373,7 @@ function actorShoots(shooter,victim,damage,weapon,aimPoint){
   active.projectiles.push({mesh,mat,direction:delta.scale(1/dist),distance:dist,
     travelled:0,speed:Math.max(8,spec.speed||spec.projSpeed||35),
     splash:(spec.splash||0)>0,impact,lob,velocity,gravity,fuse:3.2,
-    bounces:lob?1:0});
+    bounces:lob?1:0,ricochets:weapon==='RIVETER'?Math.max(0,spec.bounces||0):0});
  }
 }
 function updateArenaProjectiles(dt){
@@ -435,6 +435,23 @@ function updateArenaProjectiles(dt){
     start.add(p.direction.scale(step));
   p.mesh.position.copyFrom(end);
   p.travelled+=step;
+  if(hit&&p.ricochets>0){
+   // Riveter rounds preserve kinetic motion for one reflected segment,
+   // rather than disappearing on the first wall impact.
+   let normal=null;
+   try{normal=blocked.getNormal(true)}catch{}
+   if(normal&&normal.lengthSquared()>1e-6){
+    normal.normalize();
+    const dot=BABYLON.Vector3.Dot(p.direction,normal);
+    if(dot<0){
+     p.direction=p.direction.subtract(normal.scale(2*dot)).normalize();
+     p.mesh.position.addInPlace(normal.scale(.06));
+     p.ricochets--;
+     p.distance=Math.max(p.distance,p.travelled+Math.min(28,p.speed));
+     continue;
+    }
+   }
+  }
   if(hit||terminal){
    active.projectiles.splice(i,1);
    p.mesh.dispose();p.mat.dispose();
