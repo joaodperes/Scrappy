@@ -3,7 +3,7 @@ const fs=require('node:fs'),path=require('node:path');
 const root=path.resolve(__dirname,'..');
 const read=p=>fs.readFileSync(path.join(root,p),'utf8');
 const rules=new Function(read('js/pveStatsRules.js').replace(/^export /gm,'')+
- '\nreturn {PVE_STAT_KEYS,PVE_EQUIPMENT,normalizedPveBuild,allocatePvePoint,respecPveBuild,equipPveGear,pveModifiers} ')();
+ '\nreturn {PVE_STAT_KEYS,PVE_EQUIPMENT,normalizedPveBuild,allocatePvePoint,respecPveBuild,equipPveGear,unequipPveGear,pveModifiers} ')();
 function page(profile){
  let saves=0;
  const document={createElement:tag=>({
@@ -42,7 +42,9 @@ test('equipment locks use best Survival wave and normalize persisted ranks',()=>
  assert.equal(ui.find('LOCKED').length,2);
  ui.find('EQUIP')[0].onclick();
  assert.equal(profile.pveBuild.equipment,'armoredVest');
- assert.equal(ui.find('EQUIPPED').length,1);
+ assert.equal(ui.find('UNEQUIP').length,1);
+ ui.find('UNEQUIP')[0].onclick();
+ assert.equal(profile.pveBuild.equipment,null);
 });
 test('competitive and local arena launches clear PvE bonuses',()=>{
  const main=read('js/main.js'),player=read('js/player.js'),pickup=read('js/pickups.js');
