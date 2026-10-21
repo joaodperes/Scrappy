@@ -124,3 +124,21 @@ test('local competitive arena events do not advance Survival-only quests',async(
  trackQuestEvent(profile,'KILL',{botType:'scout',source:'PLAYER'},d);
  assert.equal(profile.questProgress.daily.metrics.pveKills,1);
 });
+
+test('purchased weapon XP leaves only base capacity and converts PvE overflow',async()=>{
+ const {convertMaxedWeaponXp}=await mod;
+ const p={scraps:0,stats:{weaponXp:{SMG:17450}}};
+ assert.equal(convertMaxedWeaponXp(p,'SMG',100,17500),2);
+ assert.equal(p.stats.weaponXp.SMG,17500);
+ assert.equal(p.scraps,2);
+ const fullBonus={scraps:0,stats:{weaponXp:{PISTOL:0}}};
+ assert.equal(convertMaxedWeaponXp(fullBonus,'PISTOL',50,0),2);
+ assert.equal(fullBonus.stats.weaponXp.PISTOL,0);
+ assert.equal(fullBonus.scraps,2);
+});
+test('arena XP source never enters Survival-only overflow-to-Scraps branch',()=>{
+ const s=fs.readFileSync(path.join(__dirname,'../js/progression.js'),'utf8');
+ assert.match(s,/if\(botType==='arena'\|\|source==='ARENA'\)/);
+ assert.match(s,/const baseCap=Math\.max\(0,maxWeaponXp-\(_shopWallet\.xpBonuses\[weaponKey\]\|\|0\)\)/);
+ assert.match(s,/convertMaxedWeaponXp\(profile,weaponKey,wxp,baseCap\)/);
+});
