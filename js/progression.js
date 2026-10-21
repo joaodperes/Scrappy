@@ -2905,8 +2905,8 @@ export function recordBarrelDestroyed() {
 export function recordRailgunPickup() {
   emitEvent('PICKUP', { type: 'railgun' });
 }
-export function recordDamage(weaponKey, amount) {
-  emitEvent('DAMAGE_DEALT', { weaponKey, amount });
+export function recordDamage(weaponKey, amount, source='PLAYER') {
+  emitEvent('DAMAGE_DEALT', { weaponKey, amount, source });
 }
 export function recordWaveComplete(waveNum, isBoss, mapId) {
   emitEvent('WAVE_COMPLETE', { waveNum, isBoss, mapId });
