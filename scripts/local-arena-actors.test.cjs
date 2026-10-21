@@ -171,6 +171,7 @@ test('burst guns expend multiple rounds per shot and visibly miss',()=>{
  const shooter=h.actor('burst','BLUE',0,9),enemy=h.actor('red','RED',0,13);
  h.api.setArenaActorWeapon(shooter,'COMET');
  const hits=[];
+ enemy.cooldown=100; // Keep the test focused on the COMET shooter tracer.
  shooter.reaction=0;shooter.cooldown=0;
  // The first target acquisition deliberately incurs persona reaction time.
  for(let i=0;i<10&&!h.lines.length;i++)
