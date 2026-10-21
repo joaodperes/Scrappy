@@ -40,3 +40,7 @@ Keep practical server-side validation of PvP damage, weapon compatibility, death
 3. Add cosmetics/weapon XP item catalog and UI, keeping compatibility with existing quest claims and profile save pipeline.
 4. Have the owner verify concurrent purchase, account switching, logout/relogin, insufficient Scraps and duplicate purchase handling in two browsers.
 5. Finish standalone offline bot matches (including genuine bot-vs-bot factions), local maps, melee and documentation cleanup on the existing PR. Schedule online multiplayer, networked bots and co-op for a **separate future PR**. Repository code moves/deletions still wait for offline gameplay QA.
+
+## October 21 implementation note
+
+The cloud-first design is now source implemented. `js/profileSession.js` coordinates one active offline game lease per UID, with graceful last-login-wins takeover initiated by Play, and `js/profileSyncRules.js` merges earned deltas against the prior cloud baseline. `js/progression.js` retains a UID-scoped pending recovery buffer (not a competing authoritative profile), versioned transaction receipts, and transactionally guarded quest rewards. Old unscoped profile data is one-time migrated conservatively. See [CLOUD_PROFILE_SESSION_ARCHITECTURE.md](CLOUD_PROFILE_SESSION_ARCHITECTURE.md). Deployed Firestore rules, free-plan usage and real multi-browser tests remain unverified; do not merge or deploy without owner approval.
