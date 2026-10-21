@@ -114,7 +114,7 @@ export function claimQuest(profile,id,date=new Date()){
  * Called only from the PvE KILL pipeline, not client-supplied PvP rewards.
  */
 export function convertMaxedWeaponXp(profile,weapon,earned,maxXp=18000){
-  if(!weapon||!Number.isFinite(earned)||earned<=0||!Number.isFinite(maxXp)||maxXp<=0)
+  if(!weapon||!Number.isFinite(earned)||earned<=0||!Number.isFinite(maxXp)||maxXp<0)
     return 0;
   const stats=profile.stats||{};
   const xp=stats.weaponXp||{};
