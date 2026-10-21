@@ -34,6 +34,7 @@ export const cb = {
   hitRobot:    null,
   onRobotDestroyed: null, // optional offline arena kill event
   onArenaActorHit: null, // distinct player-model target damage handler
+  getDamageableActors: null, // shared projectile/explosion targets
   hurtPlayer:  null,
   markHudDirty: null,
   endGame: null,
