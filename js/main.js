@@ -219,6 +219,7 @@ function startGame(startWave = 0, difficulty = 'normal', localMode = null) {
     if(localMode){
       const chosen=normalizeCompetitiveLoadout(profile.pvpLoadout||selectedMatchLoadout,WDEFS);
       const arenaStartXp=profile.totalXp||0;
+      const arenaStartWeaponXp={...(profile.stats?.weaponXp||{})};
       startLocalArena({...localMode,loadout:chosen},state=>{
         // Small capped result rewards: avoid paying out for instant resets.
         const elapsed=Math.max(0,(localMode.duration||600)-state.secondsLeft);
@@ -239,11 +240,15 @@ function startGame(startWave = 0, difficulty = 'normal', localMode = null) {
         const scores=document.getElementById('pvpEndScore');
         if(scores){
           const earned=Math.max(0,(profile.totalXp||0)-arenaStartXp);
+          const weaponGains=Object.entries(profile.stats?.weaponXp||{})
+            .map(([id,xp])=>[id,Math.max(0,(xp||0)-(arenaStartWeaponXp[id]||0))])
+            .filter(([,xp])=>xp>0).sort((a,b)=>b[1]-a[1])
+            .map(([id,xp])=>id+' +'+xp).join(', ')||'NONE';
           scores.textContent='FRAGS '+state.kills+' · POINTS '+state.score+
             ' · BOT POINTS '+state.opposition+' · DEATHS '+state.deaths+
             ' · XP +'+earned+' (KILLS +'+eliminationXp+
             ', PARTICIPATION +'+participation+', VICTORY +'+victory+')'+
-            ' · SCRAPS +0 (ARENA)';
+            ' · SCRAPS +0 (ARENA)'+' · WEAPON XP: '+weaponGains;
           const rivals=(state.participants||[]).slice(0,5)
             .map(a=>a.name+' ['+a.team+'] '+a.kills+' K / '+a.deaths+' D')
             .join('  ·  ');
