@@ -137,7 +137,7 @@ function onActorKilled(actor,killer,weapon){
    // Offline arena eliminations award modest progression, independently
    // from Survival waves and without any competitive multiplayer claim.
    awardXp(20);
-   recordKill('arena',weapon,{source:'PLAYER'});
+   recordKill('arena',weapon,{source:'ARENA'});
    const before=active.state;
    const next=localArenaKill(before,{weapon,source:'PLAYER'});
    if(before.mode==='gunGame'&&next.gunIndex!==before.gunIndex&&!next.complete){
