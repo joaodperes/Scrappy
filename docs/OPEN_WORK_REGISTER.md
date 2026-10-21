@@ -132,3 +132,5 @@
 - Both local arena actors and Survival robots now pass their map's gravity multiplier into jump-pad link planning; Moon Base's longer airborne trajectories no longer use the standard-gravity landing prediction.
 
 - Kill Confirmed now awards 5 account XP when the human actually confirms an enemy tag, no XP for denying allied tags. Match results distinguish objective XP from elimination XP, participation, and victory bonus; no Scraps reward is introduced in arena modes.
+
+- Persona grip and special-device silhouettes now appear on held bot guns. Remaining specialty interactions and map adjustments need later browser feedback before claiming full weapon parity or verified geometry.
