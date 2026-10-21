@@ -7,7 +7,7 @@ import { setupLighting } from './lighting.js';
 import { setWeapon, inventory, WDEFS, setActiveSlot, animWeapon,
          initAttachmentVisuals, wepModels, wepGroup, curWep } from './weapons.js';
 import { enemies, projs, pickups, weaponDrops, _sparkPool, particles, player, cb } from './gameState.js';
-import { rebuildMeshMap, hitRobot, updateEnemies } from './enemies.js';
+import { rebuildMeshMap, hitRobot, updateEnemies, getDamageableActors } from './enemies.js';
 import { updateProjs  } from './projectiles.js';
 import { updateParticles } from './particles.js';
 import { updatePickups, updateWeaponDrops, tryPickupWeapon, initSecretKits, initWeaponSpawns } from './pickups.js';
@@ -36,6 +36,7 @@ loadProfile();
 
 // ── Callbacks ──────────────────────────────────────────────────
 cb.hitRobot      = hitRobot;
+cb.getDamageableActors = getDamageableActors;
 cb.onRobotDestroyed = localArenaRobotKilled;
 cb.onArenaActorHit = localArenaActorHit;
 cb.hurtPlayer    = hurtPlayer;
