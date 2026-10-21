@@ -268,7 +268,8 @@ function addBotBurn(shooter,victim,spec){
    (victim&&!victim.alive)||(!victim&&active.playerDead))return;
  const existing=active.burns.find(b=>b.shooter===shooter&&b.victim===victim);
  if(existing){existing.remaining=spec.dotDuration||4;return}
- active.burns.push({shooter,victim,remaining:spec.dotDuration||4,dps:spec.dotDamage||8});
+ active.burns.push({shooter,victim,weapon:shooter.weapon,
+  remaining:spec.dotDuration||4,dps:spec.dotDamage||8});
 }
 function updateArenaBotBurns(dt){
  if(!isActive()||!active.burns.length)return;
@@ -277,7 +278,7 @@ function updateArenaBotBurns(dt){
   if(!isActive())return;
   if((b.victim&&!b.victim.alive)||(!b.victim&&active.playerDead))continue;
   const seconds=Math.min(dt,b.remaining);
-  botImpact(b.shooter,b.victim,b.dps*seconds,b.shooter.weapon,'FLAME_DOT');
+  botImpact(b.shooter,b.victim,b.dps*seconds,b.weapon,'FLAME_DOT');
   b.remaining-=dt;
   if(b.remaining>0&&(b.victim?b.victim.alive:!active.playerDead))next.push(b);
  }
