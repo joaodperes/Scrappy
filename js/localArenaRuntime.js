@@ -6,6 +6,7 @@ import {scene,camera} from './scene.js';
 import {inventory,setWeapon,setActiveSlot,curWep,WDEFS} from './weapons.js';
 import {rebuildMeshMap} from './enemies.js';
 import {awardXp,recordKill,recordDamage} from './progression.js';
+import {resolveKillAttribution} from './killAttribution.js';
 import {fetchArenaPersonas,createArenaActor,destroyArenaActors,
   chooseArenaSpawn,setArenaActorWeapon,killArenaActor,respawnArenaActor,
   updateArenaActors} from './localArenaActors.js';
@@ -121,7 +122,7 @@ function applyResult(state){
  showHud();
  if(state.complete)finish();
 }
-function onActorKilled(actor,killer,weapon){
+function onActorKilled(actor,killer,weapon,killMethod='DIRECT'){
  if(!isActive()||!actor.alive)return;
  const pos=actor.group.position.clone();
  killArenaActor(actor);
@@ -137,7 +138,7 @@ function onActorKilled(actor,killer,weapon){
    // Offline arena eliminations award modest progression, independently
    // from Survival waves and without any competitive multiplayer claim.
    awardXp(20);
-   recordKill('arena',weapon,{source:'ARENA'});
+   recordKill('arena',weapon,{source:'ARENA',killMethod});
    const before=active.state;
    const next=localArenaKill(before,{weapon,source:'PLAYER'});
    if(before.mode==='gunGame'&&next.gunIndex!==before.gunIndex&&!next.complete){
@@ -168,12 +169,13 @@ export function localArenaActorHit(actor,dmg,source='PLAYER'){
  if(!isActive()||!actor?.alive||!Number.isFinite(dmg)||dmg<=0||
     !HUMAN_DAMAGE_SOURCES.has(source))return;
  // Gun Game's ladder cannot be bypassed by another equipped firearm.
- if(active.state.mode==='gunGame'&&curWep!==active.state.gunOrder[active.state.gunIndex])return;
+ const credit=resolveKillAttribution(curWep,source);
+ if(active.state.mode==='gunGame'&&credit.weaponKey!==active.state.gunOrder[active.state.gunIndex])return;
  if(['tdm','killConfirmed'].includes(active.state.mode)&&actor.team==='RED')return;
  const dealt=Math.min(actor.hp,Math.min(500,dmg));
  actor.hp=Math.max(0,actor.hp-dealt);
- recordDamage(curWep,dealt,'ARENA');
- if(actor.hp===0)onActorKilled(actor,'human',curWep);
+ if(credit.weaponKey)recordDamage(credit.weaponKey,dealt,'ARENA');
+ if(actor.hp===0)onActorKilled(actor,'human',credit.weaponKey,credit.killMethod);
 }
 // Legacy Survival robot kills do not score in arena games. No Survival bots
 // are spawned by the new modes, so this callback must remain a no-op.
