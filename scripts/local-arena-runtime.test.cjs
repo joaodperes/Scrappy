@@ -152,3 +152,13 @@ test('arena combat source never masquerades as Survival quest damage',async()=>{
  const src=fs.readFileSync(path.join(root,'js/localArenaRuntime.js'),'utf8');
  assert.match(src,/recordDamage\(curWep,dealt,'ARENA'\)/);
 });
+
+test('arena runtime clamps background-tab deltas and ignores invalid frames',async()=>{
+ const h=harness();const initial=await h.start('ffa');
+ h.api.updateLocalArena(9);
+ assert.equal(h.context.lastUpdate.dt,.25);
+ assert.equal(h.api.getLocalArenaSnapshot().state.secondsLeft,initial.state.secondsLeft-.25);
+ h.api.updateLocalArena(NaN);
+ h.api.updateLocalArena(-3);
+ assert.equal(h.api.getLocalArenaSnapshot().state.secondsLeft,initial.state.secondsLeft-.25);
+});
