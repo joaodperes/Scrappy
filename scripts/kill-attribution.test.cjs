@@ -56,6 +56,6 @@ test('only actual explosive barrels count for barrel-destruction challenges',()=
 test('Tesla challenge criteria use both weapon and method, preserving old credits',()=>{
  const src=fs.readFileSync(path.join(__dirname,'../js/progression.js'),'utf8');
  assert.match(src,/weapon:'TESLA', killMethod:'TESLA_CHAIN'/);
- assert.match(src,/killsByWeaponMethod\?\.\[c\.weapon\+'_'+c\.killMethod\]/);
+ assert.match(src,/killsByWeaponMethod\?\.\[c\.weapon\+'_'\+c\.killMethod\]/);
  assert.match(src,/s\.killsWith\?\.TESLA_CHAIN/);
 });
