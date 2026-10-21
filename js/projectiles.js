@@ -89,9 +89,10 @@ export function fireEnemyShot(e, dir, dmg, speed, type, customStartPos = null) {
 }
 
 // ── Explosion ─────────────────────────────────────────────────
-export async function boom(pos, splashR, baseDmg, hurtBots, weaponKey=null) {
+export async function boom(pos, splashR, baseDmg, hurtBots, weaponKey=null, barrelDetonation=false) {
   sfx.explosion();
-  import('./progression.js').then(({ recordBarrelDestroyed }) => recordBarrelDestroyed());
+  // Only actual barrel detonations satisfy a barrel-destruction challenge.
+  if(barrelDetonation)import('./progression.js').then(({recordBarrelDestroyed})=>recordBarrelDestroyed());
   const flash = BABYLON.MeshBuilder.CreateSphere('flash', { diameter: splashR*.7*2, segments:10 }, scene);
   flash.position.copyFrom(pos);
   const fmat = new BABYLON.StandardMaterial('flashMat', scene);
@@ -108,7 +109,7 @@ export async function boom(pos, splashR, baseDmg, hurtBots, weaponKey=null) {
       setTimeout(() => {
         if (!b.alive) return; // Prevent double-triggering
         const bPos = detonateBarrelByMesh(b.meshes[0]);
-        if (bPos) boom(bPos.clone(), 3.6, 78, true);
+        if (bPos) boom(bPos.clone(), 3.6, 78, true,'ENVIRONMENT',true);
       }, 100);
     }
   }
@@ -219,7 +220,7 @@ export function hitscan(meshToEnemy, spread = 0, dmg = 20, range = 90, falloff =
   if(nearest?.kind==='barrel'){
     const boomPos=detonateBarrelByMesh(nearest.hit.pickedMesh);
     if(boomPos){
-      boom(boomPos,3.6,78,true);
+      boom(boomPos,3.6,78,true,'ENVIRONMENT',true);
       spawnSparks(boomPos,0xffaa44,9);
       return {hit:true,barrel:true};
     }
@@ -346,7 +347,7 @@ export function updateProjs(dt) {
         if (BABYLON.Vector3.Distance(p.mesh.position, b.pos) < 0.85) {
           b.alive = false;
           for (const m of b.meshes) { m.setEnabled(false); m.checkCollisions = false; }
-          boom(b.pos.clone(), 3.5, 70, true);
+          boom(b.pos.clone(), 3.5, 70, true,'ENVIRONMENT',true);
           spawnSparks(b.pos.clone(), 0xffaa44, 10);
           p.mesh.dispose();
           if (p.light) p.light.dispose();
@@ -365,15 +366,15 @@ export function updateProjs(dt) {
       if (gHit?.hit) {
         if (gHit.pickedMesh.metadata?.enemy || gHit.pickedMesh.name === '_playerBody') {
           // Direct hit on enemy/player → instant explosion
-          boom(p.mesh.position.clone(), p.splash, p.dmg, true);
+          boom(p.mesh.position.clone(), p.splash, p.dmg, true,'GLAUNCHER');
           p.mesh.dispose();
           if (p.light) p.light.dispose();
           projs.splice(i, 1);
         } else if (isBarrelMesh(gHit.pickedMesh)) {
           // Hit an explosive barrel → chain-detonate the barrel, then the grenade too
           const bPos = detonateBarrelByMesh(gHit.pickedMesh);
-          if (bPos) boom(bPos.clone(), 3.6, 78, true);
-          boom(p.mesh.position.clone(), p.splash, p.dmg, true);
+          if (bPos) boom(bPos.clone(), 3.6, 78, true,'ENVIRONMENT',true);
+          boom(p.mesh.position.clone(), p.splash, p.dmg, true,'GLAUNCHER');
           p.mesh.dispose();
           if (p.light) p.light.dispose();
           projs.splice(i, 1);
@@ -418,7 +419,7 @@ export function updateProjs(dt) {
 
       // Fuse expired → explode
       if (p.fuse <= 0) {
-        boom(p.mesh.position.clone(), p.splash, p.dmg, true);
+        boom(p.mesh.position.clone(), p.splash, p.dmg, true,'GLAUNCHER');
         p.mesh.dispose();
         if (p.light) p.light.dispose();
         projs.splice(i, 1);
@@ -546,7 +547,7 @@ export function updateProjs(dt) {
           if (BABYLON.Vector3.Distance(p.mesh.position, b.pos) < 0.8) {
               b.alive = false;
               for (const m of b.meshes) { m.setEnabled(false); m.checkCollisions = false; }
-              boom(b.pos.clone(), 3.5, 70, true); // Detonate the barrel!
+              boom(b.pos.clone(), 3.5, 70, true,'ENVIRONMENT',true); // Detonate the barrel!
               destroyed = true;
               break;
           }
@@ -678,7 +679,7 @@ export function updateProjs(dt) {
       const b=earliest.barrel;
       b.alive=false;
       for(const m of b.meshes){m.setEnabled(false);m.checkCollisions=false;}
-      boom(b.pos.clone(),3.5,70,true,'ENVIRONMENT');
+      boom(b.pos.clone(),3.5,70,true,'ENVIRONMENT',true);
       hit=true;
     } else if(earliest?.kind==='enemy'){
       if(p.type==='rocket')boom(impact.clone(),p.splash,p.dmg,true,p.weaponKey||'ROCKET');
@@ -692,7 +693,7 @@ export function updateProjs(dt) {
       spawnSparks(impact.clone(),0xff3300,5);
       hit=true;
     } else if(earliest?.kind==='wall'){
-      if(p.type==='rocket')boom(impact.clone(),p.splash,p.dmg,false);
+      if(p.type==='rocket')boom(impact.clone(),p.splash,p.dmg,true,p.weaponKey||'ROCKET');
       else spawnSparks(impact.clone(),0xffaa55,4);
       hit=true;
     }
