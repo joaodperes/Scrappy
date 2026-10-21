@@ -1345,9 +1345,16 @@ export function animWeapon(dt) {
       wepGroup.position.x=WPOS[curWep].x-k*.12;
     }
   } else {
-    if (_NO_SWING_WEAPONS.has(curWep)) swingT = 0; 
+    if (_NO_SWING_WEAPONS.has(curWep)) swingT = 0;
     wepGroup.position.z = WPOS[curWep].z;
     wepGroup.rotation.x = WROT[curWep].x + reloadTilt;
+    if(curWep==='KNIFE'){
+      // A completed slash must return to the idle pose. Otherwise the
+      // previous swing leaves the blade skewed until the next weapon swap.
+      wepGroup.position.x=WPOS.KNIFE.x;
+      wepGroup.rotation.y=WROT.KNIFE.y;
+      wepGroup.rotation.z=WROT.KNIFE.z;
+    }
   }
 
 }
