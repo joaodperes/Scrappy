@@ -6,7 +6,7 @@ import {scene,camera} from './scene.js';
 import {inventory,setWeapon,setActiveSlot,curWep,WDEFS} from './weapons.js';
 import {rebuildMeshMap} from './enemies.js';
 import {awardXp,recordKill,recordDamage} from './progression.js';
-import {resolveKillAttribution} from './killAttribution.js';
+import {resolveKillAttribution,SPECIAL_KILL_WEAPONS} from './killAttribution.js';
 import {fetchArenaPersonas,createArenaActor,destroyArenaActors,
   chooseArenaSpawn,setArenaActorWeapon,killArenaActor,respawnArenaActor,
   updateArenaActors,getArenaActorWeaponSpec} from './localArenaActors.js';
@@ -181,10 +181,9 @@ function onActorKilled(actor,killer,weapon,killMethod='DIRECT'){
 // Special attacks identify their ability at the hitRobot boundary. They
 // still originate from the human player; do not silently discard their kills
 // or weapon XP when resolving local arena damage.
-const HUMAN_DAMAGE_SOURCES=new Set([
- 'PLAYER','FLAMETHROWER','PHALANX_SHATTER','TESLA_CHAIN',
- 'THUNDERBOLT','OMEGA_STORM','AEGIS',
-]);
+// All registered player abilities must receive the same weapon/method credit
+// as Survival, including poison and attachment effects.
+const HUMAN_DAMAGE_SOURCES=new Set(['PLAYER',...Object.keys(SPECIAL_KILL_WEAPONS)]);
 export function localArenaActorHit(actor,dmg,source='PLAYER',weaponOverride=null,isExplosive=false){
  if(!isActive()||!actor?.alive||!Number.isFinite(dmg)||dmg<=0||
     !HUMAN_DAMAGE_SOURCES.has(source))return;
