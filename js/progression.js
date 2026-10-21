@@ -2517,13 +2517,15 @@ function _restoreCloudProfile(uid,remote,receipts={}){
    JSON.stringify(profile)!==JSON.stringify(baseline);
  _cloudDirty=hasPending;
  if(hasPending){
-  if(!_recovery)_recovery={uid,id:_newSyncId(),version:1,
+  if(!_recovery)_recovery={uid,id:_syncClientId(uid),version:_nextSyncVersion(uid),
     base:_copy(baseline),profile:_copy(profile),inFlight:null};
   _saveRecovery();
  }
  // Retire the old unscoped full-profile cache only once Firestore loaded.
- try{localStorage.removeItem(STORAGE_KEY)}catch{}
- _legacyCache=null;
+ if(!_legacyCache||_legacyCache.firebaseUid===uid){
+  try{localStorage.removeItem(STORAGE_KEY)}catch{}
+  _legacyCache=null;
+ }
 }
 function _newSyncId(){
  const bytes=new Uint8Array(16);
@@ -2561,6 +2563,7 @@ export function initFirebaseAuth(){
    _fbReady=false;_shopWallet=normalizeShopWallet(null);_shopReady=false;
    clearSessionOnSignOut();
    _profileLoadedUid=null;_cloudBase=null;_recovery=null;
+   _cloudDirty=false;_cloudRevision++;
    profile=_defaultProfile();
    return;
   }
