@@ -119,3 +119,6 @@
 
 - Moon Base jump-pad route planning now takes the map gravity multiplier and descending ballistic flight into account, matching the arena actor's airborne simulation rather than assuming standard gravity on every map.
 - Offline arena direct-hit integration recognizes every registered special weapon/attachment damage source (including Tesla chain, poison, burn and Riveter superheat) and sends the original finishing method into challenge progress. Environmental sources are still excluded.
+
+- Knife now has a timed contact window in `js/player.js`: damage is applied during the swing rather than instantly on input, and pending damage cancels on weapon switch, death or new spawn. This preserves the existing ray/cover validation in `meleeStrike`.
+- `js/weapons.js` Lantern spotlight priority now outranks mine fixtures; prior priority `-1` could drop the equipped light from textured mine materials' eight-light budget, making the attachment appear decorative. Confirm visually on Jungle and Moon Base.
