@@ -9,6 +9,7 @@ import {
 import { WDEFS, applyLoadoutToScene } from './weapons.js';
 import { MAPS } from './mapManager.js';
 import { isCompetitiveFirearm, normalizeCompetitiveLoadout } from './weaponCategories.js';
+import { renderPveBuild } from './pveBuildPage.js';
 
 let _activeWeapon = 'PISTOL';
 let _activeTab    = 'attachments';
@@ -245,6 +246,7 @@ topBar.appendChild(deployBtn);
     { id:'skins',       label:'WEAPON SKINS' },
     {id:'player',       label:'PLAYER SKIN'  },
     { id:'progress',    label:'PROGRESS'     },
+    { id:'pve',         label:'SURVIVAL GEAR' },
     { id:'pvp',         label:'PVP LOADOUT'  },
   ];
   const tabBar = _el('div',
@@ -501,7 +503,7 @@ function _renderContent() {
     b.style.cssText = _tabStyle(b.dataset.tabId === _activeTab);
   });
   const sidebar  = document.getElementById('loadoutSidebar');
-  const noSidebar = ['player','progress','pvp'].includes(_activeTab);
+  const noSidebar = ['player','progress','pve','pvp'].includes(_activeTab);
   if (sidebar) sidebar.style.display = noSidebar ? 'none' : 'block';
   sidebar?.querySelectorAll('[data-w-name]').forEach(c => {
     c.style.cssText = _wcardStyle(c.dataset.wName === _activeWeapon);
@@ -512,6 +514,7 @@ function _renderContent() {
   else if (_activeTab === 'skins')       _renderWeaponSkins(main);
   else if (_activeTab === 'player')      _renderPlayerSkins(main);
   else if (_activeTab === 'progress')    _renderProgress(main);
+  else if (_activeTab === 'pve')         renderPveBuild(main);
   else if (_activeTab === 'pvp')         _renderPvpSetup(main);
 }
 
