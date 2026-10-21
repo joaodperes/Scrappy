@@ -1511,7 +1511,7 @@ export function updateEnemies(dt) {
         if (shouldMove) {
           const botFeet = new BABYLON.Vector3(e.group.position.x,e._floorY,e.group.position.z);
           const playerFeet = new BABYLON.Vector3(_ePP.x,_ePP.y-1.72,_ePP.z);
-          const target = botTravelTarget(e,playerFeet,navPlugin,jumpPads,window._movingPlatforms||[],dt);
+          const target = botTravelTarget(e,playerFeet,navPlugin,jumpPads,window._movingPlatforms||[],dt,botGravityMult);
           const route = target && botNavPath(navPlugin,botFeet,target);
           let nextWaypoint = null;
           _eDir.setAll(0);
