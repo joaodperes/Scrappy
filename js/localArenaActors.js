@@ -451,12 +451,20 @@ export function updateArenaActors(actors,dt,mode,
     (Math.random()-.5)*3,(Math.random()-.5)*1.2,(Math.random()-.5)*3));
   // Missed fire is still visible: do not render a tracer only on damage.
   const muzzle=own.add(new B.Vector3(0,1.45,0));
-  const tracer=B.MeshBuilder.CreateLines('arena_fire_'+a.id,
-    {points:[muzzle,endpoint]},scene);
+  // The Gun Game Knife finale uses a visible close-range swipe, not a
+  // firearm tracer. Its hit still respects the melee reach and line of sight
+  // checks above; this flourish cannot damage anyone on its own.
+  const tracePoints=spec.melee
+    ?[muzzle.add(new B.Vector3(-.48,-.32,.12)),endpoint,
+      muzzle.add(new B.Vector3(.48,.18,.12))]
+    :[muzzle,endpoint];
+  const tracer=B.MeshBuilder.CreateLines(
+    (spec.melee?'arena_knife_':'arena_fire_')+a.id,
+    {points:tracePoints},scene);
   tracer.isPickable=false;
-  tracer.color=a.team==='RED'
-    ?new B.Color3(1,.40,.27):new B.Color3(.27,.68,1);
-  setTimeout(()=>{if(!tracer.isDisposed?.())tracer.dispose()},110);
+  tracer.color=spec.melee?new B.Color3(.9,.95,1):
+    a.team==='RED'?new B.Color3(1,.40,.27):new B.Color3(.27,.68,1);
+  setTimeout(()=>{if(!tracer.isDisposed?.())tracer.dispose()},spec.melee?160:110);
   if(!hit)continue;
   const pelletFactor=a.weapon==='SHOTGUN'
     ?clamp(2.5-distance/Math.max(1,spec.range||25)*1.5,1,2.5):1;
