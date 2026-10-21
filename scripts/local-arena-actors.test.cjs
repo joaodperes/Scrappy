@@ -85,3 +85,16 @@ test('Kill Confirmed bots prioritize nearby objective tags before shooting',()=>
  assert.equal(fired,0);
  assert.equal(shooter.targetId,'tag_8');
 });
+
+test('bot uses its real sidearm when primary runs empty but Gun Game cannot skip rungs',()=>{
+ const h=harness();
+ const a=h.actor('alpha','BLUE',2,8);
+ a.ammo=0;
+ h.api.updateArenaActors([a],.1,'ffa',{humanAlive:false});
+ assert.equal(a.weapon,'PISTOL');
+ assert.equal(a.ammo,12);
+ const rung=h.actor('rung','BOT_1',3,9);
+ rung.ammo=0;
+ h.api.updateArenaActors([rung],.1,'gunGame',{humanAlive:false});
+ assert.equal(rung.weapon,'SMG');
+});
