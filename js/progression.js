@@ -2796,14 +2796,15 @@ function _sanitizeUnlocks() {
     }
 }
 
-export function loadProfile() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) { const saved = JSON.parse(raw); profile = _deepMerge(_defaultProfile(), saved); _migrateOldWeaponSkins(); }
-  } catch {}
-  _sanitizeUnlocks();
-  _primeProgressNoticeHistory();
-  initFirebaseAuth();
+export function loadProfile(){
+ // Legacy full-profile cache is considered only after verifying the UID.
+ try{_legacyCache=JSON.parse(localStorage.getItem(STORAGE_KEY)||'null')}catch{}
+ _sanitizeUnlocks();_primeProgressNoticeHistory();
+ initFirebaseAuth();
+ if(typeof document!=='undefined')
+  document.addEventListener('visibilitychange',()=>{
+   if(document.hidden&&_cloudDirty)void flushProfileToCloud();
+  });
 }
 
 /**
@@ -2907,26 +2908,49 @@ export function claimProfileQuest(id,date=new Date()){
   return result;
 }
 
-export function saveProfile() {
-  _saveToLocalStorage();
-  _cloudRevision++;
-  _cloudDirty = true;
+export function saveProfile(){
+ _cloudRevision++;_cloudDirty=true;
+ const uid=profile.firebaseUid;
+ if(_profileLoadedUid===uid&&uid&&_cloudBase){
+  if(!_recovery||_recovery.uid!==uid)
+   _recovery={uid,id:_syncClientId(uid),version:_nextSyncVersion(uid),
+     base:_copy(_cloudBase),profile:_copy(profile),inFlight:null};
+  else{
+   _recovery.version=_nextSyncVersion(uid);
+   _recovery.profile=_copy(profile);
+  }
+  _saveRecovery();_scheduleCloudSync();
+ }
 }
-
-export async function flushProfileToCloud() {
-  // Serialize local writes. Otherwise an older in-flight save could finish
-  // after a newer one and overwrite it in the same Firestore document.
-  const task=_cloudFlushPromise.catch(()=>{}).then(async()=>{
-    if(!_cloudDirty)return;
-    const revision=_cloudRevision,uid=profile.firebaseUid;
-    const ok=await _saveToFirestore();
-    // A save occurring while this request was in flight still needs a flush.
-    // Never clear a new account's dirty bit on an old account's response.
-    if(ok&&revision===_cloudRevision&&uid===profile.firebaseUid)
-      _cloudDirty=false;
-  });
-  _cloudFlushPromise=task;
-  return task;
+export async function flushProfileToCloud(){
+ const task=_cloudFlushPromise.catch(()=>{}).then(async()=>{
+  if(!_cloudDirty||!_recovery)return;
+  const uid=_recovery.uid;
+  if(!_sameGoogleUser(uid)||_profileLoadedUid!==uid)return;
+  const revision=_cloudRevision;
+  const buffer={id:_recovery.id,version:_recovery.version};
+  const snapshot=_copy(_recovery.profile),base=_copy(_recovery.base);
+  _recovery.inFlight={version:buffer.version,profile:snapshot};
+  _saveRecovery(); // checkpoint before a possibly successful cloud commit
+  const result=await _saveToFirestore(uid,snapshot,base,buffer);
+  if(!result.ok||uid!==profile.firebaseUid)return;
+  const merged=_deepMerge(_defaultProfile(),result.merged);
+  _cloudBase=_copy(merged);
+  // Changes made during the network request remain pending.
+  profile=_deepMerge(_defaultProfile(),_mergeProgress(snapshot,profile,merged));
+  profile.firebaseUid=uid;
+  _sanitizeUnlocks();_primeProgressNoticeHistory();
+  if(revision===_cloudRevision&&buffer.version===_recovery?.version){
+   _cloudDirty=false;_forgetRecovery(uid);
+  }else if(_recovery?.uid===uid){
+   _recovery.base=_copy(merged);
+   _recovery.profile=_copy(profile);
+   _recovery.inFlight=null;
+   _saveRecovery();_scheduleCloudSync();
+  }
+ });
+ _cloudFlushPromise=task;
+ return task;
 }
 
 function _migrateOldWeaponSkins() {
