@@ -23,11 +23,15 @@ export const SHOP_ITEMS=Object.freeze([
 const index=new Map(SHOP_ITEMS.map(item=>[item.id,item]));
 const valid=n=>Number.isSafeInteger(n)&&n>=0;
 const ids=obj=>obj&&typeof obj==='object'&&!Array.isArray(obj)?obj:{};
+// "__proto__" mutates a normal object's prototype rather than saving a
+// receipt. Reject it so every accepted request ID has a durable own key.
+const validReceiptId=id=>typeof id==='string'&&
+ /^[A-Za-z0-9_-]{8,90}$/.test(id)&&id!=='__proto__';
 export function normalizeShopWallet(value){
  const w=ids(value);
  const receipts={};
  for(const [key,id] of Object.entries(ids(w.receipts))){
-  if(/^[A-Za-z0-9_-]{8,90}$/.test(key)&&index.has(id))receipts[key]=id;
+  if(validReceiptId(key)&&index.has(id))receipts[key]=id;
  }
  const spent=valid(w.spent)?w.spent:0;
  const owned=Array.isArray(w.owned)?[...new Set(w.owned.filter(id=>index.get(id)?.kind!=='weaponXp'&&index.has(id)))]:[];
@@ -46,7 +50,7 @@ export function purchaseShopItem(grossEarned,rawWallet,itemId,requestId,weaponXp
  const wallet=normalizeShopWallet(rawWallet);
  const item=index.get(itemId);
  if(!item)return {ok:false,reason:'Unknown shop item',wallet};
- if(typeof requestId!=='string'||!/^[A-Za-z0-9_-]{8,90}$/.test(requestId))
+ if(!validReceiptId(requestId))
    return {ok:false,reason:'Invalid transaction ID',wallet};
  if(Object.hasOwn(wallet.receipts,requestId)){
   if(wallet.receipts[requestId]!==itemId)return {ok:false,reason:'Transaction ID collision',wallet};
