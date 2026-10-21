@@ -103,7 +103,11 @@ function gunVisual(actor,weapon){
 }
 export function getArenaActorWeaponSpec(actor){
  const id=WDEFS[actor?.weapon]?actor.weapon:'PISTOL';
- return getEffectiveStatsForLoadout(id,WDEFS[id],
+ // Ion's heat-ramp bonus must use this bot's heat, not the shared human
+ // WDEFS heat value. Each actor owns an independent cooling/overheat meter.
+ const base={...WDEFS[id],
+   heat:(actor?.heat||0)/Math.max(1,WDEFS[id].maxHeat||100)};
+ return getEffectiveStatsForLoadout(id,base,
    actor?.persona?.loadout?.attachments?.[id]||{});
 }
 export function setArenaActorWeapon(actor,weapon){
@@ -436,7 +440,7 @@ export function updateArenaActors(actors,dt,mode,
   // into its maxHeat scale, and let coolRate dissipate it over real time.
   if(spec.useHeat){
     const maxHeat=spec.maxHeat||100;
-    const cost=(spec.heatPerShot||0)*maxHeat;
+    const cost=(spec.heatPerShot||0)*maxHeat*Math.max(.05,spec.heatMult||1);
     if((a.heat||0)+cost>maxHeat+1e-6)continue;
     a.heat=(a.heat||0)+cost;
   }
