@@ -116,3 +116,6 @@
 - No human multiplayer, paid Firebase product, deployment, or draft PR merge is included.
 
 - Arena bot gun damage now factors WDEFS distance falloff and competitive-mode multipliers, rather than maintaining point-blank damage across the entire weapon range.
+
+- Moon Base jump-pad route planning now takes the map gravity multiplier and descending ballistic flight into account, matching the arena actor's airborne simulation rather than assuming standard gravity on every map.
+- Offline arena direct-hit integration recognizes every registered special weapon/attachment damage source (including Tesla chain, poison, burn and Riveter superheat) and sends the original finishing method into challenge progress. Environmental sources are still excluded.
