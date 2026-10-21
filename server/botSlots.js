@@ -6,7 +6,8 @@ const ROOM_SIZES=new Set([6,10,14]);
 function validPersona(p){
  return !!p && typeof p.id==='string' && /^[a-z][a-z0-9_]{2,32}$/.test(p.id) &&
    typeof p.name==='string' && p.name.length>=2 && p.name.length<=20 &&
-   ['assault','defense','close','flank','precision','support'].includes(p.role) &&
+   ['assault','defense','close','flank','precision','support',
+    'demolition','control','explosives','area-denial'].includes(p.role) &&
    Number.isFinite(p.aggression)&&p.aggression>=0&&p.aggression<=1 &&
    Number.isFinite(p.aim)&&p.aim>=0&&p.aim<=1 &&
    Number.isFinite(p.reactionMs)&&p.reactionMs>=100&&p.reactionMs<=2000 &&
