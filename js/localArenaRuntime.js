@@ -295,7 +295,7 @@ function updateArenaBotBurns(dt){
  }
  if(isActive())active.burns=next;
 }
-function actorShoots(shooter,victim,damage,weapon,aimPoint){
+function actorShoots(shooter,victim,damage,weapon,aimPoint,missed=false){
  if(!isActive())return;
  const spec=getArenaActorWeaponSpec(shooter);
  const point=aimPoint?.clone?.()||
@@ -306,6 +306,7 @@ function actorShoots(shooter,victim,damage,weapon,aimPoint){
    arenaExplosion(shooter,impactPoint,damage,weapon,spec.splash);
    return;
   }
+  if(missed)return;
   // Dodgeable slow bolts: do not teleport damage to a target that has moved
   // far from the impact line while a projectile was in flight.
   const current=victim?.group.position.add(new BABYLON.Vector3(0,1.35,0))||
