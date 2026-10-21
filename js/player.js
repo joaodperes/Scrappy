@@ -486,7 +486,7 @@ export function shoot() {
           if (isDragonsBreath && hitRes?.hit && hitRes?.target) {
               const e = hitRes.target;
               if (!e._dots) e._dots = [];
-              e._dots.push({ dmg: EW.dotDamage || 12, remaining: EW.dotDuration || 3 });
+              e._dots.push({ dmg: EW.dotDamage || 12, remaining: EW.dotDuration || 3, source:'DRAGONS_BREATH',weapon:'SHOTGUN' });
               spawnSparks(e.group.position, 0xff4400, 8); // Fiery visual feedback
           }
       }
