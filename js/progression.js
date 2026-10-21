@@ -2393,6 +2393,7 @@ const _defaultProfile = () => ({
   scraps:0,
   questProgress:{},
   weaponScrapRemainders:{},
+  pveBuild:{ranks:{vitality:0,mobility:0,scavenger:0},equipment:null},
 
   firebaseUid:null,
   stats:{totalKills:0,pvpKills:0,bossWaveClears:0,maxWave:0,killsOfType:{},killsWith:{},killsWhileJumping:{},killsWhileScoped:{},energyPickups:{},bossKillsWith:{}},
