@@ -89,7 +89,7 @@ export function triggerCosmicGlow() {
   cosmicGlowPulse = 1.0; // Reset pulse to full intensity
 }
 
-export const inventory = [null, null, 'PISTOL']; 
+export const inventory = [null, null, 'PISTOL', 'KNIFE']; // fourth always-ready melee slot 
 export let activeSlot = 2;
 export let   curWep     = 'PISTOL';
 export let   wepCooldown = 0;
@@ -963,7 +963,7 @@ const WROT = {
 };
 
 export function refreshSlotHUD() {
-  for (let i = 0; i < 3; i++) { 
+  for (let i = 0; i < 4; i++) { 
     const el = document.getElementById('wSlot' + i);
     if (!el) continue;
     const wep = inventory[i];
