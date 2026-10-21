@@ -121,8 +121,12 @@ function finish(){
  if(!isActive())return;
  active.finished=true;
  const {onFinish,state}=active;
+ const participants=active.actors.map(a=>({
+   id:a.id,name:a.name,team:a.team,kills:a.kills,deaths:a.deaths,
+   score:state.botScores[a.id]||0
+ })).sort((a,b)=>b.score-a.score||b.kills-a.kills);
  stopLocalArena();
- onFinish?.(state);
+ onFinish?.({...state,participants});
 }
 function applyResult(state){
  if(!isActive())return;
