@@ -7,6 +7,7 @@ const source=fs.readFileSync(path.join(__dirname,'../js/localArenaActors.js'),'u
  .replace(/import\.meta\.url/g,"'http://localhost/js/localArenaActors.js'");
 class Vec {
  static Distance(a,b){return Math.hypot(a.x-b.x,a.y-b.y,a.z-b.z)}
+ static Dot(a,b){return a.x*b.x+a.y*b.y+a.z*b.z}
  constructor(x=0,y=0,z=0){this.x=x;this.y=y;this.z=z}
  clone(){return new Vec(this.x,this.y,this.z)}
  add(b){return new Vec(this.x+b.x,this.y+b.y,this.z+b.z)}
@@ -14,6 +15,8 @@ class Vec {
  scale(s){return new Vec(this.x*s,this.y*s,this.z*s)}
  scaleInPlace(s){this.x*=s;this.y*=s;this.z*=s;return this}
  length(){return Math.hypot(this.x,this.y,this.z)}
+ lengthSquared(){return this.x*this.x+this.y*this.y+this.z*this.z}
+ normalize(){const n=this.length()||1;this.x/=n;this.y/=n;this.z/=n;return this}
  set(x,y,z){this.x=x;this.y=y;this.z=z}
  copyFrom(p){this.set(p.x,p.y,p.z)}
 }
@@ -32,6 +35,8 @@ function harness(blocked=false,options={}){
   COMET:{id:'COMET',range:70,cd:.45,dmg:22,magSize:24,burstCount:3},
   ELECTRON:{id:'ELECTRON',range:60,cd:.12,dmg:25,useHeat:true,
    maxHeat:100,heatPerShot:.40,coolRate:10},
+  AEGIS:{id:'AEGIS',range:80,cd:.3,dmg:30,magSize:12,hitscan:true,maxTargets:3},
+  PHALANX:{id:'PHALANX',range:25,cd:.5,dmg:15,magSize:6,hitscan:false},
  };
  const helper=new Function('window','scene','camera','navPlugin','WDEFS','botNavPath',
   'getWalkableSpawns','getCurrentMap','makeScaledWeaponModel','registerArenaTarget',
@@ -205,4 +210,35 @@ test('stops updating other bots when a finishing elimination ends the match',()=
  });
  assert.equal(shots,1);
  assert.equal(c.cooldown,0,'third bot must not tick after match completion');
+});
+
+test('Aegis paints multiple visible hostiles using one round, never allies',()=>{
+ const h=harness(false,{randomMath:Object.assign(Object.create(Math),{random:()=>0})});
+ const marksman=h.actor('smart','RED',0,0),enemy=h.actor('enemy','BLUE',1,10),
+  another=h.actor('other','BLUE',2,11),ally=h.actor('ally','RED',1,11);
+ h.api.setArenaActorWeapon(marksman,'AEGIS');
+ // Only the marksman should be ready to fire; the others start in cooldown.
+ enemy.cooldown=100;another.cooldown=100;ally.cooldown=100;
+ marksman.reaction=0;marksman.cooldown=0;
+ const shots=[];
+ for(let i=0;i<20&&!shots.length;i++)
+  h.api.updateArenaActors([marksman,enemy,another,ally],.1,'tdm',{
+   humanAlive:false,onShot:(a,v,dmg,w)=>shots.push({a,v,dmg,w})});
+ assert.ok(shots.some(s=>s.v===enemy));
+ assert.ok(shots.some(s=>s.v===another));
+ assert.ok(shots.every(s=>s.v!==ally));
+ assert.equal(marksman.ammo,11,'multi-target Aegis spends one bullet');
+});
+test('EMP suppresses offline bots and stun/knockback reset after death',()=>{
+ const h=harness(),actor=h.actor('stunned','BLUE',0,4),enemy=h.actor('target','RED',0,9);
+ actor._stunned=1.5;actor.cooldown=0;
+ let shots=0;
+ h.api.updateArenaActors([actor,enemy],.1,'ffa',{humanAlive:false,onShot:()=>shots++});
+ assert.equal(shots,0);
+ assert.ok(actor._stunned<1.5);
+ actor._knockback={x:0,z:1,speed:15};
+ h.api.killArenaActor(actor);
+ h.api.respawnArenaActor(actor,new Vec(0,0,4));
+ assert.equal(actor._stunned,0);
+ assert.equal(actor._knockback,null);
 });
