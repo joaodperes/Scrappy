@@ -227,8 +227,12 @@ function startGame(startWave = 0, difficulty = 'normal', localMode = null) {
           ffa:'FREE FOR ALL',tdm:'TEAM DEATHMATCH'};
         if(res)res.textContent=state.result+' · '+(labels[state.mode]||state.mode);
         const scores=document.getElementById('pvpEndScore');
-        if(scores)scores.textContent='FRAGS '+state.kills+' · POINTS '+state.score+
-          ' · BOT POINTS '+state.opposition+' · DEATHS '+state.deaths;
+        if(scores){
+          const earned=Math.max(0,(profile.totalXp||0)-(state.startTotalXp||0));
+          scores.textContent='FRAGS '+state.kills+' · POINTS '+state.score+
+            ' · BOT POINTS '+state.opposition+' · DEATHS '+state.deaths+
+            ' · MATCH XP +'+earned+' · SCRAPS +0 (ARENA)';
+        }
       },damage=>hurtPlayer(damage));
       updateHUD();
     }
