@@ -47,6 +47,7 @@ export const sfx = {
   rocket:    () => { tone({ f:200, t:'sawtooth', d:.35, v:.2, f2:70 }); tone({ f:1300, t:'square', d:.07, v:.18 }); },
   explosion: () => [280,180,100,70,50].forEach((f,i) => setTimeout(() => tone({ f, t:'sawtooth', d:.3, v:.22 }), i*28)),
   hit:       () => tone({ f:550, t:'square', d:.06, v:.14, f2:180 }),
+  knife:     () => { tone({ f:900, t:'sine', d:.13, v:.10, f2:185 }); tone({ f:430, t:'sawtooth', d:.09, v:.045, f2:110 }); },
   robotDie:  () => [500,380,260,150,80].forEach((f,i) => setTimeout(() => tone({ f, t:'sawtooth', d:.14, v:.16 }), i*45)),
   playerHit: () => tone({ f:90, t:'square', d:.28, v:.26 }),
   pickup:    () => [440,550,660,880].forEach((f,i) => setTimeout(() => tone({ f, t:'sine', d:.08, v:.11 }), i*45)),
