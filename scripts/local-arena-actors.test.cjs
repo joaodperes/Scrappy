@@ -172,8 +172,10 @@ test('burst guns expend multiple rounds per shot and visibly miss',()=>{
  h.api.setArenaActorWeapon(shooter,'COMET');
  const hits=[];
  shooter.reaction=0;shooter.cooldown=0;
- h.api.updateArenaActors([shooter,enemy],.1,'gunGame',
-  {humanAlive:false,onShot:(...args)=>hits.push(args)});
+ // The first target acquisition deliberately incurs persona reaction time.
+ for(let i=0;i<10&&!h.lines.length;i++)
+  h.api.updateArenaActors([shooter,enemy],.1,'gunGame',
+   {humanAlive:false,onShot:(...args)=>hits.push(args)});
  assert.equal(shooter.ammo,21,'burst must spend three magazine rounds');
  assert.equal(hits.length,0,'a missed burst must not deal damage');
  assert.equal(h.lines.length,1,'missed fire must leave a visible tracer');
