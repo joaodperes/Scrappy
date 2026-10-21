@@ -258,12 +258,28 @@ function botImpact(shooter,victim,damage,weapon,method='DIRECT'){
     addBotBurn(shooter,victim,{dotDamage:12,dotDuration:3},'DRAGONS_BREATH');
    else if(weapon==='RIVETER'&&special==='superheated_rivets')
     addBotBurn(shooter,victim,{dotDamage:20,dotDuration:4},'SUPERHEATED_RIVETS');
+   else if(weapon==='CROSSBOW'&&special==='coated_tips')
+    addBotBurn(shooter,victim,{dotDamage:victim.maxHp*.02,dotDuration:5},
+      'CROSSBOW_POISON',true);
    if(special==='emp_rounds'&&Math.random()<.15)
     victim._stunned=Math.max(victim._stunned||0,1);
   }
  }else if(!active.playerDead){
   active.lastAttacker=shooter;
   active.onPlayerHit?.(damage);
+  // The human player also receives the same special DOT as arena actors.
+  // Attribution stays with the owning bot and normal player damage callback.
+  if(method==='DIRECT'){
+   const special=shooter.persona?.loadout?.attachments?.[weapon]?.special;
+   if(weapon==='FLAMETHROWER')
+    addBotBurn(shooter,null,getArenaActorWeaponSpec(shooter),'FLAME_DOT');
+   else if(weapon==='SHOTGUN'&&special==='dragons_breath')
+    addBotBurn(shooter,null,{dotDamage:12,dotDuration:3},'DRAGONS_BREATH');
+   else if(weapon==='RIVETER'&&special==='superheated_rivets')
+    addBotBurn(shooter,null,{dotDamage:20,dotDuration:4},'SUPERHEATED_RIVETS');
+   else if(weapon==='CROSSBOW'&&special==='coated_tips')
+    addBotBurn(shooter,null,{dotDamage:2,dotDuration:5},'CROSSBOW_POISON',true);
+  }
  }
 }
 function arenaSight(from,to){
@@ -298,10 +314,10 @@ function arenaExplosion(shooter,point,damage,weapon,radius){
     weapon,'EXPLOSION');
  }
 }
-function addBotBurn(shooter,victim,spec,method='FLAME_DOT'){
+function addBotBurn(shooter,victim,spec,method='FLAME_DOT',stack=false){
  if(!isActive()||!hostile(shooter,victim)||
    (victim&&!victim.alive)||(!victim&&active.playerDead))return;
- const existing=active.burns.find(b=>b.shooter===shooter&&b.victim===victim&&b.method===method);
+ const existing=stack?null:active.burns.find(b=>b.shooter===shooter&&b.victim===victim&&b.method===method);
  if(existing){existing.remaining=spec.dotDuration||4;return}
  active.burns.push({shooter,victim,weapon:shooter.weapon,method,
   remaining:spec.dotDuration||4,dps:spec.dotDamage||8});
@@ -319,15 +335,40 @@ function updateArenaBotBurns(dt){
  }
  if(isActive())active.burns=next;
 }
-function actorShoots(shooter,victim,damage,weapon,aimPoint,missed=false){
+function actorShoots(shooter,victim,damage,weapon,aimPoint,missed=false,burstReplica=false){
  if(!isActive())return;
  const spec=getArenaActorWeaponSpec(shooter);
+ if(weapon==='ROCKET'&&!burstReplica&&
+    shooter.persona?.loadout?.attachments?.ROCKET?.special==='rocket_burst'){
+   const token=generation;
+   for(const [index,delay]of [85,170].entries())
+    setTimeout(()=>{
+     if(!isActive()||generation!==token||!shooter.alive)return;
+     const base=aimPoint?.clone?.()||
+       (victim?victim.group.position.add(new BABYLON.Vector3(0,1.35,0)):
+         camera.position.clone());
+     // The secondary burst rockets spread just enough to be dodgeable,
+     // and consume no additional ammo from the originating shot.
+     base.x+=(index===0?-.9:.9);base.z+=index===0?-.35:.35;
+     actorShoots(shooter,victim,damage*.8,weapon,base,missed,true);
+    },delay);
+ }
  const point=aimPoint?.clone?.()||
    (victim?victim.group.position.add(new BABYLON.Vector3(0,1.35,0)):camera.position.clone());
  const impact=(impactPoint=point)=>{
   if(!isActive())return;
   if(spec.splash>0){
    arenaExplosion(shooter,impactPoint,damage,weapon,spec.splash);
+   if(weapon==='GLAUNCHER'&&
+      shooter.persona?.loadout?.attachments?.GLAUNCHER?.special==='cluster_rounds'){
+    const token=generation;
+    for(const [i,[x,z]]of [[-1.6,0],[1.6,.5],[0,1.7]].entries())
+     setTimeout(()=>{
+      if(!isActive()||generation!==token)return;
+      const offset=impactPoint.add(new BABYLON.Vector3(x,0,z));
+      arenaExplosion(shooter,offset,damage*.2,weapon,Math.max(1.5,spec.splash*.35));
+     },120+i*60);
+   }
    return;
   }
   if(missed)return;
