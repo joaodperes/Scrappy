@@ -651,7 +651,7 @@ export function spawnBot(type, _x, _spawnY, _z, scale = 1.0, eliteTraits = null)
 
 export function hitRobot(e, dmg, isHeadshot = false, isExplosive = false, source = 'PLAYER', weaponOverride = null) {
   if (!e.alive) return;
-  if(e.arenaActor){cb.onArenaActorHit?.(e,dmg,source);return;}
+  if(e.arenaActor){cb.onArenaActorHit?.(e,dmg,source,weaponOverride,isExplosive);return;}
 
   // Railgun fires 9999 – cap it for boss-tier enemies so they need multiple shots - currently capped at 20% HP
   if (BOSS_TYPES.has(e.type) && dmg > e.maxHp * 0.20) {
