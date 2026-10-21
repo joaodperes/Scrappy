@@ -203,15 +203,98 @@ export function localArenaPlayerDead(onRespawn){
  },5000);
  return true;
 }
-function actorShoots(shooter,victim,damage,weapon){
- if(!isActive())return;
+// The local match uses weapon definitions for bot-to-bot and bot-to-player
+// effects. All damage and score changes stay in the offline arena runtime.
+function hostile(shooter,victim){
+ if(!isActive())return false;
+ if(!['tdm','killConfirmed'].includes(active.state.mode))return true;
+ return shooter.team!==(victim?.team||'RED');
+}
+function botImpact(shooter,victim,damage,weapon,method='DIRECT'){
+ if(!isActive()||!hostile(shooter,victim)||!Number.isFinite(damage)||damage<=0)return;
  if(victim){
-   if(!victim.alive)return;
-   victim.hp=Math.max(0,victim.hp-damage);
-   if(victim.hp===0)onActorKilled(victim,shooter,weapon);
+  if(!victim.alive)return;
+  victim.hp=Math.max(0,victim.hp-damage);
+  if(victim.hp===0)onActorKilled(victim,shooter,weapon,method);
  }else if(!active.playerDead){
-   active.lastAttacker=shooter;
-   active.onPlayerHit?.(damage);
+  active.lastAttacker=shooter;
+  active.onPlayerHit?.(damage);
+ }
+}
+function arenaSight(from,to){
+ const delta=to.subtract(from),len=delta.length();
+ if(len<.15)return true;
+ const hit=scene.pickWithRay(new BABYLON.Ray(from,delta.scale(1/len),len),
+  m=>m.isEnabled()&&m.checkCollisions&&!m.metadata?.arenaActorId&&!m.metadata?.enemy);
+ return !hit?.hit||hit.distance>=len-.35;
+}
+function arenaTargets(shooter){
+ if(!isActive())return [];
+ const out=active.actors.filter(a=>a.alive&&a!==shooter&&hostile(shooter,a))
+  .map(a=>({actor:a,pos:a.group.position.add(new BABYLON.Vector3(0,1.35,0))}));
+ if(!active.playerDead&&hostile(shooter,null))
+  out.push({actor:null,pos:camera.position.clone()});
+ return out;
+}
+function traceAbility(start,end){
+ const line=BABYLON.MeshBuilder.CreateLines('arena_chain',{points:[start,end]},scene);
+ line.color=new BABYLON.Color3(.35,.85,1);
+ line.isPickable=false;
+ setTimeout(()=>{if(!line.isDisposed?.())line.dispose()},145);
+}
+function arenaExplosion(shooter,point,damage,weapon,radius){
+ // Splash is computed at impact, not when the trigger is pulled. Obstacles
+ // shield secondary targets and team modes disallow friendly fire.
+ for(const target of arenaTargets(shooter)){
+  if(!isActive())break;
+  const dist=BABYLON.Vector3.Distance(point,target.pos);
+  if(dist>=radius||!arenaSight(point,target.pos))continue;
+  botImpact(shooter,target.actor,Math.max(1,damage*(1-dist/radius)),
+    weapon,'EXPLOSION');
+ }
+}
+function actorShoots(shooter,victim,damage,weapon,aimPoint){
+ if(!isActive())return;
+ const spec=WDEFS[weapon]||WDEFS.PISTOL;
+ const point=aimPoint?.clone?.()||
+   (victim?victim.group.position.add(new BABYLON.Vector3(0,1.35,0)):camera.position.clone());
+ const impact=()=>{
+  if(!isActive())return;
+  if(spec.splash>0){
+   arenaExplosion(shooter,point,damage,weapon,spec.splash);
+   return;
+  }
+  // Dodgeable slow bolts: do not teleport damage to a target that has moved
+  // far from the impact line while a projectile was in flight.
+  const current=victim?.group.position.add(new BABYLON.Vector3(0,1.35,0))||
+    camera.position.clone();
+  if(!spec.hitscan&&BABYLON.Vector3.Distance(current,point)>1.6)return;
+  botImpact(shooter,victim,damage,weapon);
+  if(!isActive())return;
+  if(weapon==='TESLA'&&spec.chainTargets){
+   let last=point.clone(),amount=damage*.65;
+   const visited=new Set([victim||'human']);
+   for(let hop=0;hop<spec.chainTargets-1;hop++){
+    const next=arenaTargets(shooter).filter(t=>!visited.has(t.actor||'human')&&
+      BABYLON.Vector3.Distance(last,t.pos)<=spec.chainRange&&
+      arenaSight(last,t.pos))
+      .sort((a,b)=>BABYLON.Vector3.Distance(last,a.pos)-BABYLON.Vector3.Distance(last,b.pos))[0];
+    if(!next)break;
+    traceAbility(last,next.pos);
+    visited.add(next.actor||'human');
+    botImpact(shooter,next.actor,amount,weapon,'TESLA_CHAIN');
+    if(!isActive())break;
+    last=next.pos;amount*=.65;
+   }
+  }
+ };
+ if(spec.hitscan!==false||spec.melee)impact();
+ else{
+  const from=shooter.group.position.add(new BABYLON.Vector3(0,1.45,0));
+  const dist=BABYLON.Vector3.Distance(from,point);
+  const speed=Math.max(8,spec.speed||spec.projSpeed||35);
+  const token=generation;
+  setTimeout(()=>{if(generation===token)impact()},Math.min(1100,Math.max(25,dist/speed*1000)));
  }
 }
 // Status damage uses the same source/weapon metadata as direct hits. This
