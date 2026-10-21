@@ -36,6 +36,6 @@
 - `scripts/local-arena-runtime.test.cjs` — mocked local robot replenishment, tag collection and weapon switching.
 - `scripts/play-page.test.cjs` / `scripts/solo-flow.test.cjs` — local-first UI with no WebSocket launch, Survivor Hard/Nightmare selection and clearly separated experimental online controls.
 - Existing map, weapon, quests, server/room and Firebase progression tests should remain in CI as **regression coverage**, even when network work is deferred.
-- A V8-based simulated execution of five focused suites passed **31/31** cases in the latest development pass; this is not actual Node CI or a real Babylon browser playthrough. Confirm with `node --test scripts/*.test.cjs` and `node --test server/*.test.js` before merge.
+- A V8-based simulated execution of five focused suites passed **32/32** cases in the latest development pass; this is not actual Node CI or a real Babylon browser playthrough. Confirm with `node --test scripts/*.test.cjs` and `node --test server/*.test.js` before merge.
 
 **Work policy:** avoid scope creep into new multiplayer or cloud-hosting features before the owner signs off on offline gameplay; never claim that a bot-practice arena is full TDM/FFA until actual bot factions fight.
