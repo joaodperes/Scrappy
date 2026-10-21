@@ -97,6 +97,7 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById('playBtn')?.style.setProperty('display', 'none');
         document.getElementById('leaderboardsBtn')?.style.setProperty('display', 'none');
         document.getElementById('questsBtn')?.style.setProperty('display', 'none');
+        document.getElementById('shopBtn')?.style.setProperty('display', 'none');
         // Logged Out State - Hide everything except login
         loginBtn.style.display = 'inline-block';
         logoutBtn.style.display = 'none';
@@ -167,6 +168,8 @@ document.addEventListener("DOMContentLoaded", () => {
       if (leaderboardsBtn) leaderboardsBtn.style.display = 'block';
       const questsBtn=document.getElementById('questsBtn');
       if(questsBtn)questsBtn.style.display='block';
+      const shopBtn=document.getElementById('shopBtn');
+      if(shopBtn)shopBtn.style.display='block';
        
        const pvpNameField = document.getElementById('pvpName');
        if (pvpNameField) {
