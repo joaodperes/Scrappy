@@ -352,7 +352,8 @@ export function updateArenaActors(actors,dt,mode,
   const targetFeet=new B.Vector3(targetPos.x,
     targetPos.y-(target.objective?.65:1.55),targetPos.z);
   if(a._hopY<=0)try{transitionTarget=botTravelTarget(a,targetFeet,navPlugin,jumpPads,
-    window._movingPlatforms||[],dt)}catch{}
+    window._movingPlatforms||[],dt,
+    getMapMeta(getCurrentMap())?.gravityMult||1)}catch{}
   const travelTarget=transitionTarget||targetFeet;
   a.walkClock-=dt;
   if(a.walkClock<=0||!a.pathCursor){
