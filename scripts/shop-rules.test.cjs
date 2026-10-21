@@ -56,7 +56,8 @@ test('same profile Firestore document isolates wallet from normal profile saves'
  const p=fs.readFileSync(path.join(__dirname,'../js/progression.js'),'utf8');
  assert.match(p,/shopWallet:purchase.wallet/);
  assert.match(p,/transaction\.set\(documentRef,\{shopWallet:purchase.wallet\},\{merge:true\}\)/);
- assert.match(p,/\.set\(\s*\{ profile, updated_at:/);
+ assert.match(p,/tx\.update\(ref,\{profile:merged,profileSyncReceipts:receipts,/);
+ assert.doesNotMatch(p,/tx\.update\(ref,\{[^}]*shopWallet/);
 });
 
 test('shop caps receipt history without losing old purchase idempotency',async()=>{
