@@ -360,9 +360,19 @@ function actorShoots(shooter,victim,damage,weapon,aimPoint){
   mat.emissiveColor=weapon==='ROCKET'||weapon==='GLAUNCHER'
     ?new BABYLON.Color3(1,.45,.13):new BABYLON.Color3(.3,.7,1);
   mat.disableLighting=true;mesh.material=mat;
+  const lob=weapon==='GLAUNCHER';
+  // Grenades arc under gravity instead of travelling as straight rockets.
+  // Solve the launch velocity for a short predicted flight to the chosen
+  // impact point; actual collision or fuse still determines detonation.
+  const flight=Math.max(.35,Math.min(2.2,
+    Math.hypot(delta.x,delta.z)/Math.max(8,spec.projSpeed||30)));
+  const gravity=18;
+  const velocity=lob?new BABYLON.Vector3(
+    delta.x/flight,(delta.y+.5*gravity*flight*flight)/flight,
+    delta.z/flight):null;
   active.projectiles.push({mesh,mat,direction:delta.scale(1/dist),distance:dist,
     travelled:0,speed:Math.max(8,spec.speed||spec.projSpeed||35),
-    splash:(spec.splash||0)>0,impact});
+    splash:(spec.splash||0)>0,impact,lob,velocity,gravity,fuse:3.2});
  }
 }
 function updateArenaProjectiles(dt){
@@ -371,6 +381,31 @@ function updateArenaProjectiles(dt){
   if(!isActive())return;
   const p=active.projectiles[i];
   if(!p.mesh||p.mesh.isDisposed?.()){active.projectiles.splice(i,1);continue}
+  if(p.lob){
+   // Semi-implicit integration with an actual swept world ray. Splash
+   // occurs only at contact or fuse expiry, never at trigger time.
+   const start=p.mesh.position.clone();
+   p.velocity.y-=p.gravity*dt;
+   const movement=p.velocity.scale(dt);
+   const length=movement.length();
+   let blocked=null;
+   if(length>.001)try{
+    blocked=scene.pickWithRay(new BABYLON.Ray(
+      start,movement.scale(1/length),length+.02),
+      m=>m.isEnabled()&&m.checkCollisions&&
+        !m.metadata?.arenaActorId&&!m.metadata?.enemy);
+   }catch{}
+   const hit=blocked?.hit&&blocked.distance<=length+.02;
+   const end=hit&&blocked.pickedPoint?blocked.pickedPoint:start.add(movement);
+   p.mesh.position.copyFrom(end);
+   p.fuse-=dt;
+   if(hit||p.fuse<=0){
+    active.projectiles.splice(i,1);
+    p.mesh.dispose();p.mat.dispose();
+    p.impact(end);
+   }
+   continue;
+  }
   const step=Math.min(p.speed*dt,p.distance-p.travelled);
   const start=p.mesh.position.clone();
   let blocked=null;
