@@ -141,6 +141,7 @@ export function createArenaActor(persona,team,spawn,index){
  const actor={id,name:persona.name,persona,team,group,mats,label,alive:true,
   hp:100,maxHp:100,arenaActor:true,weapon:null,gunModel:null,
   score:0,kills:0,deaths:0,cooldown:.8+index*.13,reload:0,ammo:0,
+  hitFlash:0,
   respawnIn:0,targetId:null,reaction:0,walkClock:0,pathCursor:null,
   pathPoints:null,walkPhase:0,recoil:0,
   _floorY:spawn.y,_hopY:0,_yVel:0,_padCooldown:0,_navTransition:null,
@@ -150,6 +151,9 @@ export function createArenaActor(persona,team,spawn,index){
  setArenaActorWeapon(actor,persona.loadout?.primary||'PISTOL');
  registerArenaTarget(actor);
  return actor;
+}
+export function flashArenaActor(actor){
+ if(actor?.alive)actor.hitFlash=.18;
 }
 export function killArenaActor(actor){
  if(!actor.alive)return;
@@ -173,7 +177,8 @@ export function respawnArenaActor(actor,spawn){
  // that weapon. Reload it explicitly on respawn, including Gun Game rungs.
  const spec=getArenaActorWeaponSpec(actor);
  actor.ammo=spec.useHeat?Infinity:Math.max(1,spec.magSize||30);
- actor.heat=0;actor.recoil=0;actor.walkPhase=0;
+ actor.heat=0;actor.recoil=0;actor.walkPhase=0;actor.hitFlash=0;
+ actor.mats?.[0]?.emissiveColor?.copyFromFloats(0,0,0);
  for(const limb of [...(actor.limbs?.arms||[]),...(actor.limbs?.legs||[])])limb.rotation.x=0;
  actor._dots=[];actor._poisonDots=[];
  actor.pathCursor=null;actor.pathPoints=null;actor.walkClock=0;actor.reaction=0;
@@ -251,6 +256,8 @@ export function updateArenaActors(actors,dt,mode,
   // The final elimination may dispose the actor meshes from onShot.
   if(!isMatchActive())break;
   if(!a.alive){a.respawnIn-=dt;if(a.respawnIn<=0)onRespawn?.(a);continue}
+  a.hitFlash=Math.max(0,(a.hitFlash||0)-dt);
+  a.mats?.[0]?.emissiveColor?.copyFromFloats(a.hitFlash*3.5,a.hitFlash*.45,a.hitFlash*.3);
   // Carry a rider by the same moving-platform transform as Survival bots.
   if(a._onPlatform){
    const now=a._onPlatform.position;
