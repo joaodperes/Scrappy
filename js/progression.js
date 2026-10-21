@@ -2493,6 +2493,7 @@ function _applyShopEntitlements(){
 }
 export function getShopSnapshot(){
  return {ready:_shopReady,owned:[..._shopWallet.owned],
+  earnedScraps:Math.max(0,profile.scraps||0),spentScraps:_shopWallet.spent||0,
   scraps:shopAvailableScraps(profile.scraps||0,_shopWallet),
   xpBonuses:{..._shopWallet.xpBonuses},loggedIn:!!_fbReady};
 }
