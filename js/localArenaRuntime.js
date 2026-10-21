@@ -372,7 +372,8 @@ function actorShoots(shooter,victim,damage,weapon,aimPoint){
     delta.z/flight):null;
   active.projectiles.push({mesh,mat,direction:delta.scale(1/dist),distance:dist,
     travelled:0,speed:Math.max(8,spec.speed||spec.projSpeed||35),
-    splash:(spec.splash||0)>0,impact,lob,velocity,gravity,fuse:3.2});
+    splash:(spec.splash||0)>0,impact,lob,velocity,gravity,fuse:3.2,
+    bounces:lob?1:0});
  }
 }
 function updateArenaProjectiles(dt){
@@ -399,6 +400,22 @@ function updateArenaProjectiles(dt){
    const end=hit&&blocked.pickedPoint?blocked.pickedPoint:start.add(movement);
    p.mesh.position.copyFrom(end);
    p.fuse-=dt;
+   if(hit&&p.bounces>0){
+    // One physically reflected ricochet for the grenade; missing contact
+    // normals fail safely to an immediate explosion.
+    let normal=null;
+    try{normal=blocked.getNormal(true)}catch{}
+    if(normal&&normal.lengthSquared()>1e-6){
+     normal.normalize();
+     const dot=BABYLON.Vector3.Dot(p.velocity,normal);
+     if(dot<0){
+      p.velocity=p.velocity.subtract(normal.scale(2*dot)).scale(.55);
+      p.mesh.position.addInPlace(normal.scale(.06));
+      p.bounces--;
+      continue;
+     }
+    }
+   }
    if(hit||p.fuse<=0){
     active.projectiles.splice(i,1);
     p.mesh.dispose();p.mat.dispose();
