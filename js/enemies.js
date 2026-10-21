@@ -957,9 +957,11 @@ export function updateEnemies(dt) {
     }
     // Process DOT effects (Flamethrower burns) and show burning visual
     if (e._dots && e._dots.length > 0) {
+        let finishingDot=null;
         for (let i = e._dots.length - 1; i >= 0; i--) {
             const dot = e._dots[i];
             e.hp -= dot.dmg * dt;
+            if(e.hp<=0 && !finishingDot)finishingDot=dot;
             dot.remaining -= dt;
             if (dot.remaining <= 0) {
                 e._dots.splice(i, 1);
@@ -1049,7 +1051,7 @@ export function updateEnemies(dt) {
         }
         
         if (e.hp <= 0) {
-            destroyRobot(e, false, false, 'FLAME_DOT', 'FLAMETHROWER');
+            destroyRobot(e,false,false,finishingDot?.source||'FLAME_DOT',finishingDot?.weapon||'FLAMETHROWER');
             continue;
         }
     } else {
