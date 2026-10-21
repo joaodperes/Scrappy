@@ -130,8 +130,9 @@ export function setArenaActorWeapon(actor,weapon){
  if(actor.weapon===id&&actor.gunModel)return;
  actor.weapon=id;
  const spec=getArenaActorWeaponSpec(actor);
- actor.ammo=spec.useHeat?Infinity:Math.max(1,spec.magSize||30);
- actor.heat=0;actor.reload=0;actor._plasmaTriggers=0;gunVisual(actor,id);
+ const spinning=id==='CHAINGUN'&&actor.persona?.loadout?.attachments?.CHAINGUN?.special==='spinning_module';
+ actor.ammo=spec.useHeat?Infinity:Math.max(1,(spec.magSize||30)*(spinning?3:1));
+ actor.heat=0;actor.reload=0;actor._plasmaTriggers=0;actor._spinCharge=0;gunVisual(actor,id);
 }
 export function chooseArenaSpawn(existing=[],playerPosition=camera.position){
  const spawns=getWalkableSpawns(getCurrentMap());
@@ -192,8 +193,10 @@ export function respawnArenaActor(actor,spawn){
  // setArenaActorWeapon is intentionally a no-op when the model already holds
  // that weapon. Reload it explicitly on respawn, including Gun Game rungs.
  const spec=getArenaActorWeaponSpec(actor);
- actor.ammo=spec.useHeat?Infinity:Math.max(1,spec.magSize||30);
- actor.heat=0;actor.recoil=0;actor.walkPhase=0;actor.hitFlash=0;actor._plasmaTriggers=0;
+ const spinning=actor.weapon==='CHAINGUN'&&actor.persona?.loadout?.attachments?.CHAINGUN?.special==='spinning_module';
+ actor.ammo=spec.useHeat?Infinity:Math.max(1,(spec.magSize||30)*(spinning?3:1));
+ actor.heat=0;actor.recoil=0;actor.walkPhase=0;actor.hitFlash=0;
+ actor._plasmaTriggers=0;actor._spinCharge=0;
  actor.mats?.[0]?.emissiveColor?.copyFromFloats(0,0,0);
  for(const limb of [...(actor.limbs?.arms||[]),...(actor.limbs?.legs||[])])limb.rotation.x=0;
  actor._dots=[];actor._poisonDots=[];actor._stunned=0;actor._knockback=null;
@@ -385,7 +388,7 @@ export function updateArenaActors(actors,dt,mode,
     setArenaActorWeapon(a,primary);
     a.reload=Math.max(.7,getArenaActorWeaponSpec(a).reloadTime||1.4);
   }
-  if(a._stunned>0)continue;
+  if(a._stunned>0){a._spinCharge=0;continue}
   const goal=mode==='killConfirmed'?reachableArenaTag(a,objectives,dt):null;
   const target=goal?{id:'tag_'+goal.id,actor:null,point:goal.mesh.position.clone(),visible:true,
     distance:B.Vector3.Distance(a.group.position,goal.mesh.position),objective:true}:
@@ -479,7 +482,15 @@ export function updateArenaActors(actors,dt,mode,
   for(const [index,arm] of (a.limbs?.arms||[]).entries())
    arm.rotation.x=-Math.sin(a.walkPhase+index*Math.PI)*swing*.65;
   const spec=getArenaActorWeaponSpec(a);
-  if(target.objective||a.reload>0||a.reaction>0||a.cooldown>0||!target.visible)continue;
+  const spinning=a.weapon==='CHAINGUN'&&
+    a.persona?.loadout?.attachments?.CHAINGUN?.special==='spinning_module';
+  if(spinning){
+    if(!target.objective&&target.visible&&a.reload<=0)
+      a._spinCharge=Math.min(5,(a._spinCharge||0)+dt);
+    else a._spinCharge=Math.max(0,(a._spinCharge||0)-dt*2);
+  }
+  if(target.objective||a.reload>0||a.reaction>0||a.cooldown>0||!target.visible||
+      (spinning&&a._spinCharge<1))continue;
   const distance=B.Vector3.Distance(own.add(new B.Vector3(0,1.5,0)),targetPos);
   if(distance>(spec.range||55)||distance>110)continue;
   if(a.ammo<=0){
@@ -503,7 +514,9 @@ export function updateArenaActors(actors,dt,mode,
      a.persona?.loadout?.attachments?.PLASMA?.special==='dual_trigger')
     a._plasmaTriggers=(a._plasmaTriggers||0)+1;
   a.recoil=1;
-  a.cooldown=Math.max(.08,(spec.cd||.35)*(1.3-(a.persona.aggression||.5)*.3));
+  a.cooldown=Math.max(.055,(spec.cd||.35)*
+    (1.3-(a.persona.aggression||.5)*.3)*
+    (spinning?Math.max(.55,1.1-(a._spinCharge-1)*.16):1));
   const chance=clamp(.34+(a.persona.aim||.6)*.65-distance*.004,.12,.9);
   // Smart rounds lock onto a visible target; they never use arbitrary
   // random accuracy once lock-on succeeds, but are still range/LOS gated.
