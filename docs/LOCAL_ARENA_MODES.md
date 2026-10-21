@@ -35,7 +35,7 @@ Select a built-in map, arena duration (5/10/15 minutes) and point goal (10/15/25
 1. Stop the Node server entirely. Start the static site; confirm all five local modes are selectable and the browser makes no WebSocket requests on launch.
 2. Gun Game: start with Pistol, kill robots until ten intermediate guns and final Knife, verify no premature score-limit win and no wrong-gun progression.
 3. Kill Confirmed: kill a robot, see one gold dog tag, watch score remain unchanged, collect the tag, see score +1. Let a tag expire and verify it cannot score.
-4. Practice FFA/TDM: verify timed HUD, living bot count, enemy respawns, your death and 5-second return, match finish/result. Remember that opponent score is a practice abstraction.
+4. Local FFA/TDM: verify distinct human-shaped competitors use own weapon models, fight each other, switch targets by team, respawn, and increment individual (FFA) or shared team (TDM) scores. Check vertical navigation and genuine hit occlusion.
 5. Escape → Quit to Menu, choose another arena mode, then Survival. No orphaned tags, timers, overlays or stale weapons.
 6. Test Scrapyard, City, Jungle mine and Moon Base ramps, physics and graphics in Chromium and Firefox; inspect the game tab's F12 Console.
 
