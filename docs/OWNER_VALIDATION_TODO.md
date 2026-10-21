@@ -96,7 +96,7 @@ These are developer-owned gates, **not failures you need to reproduce today**.
 - [ ] **[11/12/13] Competitive completion** — full live bots, attachments, Gun Game rewards, robust server-side hit verification and anti-cheat, performance/latency and real-client integration tests.
 - [ ] **[14] Two-player co-op Survival** — server-authoritative shared waves, enemy ownership, boss state, pickups, reward claims, disconnect/rejoin; no working co-op match should be claimed yet.
 - [ ] **[15] Cosmetic shop** — the new `server/economyLedger.js` is a verified-grant/transaction domain scaffold, **not a usable account wallet**. Add real authenticated persistent storage, reward proof verification, cosmetic catalog/assets, direct-use XP grants and purchase UI. Never connect an untrusted local Scraps balance to spendable items.
-- [ ] **[16] Earned PvE equipment/stat UI** — pure `js/pveStatsRules.js` can calculate bounded earned points, gear unlocks, respec and competitive normalization. Still needs approved balance, real profile persistence, UI and Survival application. No PvE bonus may leak into PvP.
+- [ ] **[16] Earned PvE equipment/stat acceptance** — the Loadout tab and Survival-only modifiers are source-implemented. Still needs Chromium/Firefox stat-effect balance QA and authenticated Firestore persistence/account-switch tests; no PvE bonus may leak into FFA/TDM, Gun Game, Kill Confirmed or future PvP.
 - [ ] **[18] Final cleanup** — only after other milestones and browser QA pass: audit source/assets/duplicates, fix stale README, organize developer scripts, run all CI and both browser smoke suites. Never delete working runtime code solely to tidy filenames.
 
 ## Reporting template
