@@ -616,7 +616,7 @@ export function updateProjs(dt) {
                       e._dots.push({ dmg: 15, remaining: 4.0 }); 
                       spawnSparks(bodyCenter, 0xff4400, 10);
                   } else {
-                      cb.hitRobot(e,p.dmg,false,false,'PLAYER','RIVET');
+                      cb.hitRobot(e,p.dmg,false,false,'PLAYER','RIVETER');
                   }
                   destroyed = true; 
                   break; 
