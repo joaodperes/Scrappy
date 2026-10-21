@@ -35,7 +35,9 @@ function harness(blocked=false,options={}){
  };
  const helper=new Function('window','scene','camera','navPlugin','WDEFS','botNavPath',
   'getWalkableSpawns','getCurrentMap','makeScaledWeaponModel','registerArenaTarget',
-  'unregisterArenaTarget','rebuildMeshMap','setTimeout','Math',source+'\nreturn {arenaTeamEnemy,updateArenaActors,setArenaActorWeapon,killArenaActor,respawnArenaActor,FALLBACK_PERSONAS};');
+  'unregisterArenaTarget','rebuildMeshMap','setTimeout','Math',
+  'getEffectiveStatsForLoadout','getMapMeta','botTravelTarget','jumpPads',
+  source+'\nreturn {arenaTeamEnemy,updateArenaActors,setArenaActorWeapon,killArenaActor,respawnArenaActor,FALLBACK_PERSONAS};');
  const api=helper({BABYLON:B},scene,camera,navPlugin,WDEFS,
    (_,from,to)=>{
      navTargets.push(to.clone());
@@ -43,7 +45,8 @@ function harness(blocked=false,options={}){
        {points:[from,to],length:Vec.Distance(from,to)};
    },()=>[[10,0,0]],()=> 'scrapyard',
    () => ({position:new Vec(),rotation:{y:0},getChildMeshes:()=>[],dispose(){}}),
-   ()=>{},()=>{},()=>{},()=>{},options.randomMath||Math);
+   ()=>{},()=>{},()=>{},()=>{},options.randomMath||Math,
+   (_id,base)=>base,()=>({gravityMult:1}),(_bot,target)=>target,[]);
  const actor=(id,team,x,z,persona=api.FALLBACK_PERSONAS[0])=>({
   id,name:id,team,persona,weapon:persona.loadout.primary,
   group:{position:new Vec(x,0,z),rotation:{},setEnabled(v){this.enabled=v}},alive:true,hp:100,maxHp:100,
