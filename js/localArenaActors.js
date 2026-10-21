@@ -257,7 +257,7 @@ function pickTarget(actor,actors,mode,humanAlive){
  return found;
 }
 export function updateArenaActors(actors,dt,mode,
- {humanAlive=true,onShot,onRespawn,objectives=[],isMatchActive=()=>true}={}){
+ {humanAlive=true,onShot,onRespawn,onKnockCollision,objectives=[],isMatchActive=()=>true}={}){
  if(!Number.isFinite(dt)||dt<=0)return;
  for(const a of actors){
   // The final elimination may dispose the actor meshes from onShot.
@@ -346,9 +346,10 @@ export function updateArenaActors(actors,dt,mode,
           a.group.position.set(nav.x,nav.y,nav.z);
           a._floorY=nav.y;
         }
-      }else if(knock.shatter){
-        // The runtime applies shatter damage through its normal kill
-        // attribution path; this actor only handles collision movement.
+      }else{
+        if(knock.shatter)onKnockCollision?.(a,knock.shooter);
+        knock.speed=0;
+        if(!a.alive)continue;
       }
     }
     knock.speed*=Math.max(0,1-dt*7);
