@@ -16,7 +16,8 @@ import { updatePlayer, setupInput, hurtPlayer, PH, resetPlayer, resetWeaponHeat,
 import { updateHUD, tickHitMarker, wireDeathSubmit, showHitMarker, hideFfaHUD } from './ui.js';
 import { submitScore, renderLeaderboard } from './leaderboard.js';
 import { startFfa, stopFfa, updateFfa, isFfaActive, isFfaInPreLobby, showFfaLobby, isLocalDead, togglePvpScoreboard, checkFfaHitScan } from './pvp.js';
-import { loadProfile, getLevelProgress, levelFromTotalXp, profile } from './progression.js';
+import { loadProfile, getLevelProgress, levelFromTotalXp, profile,
+  startSurvivalRewardLedger,stopSurvivalRewardLedger,awardXp } from './progression.js';
 import { showLoadout } from './loadout.js';
 import { normalizeCompetitiveLoadout } from './weaponCategories.js';
 import { getCurrentMap, setCurrentMap, MAPS, getMapMeta, buildMap, isMapUnlocked, registerCommunityMaps } from './mapManager.js';
@@ -106,9 +107,9 @@ function _hideAllScreens() {
 }
 
 // ── Offline Survival and local robot arenas ───────────────────
-let survivalRunStart=null;
 function startGame(startWave = 0, difficulty = 'normal', localMode = null) {
-  survivalRunStart=localMode?null:{xp:profile.totalXp||0,scraps:profile.scraps||0};
+  if(!localMode)startSurvivalRewardLedger();
+  else stopSurvivalRewardLedger();
   stopLocalArena();
   document.getElementById('startupErrorNotice')?.remove();
   if(!['normal','hard','nightmare'].includes(difficulty))difficulty='normal';
@@ -219,6 +220,11 @@ function startGame(startWave = 0, difficulty = 'normal', localMode = null) {
       const chosen=normalizeCompetitiveLoadout(profile.pvpLoadout||selectedMatchLoadout,WDEFS);
       const arenaStartXp=profile.totalXp||0;
       startLocalArena({...localMode,loadout:chosen},state=>{
+        // Small capped result rewards: avoid paying out for instant resets.
+        const elapsed=Math.max(0,(localMode.duration||600)-state.secondsLeft);
+        const participation=elapsed>=120&&state.kills>=1?25:0;
+        const victory=state.result==='VICTORY'&&elapsed>=60&&state.kills>=3?80:0;
+        if(participation+victory)awardXp(participation+victory);
         gameRunning=false;
         document.exitPointerLock();
         document.getElementById('hud').style.display='none';
@@ -259,10 +265,20 @@ function endGame() {
     gameRunning = false;
     document.exitPointerLock();
     document.getElementById('hud').style.display = 'none';
-    const runXp=Math.max(0,(profile.totalXp||0)-(survivalRunStart?.xp??(profile.totalXp||0)));
-    const runScraps=Math.max(0,(profile.scraps||0)-(survivalRunStart?.scraps??(profile.scraps||0)));
-    document.getElementById('deathStats').textContent =
-        `FINAL SCORE: ${player.score}   \u2014   WAVES: ${curWave}   —   XP +${runXp}   —   SCRAPS +${runScraps}`;
+    const rewards=stopSurvivalRewardLedger();
+    const weaponXp=Object.entries(rewards?.weaponXp||{})
+      .sort((a,b)=>b[1]-a[1]).map(([k,x])=>k+' +'+x).join(', ')||'NONE';
+    const converted=Object.entries(rewards?.conversionScraps||{})
+      .sort((a,b)=>b[1]-a[1]).map(([k,x])=>k+' +'+x).join(', ')||'NONE';
+    const stats=document.getElementById('deathStats');
+    if(stats){
+      stats.style.whiteSpace='pre-line';
+      stats.textContent='FINAL SCORE: '+player.score+'  —  WAVES: '+curWave+
+        '\nACCOUNT XP +'+(rewards?.accountXp||0)+'  ·  WEAPON XP: '+weaponXp+
+        '\nSCRAPS EARNED +'+(rewards?.totalEarnedScraps||0)+
+        '  ·  CONVERSION: '+converted+
+        '  ·  QUESTS: +'+(rewards?.questScraps||0);
+    }
     const inp = document.getElementById('playerNameInput');
     const btn = document.getElementById('submitScoreBtn');
     import('./progression.js').then(({ profile, flushProfileToCloud }) => {
