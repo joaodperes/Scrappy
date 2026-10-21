@@ -766,11 +766,11 @@ function _renderWeaponSkins(main) {
   // Collector finishes are granted by weekly quests, not the standard
   // permanent weapon challenge table.
   const availableSkins = Object.values(WEAPON_SKINS).filter(skin =>
-      skin.category==='Collector' ||
+      skin.category==='Collector' || skin.category==='Shop' ||
       UNLOCK_TABLE.some(u => u.type === 'weaponSkin' && u.weapon === wName && u.id === skin.id)
   );
 
-  const categories = ['Gameplay', 'Mastery', 'Collector'];
+  const categories = ['Gameplay', 'Mastery', 'Collector', 'Shop'];
   
   categories.forEach(cat => {
     const skinsInCat = availableSkins.filter(s => s.category === cat);
@@ -807,6 +807,8 @@ function _renderWeaponSkins(main) {
         const f=_el('div','');
         f.innerHTML=skin.category==='Collector'
           ? '<span style="font-size:11px">🔒 Weekly Collector quest reward</span>'
+          :skin.category==='Shop'
+          ? '<span style="font-size:11px">🛒 Available in Scraps Shop</span>'
           : _lockHTML(skin.id,wName,'weaponSkin');
         card.appendChild(f);
       }
@@ -873,7 +875,8 @@ function _renderPlayerSkins(main) {
       // Player-level progress is already displayed in Progress: don't
       // repeat "Reach Level N (you are X)" plus another bar on every suit.
       const unlock=UNLOCK_TABLE.find(u=>u.id===skin.id&&u.type==='playerSkin');
-      const label=unlock?.level?'🔒 LOCKED': '🔒 '+(unlock?getUnlockHint(unlock):'Locked');
+      const label=['scavenger','reclaimer'].includes(skin.id)?'🛒 Available in Scraps Shop':
+        (unlock?.level?'🔒 LOCKED': '🔒 '+(unlock?getUnlockHint(unlock):'Locked'));
       card.appendChild(_el('div','font-size:11px;color:'+C.dim,label));
     }
     else if (isEquipped) card.appendChild(_el('div',`font-size:12px;color:${C.accentGreen};font-weight:bold`,'✓ EQUIPPED'));
