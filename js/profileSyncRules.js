@@ -76,6 +76,8 @@ export function importLegacyProfile(cache,cloud){
    return [...b,...a.filter(x=>!seen.has(JSON.stringify(x)))].map(clone);
   }
   if(obj(a)&&obj(b)){
+   if(path[0]==='questProgress'&&path.length===2&&a.key!==b.key)
+    return clone((a.key||'')>(b.key||'')?a:b);
    const out=clone(b);
    for(const [k,v]of Object.entries(a)){
     if(BLOCKED_KEYS.has(k)||k==='firebaseUid')continue;
@@ -84,7 +86,8 @@ export function importLegacyProfile(cache,cloud){
    return out;
   }
   if(typeof a==='number'&&typeof b==='number'&&
-     (path[0]==='stats'||NUMERIC_EARNED.has(path[0])))
+     (path[0]==='stats'||path[0]==='questProgress'||
+       NUMERIC_EARNED.has(path[0])))
    return Math.max(a,b);
   return clone(b===undefined?a:b);
  }
