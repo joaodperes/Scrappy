@@ -960,7 +960,10 @@ export function updateEnemies(dt) {
         let finishingDot=null;
         for (let i = e._dots.length - 1; i >= 0; i--) {
             const dot = e._dots[i];
-            e.hp -= dot.dmg * dt;
+            const dotCredit=resolveKillAttribution(curWep,dot.source||'FLAME_DOT',dot.weapon);
+            const applied=Math.min(Math.max(0,e.hp),Math.max(0,dot.dmg*dt));
+            e.hp-=applied;
+            if(dotCredit.weaponKey&&applied>0)recordDamage(dotCredit.weaponKey,applied);
             if(e.hp<=0 && !finishingDot)finishingDot=dot;
             dot.remaining -= dt;
             if (dot.remaining <= 0) {
@@ -1079,7 +1082,9 @@ export function updateEnemies(dt) {
         }
         
         if (totalDps > 0) {
-            e.hp -= totalDps * dt;
+            const poisoned=Math.min(Math.max(0,e.hp),Math.max(0,totalDps*dt));
+            e.hp-=poisoned;
+            if(poisoned>0)recordDamage('CROSSBOW',poisoned);
             
             // Visual green aura effect (avoids shared material conflicts)
             if (!e._poisonAura) {
