@@ -2714,11 +2714,17 @@ export function emitEvent(eventName, payload) {
       const {
         botType, weaponKey, isJumping = false, isScoped = false,
         isHeadshot = false, isExplosiveKill = false,
-        source = 'PLAYER', xpMult = 1
+        source = 'PLAYER', killMethod = null, xpMult = 1
       } = payload;
 
       _bump(s, 'totalKills');
       _bump(s, `totalKills_${mapId}`);
+      // Preserve the actual finishing mechanism alongside the base firearm.
+      // Old weapon kill challenges and Tesla-chain counters stay compatible.
+      const method=typeof killMethod==='string' && /^[A-Z_]{2,40}$/.test(killMethod)
+        ?killMethod:(source!=='PLAYER'?source:(isExplosiveKill?'EXPLOSION':'DIRECT'));
+      _bumpPerMap(s,'killsByMethod',method,mapId);
+      if(weaponKey)_bumpPerMap(s,'killsByWeaponMethod',`${weaponKey}_${method}`,mapId);
 
       if (botType === 'pvp') s.pvpKills = (s.pvpKills || 0) + 1;
       else {
