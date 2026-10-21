@@ -122,3 +122,6 @@
 
 - Knife now has a timed contact window in `js/player.js`: damage is applied during the swing rather than instantly on input, and pending damage cancels on weapon switch, death or new spawn. This preserves the existing ray/cover validation in `meleeStrike`.
 - `js/weapons.js` Lantern spotlight priority now outranks mine fixtures; prior priority `-1` could drop the equipped light from textured mine materials' eight-light budget, making the attachment appear decorative. Confirm visually on Jungle and Moon Base.
+
+- Per-bot energy weapons now use the bot's own heat for Ion charge scaling and account for equipped heat modifiers; Tesla chain hops refund bot heat. This avoids applying the local player's global weapon heat to independent bots.
+- Local bots briefly flash on successful damage, including bot-on-bot hits; the flash clears on respawn and does not replace team visor colors. Lobbed launcher rounds detonate at their flight-time target rather than travelling past character hitboxes until the fuse expires.
