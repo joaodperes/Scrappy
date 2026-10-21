@@ -8,11 +8,16 @@ test('Knife is an always-equipped fourth local slot with HUD and key four',()=>{
  assert.match(load('index.html'),/id="wSlot3"/);
  assert.match(load('js/player.js'),/e\.code === 'Digit4' && cb\.canUseMelee\?\.\(\)!==false/);
 });
-test('Knife trigger executes actual 3m maximum-range hit with short cooldown',()=>{
+test('Knife has 2.8m swept contact hit, cooldown and separate swing sound',()=>{
  const player=load('js/player.js');
- assert.match(player,/case 'KNIFE':\s*[\s\S]*?hitscan\(_meshToEnemy,0,modDmg,Math\.min\(3,range\),0\)/);
  const defs=load('js/weapons.js');
- assert.match(defs,/KNIFE: \{name:'KNIFE'[\s\S]*?range:2\.8/);
+ const projectile=load('js/projectiles.js');
+ assert.match(player,/if\(W\?\.melee\)\{[\s\S]*?sfx\.knife\(\);[\s\S]*?setWepCooldown\(W\.cd\)/);
+ assert.match(player,/_pendingMelee=\{weapon:curWep,damage:W\.dmg,range:W\.range,time:\.11\}/);
+ assert.match(player,/meleeStrike\(_meshToEnemy,strike\.damage,strike\.range\)/);
+ assert.match(defs,/KNIFE: \{name:'KNIFE'[\s\S]*?range:2\.8[\s\S]*?cd:0\.55/);
+ assert.match(projectile,/export function meleeStrike\(meshToEnemy,damage=70,range=2\.8\)/);
+ assert.doesNotMatch(player,/case 'KNIFE':\s*[\s\S]*?sfx\.pistol\(\)/);
 });
 test('Gun Game cannot bypass firearm ladder with dedicated melee hotkey',()=>{
  const main=load('js/main.js');
