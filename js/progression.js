@@ -2896,19 +2896,53 @@ export function getQuestBoard(date=new Date()){
   return {scraps:shopAvailableScraps(profile.scraps||0,_shopWallet),
     quests:questDefinitions(date).map(def=>({...def,...questProgress(profile,def,date)}))};
 }
-export function claimProfileQuest(id,date=new Date()){
-  const result=claimQuest(profile,id,date);
-  if(result.ok){
-    if(_survivalRewards?.active){
-      _survivalRewards.questScraps+=result.scraps||0;
-      _survivalRewards.questClaims++;
-    }
-    saveProfile();
-    const reward=result.skin?result.skin.id.toUpperCase()+' · '+result.skin.weapon:
-      result.scraps+' Scraps';
-    _showQuestToast('REWARD CLAIMED',reward);
+// Claims are transactionally paid once per UTC period. Concurrent browsers
+// cannot both grant Scraps simply by carrying stale local claim flags.
+export async function claimProfileQuest(id,date=new Date()){
+ const uid=profile.firebaseUid;
+ if(!_fbReady||!_sameGoogleUser(uid))
+  return {ok:false,reason:'Sign in and reconnect to claim rewards'};
+ await flushProfileToCloud();
+ if(_cloudDirty)return {ok:false,reason:'Save progress to the cloud before claiming'};
+ const before=_copy(_cloudBase);
+ try{
+  const db=firebase.firestore(),ref=db.collection('player_profiles').doc(uid);
+  const outcome=await db.runTransaction(async tx=>{
+   const doc=await tx.get(ref),data=doc.data()||{};
+   if(!data.profile)throw new Error('Cloud profile missing');
+   const owner=activeGameSession();
+   if(data.activeSession?.id&&data.activeSession.id!==owner?.id)
+    throw new Error('Account is active in another browser');
+   const updated=_deepMerge(_defaultProfile(),data.profile);
+   const result=claimQuest(updated,id,date);
+   if(!result.ok)return result;
+   tx.update(ref,{profile:updated,
+     updated_at:firebase.firestore.FieldValue.serverTimestamp()});
+   return {...result,profile:updated};
+  });
+  if(!outcome.ok)return outcome;
+  if(!_sameGoogleUser(uid))return {ok:false,reason:'Google account changed'};
+  const authoritative=_deepMerge(_defaultProfile(),outcome.profile);
+  profile=_deepMerge(_defaultProfile(),_mergeProgress(before,profile,authoritative));
+  _cloudBase=_copy(authoritative);
+  if(_cloudDirty&&_recovery?.uid===uid){
+   _recovery.base=_copy(authoritative);
+   _recovery.profile=_copy(profile);
+   _saveRecovery();_scheduleCloudSync();
   }
-  return result;
+  _sanitizeUnlocks();
+  if(_survivalRewards?.active){
+   _survivalRewards.questScraps+=outcome.scraps||0;
+   _survivalRewards.questClaims++;
+  }
+  const reward=outcome.skin?outcome.skin.id.toUpperCase()+' · '+outcome.skin.weapon:
+    outcome.scraps+' Scraps';
+  _showQuestToast('REWARD CLAIMED',reward);
+  return {ok:true,scraps:outcome.scraps,skin:outcome.skin};
+ }catch(err){
+  console.warn('[quests] Transaction failed',err);
+  return {ok:false,reason:err?.message||'Cloud reward unavailable'};
+ }
 }
 
 export function saveProfile(){
