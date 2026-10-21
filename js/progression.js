@@ -2876,8 +2876,17 @@ export function emitEvent(eventName, payload) {
           const prevWepLevel = getWeaponLevel(weaponKey);
 
           const wxp = ((WEAPON_XP_GRANTS[botType] || 8) * xpMult);
-          if(botType!=='pvp' && source!=='ENVIRONMENT'){
-            convertMaxedWeaponXp(profile,weaponKey,wxp,WEAPON_LEVEL_THRESHOLDS.at(-1));
+          const maxWeaponXp=WEAPON_LEVEL_THRESHOLDS.at(-1);
+          const baseCap=Math.max(0,maxWeaponXp-(_shopWallet.xpBonuses[weaponKey]||0));
+          if(botType==='arena'||source==='ARENA'){
+            // Offline competitive bots grant weapon XP, but never Survival's
+            // overflow-to-Scraps reward. Respect direct-applied shop XP too.
+            s.weaponXp[weaponKey]=Math.min(baseCap,
+              Math.max(0,Number(s.weaponXp[weaponKey])||0)+wxp);
+          }else if(botType!=='pvp' && source!=='PVP' && source!=='ENVIRONMENT'){
+            // Bought XP reduces remaining base XP space; overflow still
+            // converts to Scraps only when earned in genuine Survival PvE.
+            convertMaxedWeaponXp(profile,weaponKey,wxp,baseCap);
           }else{
             // PvP currency conversion is disabled until server-authoritative
             // kill validation and signed economy events are in place.
