@@ -18,12 +18,12 @@ const count=(r,lo,hi)=>{
   bottom=e.find(p=>p!==top);
  assert.ok(near(top.y,hi),r.id+' upper endpoint '+top.y);
  assert.ok(near(bottom.y,lo),r.id+' lower endpoint '+bottom.y);
- const highInner={
-  x:top.x+(bottom.x-top.x)*.13,z:top.z+(bottom.z-top.z)*.13},
-  lowOuter={x:bottom.x+(bottom.x-top.x)*.13,z:bottom.z+(bottom.z-top.z)*.13};
- assert.ok(slabs.some(s=>near(s.params.surfY,hi,.25)&&on(s,highInner.x,highInner.z)),
+ const highDeck={
+  x:top.x+(top.x-bottom.x)*.13,z:top.z+(top.z-bottom.z)*.13},
+  lowDeck={x:bottom.x+(bottom.x-top.x)*.13,z:bottom.z+(bottom.z-top.z)*.13};
+ assert.ok(slabs.some(s=>near(s.params.surfY,hi,.25)&&on(s,highDeck.x,highDeck.z)),
    r.id+' lacks raised deck');
- assert.ok(slabs.some(s=>near(s.params.surfY,lo,.25)&&on(s,lowOuter.x,lowOuter.z)),
+ assert.ok(slabs.some(s=>near(s.params.surfY,lo,.25)&&on(s,lowDeck.x,lowDeck.z)),
    r.id+' lacks lower deck');
 };
 test('Moon Base ring connects four cardinal ramps from ground to y8 balcony',()=>{
