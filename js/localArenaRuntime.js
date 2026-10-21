@@ -94,7 +94,8 @@ export function startLocalArena(cfg,onFinish,onPlayerHit=()=>{}){
      const team=teamMode?(allies?'RED':'BLUE'):'BOT_'+i;
      const spawn=chooseArenaSpawn(active.actors);
      if(!spawn)continue;
-     const persona=personas[i%personas.length];
+     const offset=((cfg.seed>>>0)||0)%personas.length;
+     const persona=personas[(i+offset)%personas.length];
      const actor=createArenaActor(persona,team,spawn,i);
      if(!actor)continue;
      if(state.mode==='gunGame')setArenaActorWeapon(actor,state.gunOrder[0]);
