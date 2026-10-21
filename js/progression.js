@@ -1283,7 +1283,7 @@ export const UNLOCK_TABLE = [
 
   // TESLA
   { id:'amplifier_coil', weapon:'TESLA', type:'attachment', secret:true,
-    challenge:{ event:'KILL', conditions:{ weapon:'TESLA_CHAIN' }, target:15,
+    challenge:{ event:'KILL', conditions:{ weapon:'TESLA', killMethod:'TESLA_CHAIN' }, target:15,
       desc:'Kill {target} enemies with Tesla Chain Lightning' } },
   { id:'capacitor_bank', weapon:'TESLA', type:'attachment',
     challenge:{ event:'KILL', conditions:{ weapon:'TESLA', targetType:'shield_bot' }, target:10,
@@ -1316,7 +1316,7 @@ export const UNLOCK_TABLE = [
     challenge:{ event:'KILL', conditions:{ weapon:'TESLA', explosive:true }, target:20,
       desc:'Get {target} explosive kills with the Tesla Cannon' } },
   { id:'magnet_coil', weapon:'TESLA', type:'attachment', secret:true,
-    challenge:{ event:'KILL', conditions:{ weapon:'TESLA_CHAIN' }, target:40,
+    challenge:{ event:'KILL', conditions:{ weapon:'TESLA', killMethod:'TESLA_CHAIN' }, target:40,
       desc:'Kill {target} enemies with Tesla Chain Lightning' } },
   { id:'compensator', weapon:'TESLA', type:'attachment',
     challenge:{ event:'KILL', conditions:{ weapon:'TESLA', targetType:'drone' }, target:20,
@@ -3271,7 +3271,7 @@ export function getLevelProgress(){
 // ── Generic Stat Resolvers ─────────────────────────────────────
 // Determines which condition takes precedence if multiple exist
 const STAT_PRIORITY = [
-  'weaponLevel', 'allChallenges', 'maxCombo', 'pvp', 'explosive',
+  'weaponLevel', 'allChallenges', 'maxCombo', 'pvp', 'killMethod', 'explosive', 
   'withAttachment', 'targetType', 'map', 'boss', 'playerState',
   'multiKill', 'isHeadshot', 'fullyEquipped', 'bareWeapon'
 ];
@@ -3282,6 +3282,12 @@ const STAT_RESOLVERS = {
   allChallenges:  (c) => _allWeaponChallengesComplete(c.weapon) ? 1 : 0,
   maxCombo:       (c, s) => s.maxKillCombo,
   pvp:            (c, s) => s.pvpKills,
+  // Separate firearm ownership from finishing mechanism. Preserve the
+  // old TESLA_CHAIN pseudo-weapon counter when reading existing saves.
+  killMethod:     (c, s) => Math.max(
+    Number(s.killsByWeaponMethod?.[c.weapon+'_'+c.killMethod]||0),
+    c.weapon==='TESLA'&&c.killMethod==='TESLA_CHAIN'
+      ?Number(s.killsWith?.TESLA_CHAIN||0):0),
   explosive:      (c, s) => s.explosiveKills,
   withAttachment: (c, s) => s.killsWithAttOnMap?.[`${c.withAttachment}_${c.weapon}_${c.map}`],
   
