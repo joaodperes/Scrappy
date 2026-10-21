@@ -1,7 +1,7 @@
 // Earned (never purchased) Survival bonuses. Called from normal Loadout.
 import {profile,saveProfile} from './progression.js';
 import {PVE_STAT_KEYS,PVE_EQUIPMENT,normalizedPveBuild,allocatePvePoint,
-  respecPveBuild,equipPveGear,pveModifiers} from './pveStatsRules.js';
+  respecPveBuild,equipPveGear,unequipPveGear,pveModifiers} from './pveStatsRules.js';
 
 const styles={
   line:'display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:11px 14px;margin:8px 0;border:1px solid #5F6B6D;border-radius:6px;background:#323447',
@@ -62,10 +62,14 @@ export function renderPveBuild(parent){
   const line=text('div','',styles.line);
   line.appendChild(text('span',gear.label+' · '+(earned?'UNLOCKED':'Wave '+gear.unlocksAtWave+' required'),
    'font-size:13px;color:#F8FAF7'));
-  line.appendChild(makeButton(worn?'EQUIPPED':earned?'EQUIP':'LOCKED',!earned||worn,()=>{
-    const result=equipPveGear(profile,id);
-    if(!result.ok)return;
-    saveBuild(result.build);parent.replaceChildren();renderPveBuild(parent);
+  line.appendChild(makeButton(worn?'UNEQUIP':earned?'EQUIP':'LOCKED',!earned,()=>{
+    if(worn)saveBuild(unequipPveGear(profile));
+    else{
+      const result=equipPveGear(profile,id);
+      if(!result.ok)return;
+      saveBuild(result.build);
+    }
+    parent.replaceChildren();renderPveBuild(parent);
   }));
   parent.appendChild(line);
  }
