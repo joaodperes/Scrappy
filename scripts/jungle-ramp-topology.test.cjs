@@ -58,7 +58,10 @@ test('excavated ramps never intersect intact horizontal floors or solid walls',(
     const other=slab.params.surfY;
     // A horizontal slab *at* this elevation would be a collider inside
     // the ramp corridor; one far overhead is an intentional mine roof.
-    assert.ok(Math.abs(other-y)>2.2,ramp.id+' overlaps slab '+slab.id);
+    // Lower-floor support is expected at the ramp lip; only intact
+    // slabs crossing the player's standing/head clearance block travel.
+    assert.ok(!(other>y+.15&&other<y+2.25),
+      ramp.id+' blocked by overhanging slab '+slab.id);
    }
    for(const wall of walls){
     const w=wall.params;
