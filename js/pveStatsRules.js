@@ -55,6 +55,10 @@ export function equipPveGear(profile,id){
     return {ok:false,reason:'Equipment not earned',build};
   return {ok:true,build:{...build,equipment:id}};
 }
+export function unequipPveGear(profile){
+ const build=normalizedPveBuild(profile);
+ return {...build,equipment:null};
+}
 export function pveModifiers(build,mode='survival'){
   // Never allow profile bonuses in human-versus-human matches.
   if(mode!=='survival')return {maxHp:100,speedMult:1,ammoDropMult:1,startingArmor:0};
