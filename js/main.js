@@ -27,6 +27,7 @@ import { setActiveHardWave } from './hardModeRules.js';
 import {normalizedPveBuild,pveModifiers} from './pveStatsRules.js';
 import { showLeaderboardPage } from './leaderboardPage.js';
 import { startLocalArena,stopLocalArena,isLocalArenaActive,updateLocalArena,localArenaRobotKilled,localArenaActorHit,localArenaPlayerDead,getLocalArenaSnapshot } from './localArenaRuntime.js';
+import {activeGameSession} from './profileSession.js';
 
 let gameRunning = false;
 let paused      = false;
@@ -35,6 +36,19 @@ window.__levelScene = scene;
 window.__levelNavPlugin = navPlugin;
 
 loadProfile();
+// Visible menu-only cloud status; never claim a save succeeded until the
+// transaction and its deduplication receipt have committed.
+const _syncLabel=document.createElement('p');
+_syncLabel.id='profileCloudStatus';
+_syncLabel.style.cssText='font:11px monospace;color:#a8c38b;text-align:center;margin:9px auto';
+document.getElementById('menuScreen')?.appendChild(_syncLabel);
+setInterval(()=>{
+ const status=getProfileSyncStatus();
+ _syncLabel.textContent=status==='saved'?'☁ CLOUD SAVED':
+   status==='pending'?'☁ SYNC PENDING (RECOVERY BUFFERED)':
+   '☁ CLOUD OFFLINE / SIGN IN';
+ _syncLabel.style.color=status==='saved'?'#a8c38b':'#f4bf67';
+},2000);
 
 // ── Callbacks ──────────────────────────────────────────────────
 cb.hitRobot      = hitRobot;
@@ -145,6 +159,7 @@ async function startGame(startWave = 0, difficulty = 'normal', localMode = null)
     return;
   }
   document.getElementById('sessionTakeoverNotice')?.remove();
+  const launchSessionId=activeGameSession()?.id;
   if(!localMode)startSurvivalRewardLedger();
   else stopSurvivalRewardLedger();
   stopLocalArena();
@@ -214,6 +229,9 @@ async function startGame(startWave = 0, difficulty = 'normal', localMode = null)
   window.__levelNavPlugin = navPlugin;
 
   buildMap(currentMap).then(({ hazardZones, movingPlatforms, powerSwitches }) => {
+    // A displaced browser may still finish an asynchronous map build.
+    // Never start a match after its session was taken over.
+    if(activeGameSession()?.id!==launchSessionId)return;
     window._hazardZones = hazardZones;
     window._movingPlatforms = movingPlatforms;
     window._powerSwitches = powerSwitches;
