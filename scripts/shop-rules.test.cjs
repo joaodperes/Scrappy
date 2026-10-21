@@ -75,3 +75,15 @@ test('shop caps receipt history without losing old purchase idempotency',async()
  assert.equal(rejected.wallet.spent,400);
  assert.equal(Object.keys(rejected.wallet.receipts).length,MAX_SHOP_RECEIPTS);
 });
+
+test('prototype-looking receipt ID cannot silently bypass duplicate protection',async()=>{
+ const {purchaseShopItem,normalizeShopWallet}=await rules;
+ const first=purchaseShopItem(500,null,'xp_TESLA_250','__proto__');
+ assert.equal(first.ok,false);
+ assert.equal(first.reason,'Invalid transaction ID');
+ const restored=normalizeShopWallet({
+  receipts:JSON.parse('{"__proto__":"xp_TESLA_250","buy_valid_001":"player_scavenger"}')
+ });
+ assert.equal(Object.hasOwn(restored.receipts,'__proto__'),false);
+ assert.equal(restored.receipts.buy_valid_001,'player_scavenger');
+});
