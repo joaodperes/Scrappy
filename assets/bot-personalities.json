@@ -84,6 +84,48 @@
         "secondary": "PISTOL"
       },
       "skin": "default"
+    },
+    {
+      "id": "rocketeer",
+      "name": "Rocketeer",
+      "role": "demolition",
+      "aggression": 0.48,
+      "aim": 0.56,
+      "reactionMs": 560,
+      "preferredRange": 27,
+      "loadout": {
+        "primary": "ROCKET",
+        "secondary": "PISTOL"
+      },
+      "skin": "oni"
+    },
+    {
+      "id": "arclight",
+      "name": "Arclight",
+      "role": "control",
+      "aggression": 0.69,
+      "aim": 0.63,
+      "reactionMs": 490,
+      "preferredRange": 18,
+      "loadout": {
+        "primary": "TESLA",
+        "secondary": "PISTOL"
+      },
+      "skin": "ghost"
+    },
+    {
+      "id": "artillerist",
+      "name": "Artillerist",
+      "role": "explosives",
+      "aggression": 0.43,
+      "aim": 0.59,
+      "reactionMs": 610,
+      "preferredRange": 29,
+      "loadout": {
+        "primary": "GLAUNCHER",
+        "secondary": "PISTOL"
+      },
+      "skin": "forest"
     }
   ]
 }
