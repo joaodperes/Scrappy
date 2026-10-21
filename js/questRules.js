@@ -62,9 +62,9 @@ export function ensureQuestState(profile,date=new Date()){
 export function trackQuestEvent(profile,event,payload={},date=new Date()){
   const state=ensureQuestState(profile,date);
   let metric=null,amount=0;
-  if(event==='KILL' && payload.botType && payload.botType!=='pvp' && payload.source!=='ENVIRONMENT' && payload.source!=='PVP'){
+  if(event==='KILL' && payload.botType && payload.botType!=='pvp' && payload.source!=='ENVIRONMENT' && payload.source!=='PVP' && payload.source!=='ARENA'){
     metric='pveKills';amount=1;
-  } else if(event==='DAMAGE_DEALT' && payload.source!=='PVP' && payload.source!=='ENVIRONMENT'){
+  } else if(event==='DAMAGE_DEALT' && payload.source!=='PVP' && payload.source!=='ENVIRONMENT' && payload.source!=='ARENA'){
     metric='damage';amount=Math.max(0,Math.floor(Number(payload.amount)||0));
   } else if(event==='WAVE_COMPLETE' && Number.isFinite(payload.waveNum) && payload.source!=='PVP'){
     metric='waves';amount=1;
