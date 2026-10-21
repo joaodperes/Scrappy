@@ -167,6 +167,7 @@ export function killArenaActor(actor){
  actor.respawnIn=5;actor.targetId=null;
  // A new life cannot inherit old fire/poison or stale path decisions.
  actor._dots=[];actor._poisonDots=[];
+ actor._stunned=0;actor._knockback=null;
  actor.pathCursor=null;actor.pathPoints=null;actor.walkClock=0;actor.tagTargetId=null;actor.tagScanClock=0;
  actor.group.setEnabled(false);
  rebuildMeshMap();
@@ -186,7 +187,7 @@ export function respawnArenaActor(actor,spawn){
  actor.heat=0;actor.recoil=0;actor.walkPhase=0;actor.hitFlash=0;
  actor.mats?.[0]?.emissiveColor?.copyFromFloats(0,0,0);
  for(const limb of [...(actor.limbs?.arms||[]),...(actor.limbs?.legs||[])])limb.rotation.x=0;
- actor._dots=[];actor._poisonDots=[];
+ actor._dots=[];actor._poisonDots=[];actor._stunned=0;actor._knockback=null;
  actor.pathCursor=null;actor.pathPoints=null;actor.walkClock=0;actor.reaction=0;
  actor.tagTargetId=null;actor.tagScanClock=0;
  rebuildMeshMap();
@@ -327,6 +328,32 @@ export function updateArenaActors(actors,dt,mode,
   a.recoil=Math.max(0,(a.recoil||0)-dt*4);
   if(a.gunModel)a.gunModel.position.z=.38-(a.recoil||0)*.15;
   a.reload=Math.max(0,a.reload-dt);
+  // PHALANX stun interrupts weapon fire and movement, while the sonic blast
+  // pushes actors along navigable ground instead of moving through walls.
+  a._stunned=Math.max(0,(a._stunned||0)-dt);
+  if(a._knockback){
+    const knock=a._knockback;
+    const step=clamp(knock.speed*dt,0,.55);
+    const dir=new B.Vector3(knock.x,0,knock.z);
+    if(step>.001&&dir.lengthSquared()>1e-6){
+      const wall=scene.pickWithRay(new B.Ray(
+        a.group.position.add(new B.Vector3(0,1.05,0)),dir,step+.4),
+        m=>m.isEnabled()&&m.checkCollisions&&!m.metadata?.enemy&&!m.metadata?.arenaActorId);
+      if(!wall?.hit){
+        const dest=a.group.position.add(dir.scale(step));
+        let nav=null;try{nav=navPlugin.getClosestPoint(dest)}catch{}
+        if(nav&&valid(nav)&&Math.abs(nav.y-a._floorY)<1.4){
+          a.group.position.set(nav.x,nav.y,nav.z);
+          a._floorY=nav.y;
+        }
+      }else if(knock.shatter){
+        // The runtime applies shatter damage through its normal kill
+        // attribution path; this actor only handles collision movement.
+      }
+    }
+    knock.speed*=Math.max(0,1-dt*7);
+    if(knock.speed<.5)a._knockback=null;
+  }
   const held=getArenaActorWeaponSpec(a);
   if(held.useHeat)
     a.heat=Math.max(0,(a.heat||0)-Math.max(0,held.coolRate||0)*dt);
@@ -348,6 +375,7 @@ export function updateArenaActors(actors,dt,mode,
     setArenaActorWeapon(a,primary);
     a.reload=Math.max(.7,getArenaActorWeaponSpec(a).reloadTime||1.4);
   }
+  if(a._stunned>0)continue;
   const goal=mode==='killConfirmed'?reachableArenaTag(a,objectives,dt):null;
   const target=goal?{id:'tag_'+goal.id,actor:null,point:goal.mesh.position.clone(),visible:true,
     distance:B.Vector3.Distance(a.group.position,goal.mesh.position),objective:true}:
@@ -464,7 +492,9 @@ export function updateArenaActors(actors,dt,mode,
   a.recoil=1;
   a.cooldown=Math.max(.08,(spec.cd||.35)*(1.3-(a.persona.aggression||.5)*.3));
   const chance=clamp(.34+(a.persona.aim||.6)*.65-distance*.004,.12,.9);
-  const hit=Math.random()<=chance;
+  // Smart rounds lock onto a visible target; they never use arbitrary
+  // random accuracy once lock-on succeeds, but are still range/LOS gated.
+  const hit=a.weapon==='AEGIS'?true:Math.random()<=chance;
   const endpoint=hit?targetPos:targetPos.add(new B.Vector3(
     (Math.random()-.5)*3,(Math.random()-.5)*1.2,(Math.random()-.5)*3));
   // Missed fire is still visible: do not render a tracer only on damage.
@@ -498,5 +528,26 @@ export function updateArenaActors(actors,dt,mode,
   // inflict area damage at their true impact point. Hitscan misses remain
   // harmless tracers; never credit a miss as a direct victim hit.
   onShot?.(a,hit?target.actor:null,dmg,a.weapon,endpoint.clone(),!hit);
+  // Aegis paints multiple visible hostile actors with the same one magazine
+  // round, just like the human ADS lock queue. Never target teammates.
+  if(hit&&a.weapon==='AEGIS'&&isMatchActive()){
+    const muzzle=own.add(new B.Vector3(0,1.45,0));
+    const forward=endpoint.subtract(muzzle).normalize();
+    const otherTargets=actors.filter(b=>b.alive&&arenaTeamEnemy(a,b,mode)&&b!==target.actor)
+      .map(b=>({actor:b,point:b.group.position.add(new B.Vector3(0,1.45,0))}));
+    if(humanAlive&&target.id!=='human'&&
+       (!['tdm','killConfirmed'].includes(mode)||a.team!=='RED'))
+      otherTargets.push({actor:null,point:camera.position.clone()});
+    let remaining=Math.max(0,Math.floor(spec.maxTargets||3)-1);
+    otherTargets.sort((x,y)=>B.Vector3.Distance(muzzle,x.point)-B.Vector3.Distance(muzzle,y.point));
+    for(const extra of otherTargets){
+      if(remaining<=0||!isMatchActive())break;
+      const to=extra.point.subtract(muzzle),len=to.length();
+      if(len<.15||len>(spec.range||80)||B.Vector3.Dot(forward,to.scale(1/len))<.9)continue;
+      if(!unobstructed(muzzle,extra.point))continue;
+      onShot?.(a,extra.actor,dmg,a.weapon,extra.point.clone(),false);
+      remaining--;
+    }
+  }
  }
 }
