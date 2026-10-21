@@ -126,6 +126,20 @@
         "secondary": "PISTOL"
       },
       "skin": "forest"
+    },
+    {
+      "id": "incinerator",
+      "name": "Incinerator",
+      "role": "area-denial",
+      "aggression": 0.72,
+      "aim": 0.53,
+      "reactionMs": 420,
+      "preferredRange": 13,
+      "loadout": {
+        "primary": "FLAMETHROWER",
+        "secondary": "PISTOL"
+      },
+      "skin": "oni"
     }
   ]
 }
