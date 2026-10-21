@@ -1328,12 +1328,9 @@ export function animWeapon(dt) {
       reloadTilt = Math.sin((player.reloadTimer / 1.6) * Math.PI) * -0.55; 
   }
 
-  // Extract effective recoil
-  let recoilMult = 1.0;
-  import('./progression.js').then(({ getEffectiveStats }) => {
-      const EW = getEffectiveStats(curWep, WDEFS[curWep]);
-      recoilMult = EW.recoilMult || 1.0;
-  });
+  // This runs every render frame: reuse the existing synchronous import
+  // rather than enqueueing an asynchronous module promise every frame.
+  const recoilMult = getEffectiveStats(curWep, WDEFS[curWep]).recoilMult || 1.0;
 
   if (swingT > 0 && !_NO_SWING_WEAPONS.has(curWep)) {
     swingT = Math.max(0, swingT - dt * (curWep==='KNIFE'?4.2:7.5));
