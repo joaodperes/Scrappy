@@ -80,6 +80,24 @@ function gunVisual(actor,weapon){
  if(!WDEFS[weapon])return;
  const gun=makeScaledWeaponModel(weapon,0.55);
  gun.parent=actor.group;gun.position.set(.47,1.25,.38);gun.rotation.y=0;
+ // Lightweight third-person attachment silhouettes correspond to actual
+ // persona modifiers; unlike human loadouts they are entirely actor-owned.
+ const attachments=actor.persona?.loadout?.attachments?.[weapon]||{};
+ const extra=(kind,options,name,x,y,z,rx=0)=>{
+  const m=kind==='cylinder'
+    ?B.MeshBuilder.CreateCylinder('arena_attachment_'+name,options,scene)
+    :B.MeshBuilder.CreateBox('arena_attachment_'+name,options,scene);
+  m.parent=gun;m.position.set(x,y,z);m.rotation.x=rx;
+  m.material=actor.mats[1];m.checkCollisions=false;m.isPickable=false;
+ };
+ if(attachments.sight)
+  extra('box',{width:.1,height:.09,depth:.17},'sight',0,.15,.22);
+ if(attachments.barrel)
+  extra('cylinder',{diameter:.085,height:.24,tessellation:8},
+    'barrel',0,.01,.78,Math.PI/2);
+ if(attachments.magazine)
+  extra('box',{width:.13,height:.24,depth:.13},
+    'magazine',0,-.17,.05);
  gun.getChildMeshes().forEach(m=>{m.isPickable=false;m.checkCollisions=false});
  actor.gunModel=gun;
 }
