@@ -122,7 +122,9 @@ function _hideAllScreens() {
 }
 
 // ── Offline Survival and local robot arenas ───────────────────
+let _startingGame=false;
 function onAccountTakenOver(reason){
+  _startingGame=false;
   gameRunning=false;paused=false;
   stopLocalArena();
   if(isFfaActive())stopFfa();
@@ -142,10 +144,12 @@ function onAccountTakenOver(reason){
   if(note)note.textContent=reason||'This account is now playing in another browser.';
 }
 async function startGame(startWave = 0, difficulty = 'normal', localMode = null) {
+  if(_startingGame)return;
+  _startingGame=true;
   try{
     await startProfileGameSession(onAccountTakenOver);
   }catch(error){
-    gameRunning=false;
+    _startingGame=false;gameRunning=false;
     const menu=document.getElementById('menuScreen');
     if(menu)menu.className='screen visible';
     let warning=document.getElementById('startupErrorNotice');
@@ -231,14 +235,15 @@ async function startGame(startWave = 0, difficulty = 'normal', localMode = null)
   buildMap(currentMap).then(({ hazardZones, movingPlatforms, powerSwitches }) => {
     // A displaced browser may still finish an asynchronous map build.
     // Never start a match after its session was taken over.
-    if(activeGameSession()?.id!==launchSessionId)return;
+    if(activeGameSession()?.id!==launchSessionId){_startingGame=false;return}
     window._hazardZones = hazardZones;
     window._movingPlatforms = movingPlatforms;
     window._powerSwitches = powerSwitches;
     finishStart();
   }).catch(error=>{
     console.error('[SCRAPPY/STARTUP] Failed to build or start map '+currentMap,error);
-    gameRunning=false;
+    _startingGame=false;gameRunning=false;
+    void stopProfileGameSession();
     const hud=document.getElementById('hud');
     if(hud)hud.style.display='none';
     const screen=document.getElementById('menuScreen');
@@ -255,6 +260,7 @@ async function startGame(startWave = 0, difficulty = 'normal', localMode = null)
   });
   
   function finishStart() {
+    _startingGame=false;
     rebuildMeshMap();
 
     const meta = getMapMeta(currentMap);
@@ -643,10 +649,7 @@ function _populateMapDropdown() {
           document.exitPointerLock();
           document.getElementById('pauseOverlay').style.display = 'none';
           document.getElementById('hud').style.display = 'none';
-          import('./progression.js').then(({ saveProfile, flushProfileToCloud }) => {
-              saveProfile();
-              flushProfileToCloud();
-          });
+          // Session shutdown already flushes the pending recovery journal.
           import('./leaderboard.js').then(({ renderLeaderboard }) => renderLeaderboard());
           document.getElementById('menuScreen').className = 'screen visible';
       };
