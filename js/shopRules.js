@@ -9,7 +9,7 @@ export const SHOP_PLAYER_SKINS=Object.freeze(['scavenger','reclaimer']);
 // Retaining existing receipts preserves idempotency for every completed purchase.
 export const MAX_SHOP_RECEIPTS=2048;
 const PAINTED_WEAPONS=Object.freeze(['PISTOL','SMG','SHOTGUN','CHAINGUN','RAILGUN','ROCKET','GLAUNCHER',
- 'ELECTRON','ION','PLASMA','COMET','DMR','FLAMETHROWER','TESLA','CROSSBOW','RIVETER','PHALANX','AEGIS']);
+ 'ELECTRON','ION','PLASMA','COMET','DMR','FLAMETHROWER','TESLA','CROSSBOW','RIVETER','PHALANX','AEGIS','KNIFE']);
 export const SHOP_ITEMS=Object.freeze([
  ...SHOP_PLAYER_SKINS.map((skin,i)=>Object.freeze({id:'player_'+skin,kind:'playerSkin',skin,label:skin.toUpperCase(),cost:175+125*i})),
  ...PAINTED_WEAPONS.flatMap((weapon,i)=>SHOP_WEAPON_SKINS.map((skin,j)=>Object.freeze({
