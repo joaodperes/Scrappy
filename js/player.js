@@ -137,6 +137,7 @@ export function hurtPlayer(rawDmg, { hazardType = null} = {}) {
   }
 }
 
+let _pendingMelee=null;
 export function shoot() {
   if (cb.isPvpDead?.()) return;
   // Synchronous burst cooldown block prevents full-auto bypass
@@ -145,7 +146,9 @@ export function shoot() {
   if(W?.melee){
     setWepCooldown(W.cd);
     setSwingT(1);
-    meleeStrike(_meshToEnemy,W.dmg,W.range);
+    // Strike at the blade animation's contact window rather than the
+    // button-down frame. Switching weapons or dying cancels the strike.
+    _pendingMelee={weapon:curWep,damage:W.dmg,range:W.range,time:.11};
     refreshSlotHUD();
     return;
   }
@@ -811,6 +814,7 @@ function getCameraRight() {
 
 export function resetPlayer(x, y, z) {
   window.__modeDead = false;
+  _pendingMelee=null;
   _playerBody.position.set(x, y, z);
   camera.position.set(x, y, z);
   _yVel = 0;
@@ -958,13 +962,26 @@ export function updatePlayer(dt, gameRunning, paused) {
 
   // ── Lock movement while dead in mode matches ────────────
   if (window.__modeDead) {
+    _pendingMelee=null;
     // Still process buffs/timers but skip ALL movement and input
     if (wepCooldown > 0) setWepCooldown(wepCooldown - dt);
     if (_burstCooldown > 0) _burstCooldown = Math.max(0, _burstCooldown - dt);
     return;
   }
   
-  if (!gameRunning || paused) return;
+  if (!gameRunning){_pendingMelee=null;return}
+  if (paused) return;
+  if(_pendingMelee){
+    if(curWep!==_pendingMelee.weapon)_pendingMelee=null;
+    else{
+      _pendingMelee.time-=dt;
+      if(_pendingMelee.time<=0){
+        const strike=_pendingMelee;
+        _pendingMelee=null;
+        meleeStrike(_meshToEnemy,strike.damage,strike.range);
+      }
+    }
+  }
   const mapMeta = getMapMeta(getCurrentMap());
 
   if (wepCooldown > 0) setWepCooldown(wepCooldown - dt);
