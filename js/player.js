@@ -373,7 +373,7 @@ export function shoot() {
           
           for (let i = 0; i < chainCount; i++) {
               let closest = null, closestDist = chainRange;
-              for (const e of enemies) {
+              for (const e of (cb.getDamageableActors?.()||enemies)) {
                   if (!e.alive || chained.has(e)) continue;
                   const d = BABYLON.Vector3.Distance(lastPos, e.group.position);
                   if (d < closestDist) { closestDist = d; closest = e; }
@@ -518,7 +518,7 @@ export function shoot() {
       camera.getForwardRay(1).direction.normalizeToRef(pushFwd);
 
       // 1. AFFECT ENEMIES
-      for (const e of enemies) {
+      for (const e of (cb.getDamageableActors?.()||enemies)) {
           if (!e.alive) continue;
           const toEnemy = e.group.position.subtract(pushCenter);
           const dist = toEnemy.length();
@@ -560,7 +560,7 @@ export function shoot() {
         sfx.plasma();
         const boltCenter = camera.position.clone();
         boltCenter.y += 0.5;
-        for (const e of enemies) {
+        for (const e of (cb.getDamageableActors?.()||enemies)) {
             if (!e.alive) continue;
             const d = BABYLON.Vector3.Distance(boltCenter, e.group.position);
             if (d <= EW.range) {
@@ -592,7 +592,7 @@ export function shoot() {
                 import('./projectiles.js').then(({ boom }) => boom(impactPos, 12, modDmg, true));
                 return;
             }
-            for (const e of enemies) {
+            for (const e of (cb.getDamageableActors?.()||enemies)) {
                 if (!e.alive) continue;
                 const d = BABYLON.Vector3.Distance(impactPos, e.group.position);
                 if (d < 12) {
@@ -622,7 +622,7 @@ export function shoot() {
         sfx.rocket();
         const osCenter = camera.position.clone(); osCenter.y += 0.5;
         // Lightning Phase
-        for (const e of enemies) {
+        for (const e of (cb.getDamageableActors?.()||enemies)) {
             if (!e.alive) continue;
             if (BABYLON.Vector3.Distance(osCenter, e.group.position) <= 25) {
                 cb.hitRobot(e, modDmg, false, false, 'OMEGA_STORM');
@@ -650,14 +650,13 @@ export function shoot() {
                 import('./projectiles.js').then(({ boom }) => boom(osPos, 15, modDmg * 1.5, true));
                 return;
             }
-            for (const e of enemies) {
+            for (const e of (cb.getDamageableActors?.()||enemies)) {
                 if (!e.alive) continue;
                 const d = BABYLON.Vector3.Distance(osPos, e.group.position);
                 if (d < 15) {
                     const dir = osPos.subtract(e.group.position).normalize();
                     e.group.position.addInPlace(dir.scale(10 * 0.1));
-                    e.hp -= 25 * 0.1; // Passive vacuum damage
-                    if (e.hp <= 0) cb.hitRobot(e, 999);
+                    cb.hitRobot(e, 25*0.1, false, false, 'OMEGA_STORM'); // route all DOT through attribution
                 }
             }
         }, 100);
@@ -908,7 +907,7 @@ function _updateAegisTargeting(){
   };
   // Prioritize the nearest reticle alignment, rather than spawn-array order,
   // while keeping already acquired locks even if the crosshair moves away.
-  const candidates=enemies.filter(valid).sort((a,b)=>{
+  const candidates=(cb.getDamageableActors?.()||enemies).filter(valid).sort((a,b)=>{
     const da=BABYLON.Vector3.Dot(forward,_aegisTargetPoint(a).subtract(camera.position).normalize());
     const db=BABYLON.Vector3.Dot(forward,_aegisTargetPoint(b).subtract(camera.position).normalize());
     return db-da;
@@ -1503,7 +1502,7 @@ export function setupInput(getGameRunning, getPaused, onTogglePause, onPickupWea
           setTimeout(() => { player.blastCooldown = false; }, 2000);
 
           const blastCenter = camera.position.clone();
-          for (const e of enemies) {
+          for (const e of (cb.getDamageableActors?.()||enemies)) {
             if (!e.alive) continue;
             const dist = BABYLON.Vector3.Distance(blastCenter, e.group.position);
             
