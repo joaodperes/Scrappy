@@ -29,10 +29,13 @@ function harness(blocked=false,options={}){
   DMR:{id:'DMR',range:100,cd:.35,dmg:45,magSize:8},
   PISTOL:{id:'PISTOL',range:60,cd:.18,dmg:20,magSize:12},
   KNIFE:{id:'KNIFE',range:2.8,cd:.55,dmg:70},
+  COMET:{id:'COMET',range:70,cd:.45,dmg:22,magSize:24,burstCount:3},
+  ELECTRON:{id:'ELECTRON',range:60,cd:.12,dmg:25,useHeat:true,
+   maxHeat:100,heatPerShot:.40,coolRate:10},
  };
  const helper=new Function('window','scene','camera','navPlugin','WDEFS','botNavPath',
   'getWalkableSpawns','getCurrentMap','makeScaledWeaponModel','registerArenaTarget',
-  'unregisterArenaTarget','rebuildMeshMap','setTimeout',source+'\nreturn {arenaTeamEnemy,updateArenaActors,setArenaActorWeapon,killArenaActor,respawnArenaActor,FALLBACK_PERSONAS};');
+  'unregisterArenaTarget','rebuildMeshMap','setTimeout','Math',source+'\nreturn {arenaTeamEnemy,updateArenaActors,setArenaActorWeapon,killArenaActor,respawnArenaActor,FALLBACK_PERSONAS};');
  const api=helper({BABYLON:B},scene,camera,navPlugin,WDEFS,
    (_,from,to)=>{
      navTargets.push(to.clone());
@@ -40,7 +43,7 @@ function harness(blocked=false,options={}){
        {points:[from,to],length:Vec.Distance(from,to)};
    },()=>[[10,0,0]],()=> 'scrapyard',
    () => ({position:new Vec(),rotation:{y:0},getChildMeshes:()=>[],dispose(){}}),
-   ()=>{},()=>{},()=>{},()=>{});
+   ()=>{},()=>{},()=>{},()=>{},options.randomMath||Math);
  const actor=(id,team,x,z,persona=api.FALLBACK_PERSONAS[0])=>({
   id,name:id,team,persona,weapon:persona.loadout.primary,
   group:{position:new Vec(x,0,z),rotation:{},setEnabled(v){this.enabled=v}},alive:true,hp:100,maxHp:100,
@@ -144,4 +147,56 @@ test('Kill Confirmed favors reachable tags and projects tag targets onto their f
  assert.equal(bot.targetId,'tag_12');
  assert.ok(h.navTargets.some(to=>to.x===8&&Math.abs(to.y)<.01));
  assert.ok(h.navTargets.every(to=>to.y>=-.01),'nav queries must not project tags below the floor');
+});
+
+test('heat weapons use cooling instead of fake magazines or Pistol swaps',()=>{
+ const h=harness(false,{randomMath:Object.assign(Object.create(Math),{random:()=>0})});
+ const shooter=h.actor('heat','BLUE',0,9),enemy=h.actor('red','RED',0,13);
+ h.api.setArenaActorWeapon(shooter,'ELECTRON');
+ assert.equal(shooter.ammo,Infinity);
+ for(let i=0;i<55;i++)h.api.updateArenaActors([shooter,enemy],.1,'gunGame',
+  {humanAlive:false,onShot:()=>{}});
+ assert.equal(shooter.weapon,'ELECTRON');
+ assert.equal(shooter.ammo,Infinity);
+ assert.ok(shooter.heat>=0&&shooter.heat<=100);
+ assert.ok(shooter.heat>0,'heat should accumulate from actual shots');
+ h.api.killArenaActor(shooter);
+ h.api.respawnArenaActor(shooter,new Vec(0,0,9));
+ assert.equal(shooter.heat,0);
+ assert.equal(shooter.ammo,Infinity);
+});
+test('burst guns expend multiple rounds per shot and visibly miss',()=>{
+ const certainMiss=Object.assign(Object.create(Math),{random:()=>.999});
+ const h=harness(false,{randomMath:certainMiss});
+ const shooter=h.actor('burst','BLUE',0,9),enemy=h.actor('red','RED',0,13);
+ h.api.setArenaActorWeapon(shooter,'COMET');
+ const hits=[];
+ shooter.reaction=0;shooter.cooldown=0;
+ h.api.updateArenaActors([shooter,enemy],.1,'gunGame',
+  {humanAlive:false,onShot:(...args)=>hits.push(args)});
+ assert.equal(shooter.ammo,21,'burst must spend three magazine rounds');
+ assert.equal(hits.length,0,'a missed burst must not deal damage');
+ assert.equal(h.lines.length,1,'missed fire must leave a visible tracer');
+});
+test('sidearm depletion restores equipped primary and waits for reload',()=>{
+ const h=harness();
+ const shooter=h.actor('switch','BLUE',0,9);
+ h.api.setArenaActorWeapon(shooter,'PISTOL');
+ shooter.ammo=0;shooter.cooldown=2;
+ h.api.updateArenaActors([shooter],.1,'ffa',{humanAlive:false});
+ assert.equal(shooter.weapon,'SMG');
+ assert.equal(shooter.ammo,30);
+ assert.ok(shooter.reload>=.7);
+});
+test('stops updating other bots when a finishing elimination ends the match',()=>{
+ const h=harness(false,{randomMath:Object.assign(Object.create(Math),{random:()=>0})});
+ const a=h.actor('one','BLUE',0,9),b=h.actor('two','RED',0,13),
+       c=h.actor('three','BLUE',0,11);
+ let running=true,shots=0;
+ h.api.updateArenaActors([a,b,c],1,'ffa',{
+  humanAlive:false,isMatchActive:()=>running,
+  onShot:()=>{running=false;shots++}
+ });
+ assert.equal(shots,1);
+ assert.equal(c.cooldown,0,'third bot must not tick after match completion');
 });
