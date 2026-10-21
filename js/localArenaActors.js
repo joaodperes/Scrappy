@@ -6,6 +6,7 @@ import { getWalkableSpawns,getCurrentMap,getMapMeta } from './mapManager.js';
 import { botNavPath,botTravelTarget } from './botNavigation.js';
 import { jumpPads } from './level.js';
 import { makeScaledWeaponModel,WDEFS } from './weapons.js';
+import { getEffectiveStatsForLoadout } from './progression.js';
 import { registerArenaTarget,unregisterArenaTarget,rebuildMeshMap } from './enemies.js';
 const B=window.BABYLON;
 const valid=p=>p&&Number.isFinite(p.x)&&Number.isFinite(p.y)&&Number.isFinite(p.z);
@@ -82,11 +83,17 @@ function gunVisual(actor,weapon){
  gun.getChildMeshes().forEach(m=>{m.isPickable=false;m.checkCollisions=false});
  actor.gunModel=gun;
 }
+export function getArenaActorWeaponSpec(actor){
+ const id=WDEFS[actor?.weapon]?actor.weapon:'PISTOL';
+ return getEffectiveStatsForLoadout(id,WDEFS[id],
+   actor?.persona?.loadout?.attachments?.[id]||{});
+}
 export function setArenaActorWeapon(actor,weapon){
  const id=WDEFS[weapon]?weapon:'PISTOL';
  if(actor.weapon===id&&actor.gunModel)return;
  actor.weapon=id;
- actor.ammo=WDEFS[id].useHeat?Infinity:Math.max(1,WDEFS[id].magSize||30);
+ const spec=getArenaActorWeaponSpec(actor);
+ actor.ammo=spec.useHeat?Infinity:Math.max(1,spec.magSize||30);
  actor.heat=0;actor.reload=0;gunVisual(actor,id);
 }
 export function chooseArenaSpawn(existing=[],playerPosition=camera.position){
@@ -142,7 +149,7 @@ export function respawnArenaActor(actor,spawn){
  actor.cooldown=.75;actor.reload=0;actor.respawnIn=0;actor.targetId=null;
  // setArenaActorWeapon is intentionally a no-op when the model already holds
  // that weapon. Reload it explicitly on respawn, including Gun Game rungs.
- const spec=WDEFS[actor.weapon]||WDEFS.PISTOL;
+ const spec=getArenaActorWeaponSpec(actor);
  actor.ammo=spec.useHeat?Infinity:Math.max(1,spec.magSize||30);
  actor.heat=0;actor.recoil=0;actor.walkPhase=0;
  for(const limb of [...(actor.limbs?.arms||[]),...(actor.limbs?.legs||[])])limb.rotation.x=0;
@@ -285,7 +292,7 @@ export function updateArenaActors(actors,dt,mode,
   a.recoil=Math.max(0,(a.recoil||0)-dt*4);
   if(a.gunModel)a.gunModel.position.z=.38-(a.recoil||0)*.15;
   a.reload=Math.max(0,a.reload-dt);
-  const held=WDEFS[a.weapon]||WDEFS.PISTOL;
+  const held=getArenaActorWeaponSpec(a);
   if(held.useHeat)
     a.heat=Math.max(0,(a.heat||0)-Math.max(0,held.coolRate||0)*dt);
   // A non-Gun-Game bot has the same primary/sidearm distinction as a
@@ -304,7 +311,7 @@ export function updateArenaActors(actors,dt,mode,
     // on a permanently refilling Pistol for the rest of the match.
     const primary=a.persona.loadout.primary;
     setArenaActorWeapon(a,primary);
-    a.reload=Math.max(.7,WDEFS[primary].reloadTime||1.4);
+    a.reload=Math.max(.7,getArenaActorWeaponSpec(a).reloadTime||1.4);
   }
   const goal=mode==='killConfirmed'?reachableArenaTag(a,objectives,dt):null;
   const target=goal?{id:'tag_'+goal.id,actor:null,point:goal.mesh.position.clone(),visible:true,
@@ -368,7 +375,10 @@ export function updateArenaActors(actors,dt,mode,
       let snapped=null;try{snapped=navPlugin.getClosestPoint(new B.Vector3(dest.x,dest.y+1,dest.z))}catch{}
       if(snapped&&valid(snapped)){
        const nextY=Math.abs(snapped.y-(dest.y+1))<.02?dest.y:snapped.y;
-       if(Math.abs(nextY-own.y)<1.15)own.set(snapped.x,nextY,snapped.z);
+       if(Math.abs(nextY-own.y)<1.15){
+        own.set(snapped.x,nextY,snapped.z);
+        a._floorY=nextY;
+       }
       }
      }
     }
@@ -394,7 +404,7 @@ export function updateArenaActors(actors,dt,mode,
    leg.rotation.x=Math.sin(a.walkPhase+index*Math.PI)*swing;
   for(const [index,arm] of (a.limbs?.arms||[]).entries())
    arm.rotation.x=-Math.sin(a.walkPhase+index*Math.PI)*swing*.65;
-  const spec=WDEFS[a.weapon]||WDEFS.PISTOL;
+  const spec=getArenaActorWeaponSpec(a);
   if(target.objective||a.reload>0||a.reaction>0||a.cooldown>0||!target.visible)continue;
   const distance=B.Vector3.Distance(own.add(new B.Vector3(0,1.5,0)),targetPos);
   if(distance>(spec.range||55)||distance>110)continue;
