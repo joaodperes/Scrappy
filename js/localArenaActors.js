@@ -2,8 +2,9 @@
 // Each participant has a distinct player-like model, personality, real weapon
 // definition, HP, team, targeting, collision-aware navigation and respawns.
 import { scene,camera,navPlugin } from './scene.js';
-import { getWalkableSpawns,getCurrentMap } from './mapManager.js';
-import { botNavPath } from './botNavigation.js';
+import { getWalkableSpawns,getCurrentMap,getMapMeta } from './mapManager.js';
+import { botNavPath,botTravelTarget } from './botNavigation.js';
+import { jumpPads } from './level.js';
 import { makeScaledWeaponModel,WDEFS } from './weapons.js';
 import { registerArenaTarget,unregisterArenaTarget,rebuildMeshMap } from './enemies.js';
 const B=window.BABYLON;
@@ -109,6 +110,8 @@ export function createArenaActor(persona,team,spawn,index){
   score:0,kills:0,deaths:0,cooldown:.8+index*.13,reload:0,ammo:0,
   respawnIn:0,targetId:null,reaction:0,walkClock:0,pathCursor:null,
   pathPoints:null,walkPhase:0,recoil:0,
+  _floorY:spawn.y,_hopY:0,_yVel:0,_padCooldown:0,_navTransition:null,
+  _navRepath:0,_navTarget:null,_onPlatform:null,_lastPlatformPos:null,
   limbs:{arms:group.getChildMeshes().filter(m=>m.name.startsWith('arena_arm_')),
     legs:group.getChildMeshes().filter(m=>m.name.startsWith('arena_leg_'))}};
  setArenaActorWeapon(actor,persona.loadout?.primary||'PISTOL');
@@ -128,6 +131,9 @@ export function killArenaActor(actor){
 export function respawnArenaActor(actor,spawn){
  if(!valid(spawn))return false;
  actor.group.position.copyFrom(spawn);actor.group.setEnabled(true);
+ actor._floorY=spawn.y;actor._hopY=0;actor._yVel=0;
+ actor._padCooldown=0;actor._navTransition=null;actor._navRepath=0;
+ actor._navTarget=null;actor._onPlatform=null;actor._lastPlatformPos=null;
  actor.hp=actor.maxHp;actor.alive=true;
  actor.cooldown=.75;actor.reload=0;actor.respawnIn=0;actor.targetId=null;
  // setArenaActorWeapon is intentionally a no-op when the model already holds
@@ -212,6 +218,37 @@ export function updateArenaActors(actors,dt,mode,
   // The final elimination may dispose the actor meshes from onShot.
   if(!isMatchActive())break;
   if(!a.alive){a.respawnIn-=dt;if(a.respawnIn<=0)onRespawn?.(a);continue}
+  // Carry a rider by the same moving-platform transform as Survival bots.
+  if(a._onPlatform){
+   const now=a._onPlatform.position;
+   const delta=now.subtract(a._lastPlatformPos||now);
+   a.group.position.addInPlace(delta);
+   a._floorY+=delta.y;
+   a._lastPlatformPos=now.clone();
+  }
+  // Ballistic pad launches honor each map's gravity and preserve the floor
+  // the actor actually launched from until landing on Recast geometry.
+  if(a._hopY>0||a._yVel>0){
+   a._yVel-=35*(getMapMeta(getCurrentMap())?.gravityMult||1)*dt;
+   a._hopY+=a._yVel*dt;
+   const air=new B.Vector3((a._airVX||0)*dt,0,(a._airVZ||0)*dt);
+   if(air.lengthSquared()>0){
+    const dir=air.normalize();
+    const collision=scene.pickWithRay(new B.Ray(
+      a.group.position.add(new B.Vector3(0,1.2,0)),dir,air.length()+.5),
+      m=>m.isEnabled()&&m.checkCollisions&&!m.metadata?.arenaActorId&&!m.metadata?.enemy);
+    if(!collision?.hit){
+     a.group.position.x+=air.x;a.group.position.z+=air.z;
+    }
+   }
+   if(a._hopY<=0){
+    a._hopY=0;a._yVel=0;a._airVX=0;a._airVZ=0;
+    let landing=null;
+    try{landing=navPlugin.getClosestPoint(a.group.position)}catch{}
+    if(landing&&valid(landing)&&Math.abs(landing.y-a._floorY)<9)a._floorY=landing.y;
+   }
+   a.group.position.y=a._floorY+a._hopY;
+  }
   a.cooldown=Math.max(0,a.cooldown-dt);
   a.recoil=Math.max(0,(a.recoil||0)-dt*4);
   if(a.gunModel)a.gunModel.position.z=.38-(a.recoil||0)*.15;
@@ -252,12 +289,18 @@ export function updateArenaActors(actors,dt,mode,
   if(flat>.01)a.group.rotation.y=Math.atan2(dx,dz);
   const preferred=target.objective?1.1:a.weapon==='KNIFE'?1.7:(a.persona.preferredRange||14);
   const near=flat<preferred*.65,far=flat>preferred*1.15;
+  // Recast alone cannot route via jump pads or lifts; request an explicit
+  // transition destination only when static geometry cannot connect floors.
+  let transitionTarget=null;
+  const targetFeet=new B.Vector3(targetPos.x,
+    targetPos.y-(target.objective?.65:1.55),targetPos.z);
+  try{transitionTarget=botTravelTarget(a,targetFeet,navPlugin,jumpPads,
+    window._movingPlatforms||[],dt)}catch{}
+  const travelTarget=transitionTarget||targetFeet;
   a.walkClock-=dt;
   if(a.walkClock<=0||!a.pathCursor){
-   const feet=new B.Vector3(own.x,own.y,own.z);
-   const targetFeet=new B.Vector3(targetPos.x,
-     targetPos.y-(target.objective?.65:1.55),targetPos.z);
-   let route=null;try{route=botNavPath(navPlugin,feet,targetFeet)}catch{}
+   const feet=new B.Vector3(own.x,a._floorY,own.z);
+   let route=null;try{route=travelTarget&&botNavPath(navPlugin,feet,travelTarget)}catch{}
    // Persist all returned Recast waypoints; a single [1] target can cause
    // looping at ramp bends and never advance to upper-floor corridors.
    a.pathPoints=route?.points?.slice(1)||[];
@@ -265,7 +308,8 @@ export function updateArenaActors(actors,dt,mode,
      B.Vector3.Distance(p,own)>.65)||null;
    a.walkClock=.4+Math.random()*.25;
   }
-  if(near||far||!target.visible||(!target.objective&&flat>1.5)){
+  if(!a._onPlatform&&a._hopY<=0&&
+     (near||far||!target.visible||(!target.objective&&flat>1.5))){
    if(a.pathCursor&&B.Vector3.Distance(a.pathCursor,own)<.85){
     a.pathPoints?.shift();
     a.pathCursor=a.pathPoints?.[0]||null;
@@ -295,6 +339,18 @@ export function updateArenaActors(actors,dt,mode,
        if(Math.abs(nextY-own.y)<1.15)own.set(snapped.x,nextY,snapped.z);
       }
      }
+    }
+   }
+  }
+  // Walking onto an active jump pad triggers real ballistic travel.
+  if(a._hopY<=0&&!a._onPlatform&&(a._padCooldown||0)<=0){
+   for(const pad of jumpPads){
+    if(Math.hypot(own.x-pad.pos.x,own.z-pad.pos.z)<1.5&&
+       Math.abs(a._floorY-pad.pos.y)<1.5){
+      a._yVel=pad.force;a._hopY=.01;a._airVX=pad.thrustX||0;
+      a._airVZ=pad.thrustZ||0;a._padCooldown=2;
+      a._navTransition=null;a._navRepath=0;a.pathCursor=null;
+      break;
     }
    }
   }
