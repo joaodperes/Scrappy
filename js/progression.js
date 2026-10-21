@@ -2845,7 +2845,7 @@ export function emitEvent(eventName, payload) {
       const {
         botType, weaponKey, isJumping = false, isScoped = false,
         isHeadshot = false, isExplosiveKill = false,
-        source = 'PLAYER', killMethod = null, xpMult = 1
+        source = 'PLAYER', killMethod = null, arenaMode = null, xpMult = 1
       } = payload;
 
       _bump(s, 'totalKills');
@@ -2856,6 +2856,15 @@ export function emitEvent(eventName, payload) {
         ?killMethod:(source!=='PLAYER'?source:(isExplosiveKill?'EXPLOSION':'DIRECT'));
       _bumpPerMap(s,'killsByMethod',method,mapId);
       if(weaponKey)_bumpPerMap(s,'killsByWeaponMethod',`${weaponKey}_${method}`,mapId);
+      if(source==='ARENA'&&['ffa','tdm','gunGame','killConfirmed'].includes(arenaMode)){
+        _bump(s,'arenaKills');
+        _bumpPerMap(s,'arenaKillsByMode',arenaMode,mapId);
+        if(weaponKey){
+          _bumpPerMap(s,'arenaKillsWith',arenaMode+'_'+weaponKey,mapId);
+          _bumpPerMap(s,'arenaKillsByWeaponMethod',
+            arenaMode+'_'+weaponKey+'_'+method,mapId);
+        }
+      }
 
       if (botType === 'pvp') s.pvpKills = (s.pvpKills || 0) + 1;
       else {
@@ -3415,13 +3424,17 @@ export function getLevelProgress(){
 // ── Generic Stat Resolvers ─────────────────────────────────────
 // Determines which condition takes precedence if multiple exist
 const STAT_PRIORITY = [
-  'weaponLevel', 'allChallenges', 'maxCombo', 'pvp', 'killMethod', 'explosive', 
+  'arenaMode', 'weaponLevel', 'allChallenges', 'maxCombo', 'pvp', 'killMethod', 'explosive', 
   'withAttachment', 'targetType', 'map', 'boss', 'playerState',
   'multiKill', 'isHeadshot', 'fullyEquipped', 'bareWeapon'
 ];
 
 // Maps a specific condition to its legacy location in profile.stats
 const STAT_RESOLVERS = {
+  arenaMode: (c,s) => c.weapon
+    ?Number((c.killMethod?s.arenaKillsByWeaponMethod?.[c.arenaMode+'_'+c.weapon+'_'+c.killMethod]:
+      s.arenaKillsWith?.[c.arenaMode+'_'+c.weapon])||0)
+    :Number(s.arenaKillsByMode?.[c.arenaMode]||0),
   weaponLevel:    (c) => getWeaponLevel(c.weapon),
   allChallenges:  (c) => _allWeaponChallengesComplete(c.weapon) ? 1 : 0,
   maxCombo:       (c, s) => s.maxKillCombo,
