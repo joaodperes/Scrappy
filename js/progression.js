@@ -3300,8 +3300,10 @@ export function getSpeedMult(wName) {
   return mult;
 }
 
-export function getEffectiveStats(wName, baseDefs) {
-  const lo = getLoadout(wName); 
+// Shared attachment calculation for human loadouts and offline bot personas.
+// Bot calls supply a separate attachment map, never the player's equipment.
+export function getEffectiveStatsForLoadout(wName, baseDefs, attachments={}) {
+  const lo = {attachments:attachments||{}};
   const out = { ...baseDefs };
   
   for (const [, id] of Object.entries(lo.attachments)) {
@@ -3364,6 +3366,9 @@ export function getEffectiveStats(wName, baseDefs) {
     out.dmg = Math.round(out.dmg * rampFactor);
   }
   return out;
+}
+export function getEffectiveStats(wName,baseDefs){
+  return getEffectiveStatsForLoadout(wName,baseDefs,getLoadout(wName).attachments);
 }
 
 export function getAdsFov(wName) {
