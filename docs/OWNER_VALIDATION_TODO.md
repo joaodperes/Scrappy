@@ -15,6 +15,8 @@ Node WebSocket service. FFA/TDM are *bot practice*, not full team AI yet.
 - [ ] **Local arena loadout:** select local Primary/Secondary weapons without an online room; saved pair persists into FFA/TDM Practice and Kill Confirmed, while Gun Game always overrides with its weapon ladder.
 - [ ] **Local match death/respawn:** after a death, there is a five-second respawn with HP reset and no wave counter reset; if score/time goal ends the match, a single result screen appears.
 - [ ] **Local menu/cleanup:** quit through Pause and return to Menu; retry different local mode/map; no leftover dog tags, HUD overlays, bot entities, duplicate score events or orphaned timers.
+- [ ] **Survival Gear:** Loadout → SURVIVAL GEAR; earn boss-wave points, allocate Vitality/Mobility/Scavenger, equip at wave 10/20/30, unequip, and use free Reset. Verify HP, speed, ammo pickups and armor change in Survival, but never in Gun Game/FFA/TDM/Kill Confirmed.
+- [ ] **Quest separation:** local arena kills, Tesla chains and arena damage grant ordinary XP but do not advance Survival-only PvE kills/damage quests. Survival robot kills and damage still advance those objectives.
 - [ ] **Survival regression:** return to Survival after a Gun Game or Kill Confirmed match; its endless waves, standard Secondary Pistol, difficulty selection and existing quests still work.
 - [ ] **Document checks:** README and LOCAL_DEVELOPMENT instructions match the actual Babylon.js implementation and browser menus.
 
