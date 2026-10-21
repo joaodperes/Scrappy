@@ -14,6 +14,11 @@ const BABYLON=window.BABYLON;
 let active=null,hud=null,tags=[],generation=0,tagSerial=0;
 const LABELS={ffa:'FREE FOR ALL',tdm:'TEAM DEATHMATCH',gunGame:'GUN GAME',killConfirmed:'KILL CONFIRMED'};
 const isActive=()=>active&&!active.finished;
+function clearProjectiles(){
+ if(!active?.projectiles)return;
+ for(const p of active.projectiles){p.mesh?.dispose();p.mat?.dispose()}
+ active.projectiles.length=0;
+}
 function clearTags(){
  for(const tag of tags){tag.mesh.dispose();tag.mat.dispose()}
  tags=[];
@@ -83,7 +88,7 @@ export function startLocalArena(cfg,onFinish,onPlayerHit=()=>{}){
    scoreLimit:cfg.scoreLimit,seed:cfg.seed});
  const token=++generation;
  active={state,onFinish,onPlayerHit,actors:[],finished:false,playerDead:false,
-   lastAttacker:null,spawned:false,feed:[],burns:[]};
+   lastAttacker:null,spawned:false,feed:[],burns:[],projectiles:[]};
  equipment(cfg);
  showHud('DEPLOYING AI PLAYERS');
  fetchArenaPersonas().then(personas=>{
@@ -108,6 +113,7 @@ export function stopLocalArena(){
  generation++;
  if(hud){hud.remove();hud=null}
  clearTags();
+ clearProjectiles();
  if(active?.actors.length)destroyArenaActors(active.actors);
  active=null;
 }
@@ -289,17 +295,17 @@ function actorShoots(shooter,victim,damage,weapon,aimPoint){
  const spec=getArenaActorWeaponSpec(shooter);
  const point=aimPoint?.clone?.()||
    (victim?victim.group.position.add(new BABYLON.Vector3(0,1.35,0)):camera.position.clone());
- const impact=()=>{
+ const impact=(impactPoint=point)=>{
   if(!isActive())return;
   if(spec.splash>0){
-   arenaExplosion(shooter,point,damage,weapon,spec.splash);
+   arenaExplosion(shooter,impactPoint,damage,weapon,spec.splash);
    return;
   }
   // Dodgeable slow bolts: do not teleport damage to a target that has moved
   // far from the impact line while a projectile was in flight.
   const current=victim?.group.position.add(new BABYLON.Vector3(0,1.35,0))||
     camera.position.clone();
-  if(!spec.hitscan&&BABYLON.Vector3.Distance(current,point)>1.6)return;
+  if(!spec.hitscan&&BABYLON.Vector3.Distance(current,impactPoint)>1.6)return;
   botImpact(shooter,victim,damage,weapon);
   if(!isActive())return;
   if(weapon==='FLAMETHROWER')addBotBurn(shooter,victim,spec);
@@ -338,11 +344,46 @@ function actorShoots(shooter,victim,damage,weapon,aimPoint){
  };
  if(spec.hitscan!==false||spec.melee)impact();
  else{
+  // Move a visible projectile through the arena frame loop. Resolve world
+  // collision before damage so ramps and cover block non-explosive fire.
   const from=shooter.group.position.add(new BABYLON.Vector3(0,1.45,0));
-  const dist=BABYLON.Vector3.Distance(from,point);
-  const speed=Math.max(8,spec.speed||spec.projSpeed||35);
-  const token=generation;
-  setTimeout(()=>{if(generation===token)impact()},Math.min(1100,Math.max(25,dist/speed*1000)));
+  const delta=point.subtract(from),dist=delta.length();
+  if(dist<.1)return;
+  const mesh=BABYLON.MeshBuilder.CreateSphere('arena_projectile_'+weapon,
+    {diameter:weapon==='ROCKET'?.2:.14,segments:6},scene);
+  mesh.position.copyFrom(from);mesh.isPickable=false;mesh.checkCollisions=false;
+  const mat=new BABYLON.StandardMaterial('arena_projectile_mat',scene);
+  mat.emissiveColor=weapon==='ROCKET'||weapon==='GLAUNCHER'
+    ?new BABYLON.Color3(1,.45,.13):new BABYLON.Color3(.3,.7,1);
+  mat.disableLighting=true;mesh.material=mat;
+  active.projectiles.push({mesh,mat,direction:delta.scale(1/dist),distance:dist,
+    travelled:0,speed:Math.max(8,spec.speed||spec.projSpeed||35),
+    splash:(spec.splash||0)>0,impact});
+ }
+}
+function updateArenaProjectiles(dt){
+ if(!isActive())return;
+ for(let i=active.projectiles.length-1;i>=0;i--){
+  if(!isActive())return;
+  const p=active.projectiles[i];
+  if(!p.mesh||p.mesh.isDisposed?.()){active.projectiles.splice(i,1);continue}
+  const step=Math.min(p.speed*dt,p.distance-p.travelled);
+  const start=p.mesh.position.clone();
+  let blocked=null;
+  try{blocked=scene.pickWithRay(new BABYLON.Ray(start,p.direction,
+    step+.02),m=>m.isEnabled()&&m.checkCollisions&&
+    !m.metadata?.arenaActorId&&!m.metadata?.enemy)}catch{}
+  const terminal=p.travelled+step>=p.distance-.001;
+  const hit=blocked?.hit&&blocked.distance<=step+.02;
+  const end=hit&&blocked.pickedPoint?blocked.pickedPoint:
+    start.add(p.direction.scale(step));
+  p.mesh.position.copyFrom(end);
+  p.travelled+=step;
+  if(hit||terminal){
+   active.projectiles.splice(i,1);
+   p.mesh.dispose();p.mat.dispose();
+   if(!hit||p.splash)p.impact(end);
+  }
  }
 }
 // Status damage uses the same source/weapon metadata as direct hits. This
@@ -439,6 +480,8 @@ export function updateLocalArena(dt){
      }
    },
  });
+ updateArenaProjectiles(dt);
+ if(!isActive())return;
  updateArenaStatusDamage(dt);
  if(!isActive())return;
  updateArenaBotBurns(dt);
