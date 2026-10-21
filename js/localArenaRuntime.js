@@ -379,7 +379,8 @@ function actorShoots(shooter,victim,damage,weapon,aimPoint){
   active.projectiles.push({mesh,mat,direction:delta.scale(1/dist),distance:dist,
     travelled:0,speed:Math.max(8,spec.speed||spec.projSpeed||35),
     splash:(spec.splash||0)>0,impact,lob,velocity,gravity,fuse:3.2,
-    bounces:lob?1:0,ricochets:weapon==='RIVETER'?Math.max(0,spec.bounces||0):0});
+    bounces:lob?1:0,flightTime:lob?flight:0,
+    ricochets:weapon==='RIVETER'?Math.max(0,spec.bounces||0):0});
  }
 }
 function updateArenaProjectiles(dt){
@@ -406,6 +407,7 @@ function updateArenaProjectiles(dt){
    const end=hit&&blocked.pickedPoint?blocked.pickedPoint:start.add(movement);
    p.mesh.position.copyFrom(end);
    p.fuse-=dt;
+   p.flightTime-=dt;
    if(hit&&p.bounces>0){
     // One physically reflected ricochet for the grenade; missing contact
     // normals fail safely to an immediate explosion.
@@ -422,7 +424,7 @@ function updateArenaProjectiles(dt){
      }
     }
    }
-   if(hit||p.fuse<=0){
+   if(hit||p.fuse<=0||p.flightTime<=0){
     active.projectiles.splice(i,1);
     p.mesh.dispose();p.mat.dispose();
     p.impact(end);
