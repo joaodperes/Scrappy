@@ -169,7 +169,7 @@ export function localArenaActorHit(actor,dmg,source='PLAYER',weaponOverride=null
  if(!isActive()||!actor?.alive||!Number.isFinite(dmg)||dmg<=0||
     !HUMAN_DAMAGE_SOURCES.has(source))return;
  // Gun Game's ladder cannot be bypassed by another equipped firearm.
- const credit=resolveKillAttribution(curWep,source);
+ const credit=resolveKillAttribution(curWep,source,weaponOverride,isExplosive);
  if(active.state.mode==='gunGame'&&credit.weaponKey!==active.state.gunOrder[active.state.gunIndex])return;
  if(['tdm','killConfirmed'].includes(active.state.mode)&&actor.team==='RED')return;
  const dealt=Math.min(actor.hp,Math.min(500,dmg));
