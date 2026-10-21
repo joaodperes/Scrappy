@@ -3,7 +3,7 @@
 **Scope revision:** this PR is now **offline-first**. The owner explicitly
 postponed human multiplayer, network co-op and networked-bot features until
 a separate later PR. The local game modes below must work without running a
-Node WebSocket service. FFA/TDM are *bot practice*, not full team AI yet.
+Node WebSocket service. Local FFA/TDM now include player-shaped bot factions and bot-versus-bot combat; full visual, combat and navigation correctness still requires owner browser QA.
 
 ## Offline player-like AI matches — updated acceptance checks
 
