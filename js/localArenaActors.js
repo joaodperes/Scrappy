@@ -22,6 +22,7 @@ export const FALLBACK_PERSONAS=[
  {id:'rocketeer',name:'Rocketeer',aggression:.48,aim:.56,reactionMs:560,preferredRange:27,skin:'oni',loadout:{primary:'ROCKET',secondary:'PISTOL'}},
  {id:'arclight',name:'Arclight',aggression:.69,aim:.63,reactionMs:490,preferredRange:18,skin:'ghost',loadout:{primary:'TESLA',secondary:'PISTOL'}},
  {id:'artillerist',name:'Artillerist',aggression:.43,aim:.59,reactionMs:610,preferredRange:29,skin:'forest',loadout:{primary:'GLAUNCHER',secondary:'PISTOL'}},
+ {id:'incinerator',name:'Incinerator',aggression:.72,aim:.53,reactionMs:420,preferredRange:13,skin:'oni',loadout:{primary:'FLAMETHROWER',secondary:'PISTOL'}},
 ];
 export async function fetchArenaPersonas(){
  try{
