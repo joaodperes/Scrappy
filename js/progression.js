@@ -2706,6 +2706,8 @@ export function ensureDisplayName() {
 }
 
 let _cloudDirty = false;
+let _cloudRevision = 0;
+let _cloudFlushPromise = Promise.resolve();
 
 export function getQuestBoard(date=new Date()){
   const state=ensureQuestState(profile,date);
@@ -2725,13 +2727,24 @@ export function claimProfileQuest(id,date=new Date()){
 
 export function saveProfile() {
   _saveToLocalStorage();
+  _cloudRevision++;
   _cloudDirty = true;
 }
 
 export async function flushProfileToCloud() {
-  if (!_cloudDirty) return;
-  const ok = await _saveToFirestore();
-  if (ok) _cloudDirty = false;
+  // Serialize local writes. Otherwise an older in-flight save could finish
+  // after a newer one and overwrite it in the same Firestore document.
+  const task=_cloudFlushPromise.catch(()=>{}).then(async()=>{
+    if(!_cloudDirty)return;
+    const revision=_cloudRevision,uid=profile.firebaseUid;
+    const ok=await _saveToFirestore();
+    // A save occurring while this request was in flight still needs a flush.
+    // Never clear a new account's dirty bit on an old account's response.
+    if(ok&&revision===_cloudRevision&&uid===profile.firebaseUid)
+      _cloudDirty=false;
+  });
+  _cloudFlushPromise=task;
+  return task;
 }
 
 function _migrateOldWeaponSkins() {
