@@ -35,6 +35,7 @@ export const cb = {
   onRobotDestroyed: null, // optional offline arena kill event
   onArenaActorHit: null, // distinct player-model target damage handler
   getDamageableActors: null, // shared projectile/explosion targets
+  canUseMelee: null, // disabled in early Gun Game rungs and network mode
   hurtPlayer:  null,
   markHudDirty: null,
   endGame: null,
