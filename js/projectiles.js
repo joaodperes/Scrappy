@@ -482,14 +482,14 @@ export function updateProjs(dt) {
     }
 
     let hitEnemy = false;
-    for (const e of enemies) {
+    for (const e of (cb.getDamageableActors?.()||enemies)) {
         if (!e.alive) continue;
         const bodyCy = e.group.position.y + (e.flyH > 0 ? 0.5 : 1.0);
         const ep = new BABYLON.Vector3(e.group.position.x, bodyCy, e.group.position.z);
         if (BABYLON.Vector3.Distance(p.mesh.position, ep) < 0.8) {
             
             // Apply Scaled Impact Damage
-            cb.hitRobot?.(e, p.dmg * impactMult);
+            cb.hitRobot?.(e,p.dmg*impactMult,false,false,'FLAMETHROWER','FLAMETHROWER');
             
             // Apply Scaled Burn DOT
             if (!e._flameDotted) {
@@ -525,7 +525,7 @@ export function updateProjs(dt) {
     p.tickTimer -= dt;
     if (p.tickTimer <= 0) {
         p.tickTimer = 0.3; // Damage ticks every 300ms
-        for (const e of enemies) {
+        for (const e of (cb.getDamageableActors?.()||enemies)) {
             if (!e.alive) continue;
             if (BABYLON.Vector3.Distance(p.mesh.position, e.group.position) < 1.8) {
                 cb.hitRobot?.(e, p.damage, false, false, 'FLAMETHROWER');
@@ -561,7 +561,7 @@ export function updateProjs(dt) {
       // 2. MAGNETIC HOMING
       if (p.isMagnetic) {
           let closest = null, minDist = 2.0; 
-          for (const e of enemies) {
+          for (const e of (cb.getDamageableActors?.()||enemies)) {
               if (!e.alive) continue;
               const bodyCenter = e.group.position.clone();
               bodyCenter.y += (e.flyH > 0 ? 0.5 : 1.0);
@@ -605,7 +605,7 @@ export function updateProjs(dt) {
 
       // 4. ENEMY HIT LOGIC
       if (!destroyed) {
-          for (const e of enemies) {
+          for (const e of (cb.getDamageableActors?.()||enemies)) {
               if (!e.alive) continue;
               const bodyCenter = e.group.position.clone();
               bodyCenter.y += (e.flyH > 0 ? 0.5 : 1.0);
@@ -616,7 +616,7 @@ export function updateProjs(dt) {
                       e._dots.push({ dmg: 15, remaining: 4.0 }); 
                       spawnSparks(bodyCenter, 0xff4400, 10);
                   } else {
-                      cb.hitRobot(e, p.dmg);
+                      cb.hitRobot(e,p.dmg,false,false,'PLAYER','RIVET');
                   }
                   destroyed = true; 
                   break; 
