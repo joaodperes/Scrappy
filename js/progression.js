@@ -2729,7 +2729,7 @@ function _scheduleCloudSync(){
  _cloudSyncTimer=setTimeout(()=>{
   _cloudSyncTimer=null;
   void flushProfileToCloud();
- },12000);
+ },20000);
 }
 
 export function checkFirstTimePickup(wName) {
