@@ -42,7 +42,7 @@ export function fireRocket(effSpeed, effSplash, spread = 0) {
   const light = new BABYLON.PointLight('rLight', pos.clone(), scene);
   light.diffuse = new BABYLON.Color3(1, .4, 0); light.intensity = 2.2; light.range = 8;
 
-  projs.push({ g, light, dir: fwd.clone(), speed: effSpeed || WDEFS.ROCKET.speed, life: 6, dmg: WDEFS.ROCKET.dmg, splash: effSplash ?? WDEFS.ROCKET.splash, owner:'player', type:'rocket' });
+  projs.push({ g, light, dir: fwd.clone(), speed: effSpeed || WDEFS.ROCKET.speed, life: 6, dmg: WDEFS.ROCKET.dmg, splash: effSplash ?? WDEFS.ROCKET.splash, owner:'player', type:'rocket', weaponKey:'ROCKET' });
 }
 
 export function firePlasma(modDmg, projSpeed) {
@@ -64,7 +64,7 @@ export function firePlasma(modDmg, projSpeed) {
   light.diffuse = new BABYLON.Color3(.27, .53, 1); light.intensity = 2.0; light.range = 7;
   
   const dmg = modDmg || WDEFS.PLASMA.dmg;
-  projs.push({ g:null, mesh, light, dir: fwd.clone(), speed: projSpeed || WDEFS.PLASMA.speed || 40, life: 4, dmg: dmg, splash:0, owner:'player', type:'player_plasma' });
+  projs.push({ g:null, mesh, light, dir: fwd.clone(), speed: projSpeed || WDEFS.PLASMA.speed || 40, life: 4, dmg: dmg, splash:0, owner:'player', type:'player_plasma', weaponKey:'PLASMA' });
 }
 
 // ── Enemy shots ───────────────────────────────────────────────
@@ -89,7 +89,7 @@ export function fireEnemyShot(e, dir, dmg, speed, type, customStartPos = null) {
 }
 
 // ── Explosion ─────────────────────────────────────────────────
-export async function boom(pos, splashR, baseDmg, hurtBots) {
+export async function boom(pos, splashR, baseDmg, hurtBots, weaponKey=null) {
   sfx.explosion();
   import('./progression.js').then(({ recordBarrelDestroyed }) => recordBarrelDestroyed());
   const flash = BABYLON.MeshBuilder.CreateSphere('flash', { diameter: splashR*.7*2, segments:10 }, scene);
@@ -131,10 +131,11 @@ export async function boom(pos, splashR, baseDmg, hurtBots) {
       }
   }
   if (hurtBots) {
-    for (const e of enemies) {
+    for (const e of (cb.getDamageableActors?.()||enemies)) {
       if (!e.alive) continue;
       const d = BABYLON.Vector3.Distance(e.group.position, pos);
-      if (d < splashR) cb.hitRobot && cb.hitRobot(e, baseDmg * (1 - d/splashR),false, true); // isHeadshot, isExplosive
+      if (d < splashR) cb.hitRobot?.(e,baseDmg*(1-d/splashR),false,true,
+        weaponKey==='ENVIRONMENT'?'BARREL_EXPLOSION':'PLAYER',weaponKey==='ENVIRONMENT'?null:weaponKey); // isHeadshot, isExplosive
     }
   }
   const dp = BABYLON.Vector3.Distance(camera.position, pos);
@@ -654,7 +655,7 @@ export function updateProjs(dt) {
       }
     }
     if(p.owner==='player' && (p.type==='rocket'||p.type==='player_plasma')){
-      for(const e of enemies){
+      for(const e of (cb.getDamageableActors?.()||enemies)){
         if(!e.alive)continue;
         const center=e.group.position.clone();
         center.y+=e.flyH>0?0.5:1;
@@ -677,12 +678,12 @@ export function updateProjs(dt) {
       const b=earliest.barrel;
       b.alive=false;
       for(const m of b.meshes){m.setEnabled(false);m.checkCollisions=false;}
-      boom(b.pos.clone(),3.5,70,true);
+      boom(b.pos.clone(),3.5,70,true,'ENVIRONMENT');
       hit=true;
     } else if(earliest?.kind==='enemy'){
-      if(p.type==='rocket')boom(impact.clone(),p.splash,p.dmg,true);
+      if(p.type==='rocket')boom(impact.clone(),p.splash,p.dmg,true,p.weaponKey||'ROCKET');
       else{
-        cb.hitRobot?.(earliest.enemy,p.dmg);
+        cb.hitRobot?.(earliest.enemy,p.dmg,false,false,'PLAYER',p.weaponKey||'PLASMA');
         spawnSparks(impact.clone(),0x4488ff,8);
       }
       hit=true;
