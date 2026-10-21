@@ -205,93 +205,14 @@ function _mkGarden() {
   return mat;
 }
 
-// City's editable geometry (floors, walls, glass, columns, barrels, relay
-// railings) now comes exclusively from assets/maps/city.json — see the
-// "-- Level builder --" section below. The thin wrapper functions that used
-// to produce that content directly (_floor/_wall/_glass/_col/_hw/_barrel)
-// have been removed since nothing calls them anymore; only the genuinely
-// non-editable/systemic builders remain: _jp (jump pads — raw gameplay
-// data, never part of the JSON system), _zipline/_lift/_bridge (carry
-// _moveData a flat JSON prop can't represent), and _car (decorative
-// composite with its own jump pad).
-function _jp(px,floorY,pz,force=22,rotY=0) {
-  force *= 1.5; // city map is larger than the others — pads hit noticeably harder across the board
-  const y=liftY(floorY), pg=new BABYLON.TransformNode('jpGroup',scene);
-  pg.position.set(px,y,pz); pg.rotation.y=rotY;
-  const base=BABYLON.MeshBuilder.CreateCylinder('jpBase',{diameter:2.2,height:0.1,tessellation:16},scene);
-  base.position.set(0,0.05,0);
-  base.material=M.jumpPad || M.ledGreen; // same shared pad material the other maps use
-  base.parent=pg; base.isPickable=false; base.checkCollisions=false;
-  jumpPads.push({pos:new BABYLON.Vector3(px,y,pz),force,thrustX:Math.sin(rotY)*(force*0.45),thrustZ:Math.cos(rotY)*(force*0.45)});
-}
-// Zipline at walking speed (worldSpeedUPS = world units per second).
-// Kept as a direct mesh build (not routed through createSlab) — it carries
-// _moveData (movingPlatforms) that a generic JSON re-import wouldn't
-// reconstruct from a flat slab, so it stays explicitly non-editable.
-function _zipline(name,start,end,worldSpeedUPS,sw,sz) {
-  const dist=BABYLON.Vector3.Distance(start,end);
-  const tSpeed=worldSpeedUPS/dist;
-  const H=0.3, m=BABYLON.MeshBuilder.CreateBox(name,{width:sw,height:H,depth:sz},scene);
-  m.position.set(start.x,start.y-H/2,start.z);
-  const mat=new BABYLON.StandardMaterial(name+'_mat',scene);
-  mat.diffuseColor=new BABYLON.Color3(0.22,0.52,0.92);
-  mat.emissiveColor=new BABYLON.Color3(0.04,0.12,0.28);
-  m.material=mat; m.checkCollisions=true; m.isPickable=false;
-  m.metadata={editable:false,type:'zipline'};
-  m._moveData={start:start.clone(),end:end.clone(),speed:tSpeed,t:0,dir:1,waitTimer:0,waitTime:1.5,paused:false};
-  movingPlatforms.push(m); walkableMeshes.push(m);
-  // Cable
-  const mid=BABYLON.Vector3.Lerp(start,end,0.5);
-  const cable=BABYLON.MeshBuilder.CreateCylinder(name+'_cab',{diameter:0.07,height:dist,tessellation:5},scene);
-  cable.position.copyFrom(mid);
-  const axis=end.subtract(start).normalize();
-  const dot=BABYLON.Vector3.Dot(axis,BABYLON.Axis.Y);
-  if(Math.abs(dot)<0.999){
-    const rot=BABYLON.Vector3.Cross(BABYLON.Axis.Y,axis);
-    cable.rotationQuaternion=BABYLON.Quaternion.RotationAxis(rot.normalize(),Math.acos(dot));
-  }
-  const cmat=new BABYLON.StandardMaterial(name+'_cmat',scene);
-  cmat.diffuseColor=new BABYLON.Color3(0.24,0.28,0.35);
-  cmat.emissiveColor=new BABYLON.Color3(0.03,0.05,0.08);
-  cable.material=cmat; cable.isPickable=false;
-  return m;
-}
-
-// Shared helper: rotate a mesh (already positioned) so its local Z axis
-// points along `dir`, WITHOUT rolling it sideways. A single minimal
-// rotation (rotate Z toward dir around their cross product) is fine when
-// dir only tilts in one vertical plane — e.g. the bridges, which just rise
-// or fall along their span — but it does NOT keep "width" level for a
-// genuinely 3D diagonal like the fire-escape flights (which move sideways,
-// outward, AND up all at once); it twists the whole box into the slope.
-// This builds an explicit right/up/forward frame instead — right is always
-// horizontal (perpendicular to world-up and to the travel direction), up
-// tilts ONLY in the vertical plane containing the travel direction — then
-// converts that frame to a quaternion with the standard rotation-matrix
-// formula (right/up/forward as the matrix's three columns).
-function _alignToDir(mesh, dir) {
-  const forward = dir.normalize();
-  let right = BABYLON.Vector3.Cross(BABYLON.Axis.Y, forward);
-  if (right.lengthSquared() < 1e-6) right = BABYLON.Vector3.Cross(BABYLON.Axis.Z, forward);
-  right.normalize();
-  const up = BABYLON.Vector3.Cross(forward, right).normalize();
-  const trace = right.x + up.y + forward.z;
-  let qx,qy,qz,qw;
-  if (trace > 0) {
-    const s = Math.sqrt(trace+1.0)*2;
-    qw = 0.25*s; qx = (up.z-forward.y)/s; qy = (forward.x-right.z)/s; qz = (right.y-up.x)/s;
-  } else if (right.x > up.y && right.x > forward.z) {
-    const s = Math.sqrt(1.0+right.x-up.y-forward.z)*2;
-    qw = (up.z-forward.y)/s; qx = 0.25*s; qy = (up.x+right.y)/s; qz = (forward.x+right.z)/s;
-  } else if (up.y > forward.z) {
-    const s = Math.sqrt(1.0+up.y-right.x-forward.z)*2;
-    qw = (forward.x-right.z)/s; qx = (up.x+right.y)/s; qy = 0.25*s; qz = (forward.y+up.z)/s;
-  } else {
-    const s = Math.sqrt(1.0+forward.z-right.x-up.y)*2;
-    qw = (right.y-up.x)/s; qx = (forward.x+right.z)/s; qy = (forward.y+up.z)/s; qz = 0.25*s;
-  }
-  mesh.rotationQuaternion = new BABYLON.Quaternion(qx,qy,qz,qw);
-}
+// City static geometry, 13 cable routes, 17 rooftop lifts and 8 bridges now
+// load from city.json through the shared editable entity factories.
+// Remaining procedural content: decorative cars with their roof jump pads,
+// rooftop/relay pads, city lighting and minor environmental dressing.
+// All City jump pads, including car roofs and rooftop relays, are
+// authored in city.json using createCarWreck/createJumpPad.
+// Ziplines are now data-driven createZipline entities in city.json.
+// Bridge orientation and its selectable rails are handled by createSkybridge.
 
 // -- Building lighting ---------------------------------------------
 // _building() used to generate an entire building's walls, glass panels,
@@ -313,129 +234,11 @@ function _buildingLight(cx, cz, topSurfY, roofType, label) {
   }
 }
 
-// -- Rooftop lift: a flat car riding straight up a shaft, ground -> roof --
-// Bolted to one wall face, standing LIFT_STAND off the wall. Uses the exact
-// same moving-platform mechanism as the ziplines (movingPlatforms + main.js
-// already carries the player along anything in that array) — the car just
-// moves on Y instead of across a horizontal span. Static landings at both
-// ends mean there's always solid ground to wait on even when the car itself
-// is parked at the other end. faceOffset shifts the shaft along the wall —
-// only needed for hub building E, whose every face already carries a
-// bridge deck.
-function _lift(cx, cz, topSurfY, face, faceOffset=0) {
-  const HALF = 10; // matches every building's 20x20 footprint (BW=BD=20 in _building)
-  const alongX = (face==='N' || face==='S');
-  const wall    = alongX ? (cz + (face==='N'?-HALF:HALF)) : (cx + (face==='E'?HALF:-HALF));
-  const outSign = (face==='N' || face==='W') ? -1 : 1; // points away from the building
-  const anchor  = (alongX ? cx : cz) + faceOffset;
-  const out     = wall + outSign*LIFT_STAND;
-  const shaftX  = alongX ? anchor : out;
-  const shaftZ  = alongX ? out    : anchor;
-  const half    = LIFT_W/2;
+// Rooftop lifts are serialized createRooftopLift entities in city.json.
 
-  // Static landing floor at the bottom is now part of assets/maps/city.json
-  // (a plain LIFT_W×LIFT_W slab, same as any other editable floor patch) —
-  // everything below this point is the actual moving mechanism, which has
-  // no equivalent in the JSON system (it carries _moveData/collision state
-  // a flat prop can't represent).
+// Skybridge geometry now loads from city.json as createSkybridge composites.
 
-  // Corner support poles, ground to roof — purely cosmetic shaft framing.
-  const poleH = topSurfY + 1.2;
-  [[-half,-half],[half,-half],[-half,half],[half,half]].forEach(([dx,dz])=>{
-    const pole = BABYLON.MeshBuilder.CreateCylinder('liftPole',{diameter:0.16,height:poleH},scene);
-    pole.position.set(shaftX+dx, poleH/2, shaftZ+dz);
-    pole.material=_STEEL; pole.isPickable=false;
-  });
-
-  // The moving car itself — carries _moveData, stays non-editable.
-  const H = 0.3;
-  const plat = BABYLON.MeshBuilder.CreateBox('liftPlat',{width:LIFT_W,height:H,depth:LIFT_W},scene);
-  plat.position.set(shaftX, -H/2, shaftZ);
-  plat.material=_STEEL; plat.checkCollisions=true; plat.isPickable=false;
-  plat.metadata={editable:false,type:'lift'};
-  walkableMeshes.push(plat);
-
-  // Low rim rail, parented so it rides with the car automatically.
-  [-1,1].forEach(s=>{
-    const rail = BABYLON.MeshBuilder.CreateBox('liftRail',
-      {width: alongX?LIFT_W:0.15, height:1.0, depth: alongX?0.15:LIFT_W}, scene);
-    rail.position.set(alongX?0:s*half, 0.5+H/2, alongX?s*half:0);
-    rail.material=_STEEL; rail.isPickable=false; rail.parent=plat;
-  });
-
-  plat._moveData = {
-    start: new BABYLON.Vector3(shaftX, -H/2, shaftZ),
-    end:   new BABYLON.Vector3(shaftX, topSurfY-H/2, shaftZ),
-    speed: LIFT_SPEED/topSurfY, t:0, dir:1, waitTimer:0, waitTime:LIFT_WAIT, paused:false,
-  };
-  movingPlatforms.push(plat);
-}
-
-// Sky bridge between two rooftops. y1/y2 are each building's own topSurfY —
-// when they match the deck is flat (old behaviour); when they differ this
-// builds a sloped ramp instead, using the shared _alignToDir helper.
-function _bridge(cx, cz, spanAxis, spanLen, bridgeW, y1, y2) {
-  const half = spanLen/2;
-  const p1 = spanAxis==='X' ? new BABYLON.Vector3(cx-half,y1,cz) : new BABYLON.Vector3(cx,y1,cz-half);
-  const p2 = spanAxis==='X' ? new BABYLON.Vector3(cx+half,y2,cz) : new BABYLON.Vector3(cx,y2,cz+half);
-  const dist = BABYLON.Vector3.Distance(p1,p2);
-  const mid  = BABYLON.Vector3.Lerp(p1,p2,0.5);
-  const H = 0.35;
-  const dir = p2.subtract(p1).normalize();
-
-  // _alignToDir rotates local Z to `dir`; build the deck/rails with their
-  // long axis along Z (=dist) regardless of spanAxis, then align. Not
-  // routed through createSlab/createWall since the rotation is applied via
-  // rotationQuaternion (not the simple rotX/rotZ that createRamp expects).
-  const deck = BABYLON.MeshBuilder.CreateBox('bridgeDeck',{width:bridgeW,height:H,depth:dist},scene);
-  deck.position.set(mid.x, mid.y-H/2, mid.z); _alignToDir(deck,dir);
-  deck.material=_CONCRETE; deck.checkCollisions=true; deck.isPickable=false;
-  deck.metadata={editable:false,type:'bridge'};
-  walkableMeshes.push(deck);
-
-  [-1,1].forEach(side=>{
-    const rail = BABYLON.MeshBuilder.CreateBox('bridgeRail',{width:0.25,height:1.4,depth:dist},scene);
-    // Offset sideways in the deck's (pre-rotation) local X, then rotate the
-    // offset point itself by reusing the same rotation as the deck.
-    const localOff = new BABYLON.Vector3(side*(bridgeW/2),0.7-H/2,0);
-    let worldOff = localOff;
-    if (deck.rotationQuaternion) {
-      worldOff = new BABYLON.Vector3();
-      localOff.rotateByQuaternionToRef(deck.rotationQuaternion, worldOff);
-    }
-    rail.position.copyFrom(mid).addInPlace(worldOff);
-    rail.rotationQuaternion = deck.rotationQuaternion ? deck.rotationQuaternion.clone() : null;
-    rail.material=_CONCRETE; rail.checkCollisions=true; rail.isPickable=false;
-    rail.metadata={editable:false,type:'bridge_rail'};
-    walkableMeshes.push(rail);
-  });
-}
-
-// Car wreck — body/cabin still go through createWall (consistent collision
-// + walkableMeshes bookkeeping) but stay editable:false since they're
-// parented sub-meshes of a decorative composite, not standalone props.
-function _car(cx,cz,rotY=0) {
-  const g=new BABYLON.TransformNode('car',scene);
-  g.position.set(cx,0.5,cz); g.rotation.y=rotY;
-  const bmat=new BABYLON.StandardMaterial('cBM_'+Math.random().toFixed(4),scene);
-  const h=Math.random();
-  bmat.diffuseColor=new BABYLON.Color3(0.1+h*0.5,0.08+h*0.25,0.06+h*0.18);
-  bmat.specularColor=new BABYLON.Color3(0.05,0.05,0.05);
-  const body = createWall(0, 0, 0, 2, 0.9, 4.4, bmat, { editable: false });
-  body.parent=g; body.isPickable=false;
-  const cabin = createWall(0, 0.78, 0, 1.8, 0.7, 2.2, bmat, { editable: false });
-  cabin.parent=g; cabin.isPickable=false;
-  const wmat=new BABYLON.StandardMaterial('wM',scene);
-  wmat.diffuseColor=new BABYLON.Color3(0.08,0.08,0.08);
-  [[-1.1,-1.4],[-1.1,1.4],[1.1,-1.4],[1.1,1.4]].forEach(([wx,wz])=>{
-    const w=BABYLON.MeshBuilder.CreateCylinder('wh',{diameter:0.7,height:0.25,tessellation:10},scene);
-    w.rotation.z=Math.PI/2; w.parent=g; w.position.set(wx,-0.3,wz);
-    w.material=wmat; w.isPickable=false;
-  });
-  // Roof jump pad — cabin roof sits at world Y=1.63; lets players hop on/off
-  // cars for a quick street-level boost (same _jp design as every other pad).
-  _jp(cx,1.63,cz,16,rotY);
-}
+// Car wreck geometry and roof pads load as composite createCarWreck entities.
 
 // -- Level builder ---------------------------------------------
 export async function buildCityLevel(customScene = null) {
@@ -492,7 +295,7 @@ export async function buildCityLevel(customScene = null) {
   // -- Street ground ---------------------------------------------
   const street=BABYLON.MeshBuilder.CreateGround('street',{width:202,height:202},scene);
   street.position.y=-0.05; street.material=_ASPHALT;
-  street.checkCollisions=true; street.isPickable=false; walkableMeshes.push(street);
+  street.checkCollisions=true; street.isPickable=true; // Solid road blocks bullets walkableMeshes.push(street);
 
   // Pavement kerbs at all building bases
   const allBldgPos=[[-36,-36],[36,-36],[36,36],[-36,36],[0,0],[-60,0],[60,0],[0,-60],[0,60],
@@ -521,26 +324,25 @@ export async function buildCityLevel(customScene = null) {
 
   // -- Cars ------------------------------------------------------
   // Inner zone
-  _car(-14,-8,0.2);_car(14,-8,-0.1);_car(-14,8,Math.PI+0.15);_car(14,8,Math.PI-0.2);
-  _car(0,-22,Math.PI/2);_car(0,22,-Math.PI/2+0.1);
-  _car(-22,0,0.05);_car(22,0,Math.PI/6);
-  _car(-6,-16,Math.PI/4);_car(6,16,-Math.PI/3);
+
+
+
+
   // Mid zone
-  _car(-48,8,0.3);_car(48,-8,-0.25);
-  _car(-22,-50,Math.PI/2+0.1);_car(22,50,-Math.PI/2-0.1);
-  _car(-50,22,0.4);_car(50,-22,-0.35);
-  _car(0,-42,0.1);_car(0,42,-0.1);
-  _car(-42,0,Math.PI/2+0.2);_car(42,0,-Math.PI/2-0.2);
+
+
+
+
+
   // Outer zone (new)
-  _car(-68,-20,0.25);_car(68,20,-0.25);_car(-68,20,Math.PI+0.1);_car(68,-20,Math.PI-0.1);
-  _car(-20,-68,Math.PI/2+0.2);_car(20,68,-Math.PI/2-0.2);
-  _car(-20,68,Math.PI/3);_car(20,-68,-Math.PI/3);
-  _car(-90,0,Math.PI/2);_car(90,0,-Math.PI/2);
-  _car(0,-90,0.05);_car(0,90,-0.05);
-  _car(-68,-68,Math.PI/4);_car(68,68,-Math.PI/4);
-  _car(68,-68,-Math.PI/4+Math.PI);_car(-68,68,Math.PI/4+Math.PI);
-  _car(-85,-30,0.3);_car(85,30,-0.3);_car(-30,-85,Math.PI/2+0.15);_car(30,85,-Math.PI/2-0.15);
-  _car(-85,30,Math.PI-0.2);_car(85,-30,0.2);_car(30,-85,Math.PI/2-0.1);_car(-30,85,-Math.PI/2+0.1);
+
+
+
+
+
+
+
+
 
   // Jersey barriers — the material is still created/registered here since
   // city.json's Jersey-barrier wall entries reference it by the 'jersey'
@@ -557,138 +359,77 @@ export async function buildCityLevel(customScene = null) {
 
   // RING 1 BUILDINGS
   _buildingLight(-36,-36,F5_Y,'open','A');
-  _lift(-36,-36,F5_Y,'W');
-  _jp(-36,F5_Y,-36,24,Math.PI*5/4);
+
 
   _buildingLight(36,-36,F4_Y,'garden','B');
-  _lift(36,-36,F4_Y,'E');
-  _jp(36,F4_Y,-36,22,Math.PI+Math.PI/4);
+
 
   _buildingLight(36,36,F4_Y,'open','C');
-  _lift(36,36,F4_Y,'E');
-  _jp(36,F4_Y,36,22,-Math.PI/4);
+
 
   _buildingLight(-36,36,F3_Y,'garden','D');
-  _lift(-36,36,F3_Y,'W');
-  _jp(-36,F3_Y,36,22,Math.PI/4);
+
 
   _buildingLight(0,0,F2_Y,'open','E');
-  _lift(0,0,F2_Y,'S',4.5);
-  _jp(0,F2_Y,0,22,0);
+
 
   // RING 2 - wall-adjacent towers
   _buildingLight(-60,0,F3_Y,'open','F');
-  _lift(-60,0,F3_Y,'N');
-  _jp(-60,F3_Y,0,20,Math.PI/2);
+
 
   _buildingLight(60,0,F3_Y,'garden','G');
-  _lift(60,0,F3_Y,'N');
-  _jp(60,F3_Y,0,20,-Math.PI/2);
+
 
   _buildingLight(0,-60,F4_Y,'open','H');
-  _lift(0,-60,F4_Y,'E');
-  _jp(0,F4_Y,-60,22,Math.PI);
+
 
   _buildingLight(0,60,F3_Y,'garden','I');
-  _lift(0,60,F3_Y,'E');
-  _jp(0,F3_Y,60,20,0);
+
 
   // RING 3 - expanded outer buildings
   _buildingLight(-80,-80,F5_Y,'open','J');
-  _lift(-80,-80,F5_Y,'N');
-  _jp(-80,F5_Y,-80,24,Math.PI*5/4);
+
 
   _buildingLight(80,-80,F4_Y,'garden','K');
-  _lift(80,-80,F4_Y,'N');
-  _jp(80,F4_Y,-80,22,Math.PI+Math.PI/4);
+
 
   _buildingLight(80,80,F3_Y,'open','L');
-  _lift(80,80,F3_Y,'S');
-  _jp(80,F3_Y,80,20,-Math.PI/4);
+
 
   _buildingLight(-80,80,F4_Y,'garden','M');
-  _lift(-80,80,F4_Y,'S');
-  _jp(-80,F4_Y,80,22,Math.PI/4);
+
 
   _buildingLight(-80,0,F3_Y,'open','N');
-  _lift(-80,0,F3_Y,'W');
-  _jp(-80,F3_Y,0,20,Math.PI/2);
+
 
   _buildingLight(80,0,F3_Y,'garden','O');
-  _lift(80,0,F3_Y,'E');
-  _jp(80,F3_Y,0,20,-Math.PI/2);
+
 
   _buildingLight(0,-80,F4_Y,'open','P');
-  _lift(0,-80,F4_Y,'N');
-  _jp(0,F4_Y,-80,22,Math.PI);
+
 
   _buildingLight(0,80,F3_Y,'garden','Q');
-  _lift(0,80,F3_Y,'S');
-  _jp(0,F3_Y,80,20,0);
 
-  // BRIDGES — every span now runs rooftop-to-rooftop (no more mid-floor
-  // decks reachable only from removed interior stairs). y1 is the height
-  // of the building on the p1/negative-axis end, y2 the building on the
-  // p2/positive-axis end; when they differ _bridge() builds a sloped ramp
-  // instead of a flat deck.
 
-  // -- Ring1 <-> Ring2 (E's roof is lower than all 4 neighbours -> ramps)
-  _bridge(-30, 0, 'X', 40, 4, F3_Y, F2_Y);
-  _bridge(30, 0, 'X', 40, 4, F2_Y, F3_Y);
-  _bridge(0, -30, 'Z', 40, 4, F4_Y, F2_Y);
-  _bridge(0, 30, 'Z', 40, 4, F2_Y, F3_Y);
-
-  // -- Ring2 <-> Ring3 (each pair shares the same roof height -> flat decks)
-  _bridge(-70, 0, 'X', 2, 4, F3_Y, F3_Y);
-  _bridge(70, 0, 'X', 2, 4, F3_Y, F3_Y);
-  _bridge(0, -70, 'Z', 2, 4, F4_Y, F4_Y);
-  _bridge(0, 70, 'Z', 2, 4, F3_Y, F3_Y);
+  // JSON bridge entities connect rooftops; no duplicate hardcoded decks.
 
   // -- Ring3 corners <-> Ring3 mid (J,K,L,M <-> N,O,P,Q via relay pads)
   // These are aerial jump-pad hops between rooftops via a floating midpoint
   // platform, not walkable bridges — gaps are too wide (60u) for a deck/ramp.
-  // Each relay pad's floor + 4 low railing walls now come from
-  // assets/maps/city.json (createSlab/createWall respectively); only the
-  // jump pad itself stays hardcoded here.
-  const RELAY_Y = F3_Y;
-  _jp(-74,RELAY_Y,-40,18,Math.PI/2);   // J<->N relay
-  _jp(-40,RELAY_Y,-74,18,Math.PI);     // J<->P relay
-  _jp(40,RELAY_Y,-74,18,Math.PI);      // K<->P relay
-  _jp(74,RELAY_Y,-40,18,-Math.PI/2);   // K<->O relay
-  _jp(74,RELAY_Y,40,18,-Math.PI/2);    // L<->O relay
-  _jp(40,RELAY_Y,74,18,0);             // L<->Q relay
-  _jp(-40,RELAY_Y,74,18,0);            // M<->Q relay
-  _jp(-74,RELAY_Y,40,18,Math.PI/2);    // M<->N relay
+  // Relay pad floors, railings and pads all come from city.json.
 
-  // Ring1 diagonal relay pads (AH and CG nudged off the zip_HA / zip_GC cables)
-  [[-15,F3_Y,-45,'AH',-Math.PI*3/4],[18,F3_Y,-48,'BH',-Math.PI*5/4],
-   [-18,F2_Y,48,'DI',Math.PI/4],[18,F2_Y,48,'CI',-Math.PI/4],
-   [-48,F2_Y,-18,'AF',0.25],[48,F2_Y,-18,'BG',Math.PI-0.25],
-   [-48,F2_Y,18,'DF',Math.PI/5],[45,F2_Y,15,'CG',-Math.PI/5],
-  ].forEach(([px,py,pz,,rot])=>{
-    _jp(px,py,pz,18,rot);
-  });
 
-  // ZIPLINES
-  const ZS = 11.5; // world units/second — faster than before per request
 
-  // Ring1 rooftops
-  _zipline('zip_AB',new BABYLON.Vector3(-26,F5_Y+1,-36),new BABYLON.Vector3(26,F4_Y+1,-36),ZS,4,4);
-  _zipline('zip_AD',new BABYLON.Vector3(-36,F5_Y+1,-26),new BABYLON.Vector3(-36,F3_Y+1,26),ZS,4,4);
-  _zipline('zip_BC',new BABYLON.Vector3(36,F4_Y+1,-26),new BABYLON.Vector3(36,F4_Y+1,26),ZS,4,4);
-  _zipline('zip_CD',new BABYLON.Vector3(26,F4_Y+1,36),new BABYLON.Vector3(-26,F3_Y+1,36),ZS,4,4);
-  _zipline('zip_EA',new BABYLON.Vector3(-7,F2_Y+1,-7),new BABYLON.Vector3(-26,F5_Y+1,-26),ZS,3.5,3.5);
-  // Ring2 to Ring1
-  _zipline('zip_HA',new BABYLON.Vector3(-10,F4_Y+1,-60),new BABYLON.Vector3(-26,F5_Y+1,-44),ZS,3.5,3.5);
-  _zipline('zip_GC',new BABYLON.Vector3(60,F3_Y+1,10),new BABYLON.Vector3(46,F4_Y+1,26),ZS,3.5,3.5);
-  // Ring3 rooftops
-  _zipline('zip_JK',new BABYLON.Vector3(-70,F5_Y+1,-80),new BABYLON.Vector3(70,F4_Y+1,-80),ZS,4,4);
-  _zipline('zip_JM',new BABYLON.Vector3(-80,F5_Y+1,-70),new BABYLON.Vector3(-80,F4_Y+1,70),ZS,4,4);
-  _zipline('zip_KL',new BABYLON.Vector3(80,F4_Y+1,-70),new BABYLON.Vector3(80,F3_Y+1,70),ZS,4,4);
-  _zipline('zip_LM',new BABYLON.Vector3(70,F3_Y+1,80),new BABYLON.Vector3(-70,F4_Y+1,80),ZS,4,4);
-  // Ring3 to Ring2 diagonal
-  _zipline('zip_JP',new BABYLON.Vector3(-70,F5_Y+1,-80),new BABYLON.Vector3(-10,F4_Y+1,-70),ZS,3.5,3.5);
-  _zipline('zip_KP',new BABYLON.Vector3(70,F4_Y+1,-80),new BABYLON.Vector3(10,F4_Y+1,-70),ZS,3.5,3.5);
+
+
+
+
+
+
+  // Eight diagonal relay pads now load from city.json.
+
+  // Cable-car routes are authored in assets/maps/city.json and constructed
+  // by the shared createZipline generator when the JSON layout loads.
 
   // SECRET KIT - Bldg E roof (full health + full armor)
   // Registered for initSecretKits() in pickups.js
@@ -739,7 +480,7 @@ export async function buildCityLevel(customScene = null) {
 
   // JSON LAYOUT OVERRIDE (assets/maps/city.json — see levelHelpers.js)
   const override = await loadMapOverride('city');
-  if (override) applyEditableLayout(override, { hazardZones, destructibleWalls });
+  if (override) applyEditableLayout(override, { hazardZones, destructibleWalls, movingPlatforms, powerSwitches });
 
   // NAVMESH
   walkableMeshes.forEach(m=>m.computeWorldMatrix(true));

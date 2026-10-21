@@ -2,7 +2,7 @@
 const BABYLON = window.BABYLON;
 import { scene, camera } from './scene.js';
 import { M } from './textures.js';
-import { player } from './gameState.js';
+import { player, cb } from './gameState.js';
 import { hasLaserDot, isAkimbo, hasEnergyConverter, getEffectiveStats, getLoadout, getAdsLerpSpeed  } from './progression.js';
 import { isScoped } from './player.js'
 
@@ -35,6 +35,9 @@ export const WDEFS = {
   RIVETER: { name:'RIVETER', desc:'Heavy nailgun. Projectiles bounce off walls once. Excels in tight alleys.', dmg:45, range:50, cd:0.2, hitscan:false, ammo:0, aps:1, spread:.02, pellets:1, startAmmo:40, projSpeed: 45, magSize: 10, currentMag: 10, reloadTime: 2.0, bounces: 1 },
   PHALANX: { name:'PHALANX', desc:'Sonic crowd control. Low damage, massive knockback force.', dmg:15, range:25, cd:0.5, hitscan:false, ammo:0, aps:1, spread:.35, pellets:1, startAmmo:30, magSize: 6, currentMag: 6, reloadTime: 2.5 },
   AEGIS: { name:'AEGIS', desc:'Smart pistol. Aim down sights to paint targets for guaranteed hits.', dmg:30, range:80, cd:0.3, hitscan:true, ammo:0, aps:1, spread:.0, pellets:1, startAmmo:36, magSize: 12, currentMag: 12, reloadTime: 1.5, maxTargets: 3, lockCone: 0.95 },
+  // Melee-only weapon; Gun Game's final weapon, not a standard firearm slot.
+  KNIFE: {name:'KNIFE',desc:'Close-range backup blade. Final weapon in Gun Game.',dmg:70,range:2.8,
+    cd:0.55,hitscan:true,melee:true,ammo:Infinity,startAmmo:Infinity,aps:0,pellets:1,spread:0},
   // ── Wonder Weapons (boss drops only — wonderWeapon:true prevents loadout/ammo pickup) ──
   THUNDERBOLT: { name:'THUNDERBOLT', desc:'Instant AOE lightning — chains to ALL enemies within 20m simultaneously. Full damage, no falloff.', dmg:120, range:20, cd:1.5, hitscan:true, ammo:2, aps:1, spread:.0, pellets:1, startAmmo:2, falloff:0, wonderWeapon:true, useHeat:false, magSize:2, currentMag:2, reloadTime:2.0, splash:20, headshotMult:1.0 },
   SINGULARITY: { name:'SINGULARITY', desc:'Fires a gravity well that pulls all enemies within 12m for 3 seconds, then implodes for 200 damage.', dmg:200, range:90, cd:2.0, hitscan:true, ammo:3, aps:1, pellets:1, startAmmo:3, speed:18, splash:12, falloff:0, wonderWeapon:true, magSize:3, currentMag:3, reloadTime:2.5, headshotMult:1.0 },
@@ -43,6 +46,7 @@ export const WDEFS = {
 };
 
 export const WCOLORS = {
+  KNIFE:0xa5a5a5,
   PISTOL:0x999999, SMG:0xff8800, SHOTGUN:0x885533,
   CHAINGUN:0xff3300, RAILGUN:0x00ffcc, PLASMA:0x4488ff, ROCKET:0xcc3300,
   GLAUNCHER:0x44cc44, ELECTRON:0x00ccff, ION:0xaa44ff,
@@ -85,7 +89,7 @@ export function triggerCosmicGlow() {
   cosmicGlowPulse = 1.0; // Reset pulse to full intensity
 }
 
-export const inventory = [null, null, 'PISTOL']; 
+export const inventory = [null, null, 'PISTOL', 'KNIFE']; // fourth always-ready melee slot 
 export let activeSlot = 2;
 export let   curWep     = 'PISTOL';
 export let   wepCooldown = 0;
@@ -148,23 +152,47 @@ function _ensureDarkMatterAnimation() {
   })
 }
 
-let _auroraObserver = null;
-function _ensureAuroraAnimation(scene) {
-  // Only bind one global observer for the scene loop
-  if (_auroraObserver) return;
-
-  _auroraObserver = scene.onBeforeRenderObservable.add(() => {
-    // High frequency frequency multiplier (0.0055 vs dark matter's standard slower rate)
-    const t = Date.now() * 0.0055;
-    scene.materials.forEach(mat => {
-      if (mat && mat.metadata && mat.metadata.isAurora && mat.emissiveColor) {
-          // Pin colors strictly to a dark green/emerald spectrum with a slight teal shift
-          mat.emissiveColor.r = 0.0;
-          mat.emissiveColor.g = 0.22 + (Math.sin(t) * 0.18);       // Ranges from 0.04 to 0.40
-          mat.emissiveColor.b = 0.06 + (Math.cos(t * 0.8) * 0.05); // Asynchronous subtle cyan/emerald bleed
+// All Collector finishes animate independently of standard camouflage.
+// Register only materials actively assigned to a weapon mesh; no scanning
+// every scene material per frame or using undefined `parentMesh` variables.
+const _collectorMats=new Set();
+let _collectorObserver=null;
+function _ensureCollectorAnimation(){
+  if(_collectorObserver)return;
+  _collectorObserver=scene.onBeforeRenderObservable.add(()=>{
+    const t=Date.now()/1000;
+    for(const item of _collectorMats){
+      const {mat,skinId,phase}=item;
+      if(!mat || (typeof mat.isDisposed==='function'&&mat.isDisposed()))continue;
+      const wave=Math.sin(t*1.65+phase)*.5+.5;
+      const shimmer=Math.sin(t*4.3+phase*2)*.5+.5;
+      const e=mat.emissiveColor, d=mat.diffuseColor;
+      if(!e||!d)continue;
+      if(skinId==='aurora'){
+        // Shifting aurora: green/teal light flowing across a dark body.
+        e.r=.015;e.g=.12+.53*wave;e.b=.04+.36*(1-wave);
+        d.r=.025;d.g=.055+.08*wave;d.b=.035+.065*(1-wave);
+      }else if(skinId==='nebula'){
+        // Iridescent galactic violet, blue and magenta.
+        e.r=.17+.42*wave;e.g=.025+.12*shimmer;e.b=.3+.48*(1-wave);
+        d.r=.08+.11*wave;d.g=.025;d.b=.17+.08*(1-wave);
+      }else if(skinId==='cinder'){
+        // Unsteady orange/red volcanic embers, without strobe flashes.
+        e.r=.27+.58*shimmer;e.g=.035+.25*shimmer;e.b=.003;
+        d.r=.11+.09*wave;d.g=.025+.02*wave;d.b=.012;
+      }else if(skinId==='tundra'){
+        // Slow cool/white cryo sheen with a drifting cyan highlight.
+        e.r=.025+.13*(1-wave);e.g=.17+.43*wave;e.b=.32+.48*wave;
+        d.r=.13+.07*(1-wave);d.g=.20+.08*wave;d.b=.23+.08*wave;
       }
-    });
+    }
   });
+}
+function _registerCollectorMaterial(mat,skinId,offset=0){
+  const item={mat,skinId,phase:offset*4.0};
+  _collectorMats.add(item);
+  mat.onDisposeObservable.add(()=>_collectorMats.delete(item));
+  _ensureCollectorAnimation();
 }
 
 // ── Weapon models ─────────────────────────────────────────────
@@ -317,7 +345,12 @@ function _buildSingularity(p) { _box(p,'body',.1,.15,.5,M.plasmaMat,0,.02,.1); _
 function _buildPyroclast(p) { _box(p,'body',.15,.15,.5,M.ledRed,0,.02,.1); _cyl(p,'bbl1',.04,.3,M.gunMetal,.05,.02,.4,Math.PI/2); _cyl(p,'bbl2',.04,.3,M.gunMetal,-.05,.02,.4,Math.PI/2); _box(p,'grip',.08,.2,.1,M.black,0,-.1,-.1,.2); }
 function _buildOmegaStorm(p) { _box(p,'body',.12,.18,.6,M.white,0,.02,.1); _cyl(p,'bbl',.1,.4,M.ledCyan,0,.02,.5,Math.PI/2); _box(p,'grip',.08,.2,.1,M.white,0,-.1,-.1,.2); }
 
+function _buildKnife(p) {
+  _box(p,'hilt',.08,.10,.18,M.gunBrown,0,-.08,-.05);
+  _box(p,'blade',.035,.025,.42,M.grey,0,.02,.25);
+}
 const _modelBuilders = {
+  KNIFE:_buildKnife,
   PISTOL: _buildPistol, SMG: _buildSmg, SHOTGUN: _buildShotgun,
   CHAINGUN: _buildChaingun, RAILGUN: _buildRailgun,
   PLASMA: _buildPlasma, ROCKET: _buildRocket, GLAUNCHER: _buildGlauncher,
@@ -600,10 +633,10 @@ function _makeSightLantern(parent, wName) {
     new BABYLON.Vector3(0, 0, 1),       // Shoot straight down the Z axis
     Math.PI / 2.5, 
     25, scene);
-  spotLight.priority = -1; // Force engine to prioritize this light over explosions
-  import('./scene.js').then(({ camera }) => {
-      spotLight.parent = camera;
-  });
+  spotLight.priority = 100; // Keep the Lantern ahead of the mine's fixture lights
+  // camera is already imported in this module. Bind immediately so a
+  // newly equipped Lantern cannot briefly aim from world origin.
+  spotLight.parent = camera;
   
   spotLight.diffuse = new BABYLON.Color3(1.0, 0.95, 0.8);
   spotLight.specular = new BABYLON.Color3(1, 1, 1);
@@ -879,6 +912,7 @@ function _rebuildAttachmentVisuals(wName) {
 }
 
 const WPOS = {
+  KNIFE: new BABYLON.Vector3(.32,-.40,.52),
   PISTOL:    new BABYLON.Vector3(.38,-.36, .66),
   SHOTGUN:   new BABYLON.Vector3(.32,-.38, .60),
   ROCKET:    new BABYLON.Vector3(.28,-.32, .63),
@@ -903,6 +937,7 @@ const WPOS = {
   DMR: new BABYLON.Vector3(.34,-.35, .66),
 };
 const WROT = {
+  KNIFE: new BABYLON.Vector3(.10,-.08,0),
   PISTOL:    new BABYLON.Vector3(.06,-.08,0),
   SHOTGUN:   new BABYLON.Vector3(.04,-.10,0),
   ROCKET:    new BABYLON.Vector3(.05,-.12,0),
@@ -928,7 +963,7 @@ const WROT = {
 };
 
 export function refreshSlotHUD() {
-  for (let i = 0; i < 3; i++) { 
+  for (let i = 0; i < 4; i++) { 
     const el = document.getElementById('wSlot' + i);
     if (!el) continue;
     const wep = inventory[i];
@@ -991,6 +1026,7 @@ export function setWeapon(name) {
   }
   
   if (!WDEFS[name]) return;
+  if(curWep!==name)cb.clearAegisLocks?.();
   curWep = name;
   player.wepHeat = 0; player.overheated = false; 
   
@@ -1113,21 +1149,18 @@ export function applyLoadoutToScene(wName) {
             m.material = mat;
         }
         return;
-      } else if (skin.id === 'aurora') {
-        // Target any child mesh materials on the weapon model
-        parentMesh.getChildMeshes().forEach(mesh => {
-          if (mesh.material) {
-            // Re-use standard material or your specific base material setup
-            const mat = mesh.material;
-            mat.diffuseColor = new BABYLON.Color3(0.01, 0.04, 0.01); // Deep obsidian green base
-            mat.emissiveColor = new BABYLON.Color3(0.0, 0.15, 0.02); // Initial green glow
-            
-            // Mark it with metadata so the render loop identifier catches it
-            mat.metadata = mat.metadata || {};
-            mat.metadata.isAurora = true;
-          }
-        });
-        _ensureAuroraAnimation(scene);
+      }
+
+      // Collector skins deliberately use animated diffuse/emissive palettes.
+      // This is a separate FX class, not an ordinary static gameplay camo.
+      if(skin.category==='Collector'){
+        mat.diffuseColor=new BABYLON.Color3(br,bg,bb);
+        mat.emissiveColor=new BABYLON.Color3(ar*.28,ag*.28,ab*.28);
+        mat.specularColor=new BABYLON.Color3(.65,.75,.8);
+        mat.specularPower=92;
+        _registerCollectorMaterial(mat,skin.id,meshIdx+(.3*m.position.z));
+        m.material=mat;
+        return;
       }
 
       // ── Bengal — Procedural Canvas Stripes ──────────────────────
@@ -1295,23 +1328,33 @@ export function animWeapon(dt) {
       reloadTilt = Math.sin((player.reloadTimer / 1.6) * Math.PI) * -0.55; 
   }
 
-  // Extract effective recoil
-  let recoilMult = 1.0;
-  import('./progression.js').then(({ getEffectiveStats }) => {
-      const EW = getEffectiveStats(curWep, WDEFS[curWep]);
-      recoilMult = EW.recoilMult || 1.0;
-  });
+  // This runs every render frame: reuse the existing synchronous import
+  // rather than enqueueing an asynchronous module promise every frame.
+  const recoilMult = getEffectiveStats(curWep, WDEFS[curWep]).recoilMult || 1.0;
 
   if (swingT > 0 && !_NO_SWING_WEAPONS.has(curWep)) {
-    swingT = Math.max(0, swingT - dt * 7.5);
+    swingT = Math.max(0, swingT - dt * (curWep==='KNIFE'?4.2:7.5));
     const k = Math.sin(swingT * Math.PI);
     // Multiply the physical Z kick and X rotation tilt by the recoil multiplier
     wepGroup.position.z = WPOS[curWep].z - (k * .09 * recoilMult);
-    wepGroup.rotation.x = WROT[curWep].x - (k * 0.15 * recoilMult) + reloadTilt;
+    wepGroup.rotation.x = WROT[curWep].x - (k * (curWep==='KNIFE'?0.5:0.15) * recoilMult) + reloadTilt;
+    if(curWep==='KNIFE'){
+      // A distinct sweeping blade motion, not a firearm-style muzzle kick.
+      wepGroup.rotation.y=WROT[curWep].y+Math.cos(swingT*Math.PI)*.65;
+      wepGroup.rotation.z=WROT[curWep].z-k*.34;
+      wepGroup.position.x=WPOS[curWep].x-k*.12;
+    }
   } else {
-    if (_NO_SWING_WEAPONS.has(curWep)) swingT = 0; 
+    if (_NO_SWING_WEAPONS.has(curWep)) swingT = 0;
     wepGroup.position.z = WPOS[curWep].z;
     wepGroup.rotation.x = WROT[curWep].x + reloadTilt;
+    if(curWep==='KNIFE'){
+      // A completed slash must return to the idle pose. Otherwise the
+      // previous swing leaves the blade skewed until the next weapon swap.
+      wepGroup.position.x=WPOS.KNIFE.x;
+      wepGroup.rotation.y=WROT.KNIFE.y;
+      wepGroup.rotation.z=WROT.KNIFE.z;
+    }
   }
 
 }

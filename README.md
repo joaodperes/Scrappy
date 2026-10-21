@@ -1,134 +1,93 @@
-# Scrappy – Browser FPS
+# Scrappy — browser FPS
 
-A fast-paced first-person shooter built entirely in vanilla JavaScript + Three.js, with no build step required.
+**Scrappy** is a browser-first FPS powered by **Babylon.js** and native JavaScript ES modules. It runs without a frontend bundler. The game includes four shipped maps, robot combat, Survival waves, Hard/Nightmare difficulty, Elites, weapons and attachments, player progression and Firebase-backed profiles.
 
-## Features
+This README describes the current **offline-first testing branch** `fix/foundations-room-flow-20261018`. The project has experimental WebSocket room code, but **multiplayer is intentionally deferred** until offline modes and gameplay regressions are accepted. See [the approved scope](docs/APPROVED_PRIORITY_ROADMAP.md).
 
-- **Solo Wave Mode** – survive endless waves of increasingly difficult AI robots
-- **PvP Mode** – real-time multiplayer via WebSocket (requires running the Node.js server)
-- **Multiple weapon classes** – Pistol, SMG, Shotgun, Chaingun, Railgun, Plasma Rifle, Rocket Launcher
-- **Multi-floor office-park arena** – four distinct buildings (1–3 floors), sky-bridges, stair ramps, and jump pads
-- **Procedural textures** – all art is generated with Canvas 2D at startup, no external image assets required
-- **Leaderboard** – score submission via Firebase Firestore (requires Firebase credentials)
+## Playing locally
 
----
+Requirements: a modern desktop Chromium/Firefox browser and a static file server (Python 3 or equivalent).
 
-## Running Locally
-
-### Requirements
-
-- Any modern browser (Chrome/Edge/Firefox)
-- Node.js 18+ *(only needed for PvP server or local HTTP serving)*
-- Python 3 *(optional alternative for a quick static server)*
-
-### Quick Start (Solo Mode)
-
-```bash
-# Option A – Python static server
-python -m http.server 3000
-# Open http://localhost:3000
-
-# Option B – Node static server (no install needed in Node 18+)
-node -e "require('http').createServer((q,r)=>{require('fs').readFile('.' + q.url.replace(/\/$/,'/index.html'), (e,d)=>{ r.writeHead(e?404:200); r.end(d||'Not found'); })}).listen(3000)"
-# Open http://localhost:3000
+```sh
+git clone https://github.com/joaodperes/Scrappy.git
+cd Scrappy
+git checkout fix/foundations-room-flow-20261018
+python3 -m http.server 3000
 ```
 
-> **Important:** The game uses ES Modules (`import`/`export`). You **must** serve files over HTTP — opening `index.html` directly via `file://` will not work.
+Visit **http://localhost:3000** (not `file://`). Sign in using Google and set your display name. The existing Firebase project is used for authentication, progression and leaderboards. For local sign-in, `localhost` must be allowed in Firebase Authentication authorized domains.
 
-### PvP Server
+Select **PLAY → LOCAL MODES**, choose a map and:
 
-```bash
+- **Survival:** normal, Hard or Nightmare endless waves and Elites; uses the standard starting Pistol.
+- **Gun Game (vs AI players):** deterministic shuffled weapon ladder, Pistol first and Knife final. Both the human and every bot advance independently by defeating opponents with their currently equipped gun.
+- **Kill Confirmed (teams vs AI players):** RED/BLUE teams collect enemy tags to score and can deny points by recovering friendly tags. Bots actively pursue dropped tags.
+- **Free-for-all / Team Deathmatch:** local player-shaped bot opponents use their own weapon loadouts, spawn/respawn, acquire each other as targets and score independent frags (FFA) or RED/BLUE team frags (TDM). TDM includes two allied bots on RED alongside the human against three BLUE bots.
+
+Offline arena modes support configurable match time and point targets and five computer-controlled contestants. Their player-shaped meshes and firearm rules are separate from Survival robots. Shots use the real weapon definitions for range, damage and cooldown with simplified bot hit resolution (special projectile/attachment effects are not yet one-to-one identical to the human versions). These new modes still require owner gameplay QA and are not yet considered accepted.
+
+### Experimental network rooms (not required for local modes)
+
+The in-repo server can be started separately:
+
+```sh
 cd server
-npm install
-node server.js          # defaults to port 8080
+npm ci
+npm test
+npm start
 ```
 
-Then in the game menu: enter a player name, room code and point the server URL to `ws://localhost:8080`.
+By default it serves WebSocket connections at `ws://localhost:8080`. Multiplayer setup, authority, bot replication, co-op and reconnect are **outside this PR's acceptance scope** and must not be mistaken for production-ready multiplayer. Firebase static Hosting does not run a persistent Node WebSocket service.
 
----
+## Tests
 
-## Project Structure
+From the repository root (Node.js 22 recommended to match CI):
 
-```
-index.html          – single-page app shell + HUD markup
-js/
-  main.js           – game loop, mode orchestration
-  scene.js          – Three.js renderer / camera / clock
-  level.js          – multi-floor map geometry, collidables, jump pads
-  player.js         – movement, input, jump pad trigger, shooting
-  enemies.js        – robot AI, spawning, hit/destroy
-  projectiles.js    – hitscan (with damage falloff), rockets, plasma
-  weapons.js        – weapon definitions, inventory, equip/swap
-  pickups.js        – health/armor/ammo drops, weapon drops (w/ 45 s despawn)
-  waves.js          – solo wave composition and spawning
-  particles.js      – spark pool (pre-allocated, zero GC)
-  textures.js       – procedural Canvas2D materials
-  audio.js          – Web Audio API sound effects
-  lighting.js       – ambient + point lights setup
-  ui.js             – HUD updates, hit marker, death screen
-  network.js        – WebSocket helpers shared by pvp.js
-  pvp.js            – PvP game mode logic
-  leaderboard.js    – Firebase Firestore score submission & display
-  gameState.js      – shared mutable state (enemies, projs, player, cb)
-server/
-  server.js         – Node.js WebSocket relay server
-  package.json
+```sh
+node scripts/check-module-imports.cjs
+node scripts/check-inline-modules.cjs
+node scripts/validate-map-data.cjs
+node --test scripts/*.test.cjs
+node --test server/*.test.js
 ```
 
----
+See [GitHub Actions quality workflow](.github/workflows/quality.yml). Passing syntax/rules tests does not replace Firefox and Chromium gameplay checks, especially for Jungle/Moon Base geometry, bots, weapons and physics.
 
-## TODO / Next Steps
+## Repository layout
 
-### Firebase (Leaderboard)
+| Path | Purpose |
+| --- | --- |
+| `index.html`, `css/` | Page shell, authentication widgets, HUD, visual style |
+| `js/main.js` | Startup, rendering loop, mode orchestration |
+| `js/scene.js`, `js/level*.js`, `js/mapManager.js` | Babylon.js scene, maps and geometry |
+| `assets/maps/` | Versioned editable map JSON |
+| `js/enemies.js`, `js/botNavigation.js`, `js/waves.js` | PvE robots, navigation and Survival |
+| `js/localArenaRules.js`, `js/localArenaRuntime.js` | Offline arena scoring, spawning and match flow |
+| `js/player.js`, `js/weapons.js`, `js/projectiles.js` | Input, first-person combat, weapon assets |
+| `js/progression.js`, `js/questRules.js` | Player progression, quests and Firebase sync |
+| `js/roomFlow.js`, `js/pvp.js`, `js/network.js` | Experimental room UX and networked matches (deferred) |
+| `server/` | Separate Node/WebSocket prototype and pure server-side rules (deferred for PvP) |
+| `editor.html`, `js/editorTransforms.js` | Shared JSON map editor |
+| `scripts/` | Static checks and regression tests |
+| `docs/` | Approved roadmap, feature contracts, authoring and test checklists |
+| `.github/workflows/quality.yml` | CI syntax, imports, map data and tests |
 
-1. Create a project at [console.firebase.google.com](https://console.firebase.google.com)
-2. Add a **Web App** to the project and copy the config object
-3. Open `js/leaderboard.js` and replace the placeholder `firebaseConfig` object with your real credentials:
-   ```js
-   const firebaseConfig = {
-     apiKey:            "YOUR_API_KEY",
-     authDomain:        "YOUR_PROJECT.firebaseapp.com",
-     projectId:         "YOUR_PROJECT_ID",
-     storageBucket:     "YOUR_PROJECT.appspot.com",
-     messagingSenderId: "YOUR_SENDER_ID",
-     appId:             "YOUR_APP_ID",
-   };
-   ```
-4. In Firestore, create a collection called `scores` with **Security Rules** allowing public reads and writes (or authenticated writes if you add Firebase Auth)
-5. Enable **Firestore Database** in the Firebase console (not Realtime Database)
+The checked-in `js/babylon.max.js` is a required local Babylon runtime asset; it is **not an obsolete Three.js file**. Keep it unless the HTML/editor dependency and replacement license are reviewed.
 
-### Hosting / Deployment
+## Progression and backend scope
 
-- The client is a static site — it can be deployed to **GitHub Pages**, **Netlify**, **Vercel**, or any static host
-- The PvP WebSocket server requires a persistent Node.js host (e.g. **Railway**, **Render**, **fly.io**, or a VPS)
-- Update the default `pvpServer` URL in `index.html` to point to your deployed WebSocket server
+Scrappy uses the existing Firebase Spark plan for Google sign-in and Firestore profiles. The owner explicitly chose a **free, friends-only** model: account-owned profile documents and transaction-safe shop spending, accepting simpler client-reported PvE rewards instead of paid anti-cheat infrastructure. Do not enable paid cloud infrastructure or expose admin credentials.
 
-### Web Assets / Art Direction
+The cosmetic shop and secure/concurrent wallet persistence remain work in progress. Loadout now has a **SURVIVAL GEAR** tab for earned stats, equipment, free respec and unequip; effects apply to Survival only and still require real browser/Firebase persistence QA. Arena bot navigation and gameplay acceptance also remain open. Pure testing modules are not a shipped UI. See [Firebase architecture](docs/FIREBASE_SPARK_DECISION.md) and [remaining work](docs/OPEN_WORK_REGISTER.md).
 
-Three.js supports loading external textures (`THREE.TextureLoader`) and GLTF models (`GLTFLoader`).  
-For the "rusty office park" vibe, good free sources include:
+## Test and contribution resources
 
-| Resource | URL | License |
-|---|---|---|
-| Kenney game assets | https://kenney.nl/assets | CC0 |
-| Poly Haven (textures/HDRIs) | https://polyhaven.com | CC0 |
-| Sketchfab (GLTF models) | https://sketchfab.com/features/free-3d-models | Mixed |
-| Quaternius (low-poly packs) | https://quaternius.com | CC0 |
-| OpenGameArt | https://opengameart.org | Mixed |
+- [Approved priorities and current scope](docs/APPROVED_PRIORITY_ROADMAP.md)
+- [Owner gameplay checklist](docs/OWNER_VALIDATION_TODO.md)
+- [Unfinished engineering register](docs/OPEN_WORK_REGISTER.md)
+- [Local troubleshooting](docs/LOCAL_DEVELOPMENT.md)
+- [Map authoring/editor guide](docs/MAP_AUTHORING.md)
+- [Jungle dungeon QA](docs/JUNGLE_DUNGEON.md) and [Moon Base QA](docs/MOON_BASE.md)
+- [Hard mode](docs/ELITE_ENCOUNTERS.md) and [quests/Scraps](docs/QUESTS_AND_SCRAPS.md)
 
-Replace the `rwCache1`/`rwCache2` texture calls in `textures.js` with `THREE.TextureLoader().load('path/to/texture.jpg')` and apply to the wall/floor materials. For GLTF props, use:
-```js
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-const loader = new GLTFLoader();
-loader.load('models/desk.glb', gltf => scene.add(gltf.scene));
-```
-
-### Other Planned Work
-
-- [ ] Add a minimap / floor indicator HUD element to help players navigate the multi-floor map
-- [ ] Elevator / lift mechanic as an alternative to jump pads
-- [ ] Per-gun reload animations and sound variations
-- [ ] Enemy pathfinding that uses building stairs instead of walking through walls
-- [ ] Wave victory screen with per-wave summary
-- [ ] Firebase Auth so leaderboard scores are verified
-- [ ] Mobile/gamepad controller support
+**Review policy:** develop on the existing draft PR #2 branch, await owner gameplay approval, then close/merge that PR as the owner chooses. Discuss PvP/co-op as a **separate follow-up scope**, not a prerequisite for accepting offline gameplay.

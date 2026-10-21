@@ -1,15 +1,16 @@
 // projectiles.js – rockets, plasma balls, enemy shots, collision  (Babylon.js port)
 const BABYLON = window.BABYLON;
-import { scene, camera } from './scene.js';
+import { scene, camera, navPlugin } from './scene.js';
 import { M, fireTex } from './textures.js';
-import { explosiveBarrels, isBarrelMesh, detonateBarrelByMesh } from './level.js';
+import { explosiveBarrels, walkableMeshes, isBarrelMesh, detonateBarrelByMesh } from './level.js';
 import { WDEFS, curWep } from './weapons.js';
-import { projs, enemies, cb } from './gameState.js';
+import { projs, enemies, player, cb } from './gameState.js';
 import { spawnSparks } from './particles.js';
 import { sfx } from './audio.js';
 import { applyExplosionImpulse } from './player.js';
-import { getCurrentMap } from './mapManager.js';
+import { getCurrentMap, getMapMeta } from './mapManager.js';
 import { getLoadout } from './progression.js';
+import { blocksBullet, closestBulletHit, segmentSphereHit } from './bulletCollision.js';
 
 // ── Player projectiles ────────────────────────────────────────
 export function fireRocket(effSpeed, effSplash, spread = 0) {
@@ -41,7 +42,7 @@ export function fireRocket(effSpeed, effSplash, spread = 0) {
   const light = new BABYLON.PointLight('rLight', pos.clone(), scene);
   light.diffuse = new BABYLON.Color3(1, .4, 0); light.intensity = 2.2; light.range = 8;
 
-  projs.push({ g, light, dir: fwd.clone(), speed: effSpeed || WDEFS.ROCKET.speed, life: 6, dmg: WDEFS.ROCKET.dmg, splash: effSplash ?? WDEFS.ROCKET.splash, owner:'player', type:'rocket' });
+  projs.push({ g, light, dir: fwd.clone(), speed: effSpeed || WDEFS.ROCKET.speed, life: 6, dmg: WDEFS.ROCKET.dmg, splash: effSplash ?? WDEFS.ROCKET.splash, owner:'player', type:'rocket', weaponKey:'ROCKET' });
 }
 
 export function firePlasma(modDmg, projSpeed) {
@@ -63,7 +64,7 @@ export function firePlasma(modDmg, projSpeed) {
   light.diffuse = new BABYLON.Color3(.27, .53, 1); light.intensity = 2.0; light.range = 7;
   
   const dmg = modDmg || WDEFS.PLASMA.dmg;
-  projs.push({ g:null, mesh, light, dir: fwd.clone(), speed: projSpeed || WDEFS.PLASMA.speed || 40, life: 4, dmg: dmg, splash:0, owner:'player', type:'player_plasma' });
+  projs.push({ g:null, mesh, light, dir: fwd.clone(), speed: projSpeed || WDEFS.PLASMA.speed || 40, life: 4, dmg: dmg, splash:0, owner:'player', type:'player_plasma', weaponKey:'PLASMA' });
 }
 
 // ── Enemy shots ───────────────────────────────────────────────
@@ -88,9 +89,10 @@ export function fireEnemyShot(e, dir, dmg, speed, type, customStartPos = null) {
 }
 
 // ── Explosion ─────────────────────────────────────────────────
-export async function boom(pos, splashR, baseDmg, hurtBots) {
+export async function boom(pos, splashR, baseDmg, hurtBots, weaponKey=null, barrelDetonation=false) {
   sfx.explosion();
-  import('./progression.js').then(({ recordBarrelDestroyed }) => recordBarrelDestroyed());
+  // Only actual barrel detonations satisfy a barrel-destruction challenge.
+  if(barrelDetonation)import('./progression.js').then(({recordBarrelDestroyed})=>recordBarrelDestroyed());
   const flash = BABYLON.MeshBuilder.CreateSphere('flash', { diameter: splashR*.7*2, segments:10 }, scene);
   flash.position.copyFrom(pos);
   const fmat = new BABYLON.StandardMaterial('flashMat', scene);
@@ -107,7 +109,7 @@ export async function boom(pos, splashR, baseDmg, hurtBots) {
       setTimeout(() => {
         if (!b.alive) return; // Prevent double-triggering
         const bPos = detonateBarrelByMesh(b.meshes[0]);
-        if (bPos) boom(bPos.clone(), 3.6, 78, true);
+        if (bPos) boom(bPos.clone(), 3.6, 78, true,'ENVIRONMENT',true);
       }, 100);
     }
   }
@@ -121,27 +123,56 @@ export async function boom(pos, splashR, baseDmg, hurtBots) {
         spawnSparks(mesh.getAbsolutePosition(), 0xaaaaaa, 3);
         if (mesh.metadata.hp <= 0) {
             mesh.dispose();
-            const map = getCurrentMap();  // import getCurrentMap from mapManager
-            const levelModule = map === 'jungle'
-                ? await import('./levelJungle.js')
-                : await import('./level.js');
-            const idx = levelModule.walkableMeshes.indexOf(mesh);
-            if (idx !== -1) levelModule.walkableMeshes.splice(idx, 1);
-            navPlugin.createNavMesh(levelModule.walkableMeshes, levelModule.NAVMESH_PARAMS);
+            const mod=await import(getMapMeta(getCurrentMap()).levelModule);
+            const idx=walkableMeshes.indexOf(mesh);
+            if(idx!==-1)walkableMeshes.splice(idx,1);
+            walkableMeshes.forEach(m=>m.computeWorldMatrix(true));
+            navPlugin.createNavMesh(walkableMeshes,mod.NAVMESH_PARAMS);
         }
       }
   }
   if (hurtBots) {
-    for (const e of enemies) {
+    for (const e of (cb.getDamageableActors?.()||enemies)) {
       if (!e.alive) continue;
       const d = BABYLON.Vector3.Distance(e.group.position, pos);
-      if (d < splashR) cb.hitRobot && cb.hitRobot(e, baseDmg * (1 - d/splashR),false, true); // isHeadshot, isExplosive
+      if (d < splashR) cb.hitRobot?.(e,baseDmg*(1-d/splashR),false,true,
+        weaponKey==='ENVIRONMENT'?'BARREL_EXPLOSION':'PLAYER',weaponKey==='ENVIRONMENT'?null:weaponKey); // isHeadshot, isExplosive
     }
   }
   const dp = BABYLON.Vector3.Distance(camera.position, pos);
   if (dp < splashR) cb.hurtPlayer && cb.hurtPlayer(baseDmg * (1 - dp/splashR) * .65);
   // We multiply splashR by 1.5 so the physics push reaches slightly further than the damage
   applyExplosionImpulse(pos, splashR * 1.5, 20);
+}
+
+// Melee uses a short swept arc rather than one pixel-perfect gun ray.
+// One victim per swing, with wall occlusion checked on each sampled ray.
+export function meleeStrike(meshToEnemy,damage=70,range=2.8){
+ if(cb.isPvpActive?.())return {hit:!!cb.pvpHitscan?.(damage,range,0),target:null};
+ const center=camera.getForwardRay(1).direction.clone().normalize();
+ let best=null;
+ for(const angle of [-0.36,-0.18,0,0.18,0.36]){
+  const c=Math.cos(angle),q=Math.sin(angle);
+  const direction=new BABYLON.Vector3(
+    center.x*c+center.z*q,center.y,center.z*c-center.x*q).normalize();
+  const ray=new BABYLON.Ray(camera.position,direction,range);
+  const wall=scene.pickWithRay(ray,blocksBullet);
+  const hits=scene.multiPickWithRay(ray,m=>meshToEnemy.has(m))||[];
+  for(const h of hits){
+   if(!h.hit||!h.pickedMesh||h.distance>range)continue;
+   if(wall?.hit&&wall.distance+0.08<h.distance)continue;
+   const target=meshToEnemy.get(h.pickedMesh);
+   if(!target?.alive)continue;
+   const score=h.distance+Math.abs(angle)*.5;
+   if(!best||score<best.score)best={target,point:h.pickedPoint,score};
+  }
+ }
+ if(best){
+  cb.hitRobot?.(best.target,damage,false,false,'PLAYER','KNIFE');
+  if(best.point)spawnSparks(best.point,0xd2d6dd,8);
+  return {hit:true,target:best.target};
+ }
+ return {hit:false,target:null};
 }
 
 // ── Hitscan ────────────────────────────────────────────────────
@@ -151,15 +182,20 @@ export function hitscan(meshToEnemy, spread = 0, dmg = 20, range = 90, falloff =
                         flashColor = new BABYLON.Color3(1, 0.9, 0.4),
                         hitSparkColor = 0xffcc44,
                         missSparkColor = 0x886655) {
+  if(cb.isPvpActive?.()){
+    const hit=cb.pvpHitscan?.(dmg,range,spread) || false;
+    return {hit,target:null};
+  }
   camera.getForwardRay(1).direction.normalizeToRef(_rcDir);
   // Muzzle flash: bright sphere 0.5m in front
   const flashPos = camera.position.clone().addInPlace(_rcDir.scale(0.5));
   const flash = BABYLON.MeshBuilder.CreateSphere('mflash', { diameter: 0.09, segments: 4 }, scene);
+  flash.position.copyFrom(flashPos);
   const fmat = new BABYLON.StandardMaterial('mflashM', scene);
   fmat.emissiveColor = flashColor;
-  fmat.emissiveColor = new BABYLON.Color3(1, 0.9, 0.4); fmat.disableLighting = true;
+  fmat.disableLighting = true;
   flash.material = fmat; flash.isPickable = false;
-  setTimeout(() => flash.dispose(), 55);
+  setTimeout(() => {flash.dispose();fmat.dispose();}, 55);
   if (spread > 0) {
     _rcDir.x += (Math.random()-.5)*spread*2;
     _rcDir.y += (Math.random()-.5)*spread*2;
@@ -167,23 +203,31 @@ export function hitscan(meshToEnemy, spread = 0, dmg = 20, range = 90, falloff =
   }
   const ray  = new BABYLON.Ray(camera.position, _rcDir, range);
   const barrelHit = scene.pickWithRay(ray, m => m.isEnabled() && isBarrelMesh(m));
-  const hits = scene.multiPickWithRay(ray, m => meshToEnemy.has(m));
+  const wallHit = scene.pickWithRay(ray, blocksBullet);
+  const hits = scene.multiPickWithRay(ray, m => meshToEnemy.has(m)) || [];
   hits.sort((a,b) => a.distance - b.distance);
-
-  const endDist = (hits.length > 0) ? hits[0].distance : (barrelHit?.hit ? barrelHit.distance : range);
+  const nearest=closestBulletHit([
+    {kind:'barrel',hit:barrelHit},
+    {kind:wallHit?.pickedMesh?.metadata?.destructible?'destructible':'wall',hit:wallHit},
+    {kind:'enemy',hit:hits.length?{...hits[0],hit:true}:null},
+  ]);
+  const endDist=nearest?.hit.distance ?? range;
   const endPos = camera.position.clone().add(_rcDir.scale(endDist));
   
   //Use CreateTube instead of CreateLines for visible thickness
-  const isBeam = curWep === 'ELECTRON' || curWep === 'ION';
+  // Plasma's sniper trigger is hitscan (there is no traveling projectile).
+  // A bright persistent blue beam makes the exact aim line and impact clear.
+  const plasmaSniper=curWep==='PLASMA' && !!player.plasmaAltMode;
+  const isBeam = plasmaSniper || curWep === 'ELECTRON' || curWep === 'ION';
   const tracer = BABYLON.MeshBuilder.CreateTube('tracer', {
       path: [flashPos, endPos],
-      radius: isBeam ? 0.06 : 0.015, // Thicker beam for energy weapons
+      radius: plasmaSniper ? 0.1 : isBeam ? 0.06 : 0.015,
       updatable: false
   }, scene);
   
   // Use emissive color for the beam to make it glow
   const tracerMat = new BABYLON.StandardMaterial('tracerMat', scene);
-  tracerMat.emissiveColor = flashColor;
+  tracerMat.emissiveColor = plasmaSniper ? new BABYLON.Color3(.25,.65,1) : flashColor;
   tracerMat.disableLighting = true;
   tracerMat.alpha = 0.8;
   tracer.material = tracerMat;
@@ -191,7 +235,7 @@ export function hitscan(meshToEnemy, spread = 0, dmg = 20, range = 90, falloff =
   
   // Fade tracer out over ~80ms
   let fadeTimer = 0;
-  const tracerLife = isBeam ? 0.12 : 0.08; // Beams linger slightly longer
+  const tracerLife = plasmaSniper ? 0.28 : isBeam ? 0.12 : 0.08; // Beams linger slightly longer
   const onBeforeRender = () => {
       fadeTimer += scene.getEngine().getDeltaTime() / 1000;
       tracer.material.alpha = 1.0 - (fadeTimer / tracerLife);
@@ -203,21 +247,19 @@ export function hitscan(meshToEnemy, spread = 0, dmg = 20, range = 90, falloff =
   };
   scene.onBeforeRenderObservable.add(onBeforeRender);
 
-  if (barrelHit?.hit) {
-    const enemyDist = hits.length > 0 ? hits[0].distance : Infinity;
-    if (barrelHit.distance <= enemyDist) {
-      const boomPos = detonateBarrelByMesh(barrelHit.pickedMesh);
-      if (boomPos) {
-        boom(boomPos, 3.6, 78, true);
-        spawnSparks(boomPos, 0xffaa44, 9);
-        return { hit: true, barrel: true };
-      }
+  if(nearest?.kind==='barrel'){
+    const boomPos=detonateBarrelByMesh(nearest.hit.pickedMesh);
+    if(boomPos){
+      boom(boomPos,3.6,78,true,'ENVIRONMENT',true);
+      spawnSparks(boomPos,0xffaa44,9);
+      return {hit:true,barrel:true};
     }
+    return {hit:false,blocked:true};
   }
 
-  // destructible wall check — hitscan deals dmg, destroys at hp<=0
-  const dWallHit = scene.pickWithRay(ray, m => m.metadata?.destructible && m.isEnabled());
-  if (dWallHit?.hit) {
+  // Destructible walls take damage only when they're the first obstruction.
+  if(nearest?.kind==='destructible'){
+      const dWallHit=nearest.hit;
       const wall = dWallHit.pickedMesh;
       // Apply damage
       wall.metadata.hp -= dmg;
@@ -246,7 +288,11 @@ export function hitscan(meshToEnemy, spread = 0, dmg = 20, range = 90, falloff =
       return { hit: true, destructible: true };
   }
 
-  if (hits.length > 0) {
+  if(nearest?.kind==='wall'){
+    spawnSparks(nearest.hit.pickedPoint ?? endPos,missSparkColor,3);
+    return {hit:false,blocked:true};
+  }
+  if (nearest?.kind==='enemy') {
     spawnSparks(hits[0].pickedPoint, hitSparkColor, 5);
     const pickedMesh = hits[0].pickedMesh;
     const e = meshToEnemy.get(pickedMesh);
@@ -331,7 +377,7 @@ export function updateProjs(dt) {
         if (BABYLON.Vector3.Distance(p.mesh.position, b.pos) < 0.85) {
           b.alive = false;
           for (const m of b.meshes) { m.setEnabled(false); m.checkCollisions = false; }
-          boom(b.pos.clone(), 3.5, 70, true);
+          boom(b.pos.clone(), 3.5, 70, true,'ENVIRONMENT',true);
           spawnSparks(b.pos.clone(), 0xffaa44, 10);
           p.mesh.dispose();
           if (p.light) p.light.dispose();
@@ -344,20 +390,21 @@ export function updateProjs(dt) {
 
       // Raycast in velocity direction for collisions
       const gRay = new BABYLON.Ray(p.mesh.position, moveDir, speed * dt + 0.3);
-      const gHit = scene.pickWithRay(gRay, m => m.checkCollisions && m.isEnabled());
+      const gHit = scene.pickWithRay(gRay, m => blocksBullet(m) ||
+        (m.isEnabled() && m.metadata?.enemy));
 
       if (gHit?.hit) {
         if (gHit.pickedMesh.metadata?.enemy || gHit.pickedMesh.name === '_playerBody') {
           // Direct hit on enemy/player → instant explosion
-          boom(p.mesh.position.clone(), p.splash, p.dmg, true);
+          boom(p.mesh.position.clone(), p.splash, p.dmg, true,'GLAUNCHER');
           p.mesh.dispose();
           if (p.light) p.light.dispose();
           projs.splice(i, 1);
         } else if (isBarrelMesh(gHit.pickedMesh)) {
           // Hit an explosive barrel → chain-detonate the barrel, then the grenade too
           const bPos = detonateBarrelByMesh(gHit.pickedMesh);
-          if (bPos) boom(bPos.clone(), 3.6, 78, true);
-          boom(p.mesh.position.clone(), p.splash, p.dmg, true);
+          if (bPos) boom(bPos.clone(), 3.6, 78, true,'ENVIRONMENT',true);
+          boom(p.mesh.position.clone(), p.splash, p.dmg, true,'GLAUNCHER');
           p.mesh.dispose();
           if (p.light) p.light.dispose();
           projs.splice(i, 1);
@@ -402,7 +449,7 @@ export function updateProjs(dt) {
 
       // Fuse expired → explode
       if (p.fuse <= 0) {
-        boom(p.mesh.position.clone(), p.splash, p.dmg, true);
+        boom(p.mesh.position.clone(), p.splash, p.dmg, true,'GLAUNCHER');
         p.mesh.dispose();
         if (p.light) p.light.dispose();
         projs.splice(i, 1);
@@ -426,7 +473,7 @@ export function updateProjs(dt) {
     // ── STICKY FUEL: Check if flame hits the ground/wall ──
     if (p.isSticky) {
         const ray = new BABYLON.Ray(p.mesh.position, p.dir, p.speed * dt + 0.2);
-        const pick = scene.pickWithRay(ray, (m) => m.isPickable && !m.metadata?.enemy && m.name !== '_playerBody');
+        const pick = scene.pickWithRay(ray, m => blocksBullet(m) && m.name !== '_playerBody');
         if (pick && pick.hit) {
             const n = pick.getNormal(true);
             
@@ -466,20 +513,20 @@ export function updateProjs(dt) {
     }
 
     let hitEnemy = false;
-    for (const e of enemies) {
+    for (const e of (cb.getDamageableActors?.()||enemies)) {
         if (!e.alive) continue;
         const bodyCy = e.group.position.y + (e.flyH > 0 ? 0.5 : 1.0);
         const ep = new BABYLON.Vector3(e.group.position.x, bodyCy, e.group.position.z);
         if (BABYLON.Vector3.Distance(p.mesh.position, ep) < 0.8) {
             
             // Apply Scaled Impact Damage
-            cb.hitRobot?.(e, p.dmg * impactMult);
+            cb.hitRobot?.(e,p.dmg*impactMult,false,false,'FLAMETHROWER','FLAMETHROWER');
             
             // Apply Scaled Burn DOT
             if (!e._flameDotted) {
                 e._flameDotted = true;
                 if (!e._dots) e._dots = [];
-                e._dots.push({ dmg: dotDmg, remaining: 3 });
+                e._dots.push({ dmg: dotDmg, remaining: 3,source:'FLAME_DOT',weapon:'FLAMETHROWER' });
                 setTimeout(() => { if (e) e._flameDotted = false; }, 500);
             }
 
@@ -509,13 +556,13 @@ export function updateProjs(dt) {
     p.tickTimer -= dt;
     if (p.tickTimer <= 0) {
         p.tickTimer = 0.3; // Damage ticks every 300ms
-        for (const e of enemies) {
+        for (const e of (cb.getDamageableActors?.()||enemies)) {
             if (!e.alive) continue;
             if (BABYLON.Vector3.Distance(p.mesh.position, e.group.position) < 1.8) {
                 cb.hitRobot?.(e, p.damage, false, false, 'FLAMETHROWER');
                 if (!e._dots) e._dots = [];
                 // Use the dotDmg stored when the patch was created
-                e._dots.push({ dmg: p.dotDmg, remaining: 1.0 }); 
+                e._dots.push({ dmg: p.dotDmg, remaining: 1.0,source:'FLAME_DOT',weapon:'FLAMETHROWER' }); 
             }
         }
     }
@@ -530,7 +577,7 @@ export function updateProjs(dt) {
           if (BABYLON.Vector3.Distance(p.mesh.position, b.pos) < 0.8) {
               b.alive = false;
               for (const m of b.meshes) { m.setEnabled(false); m.checkCollisions = false; }
-              boom(b.pos.clone(), 3.5, 70, true); // Detonate the barrel!
+              boom(b.pos.clone(), 3.5, 70, true,'ENVIRONMENT',true); // Detonate the barrel!
               destroyed = true;
               break;
           }
@@ -545,7 +592,7 @@ export function updateProjs(dt) {
       // 2. MAGNETIC HOMING
       if (p.isMagnetic) {
           let closest = null, minDist = 2.0; 
-          for (const e of enemies) {
+          for (const e of (cb.getDamageableActors?.()||enemies)) {
               if (!e.alive) continue;
               const bodyCenter = e.group.position.clone();
               bodyCenter.y += (e.flyH > 0 ? 0.5 : 1.0);
@@ -566,7 +613,7 @@ export function updateProjs(dt) {
 
       // 3. WALL BOUNCING
       const wallRay = new BABYLON.Ray(p.mesh.position, p.dir, step.length() + 0.2);
-      const wHit = scene.pickWithRay(wallRay, m => m.checkCollisions && !m.metadata?.enemy && m.isEnabled());
+      const wHit = scene.pickWithRay(wallRay, blocksBullet);
       
       if (wHit?.hit) {
           if (p.bounces > 0) {
@@ -589,7 +636,7 @@ export function updateProjs(dt) {
 
       // 4. ENEMY HIT LOGIC
       if (!destroyed) {
-          for (const e of enemies) {
+          for (const e of (cb.getDamageableActors?.()||enemies)) {
               if (!e.alive) continue;
               const bodyCenter = e.group.position.clone();
               bodyCenter.y += (e.flyH > 0 ? 0.5 : 1.0);
@@ -597,10 +644,10 @@ export function updateProjs(dt) {
               if (BABYLON.Vector3.Distance(p.mesh.position, bodyCenter) < 1.2) {
                   if (p.isSuperheated) {
                       if (!e._dots) e._dots = [];
-                      e._dots.push({ dmg: 15, remaining: 4.0 }); 
+                      e._dots.push({ dmg: 15, remaining: 4.0,source:'SUPERHEATED_RIVET',weapon:'RIVETER' }); 
                       spawnSparks(bodyCenter, 0xff4400, 10);
                   } else {
-                      cb.hitRobot(e, p.dmg);
+                      cb.hitRobot(e,p.dmg,false,false,'PLAYER','RIVETER');
                   }
                   destroyed = true; 
                   break; 
@@ -617,89 +664,75 @@ export function updateProjs(dt) {
       continue; 
   }
 
-    // ── All other projectiles: shared linear movement ─────────────
-    const step = p.dir.scale(p.speed * dt);
-    const obj  = p.g || p.mesh;
-    obj.position.addInPlace(step);
-    if (p.light) p.light.position.copyFrom(obj.position);
-    let hit = false;
+    // ── Linear projectiles: swept collision (no tunnelling between frames) ──
+    const obj=p.g || p.mesh;
+    const from=obj.position.clone();
+    const step=p.dir.scale(p.speed*dt);
+    const distance=step.length();
+    const to=from.add(step);
+    const direction=distance>1e-8?step.scale(1/distance):p.dir;
+    const wallHit=distance>1e-8
+      ? scene.pickWithRay(new BABYLON.Ray(from,direction,distance),blocksBullet)
+      : null;
+    let earliest=wallHit?.hit?{kind:'wall',t:Math.min(1,wallHit.distance/distance),point:wallHit.pickedPoint}:null;
 
-    // ── Check explosive barrels ───────────────────────────────
-    let hitBarrel = null;
-    for (const b of explosiveBarrels) {
-      if (!b.alive) continue;
-      if (BABYLON.Vector3.Distance(obj.position, b.pos) < 0.7) {
-        hitBarrel = b;
-        break;
+    // Geometry and targets compete on the same segment. A wall *behind*
+    // an enemy/barrel cannot steal the hit, but a wall in front blocks it.
+    for(const b of explosiveBarrels){
+      if(!b.alive)continue;
+      const t=segmentSphereHit(from,to,b.pos,0.75);
+      if(t!==null && (!earliest || t<earliest.t)){
+        earliest={kind:'barrel',t,barrel:b};
       }
     }
-
-    if (hitBarrel) {
-      hitBarrel.alive = false;
-      for (const m of hitBarrel.meshes) { m.setEnabled(false); m.checkCollisions = false; }
-      boom(hitBarrel.pos.clone(), 3.5, 70, true);
-      hit = true;
-    } else {
-      // ── Check scene collision (walls/floors) for hitscan-style projectile ─
-      const wallRay = new BABYLON.Ray(obj.position.subtract(step), step.normalize(), step.length() + 0.15);
-      const wHit = scene.pickWithRay(wallRay, m => m.checkCollisions && !m.metadata?.enemy && m.isEnabled());
-      if (wHit.hit) {
-        if (p.type === 'rocket') boom(obj.position.clone(), p.splash, p.dmg, false);
-        else spawnSparks(obj.position.clone(), 0xffaa55, 4);
-        hit = true;
+    if(p.owner==='player' && (p.type==='rocket'||p.type==='player_plasma')){
+      for(const e of (cb.getDamageableActors?.()||enemies)){
+        if(!e.alive)continue;
+        const center=e.group.position.clone();
+        center.y+=e.flyH>0?0.5:1;
+        const t=segmentSphereHit(from,to,center,p.type==='rocket'?1.6:1.1);
+        if(t!==null && (!earliest || t<earliest.t))
+          earliest={kind:'enemy',t,enemy:e};
       }
     }
-
-    if (!hit) {
-      if (p.owner === 'player' && p.type === 'rocket') {
-        for (const e of enemies) {
-          if (!e.alive) continue;
-          const bodyCy = e.group.position.y + (e.flyH > 0 ? 0.5 : 1.0);
-          _bodyVec.set(e.group.position.x, bodyCy, e.group.position.z);
-          if (BABYLON.Vector3.Distance(obj.position, _bodyVec) < 1.6) {
-            boom(obj.position.clone(), p.splash, p.dmg, true);
-            hit = true; break;
-          }
-        }
-      } else if (p.owner === 'player' && p.type === 'player_plasma') {
-        for (const e of enemies) {
-          if (!e.alive) continue;
-          const bodyCy = e.group.position.y + (e.flyH > 0 ? 0.5 : 1.0);
-          _bodyVec.set(e.group.position.x, bodyCy, e.group.position.z);
-          if (BABYLON.Vector3.Distance(obj.position, _bodyVec) < 1.1) {
-            cb.hitRobot && cb.hitRobot(e, p.dmg);
-            spawnSparks(obj.position.clone(), 0x4488ff, 8);
-            hit = true; break;
-          }
-        }
-      } else if (p.owner === 'enemy') {
-        // Check barrel hits for enemy projectiles
-        let hitBarrel = false;
-        for (const b of explosiveBarrels) {
-            if (!b.alive) continue;
-            if (BABYLON.Vector3.Distance(obj.position, b.pos) < 0.7) {
-                b.alive = false;
-                for (const m of b.meshes) { m.setEnabled(false); m.checkCollisions = false; }
-                boom(b.pos.clone(), 3.5, 70, true);
-                hitBarrel = true;
-                break;
-            }
-        }
-        if (hitBarrel) {
-            hit = true;
-        } else if (BABYLON.Vector3.Distance(obj.position, camera.position) < .95) {
-            cb.hurtPlayer && cb.hurtPlayer(p.dmg);
-            spawnSparks(obj.position.clone(), 0xff3300, 5);
-            hit = true;
-        }
-      }
+    if(p.owner==='enemy'){
+      const t=segmentSphereHit(from,to,camera.position,0.95);
+      if(t!==null && (!earliest || t<earliest.t))
+        earliest={kind:'player',t};
     }
 
-    if (hit || p.life <= 0) {
-      if (p.g) { p.g.getChildMeshes().forEach(m => m.dispose()); p.g.dispose(); }
-      else if (p.mesh) p.mesh.dispose();
-      if (p.light) p.light.dispose();
-      projs.splice(i, 1);
+    const impact=earliest?from.add(step.scale(earliest.t)):to;
+    obj.position.copyFrom(impact);
+    if(p.light)p.light.position.copyFrom(impact);
+    let hit=false;
+    if(earliest?.kind==='barrel'){
+      const b=earliest.barrel;
+      b.alive=false;
+      for(const m of b.meshes){m.setEnabled(false);m.checkCollisions=false;}
+      boom(b.pos.clone(),3.5,70,true,'ENVIRONMENT',true);
+      hit=true;
+    } else if(earliest?.kind==='enemy'){
+      if(p.type==='rocket')boom(impact.clone(),p.splash,p.dmg,true,p.weaponKey||'ROCKET');
+      else{
+        cb.hitRobot?.(earliest.enemy,p.dmg,false,false,'PLAYER',p.weaponKey||'PLASMA');
+        spawnSparks(impact.clone(),0x4488ff,8);
+      }
+      hit=true;
+    } else if(earliest?.kind==='player'){
+      cb.hurtPlayer?.(p.dmg);
+      spawnSparks(impact.clone(),0xff3300,5);
+      hit=true;
+    } else if(earliest?.kind==='wall'){
+      if(p.type==='rocket')boom(impact.clone(),p.splash,p.dmg,true,p.weaponKey||'ROCKET');
+      else spawnSparks(impact.clone(),0xffaa55,4);
+      hit=true;
+    }
+
+    if(hit || p.life<=0){
+      if(p.g){p.g.getChildMeshes().forEach(m=>m.dispose());p.g.dispose();}
+      else if(p.mesh)p.mesh.dispose();
+      if(p.light)p.light.dispose();
+      projs.splice(i,1);
     }
   }
 }

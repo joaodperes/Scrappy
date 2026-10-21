@@ -2,13 +2,16 @@
 const BABYLON = window.BABYLON;
 import { scene, camera } from './scene.js';
 import { remotePlayers, player, roomConfig, setRoomConfig, DEFAULT_ROOM_CONFIG } from './gameState.js';
-import { connect, disconnect, send, on, off, sendMoveThrottled, sendHit, sendReady, getMyId } from './network.js';
+import { connect, disconnect, adoptConnection, send, on, off, sendMoveThrottled, sendHit, sendReady, getMyId, getMyTeam } from './network.js';
 import { sfx } from './audio.js';
 import { updateFfaHUD, showRoomConfigBanner, hideFfaHUD } from './ui.js';
 import { hurtPlayer } from './player.js';
+import { blocksBullet } from './bulletCollision.js';
 import { spawnBot, updateEnemies } from './enemies.js';
 import { enemies } from './gameState.js';
-import { profile } from './progression.js';
+import { profile, emitEvent, awardXp } from './progression.js';
+import { curWep, inventory, setWeapon, setActiveSlot } from './weapons.js';
+import { getCurrentMap, getWalkableSpawns } from './mapManager.js';
 
 
 // ── FFA state ─────────────────────────────────────────────────
@@ -23,6 +26,9 @@ let myScore       = 0;
 // Pre-game lobby state
 let _inPreLobby   = false;
 let _isHost       = false;
+let _externalRoom = false;
+let _scoreboardShown = false;
+let _gunOrder = null;
 let _prelobbyOnStart = null;   // callback when host clicks "START GAME"
 
 // Scoreboard: id → { name, score }
@@ -47,7 +53,8 @@ function _chooseFarSpawn() {
     if (rp.alive) occupied.push(rp.group.position);
   }
   let best = FFA_SPAWNS[0], bestDist = -1;
-  for (const sp of FFA_SPAWNS) {
+  const choices = getWalkableSpawns(getCurrentMap());
+  for (const sp of (choices.length ? choices : FFA_SPAWNS)) {
     const sv = new BABYLON.Vector3(sp[0], sp[1], sp[2]);
     const minD = Math.min(...occupied.map(p => BABYLON.Vector3.Distance(sv, p)));
     if (minD > bestDist) { bestDist = minD; best = sp; }
@@ -92,7 +99,7 @@ function makeRemotePlayerMesh(id, name) {
 }
 
 // When building the lobby name input:
-if (nameInput && profile.displayName) nameInput.value = profile.displayName;
+// Callsign belongs to the legacy lobby DOM, not module initialization.
 
 function _makeNameTag(name, col3) {
   const W = 256, H = 64;
@@ -257,14 +264,14 @@ function _wireEvents(onRoundEnd, onGameStart) {
       if (pd.id === msg.id) continue;
       const g = makeRemotePlayerMesh(pd.id, pd.name ?? '?');
       remotePlayers.set(pd.id, { group: g, hp: player.maxHp, name: pd.name ?? '?', alive: true, score: 0 });
-      _scores.set(pd.id, { name: pd.name ?? '?', score: 0 });
+      _scores.set(pd.id, { name: pd.name ?? '?', score: 0, team: pd.team });
     }
     _rebuildMeshMap();
     sendReady();
 
     // Show pre-game lobby (not straight into gameplay)
     _inPreLobby = true;
-    _showPreLobbyOverlay(msg.roomId ?? '??????', _isHost, null);
+    if (!_externalRoom) _showPreLobbyOverlay(msg.roomId ?? '??????', _isHost, null);
     showRoomConfigBanner(roomConfig);
   });
 
@@ -272,7 +279,7 @@ function _wireEvents(onRoundEnd, onGameStart) {
     if (msg.id === getMyId()) return;
     const g = makeRemotePlayerMesh(msg.id, msg.name ?? '?');
     remotePlayers.set(msg.id, { group: g, hp: player.maxHp, name: msg.name ?? '?', alive: true, score: 0 });
-    _scores.set(msg.id, { name: msg.name ?? '?', score: 0 });
+    _scores.set(msg.id, { name: msg.name ?? '?', score: 0,team:msg.team });
     _rebuildMeshMap();
     _updatePreLobbyList();
     if (_inPreLobby) updateFfaHUD(_buildScoreRows(), timeLeft, getMyId());
@@ -302,14 +309,16 @@ function _wireEvents(onRoundEnd, onGameStart) {
       rp.alive = (pd.hp ?? 1) > 0;
       rp.score = pd.score ?? rp.score;
       rp.group.getChildMeshes().forEach(m => { if (m.name !== 'nameTag') m.setEnabled(rp.alive); });
-      const sc = _scores.get(pd.id) ?? { name: rp.name, score: 0 };
-      sc.score = rp.score; _scores.set(pd.id, sc);
+      const sc = _scores.get(pd.id) ?? { name: rp.name, score: 0,team:pd.team };
+      sc.score = rp.score;sc.team=pd.team||sc.team; _scores.set(pd.id, sc);
     }
     if (!_inPreLobby) updateFfaHUD(_buildScoreRows(), timeLeft, getMyId());
   });
 
   on('hit', msg => {
-    if (msg.targetId === getMyId()) hurtPlayer(msg.dmg * (roomConfig.damageMult ?? 1));
+    // The server has already applied room damage scaling and HP clamping.
+    // Multiplying again here made client HP diverge from the server state.
+    if (msg.targetId === getMyId()) hurtPlayer(msg.dmg);
   });
 
   on('killed', msg => {
@@ -325,19 +334,27 @@ function _wireEvents(onRoundEnd, onGameStart) {
     if (msg.killerId) {
       const sc = _scores.get(msg.killerId);
       if (sc) sc.score++;
-      if (msg.killerId === getMyId()) myScore++;
-      updateFfaHUD(_buildScoreRows(), timeLeft, getMyId());
-      if (roomConfig.scoreLimit > 0 && (msg.killerScore ?? 0) >= roomConfig.scoreLimit) {
-        _handleRoundEnd({ winner: msg.killerName ?? 'Someone', scores: msg.scores }, onRoundEnd);
+      if (msg.killerId === getMyId()) {
+        myScore++;
+        emitEvent('KILL',{botType:'pvp',weaponKey:msg.weapon||curWep,source:'PVP'});
+        awardXp(50);
       }
+      updateFfaHUD(_buildScoreRows(), timeLeft, getMyId());
+      // Do not infer the winner from this one kill. TDM uses aggregated
+      // team score, Gun Game has a Knife finale, and only the server's
+      // roundEnd packet decides whether/time/how the match concluded.
     }
+  });
+
+  on('damageConfirmed',msg=>{
+    if(Number(msg.damage)>0) emitEvent('DAMAGE_DEALT',{weaponKey:msg.weapon||curWep,amount:msg.damage,source:'PVP'});
   });
 
   on('respawn', msg => {
     if (msg.playerId === getMyId()) {
       player.hp = player.maxHp; player.armor = 0;
-      const sp = _chooseFarSpawn();
-      camera.position.set(sp[0], 1.72, sp[2]);
+      const sp = [msg.x ?? _chooseFarSpawn()[0],msg.y ?? 0,msg.z ?? _chooseFarSpawn()[2]];
+      camera.position.set(sp[0], sp[1] + 1.72, sp[2]);
       localDead = false;
       _hideRespawnOverlay();
       document.getElementById('c')?.requestPointerLock();
@@ -350,6 +367,7 @@ function _wireEvents(onRoundEnd, onGameStart) {
 
   on('roundStart', msg => {
     roundActive = true;
+    _gunOrder=msg.gunOrder||_gunOrder;
     timeLeft = msg.duration ?? roomConfig.roundDuration ?? 600;
     myScore = 0; _scores.forEach(s => { s.score = 0; });
 
@@ -363,6 +381,25 @@ function _wireEvents(onRoundEnd, onGameStart) {
     _announce('FIGHT!', 2200);
   });
 
+  on('weaponProgress',msg=>{
+    if(msg.playerId!==getMyId() || !WDEFS_GUN_ALLOWED(msg.weapon))return;
+    inventory[0]=msg.weapon;
+    setActiveSlot(0);
+    setWeapon(msg.weapon);
+    _announce('WEAPON UP: '+msg.weapon,1750);
+  });
+  on('roundCountdown',msg=>{
+    roundActive=false;
+    _gunOrder=msg.gunOrder||null;
+  });
+  // Disconnect while the host's 5s countdown is running: do not leave
+  // remaining clients stranded behind the pre-match overlay.
+  on('roundCancelled', msg=>{
+    roundActive=false;
+    _gunOrder=null;
+    if(_inPreLobby)_hidePreLobbyOverlay();
+    onRoundEnd?.('CANCELLED',[]);
+  });
   on('roundEnd',    msg => _handleRoundEnd(msg, onRoundEnd));
   on('disconnected', ()  => stopFfa());
 }
@@ -373,10 +410,57 @@ function _handleRoundEnd(msg, onRoundEnd) {
   onRoundEnd?.(msg.winner ?? 'Nobody', _buildScoreRows());
 }
 
+function WDEFS_GUN_ALLOWED(name){
+  return !!(name && ['PISTOL','SMG','SHOTGUN','CHAINGUN','DMR','COMET','RAILGUN',
+    'TESLA','CROSSBOW','ELECTRON','ION','KNIFE'].includes(name));
+}
+function drawMatchScoreboard(){
+  const root=document.getElementById('_matchScoreboard');
+  if(!root||!_scoreboardShown)return;
+  const list=root.querySelector('[data-scores]');
+  if(!list)return;
+  list.replaceChildren();
+  const rows=_buildScoreRows();
+  const heading=document.createElement('div');
+  heading.textContent=(roomConfig.mode==='tdm'?'TEAM DEATHMATCH':roomConfig.mode==='gunGame'?'GUN GAME':'FREE FOR ALL')+' · '+(roomConfig.roundDuration===0?'NO TIME LIMIT':Math.ceil(timeLeft)+'s');
+  heading.style.cssText='font-weight:bold;color:#15cab6;margin-bottom:14px';
+  list.appendChild(heading);
+  for(const [i,r] of rows.entries()){
+    const line=document.createElement('div');
+    line.textContent=(i+1)+'. '+r.name+' — '+r.score;
+    line.style.cssText='padding:7px 0;border-bottom:1px solid #444';
+    list.appendChild(line);
+  }
+}
+export function togglePvpScoreboard(){
+  if(!ffaActive||_inPreLobby)return;
+  _scoreboardShown=!_scoreboardShown;
+  let root=document.getElementById('_matchScoreboard');
+  if(!root){
+    root=document.createElement('div');
+    root.id='_matchScoreboard';
+    root.style.cssText='position:fixed;inset:0;z-index:1100;background:rgba(10,12,20,.94);color:#fff;display:none;align-items:center;justify-content:center;font:16px monospace';
+    const panel=document.createElement('div');
+    panel.style.cssText='width:min(540px,90vw);padding:25px;background:#262735;border:1px solid #5f6b6d';
+    const list=document.createElement('div');list.dataset.scores='1';
+    panel.appendChild(list);
+    const resume=document.createElement('button');
+    resume.textContent='RETURN TO MATCH';
+    resume.style.cssText='margin-top:20px;padding:11px 18px;cursor:pointer;background:#15cab6;color:#10121d;border:0';
+    resume.onclick=()=>{
+      _scoreboardShown=false;root.style.display='none';
+      document.getElementById('c')?.requestPointerLock().catch(()=>{});
+    };
+    panel.appendChild(resume);root.appendChild(panel);document.body.appendChild(root);
+  }
+  root.style.display=_scoreboardShown?'flex':'none';
+  if(_scoreboardShown){document.exitPointerLock();drawMatchScoreboard();}
+}
 function _buildScoreRows() {
-  const rows = [{ id: getMyId() ?? 'me', name: myName, score: myScore }];
+  const tm = roomConfig.mode === 'tdm';
+  const rows = [{ id: getMyId() ?? 'me', name: tm ? '['+(getMyTeam()||'?')+'] '+myName : myName, score: myScore }];
   for (const [id, sc] of _scores) {
-    if (id !== getMyId()) rows.push({ id, name: sc.name, score: sc.score });
+    if (id !== getMyId()) rows.push({ id, name: tm && sc.team ? '['+sc.team+'] '+sc.name : sc.name, score: sc.score });
   }
   return rows.sort((a, b) => b.score - a.score);
 }
@@ -391,10 +475,11 @@ function _buildScoreRows() {
  * @param onGameStart  Called when server sends roundStart (game actually begins)
  * @param onRoundEnd   Called when round finishes
  */
-export function startFfa(serverUrl, name, roomId, config, isHost, onGameStart, onRoundEnd) {
+export function startFfa(serverUrl, name, roomId, config, isHost, onGameStart, onRoundEnd, existingSession = null) {
   ffaActive   = true;
   localDead   = false;
   _isHost     = isHost;
+  _externalRoom = !!existingSession;
   _inPreLobby = true;
   myName      = name ?? 'ANON';
   myScore     = 0;
@@ -403,7 +488,8 @@ export function startFfa(serverUrl, name, roomId, config, isHost, onGameStart, o
   _clearRemotePlayers();
   setRoomConfig({ ...DEFAULT_ROOM_CONFIG, ...(config ?? {}) });
   _wireEvents(onRoundEnd, onGameStart);
-  connect(serverUrl, name, roomId, { type: 'ffa', config: roomConfig, isHost });
+  if (existingSession) adoptConnection(existingSession.socket, existingSession.welcome, existingSession.buffered || []);
+  else connect(serverUrl, name, roomId, { type: 'ffa', config: roomConfig, isHost });
   _botSpawnTimer = BOT_SPAWN_INTERVAL;
 }
 
@@ -412,11 +498,15 @@ export function stopFfa() {
   roundActive = false;
   _inPreLobby = false;
   _isHost     = false;
+  _externalRoom = false;
+  _scoreboardShown = false;
+  const board=document.getElementById('_matchScoreboard');
+  if(board)board.remove();
   disconnect();
   _clearRemotePlayers();
   _hidePreLobbyOverlay();
-  ['welcome','playerJoined','playerLeft','state','hit','killed',
-   'respawn','roundStart','roundEnd','disconnected'].forEach(t => off(t));
+  ['welcome','playerJoined','playerLeft','state','hit','killed','damageConfirmed',
+   'respawn','weaponProgress','roundCountdown','roundCancelled','roundStart','roundEnd','disconnected'].forEach(t => off(t));
   for (const e of enemies) {
     if (!e.alive) continue;
     e.group.getChildMeshes().forEach(m => m.dispose());
@@ -443,8 +533,9 @@ export function updateFfa(dt) {
   }
 
   if (roundActive) {
-    timeLeft = Math.max(0, timeLeft - dt);
+    if(roomConfig.roundDuration!==0)timeLeft = Math.max(0, timeLeft - dt);
     updateFfaHUD(_buildScoreRows(), timeLeft, getMyId());
+    drawMatchScoreboard();
   }
 
   // Periodic bot spawning
@@ -483,12 +574,13 @@ export function checkFfaHitScan(dmg, range, spread = 0) {
     fwd.normalize();
   }
   const ray  = new BABYLON.Ray(camera.position.clone(), fwd, range);
-  const hits = scene.multiPickWithRay(ray, m => _remoteMeshMap.has(m));
-  if (hits?.length > 0) {
-    const entry = _remoteMeshMap.get(hits[0].pickedMesh);
-    if (entry) {
-      const realDmg = (roomConfig.instagib ? 9999 : dmg) * (roomConfig.damageMult ?? 1);
-      sendHit(entry.id, realDmg, 'hitscan');
+  const hit = scene.pickWithRay(ray,m => m.isEnabled() &&
+    (_remoteMeshMap.has(m) || blocksBullet(m)));
+  if (hit?.hit) {
+    const entry = _remoteMeshMap.get(hit.pickedMesh);
+    if(entry){
+      const realDmg=Math.min(160,(roomConfig.instagib?150:dmg)*(roomConfig.damageMult??1));
+      sendHit(entry.id,realDmg,curWep);
       return true;
     }
   }
@@ -506,10 +598,12 @@ function _showRespawnOverlay(secs) {
     document.body.appendChild(el);
   }
   el.style.display = 'flex';
+  const canvas=document.getElementById('c');if(canvas)canvas.style.filter='grayscale(1)';
 }
 function _hideRespawnOverlay() {
   const el = document.getElementById('ffaRespawnOverlay');
   if (el) el.style.display = 'none';
+  const canvas=document.getElementById('c');if(canvas)canvas.style.filter='';
 }
 function _announce(txt, ms) {
   const el = document.getElementById('waveAnnounce');

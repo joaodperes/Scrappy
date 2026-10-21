@@ -21,8 +21,10 @@
 //
 // Uses window.__levelScene for the current scene (set by host).
 const BABYLON = window.BABYLON;
-import { walkableMeshes, explosiveBarrels } from './level.js';
+import { walkableMeshes, explosiveBarrels, jumpPads } from './level.js';
 import { M } from './textures.js';
+import { validateMapDocument } from './mapSchema.js';
+import { registerMapDocument } from './mapLayoutStore.js';
 
 export const LIFT_Y = 0.22;
 export const liftY = y => (y > 0.05 ? y + LIFT_Y : y);
@@ -93,6 +95,10 @@ function _tagMeta(m, type, generator, params, editable, extraMeta) {
   m.metadata = editable
     ? { editable: true, type, generator, params, ...(extraMeta || {}) }
     : { editable: false, type, ...(extraMeta || {}) };
+  // Babylon ray picking also requires isPickable. Solid non-editable
+  // walls must remain bullet blockers; editable glass is visually pickable
+  // in the editor but excluded from bullets by bulletCollision.js.
+  m.isPickable = !!editable || (!!m.checkCollisions && m.metadata.type !== 'glass');
   return m;
 }
 
@@ -276,9 +282,10 @@ export function createBarrel(px, pz, yOff = 0, opts = {}) {
     const h = BABYLON.MeshBuilder.CreateCylinder('barrelHoop', {
       diameterTop: 1.22, diameterBottom: 1.24, height: 0.15, tessellation: 12,
     }, scene);
-    h.position.set(px, yPos, pz);
+    h.parent = bm;
+    h.position.set(0, yPos - baseY, 0);
     h.material = M.barrelHoop || M.grey;
-    h.isPickable = true;
+    h.isPickable = false;
     h.metadata = { editable: false, type: 'barrelHoop' };
     return h;
   };
@@ -328,26 +335,26 @@ export function createCrate(px, py, pz, sx, sy, sz, mat = matConcrete, opts = {}
 // hardcoded placement where you're pushing yourself) and they won't.
 
 export function createLava(cx, cz, sx, sz, opts = {}) {
-  const { editable = true, navmesh = true, extraMeta = null, hazardZones = null } = opts;
+  const { editable = true, navmesh = true, extraMeta = null, hazardZones = null, surfY = 0 } = opts;
   const scene = getScene();
   const mat = new BABYLON.StandardMaterial('jLv', scene);
   mat.emissiveColor = new BABYLON.Color3(.95, .22, .02);
   mat.disableLighting = true;
 
   const m = BABYLON.MeshBuilder.CreateBox('lava', { width: sx, height: .28, depth: sz }, scene);
-  m.position.set(cx, -.06, cz);
+  m.position.set(cx, liftY(surfY) - .06, cz);
   m.material = mat;
   m.checkCollisions = true;
   m.isPickable = false;
 
-  _tagMeta(m, 'lava', 'createLava', { cx, cz, sx, sz }, editable, {
-    hazard: true, dps: 10, hazardType: 'LAVA', halfWidth: sx / 2, halfDepth: sz / 2, solid: true,
+  _tagMeta(m, 'lava', 'createLava', { cx, cz, sx, sz, surfY }, editable, {
+    hazard: true, dps: 10, hazardType: 'LAVA', halfWidth: sx / 2, halfDepth: sz / 2, halfHeight: .55, solid: true,
     ...(extraMeta || {}),
   });
 
   if (navmesh) walkableMeshes.push(m);
   if (hazardZones) hazardZones.push(m);
-  m.freezeWorldMatrix();
+  // Mutable: editor can move or scale this hazard.
   return m;
 }
 
@@ -399,7 +406,7 @@ export function createSpikeTrap(cx, cz, sx, sz, surfY, opts = {}) {
   // Note: spike traps deliberately don't join walkableMeshes (matches the
   // original — they're a floor decal you walk ONTO, not a solid obstacle).
   if (hazardZones) hazardZones.push(f);
-  f.freezeWorldMatrix();
+  // Mutable: editor can move or scale this hazard.
 
   // Visual spikes (child objects, not editable independently — deleting or
   // re-exporting the parent floor is enough; these ride along for free).
@@ -413,13 +420,263 @@ export function createSpikeTrap(cx, cz, sx, sz, surfY, opts = {}) {
       const ox = (sx / cr) * c - sx / 2 + sx / (cr * 2);
       const oz = (sz / rw) * r - sz / 2 + sz / (rw * 2);
       const sp = BABYLON.MeshBuilder.CreateCylinder('jSp', { diameterTop: 0, diameterBottom: .18, height: .52, tessellation: 5 }, scene);
-      sp.position.set(cx + ox, liftY(surfY) + .26, cz + oz);
+      sp.position.set(ox, 0.32, oz);
       sp.material = sm;
       sp.isPickable = false;
       sp.parent = f;
     }
   }
   return f;
+}
+
+// ── Editable gameplay entities ───────────────────────────────────
+// Single editable root meshes, with runtime state reconstructed from JSON.
+// Unlike static geometry these NEVER participate in the baked NavMesh.
+export function createJumpPad(px, floorY, pz, force = 24, rotY = 0) {
+  const scene = getScene(), y = liftY(floorY);
+  const mesh = BABYLON.MeshBuilder.CreateCylinder('jumpPad', {diameter:2.2,height:0.1,tessellation:16},scene);
+  mesh.position.set(px,y,pz);
+  mesh.rotation.y = rotY;
+  mesh.material = M.jumpPad || M.ledGreen;
+  mesh.checkCollisions = false;
+  _tagMeta(mesh,'jump_pad','createJumpPad',{px,floorY,pz,force,rotY},true,null);
+  const pad = {pos:mesh.position.clone(),force,thrustX:Math.sin(rotY)*force*0.45,
+    thrustZ:Math.cos(rotY)*force*0.45,mesh};
+  jumpPads.push(pad);
+  return mesh;
+}
+
+export function createMovingPlatform(startX,startY,startZ,endX,endY,endZ,
+  sx=5,sz=5,speed=0.25,waitTime=1.5,opts={}) {
+  const scene=getScene();
+  const mesh=BABYLON.MeshBuilder.CreateBox('movingPlatform',{width:sx,height:0.5,depth:sz},scene);
+  mesh.position.set(startX,startY,startZ);
+  mesh.checkCollisions=true;
+  mesh.material=matSteel || matConcrete;
+  _tagMeta(mesh,'moving_platform','createMovingPlatform',
+    {startX,startY,startZ,endX,endY,endZ,sx,sz,speed,waitTime},true,null);
+  const start=mesh.position.clone(),end=new BABYLON.Vector3(endX,endY,endZ);
+  mesh._moveData={start,end,speed,t:0,dir:1,waitTime,waitTimer:0,paused:true};
+  mesh.setEnabled(!!window.__levelEditorMode);
+  opts.movingPlatforms?.push(mesh);
+  return mesh;
+}
+
+export function createPowerSwitch(px,py,pz,targetPlatformIds=[],opts={}) {
+  const scene=getScene();
+  const mesh=BABYLON.MeshBuilder.CreateBox('powerSwitch',{width:0.8,height:1.3,depth:0.4},scene);
+  mesh.position.set(px,py,pz);
+  const mat=new BABYLON.StandardMaterial('switchMat',scene);
+  mat.diffuseColor=new BABYLON.Color3(0.13,0.4,0.28);
+  mat.emissiveColor=new BABYLON.Color3(0,0.8,0.2);
+  mesh.material=mat;
+  mesh.checkCollisions=false;
+  _tagMeta(mesh,'power_switch','createPowerSwitch',
+    {px,py,pz,targetPlatformIds},true,{interactive:true,activated:false,targetPlatforms:[]});
+  const ring=BABYLON.MeshBuilder.CreateTorus('switchRing',{diameter:0.75,thickness:0.1},scene);
+  ring.parent=mesh;
+  ring.position.set(0,0,0.28);
+  ring.isPickable=false;
+  ring.checkCollisions=false;
+  ring.material=M.ledGreen || mat;
+  mesh.metadata.ring=ring;
+  opts.powerSwitches?.push(mesh);
+  return mesh;
+}
+
+// City-style moving cable car: the car and its static guide cable are one
+// serialized gameplay entity. Keep the cable as an auxiliary mesh rather
+// than a child of the car, or it would travel along the route.
+export function createZipline(name, startX, startY, startZ, endX, endY, endZ,
+  worldSpeed = 11.5, width = 4, depth = 4, opts = {}) {
+  const scene=getScene();
+  const start=new BABYLON.Vector3(startX,startY,startZ);
+  const end=new BABYLON.Vector3(endX,endY,endZ);
+  const distance=BABYLON.Vector3.Distance(start,end);
+  if(distance<=0.01)throw Error('Zipline start/end cannot coincide');
+  const H=0.3;
+  const car=BABYLON.MeshBuilder.CreateBox(name||'zipline',
+    {width,height:H,depth},scene);
+  car.position.set(startX,startY-H/2,startZ);
+  const mat=new BABYLON.StandardMaterial('ziplineMat',scene);
+  mat.diffuseColor=new BABYLON.Color3(0.22,0.52,0.92);
+  mat.emissiveColor=new BABYLON.Color3(0.04,0.12,0.28);
+  car.material=mat;
+  car.checkCollisions=true;
+  _tagMeta(car,'zipline','createZipline',
+    {name,startX,startY,startZ,endX,endY,endZ,worldSpeed,width,depth},true,null);
+  car._moveData={
+    start:start.clone(),end:end.clone(),speed:worldSpeed/distance,
+    t:0,dir:1,waitTimer:0,waitTime:1.5,paused:false,
+  };
+  const cable=BABYLON.MeshBuilder.CreateCylinder('ziplineCable',
+    {diameter:0.07,height:distance,tessellation:5},scene);
+  cable.position.copyFrom(BABYLON.Vector3.Lerp(start,end,0.5));
+  const axis=end.subtract(start).normalize();
+  const dot=BABYLON.Vector3.Dot(axis,BABYLON.Axis.Y);
+  if(Math.abs(dot)<0.999){
+    const rot=BABYLON.Vector3.Cross(BABYLON.Axis.Y,axis);
+    cable.rotationQuaternion=BABYLON.Quaternion.RotationAxis(rot.normalize(),Math.acos(dot));
+  }
+  const cableMat=new BABYLON.StandardMaterial('ziplineCableMat',scene);
+  cableMat.diffuseColor=new BABYLON.Color3(0.24,0.28,0.35);
+  cableMat.emissiveColor=new BABYLON.Color3(0.03,0.05,0.08);
+  cable.material=cableMat;
+  cable.isPickable=false;
+  cable.checkCollisions=false;
+  car.metadata.auxiliaryMeshes=[cable];
+  opts.movingPlatforms?.push(car);
+  // Retain the original City NavMesh contribution until dynamic-platform
+  // links are fully modeled in the navigation graph.
+  walkableMeshes.push(car);
+  return car;
+}
+
+// City rooftop lift, matching the original 20x20-building shaft layout.
+// The car is the editable entity; rails follow it, poles remain stationary.
+export function createRooftopLift(cx, cz, topSurfY, face, faceOffset=0, opts={}) {
+  const scene=getScene();
+  const halfFootprint=10, stand=2, carWidth=3.6, half=carWidth/2;
+  const alongX=face==='N'||face==='S';
+  const wall=alongX?cz+(face==='N'?-halfFootprint:halfFootprint):
+    cx+(face==='E'?halfFootprint:-halfFootprint);
+  const sign=(face==='N'||face==='W')?-1:1;
+  const anchor=(alongX?cx:cz)+faceOffset;
+  const out=wall+sign*stand;
+  const shaftX=alongX?anchor:out,shaftZ=alongX?out:anchor;
+  const auxiliary=[];
+  const poleHeight=topSurfY+1.2;
+  for(const [dx,dz] of [[-half,-half],[half,-half],[-half,half],[half,half]]){
+    const pole=BABYLON.MeshBuilder.CreateCylinder('liftPole',
+      {diameter:0.16,height:poleHeight},scene);
+    pole.position.set(shaftX+dx,poleHeight/2,shaftZ+dz);
+    pole.material=matSteel;
+    pole.isPickable=false;
+    auxiliary.push(pole);
+  }
+  const H=0.3;
+  const car=BABYLON.MeshBuilder.CreateBox('liftPlat',
+    {width:carWidth,height:H,depth:carWidth},scene);
+  car.position.set(shaftX,-H/2,shaftZ);
+  car.material=matSteel;
+  car.checkCollisions=true;
+  _tagMeta(car,'rooftop_lift','createRooftopLift',
+    {cx,cz,topSurfY,face,faceOffset},true,null);
+  for(const side of [-1,1]){
+    const rail=BABYLON.MeshBuilder.CreateBox('liftRail',{
+      width:alongX?carWidth:0.15,height:1,depth:alongX?0.15:carWidth},scene);
+    rail.parent=car;
+    rail.position.set(alongX?0:side*half,0.5+H/2,alongX?side*half:0);
+    rail.material=matSteel;
+    rail.isPickable=false;
+  }
+  car._moveData={
+    start:new BABYLON.Vector3(shaftX,-H/2,shaftZ),
+    end:new BABYLON.Vector3(shaftX,topSurfY-H/2,shaftZ),
+    speed:5/topSurfY,t:0,dir:1,waitTimer:0,waitTime:2,paused:false,
+  };
+  car.metadata.auxiliaryMeshes=auxiliary;
+  opts.movingPlatforms?.push(car);
+  walkableMeshes.push(car);
+  return car;
+}
+
+// Preserve City's original bridge orientation: width stays horizontal even
+// when the deck rises between two different roof heights.
+function _bridgeOrientation(direction) {
+  const forward=direction.normalize();
+  let right=BABYLON.Vector3.Cross(BABYLON.Axis.Y,forward);
+  if(right.lengthSquared()<1e-6)right=BABYLON.Vector3.Cross(BABYLON.Axis.Z,forward);
+  right.normalize();
+  const up=BABYLON.Vector3.Cross(forward,right).normalize();
+  const trace=right.x+up.y+forward.z;
+  let qx,qy,qz,qw;
+  if(trace>0){
+    const t=Math.sqrt(trace+1)*2;
+    qw=.25*t;qx=(up.z-forward.y)/t;qy=(forward.x-right.z)/t;qz=(right.y-up.x)/t;
+  }else if(right.x>up.y&&right.x>forward.z){
+    const t=Math.sqrt(1+right.x-up.y-forward.z)*2;
+    qw=(up.z-forward.y)/t;qx=.25*t;qy=(up.x+right.y)/t;qz=(forward.x+right.z)/t;
+  }else if(up.y>forward.z){
+    const t=Math.sqrt(1+up.y-right.x-forward.z)*2;
+    qw=(forward.x-right.z)/t;qx=(up.x+right.y)/t;qy=.25*t;qz=(forward.y+up.z)/t;
+  }else{
+    const t=Math.sqrt(1+forward.z-right.x-up.y)*2;
+    qw=(right.y-up.x)/t;qx=(forward.x+right.z)/t;qy=(forward.y+up.z)/t;qz=.25*t;
+  }
+  return new BABYLON.Quaternion(qx,qy,qz,qw);
+}
+
+// One selectable deck and two attached railings; the entire sloped bridge
+// rotates/moves as one physical and serializable composite.
+export function createSkybridge(cx,cz,spanAxis,spanLen,bridgeW,y1,y2) {
+  const scene=getScene(),half=spanLen/2,H=.35;
+  const p1=spanAxis==='X'
+    ?new BABYLON.Vector3(cx-half,y1,cz)
+    :new BABYLON.Vector3(cx,y1,cz-half);
+  const p2=spanAxis==='X'
+    ?new BABYLON.Vector3(cx+half,y2,cz)
+    :new BABYLON.Vector3(cx,y2,cz+half);
+  const distance=BABYLON.Vector3.Distance(p1,p2);
+  const mid=BABYLON.Vector3.Lerp(p1,p2,.5);
+  const deck=BABYLON.MeshBuilder.CreateBox('bridgeDeck',
+    {width:bridgeW,height:H,depth:distance},scene);
+  deck.position.set(mid.x,mid.y-H/2,mid.z);
+  deck.rotationQuaternion=_bridgeOrientation(p2.subtract(p1));
+  deck.material=matConcrete;
+  deck.checkCollisions=true;
+  _tagMeta(deck,'skybridge','createSkybridge',
+    {cx,cz,spanAxis,spanLen,bridgeW,y1,y2},true,null);
+  walkableMeshes.push(deck);
+  for(const side of [-1,1]){
+    const rail=BABYLON.MeshBuilder.CreateBox('bridgeRail',
+      {width:.25,height:1.4,depth:distance},scene);
+    rail.parent=deck;
+    rail.position.set(side*bridgeW/2,.7,0);
+    rail.material=matConcrete;
+    rail.checkCollisions=true;
+    rail.isPickable=true; // Physical railing must also block hitscan shots.
+    rail.metadata={editable:false,type:'bridge_rail'};
+    walkableMeshes.push(rail);
+  }
+  return deck;
+}
+
+// City street car wreck with a roof-mounted jump pad. One editable root
+// owns every collision/visual mesh and its gameplay pad, avoiding the old
+// hardcoded pad drifting away whenever the vehicle is repositioned.
+export function createCarWreck(cx,cz,rotY=0) {
+  const scene=getScene();
+  const mat=new BABYLON.StandardMaterial('carBody_'+cx+'_'+cz,scene);
+  // Stable variation instead of a new color on every JSON import.
+  const tint=(Math.sin(cx*12.9898+cz*78.233)*43758.5453)%1;
+  const h=Math.abs(tint);
+  mat.diffuseColor=new BABYLON.Color3(0.1+h*0.5,0.08+h*0.25,0.06+h*0.18);
+  mat.specularColor=new BABYLON.Color3(0.05,0.05,0.05);
+  const root=createWall(cx,0.5,cz,2,0.9,4.4,mat,{editable:true});
+  root.name='carWreck';
+  root.rotation.y=rotY;
+  const cabin=createWall(0,0.78,0,1.8,0.7,2.2,mat,{editable:false});
+  cabin.parent=root;
+  cabin.isPickable=false;
+  const wheelMat=new BABYLON.StandardMaterial('carWheelMat',scene);
+  wheelMat.diffuseColor=new BABYLON.Color3(.08,.08,.08);
+  for(const [wx,wz] of [[-1.1,-1.4],[-1.1,1.4],[1.1,-1.4],[1.1,1.4]]){
+    const wheel=BABYLON.MeshBuilder.CreateCylinder('carWheel',
+      {diameter:0.7,height:0.25,tessellation:10},scene);
+    wheel.parent=root;
+    wheel.rotation.z=Math.PI/2;
+    wheel.position.set(wx,-0.3,wz);
+    wheel.material=wheelMat;
+    wheel.isPickable=false;
+  }
+  const roofPad=createJumpPad(cx,1.63,cz,24,rotY);
+  roofPad.setParent(root); // Preserve world position/heading at construction.
+  roofPad.isPickable=false;
+  roofPad.metadata.editable=false; // Part of car entity, not a second export.
+  _tagMeta(root,'car_wreck','createCarWreck',{cx,cz,rotY},true,null);
+  root.metadata.roofPad=roofPad;
+  return root;
 }
 
 // ── JSON layout pipeline ─────────────────────────────────────────
@@ -456,9 +713,24 @@ const _generators = {
   // primitives" section above for why these take no per-map material.
   // hazardTargets/destructibleTargets are threaded in from applyEditableLayout
   // below, not part of the exported params themselves.
-  createLava:             (p, t) => createLava(p.cx, p.cz, p.sx, p.sz, { hazardZones: t?.hazardZones }),
+  createLava:             (p, t) => createLava(p.cx, p.cz, p.sx, p.sz, { hazardZones: t?.hazardZones, surfY: p.surfY ?? 0 }),
   createDestructibleWall: (p, t) => createDestructibleWall(p.px, p.surfY, p.pz, p.sx, p.sh, p.sz, p.hp, { destructibleWalls: t?.destructibleWalls }),
   createSpikeTrap:        (p, t) => createSpikeTrap(p.cx, p.cz, p.sx, p.sz, p.surfY, { hazardZones: t?.hazardZones }),
+  createJumpPad:          p => createJumpPad(p.px,p.floorY,p.pz,p.force,p.rotY),
+  createMovingPlatform:   (p,t) => createMovingPlatform(p.startX,p.startY,p.startZ,p.endX,p.endY,p.endZ,
+                                   p.sx,p.sz,p.speed,p.waitTime,{movingPlatforms:t?.movingPlatforms}),
+  createPowerSwitch:      (p,t) => createPowerSwitch(p.px,p.py,p.pz,p.targetPlatformIds||[],
+                                   {powerSwitches:t?.powerSwitches}),
+  createStaircase:        p => createStaircase(p.px,p.py,p.pz,p.width,p.depth,p.steps,
+                                  p.dirX,p.dirZ,p.stepHeight??0.5,!!p.flareEnds,_matForParams(p)),
+  createZipline:          (p,t) => createZipline(p.name,p.startX,p.startY,p.startZ,
+                              p.endX,p.endY,p.endZ,p.worldSpeed,p.width,p.depth,
+                              {movingPlatforms:t?.movingPlatforms}),
+  createRooftopLift:      (p,t) => createRooftopLift(p.cx,p.cz,p.topSurfY,p.face,
+                              p.faceOffset||0,{movingPlatforms:t?.movingPlatforms}),
+  createSkybridge:        p => createSkybridge(p.cx,p.cz,p.spanAxis,p.spanLen,
+                              p.bridgeW,p.y1,p.y2),
+  createCarWreck:         p => createCarWreck(p.cx,p.cz,p.rotY??0),
 };
 
 /** Re-creates one editable prop from its generator name + params. `targets`
@@ -490,7 +762,14 @@ export function instantiateFromParams(generator, params = {}, targets = null) {
 export function clearEditableMeshes(targets = null) {
   const scene = getScene();
   const toRemove = new Set();
-  scene.meshes.forEach(m => { if (m.metadata?.editable) toRemove.add(m); });
+  scene.meshes.forEach(m => {
+    if (!m.metadata?.editable) return;
+    toRemove.add(m);
+    // Composite entities contain physical child meshes; remove every child
+    // from walkableMeshes before Babylon recursively disposes the parent.
+    m.getChildMeshes(false).forEach(child=>toRemove.add(child));
+    m.metadata?.auxiliaryMeshes?.forEach(mesh=>toRemove.add(mesh));
+  });
 
   for (let i = explosiveBarrels.length - 1; i >= 0; i--) {
     const entry = explosiveBarrels[i];
@@ -504,6 +783,17 @@ export function clearEditableMeshes(targets = null) {
     for (let i = targets.hazardZones.length - 1; i >= 0; i--) {
       if (toRemove.has(targets.hazardZones[i])) targets.hazardZones.splice(i, 1);
     }
+  }
+  for (let i=jumpPads.length-1;i>=0;i--) {
+    if (toRemove.has(jumpPads[i].mesh)) jumpPads.splice(i,1);
+  }
+  if (targets?.movingPlatforms) {
+    for (let i=targets.movingPlatforms.length-1;i>=0;i--)
+      if (toRemove.has(targets.movingPlatforms[i])) targets.movingPlatforms.splice(i,1);
+  }
+  if (targets?.powerSwitches) {
+    for (let i=targets.powerSwitches.length-1;i>=0;i--)
+      if (toRemove.has(targets.powerSwitches[i])) targets.powerSwitches.splice(i,1);
   }
   if (targets?.destructibleWalls) {
     for (let i = targets.destructibleWalls.length - 1; i >= 0; i--) {
@@ -537,12 +827,63 @@ export function clearEditableMeshes(targets = null) {
  */
 export function applyEditableLayout(objects, targets = null) {
   clearEditableMeshes(targets);
+  const idMeshes = new Map();
   for (const obj of (objects || [])) {
     const mesh = instantiateFromParams(obj.generator, obj.params || {}, targets);
     if (!mesh) continue;
     if (obj.position) mesh.position.set(obj.position.x, obj.position.y, obj.position.z);
-    if (obj.rotation) mesh.rotation.set(obj.rotation.x, obj.rotation.y, obj.rotation.z);
+    if (obj.rotation) {
+      // Composite bridges initialize with a quaternion; replace it when
+      // importing explicit Euler angles from a saved editor transform.
+      mesh.rotationQuaternion=null;
+      mesh.rotation.set(obj.rotation.x,obj.rotation.y,obj.rotation.z);
+    }
     if (obj.scaling)  mesh.scaling.set(obj.scaling.x, obj.scaling.y, obj.scaling.z);
+    mesh.computeWorldMatrix(true);
+    if (mesh.metadata?.editable) {
+      mesh.metadata.editorId = obj.id || mesh.metadata.editorId ||
+        ('entity_' + Math.random().toString(36).slice(2));
+      idMeshes.set(mesh.metadata.editorId, mesh);
+    }
+    if (mesh.metadata?.generator === 'createJumpPad') {
+      const pad = jumpPads.find(p=>p.mesh===mesh);
+      if (pad) {
+        pad.pos.copyFrom(mesh.position);
+        pad.thrustX = Math.sin(mesh.rotation.y) * pad.force * 0.45;
+        pad.thrustZ = Math.cos(mesh.rotation.y) * pad.force * 0.45;
+      }
+    }
+    if (mesh._moveData) {
+      const offset = mesh.position.subtract(mesh._moveData.start);
+      mesh._moveData.start.addInPlace(offset);
+      mesh._moveData.end.addInPlace(offset);
+      mesh.metadata?.auxiliaryMeshes?.forEach(aux=>aux.position.addInPlace(offset));
+    }
+    if (mesh.metadata?.hazard) {
+      const p = mesh.metadata.params;
+      if (typeof p?.sx === 'number') mesh.metadata.halfWidth = p.sx * Math.abs(mesh.scaling.x) / 2;
+      if (typeof p?.sz === 'number') mesh.metadata.halfDepth = p.sz * Math.abs(mesh.scaling.z) / 2;
+    }
+  }
+  // A composite car moves its roof pad with the body. The jump-pad
+  // collision registry uses world positions, so re-sync after each import.
+  for(const pad of jumpPads) {
+    if(!pad.mesh || pad.mesh.isDisposed())continue;
+    pad.mesh.computeWorldMatrix(true);
+    if(pad.mesh.parent){
+      pad.pos.copyFrom(pad.mesh.getAbsolutePosition());
+      const owner=pad.mesh.parent;
+      const angle=(owner.rotationQuaternion?.toEulerAngles()?.y??owner.rotation.y) || 0;
+      pad.thrustX=Math.sin(angle)*pad.force*.45;
+      pad.thrustZ=Math.cos(angle)*pad.force*.45;
+    }
+  }
+  // Resolve switch links only after all referenced platform entities exist.
+  for (const m of idMeshes.values()) {
+    if (m.metadata?.generator !== 'createPowerSwitch') continue;
+    const ids = m.metadata.params.targetPlatformIds || [];
+    m.metadata.targetPlatforms = ids.map(id=>idMeshes.get(id))
+      .filter(p=>p?._moveData);
   }
 }
 
@@ -552,16 +893,27 @@ export function applyEditableLayout(objects, targets = null) {
  * unreachable, or malformed (treated as "no override" — callers should
  * just keep their hardcoded default layout in that case).
  */
+export async function loadMapDocument(mapId) {
+  // Validation and stable IDs must happen before we alter the scene.
+  const path='assets/maps/'+encodeURIComponent(mapId)+'.json';
+  let res;
+  try{res=await fetch(path,{cache:'no-cache'})}
+  catch(e){throw new Error('[map] Failed to fetch '+path+': '+e.message)}
+  if(!res.ok)throw new Error('[map] '+path+' returned HTTP '+res.status);
+  let data;
+  try{data=await res.json()}
+  catch(e){throw new Error('[map] Invalid JSON in '+path+': '+e.message)}
+  const checked=validateMapDocument(data,{expectedMap:mapId,strictIds:false});
+  if(!checked.valid)throw new Error('[map] Invalid '+path+':\\n'+checked.errors.join('\\n'));
+  registerMapDocument(mapId,checked.document);
+  return checked.document;
+}
+// Kept for level builders relying on the original array-only interface.
+// Full document (including markers and version) is available via
+// loadMapDocument() and getLoadedMapDocument().
 export async function loadMapOverride(mapId) {
-  try {
-    const res = await fetch(`assets/maps/${mapId}.json`, { cache: 'no-cache' });
-    if (!res.ok) return null;
-    const data = await res.json();
-    if (!data || !Array.isArray(data.objects)) return null;
-    return data.objects;
-  } catch (e) {
-    return null;
-  }
+  const document=await loadMapDocument(mapId);
+  return document.objects;
 }
 
 // ── Structural (non-editable) composite helper ──────────────────
@@ -570,7 +922,7 @@ export async function loadMapOverride(mapId) {
 // many meshes describing ONE staircase, not a single draggable object, and
 // re-importing a lone "step" box from JSON wouldn't reconstruct the flight.
 export function buildStaircase(px, py, pz, width, depth, steps, dirX, dirZ, mat = matConcrete, opts = {}) {
-  const { stepHeight = 0.5, flareEnds = false } = opts;
+  const { stepHeight = 0.5, flareEnds = false, editable = false } = opts;
   const scene = getScene();
   const stepDepth = depth / steps;
   const out = [];
@@ -578,21 +930,45 @@ export function buildStaircase(px, py, pz, width, depth, steps, dirX, dirZ, mat 
     const x = px + dirX * i * stepDepth;
     const y = py + i * stepHeight;
     const z = pz + dirZ * i * stepDepth;
+    // Bake first/last-step flare into the mesh dimensions instead of
+    // scaling a step. Step 0 is the composite parent: non-unit scale on
+    // that parent compresses every child's offset when JSON resets it to 1.
+    const flared = flareEnds && (i === 0 || i === steps - 1);
+    const span = (stepDepth + 0.2) * (flared ? 1.5 : 1);
     const s = BABYLON.MeshBuilder.CreateBox('step', {
-      width:  dirZ ? width : stepDepth + 0.2,
+      width:  dirZ ? width : span,
       height: stepHeight,
-      depth:  dirX ? width : stepDepth + 0.2,
+      depth:  dirX ? width : span,
     }, scene);
     s.position.set(x, y + stepHeight / 2, z);
     s.material = mat;
     s.checkCollisions = true;
     s.isPickable = false;
-    if (flareEnds && (i === 0 || i === steps - 1)) {
-      s.scaling[dirX ? 'x' : 'z'] = 1.5;
-    }
     s.metadata = { editable: false, type: 'stair_step' };
+    if (editable && i > 0) {
+      // setParent preserves the step's world-space position while making
+      // all subsequent gizmo operations affect the whole flight.
+      s.setParent(out[0]);
+    }
     walkableMeshes.push(s);
     out.push(s);
   }
   return out;
+}
+
+// One exportable gameplay entity with a collidable/pickable first step as its
+// gizmo anchor and correctly parented descendants for all other steps.
+// The original buildStaircase() remains available for legacy callers.
+export function createStaircase(px, py, pz, width, depth, steps, dirX, dirZ,
+  stepHeight = 0.5, flareEnds = false, mat = matConcrete) {
+  const stair = buildStaircase(px,py,pz,width,depth,steps,dirX,dirZ,mat,
+    {stepHeight,flareEnds,editable:true});
+  const root=stair[0];
+  root.name='staircase';
+  root.isPickable=true;
+  _tagMeta(root,'staircase','createStaircase',
+    {px,py,pz,width,depth,steps,dirX,dirZ,stepHeight,flareEnds,mat:
+      typeof mat==='string'?mat:'concrete'},true,null);
+  // No additional collision is generated by the root: it's step 0.
+  return root;
 }

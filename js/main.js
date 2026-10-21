@@ -7,7 +7,7 @@ import { setupLighting } from './lighting.js';
 import { setWeapon, inventory, WDEFS, setActiveSlot, animWeapon,
          initAttachmentVisuals, wepModels, wepGroup, curWep } from './weapons.js';
 import { enemies, projs, pickups, weaponDrops, _sparkPool, particles, player, cb } from './gameState.js';
-import { rebuildMeshMap, hitRobot, updateEnemies } from './enemies.js';
+import { rebuildMeshMap, hitRobot, updateEnemies, getDamageableActors } from './enemies.js';
 import { updateProjs  } from './projectiles.js';
 import { updateParticles } from './particles.js';
 import { updatePickups, updateWeaponDrops, tryPickupWeapon, initSecretKits, initWeaponSpawns } from './pickups.js';
@@ -15,12 +15,19 @@ import { updateWaves, setCurWave, setWaveOn, setWaveDly, curWave, launchWave, ge
 import { updatePlayer, setupInput, hurtPlayer, PH, resetPlayer, resetWeaponHeat, keys, movePlayerBody } from './player.js';
 import { updateHUD, tickHitMarker, wireDeathSubmit, showHitMarker, hideFfaHUD } from './ui.js';
 import { submitScore, renderLeaderboard } from './leaderboard.js';
-import { startFfa, updateFfa, isFfaActive, isFfaInPreLobby, showFfaLobby } from './pvp.js';;
-import { loadProfile, getLevelProgress, levelFromTotalXp } from './progression.js';
+import { startFfa, stopFfa, updateFfa, isFfaActive, isFfaInPreLobby, showFfaLobby, isLocalDead, togglePvpScoreboard, checkFfaHitScan } from './pvp.js';
+import { loadProfile, getLevelProgress, levelFromTotalXp, profile,
+  startSurvivalRewardLedger,stopSurvivalRewardLedger,awardXp,
+  startProfileGameSession,stopProfileGameSession,getProfileSyncStatus } from './progression.js';
 import { showLoadout } from './loadout.js';
-import { getCurrentMap, setCurrentMap, MAPS, getMapMeta, buildMap, isHardModeUnlocked, isMapUnlocked } from './mapManager.js';
+import { normalizeCompetitiveLoadout } from './weaponCategories.js';
+import { getCurrentMap, setCurrentMap, MAPS, getMapMeta, buildMap, isMapUnlocked, registerCommunityMaps } from './mapManager.js';
 import { initRoomFlow, showPlayPage } from './roomFlow.js';
+import { setActiveHardWave } from './hardModeRules.js';
+import {normalizedPveBuild,pveModifiers} from './pveStatsRules.js';
 import { showLeaderboardPage } from './leaderboardPage.js';
+import { startLocalArena,stopLocalArena,isLocalArenaActive,updateLocalArena,localArenaRobotKilled,localArenaActorHit,localArenaPlayerDead,getLocalArenaSnapshot } from './localArenaRuntime.js';
+import {activeGameSession} from './profileSession.js';
 
 let gameRunning = false;
 let paused      = false;
@@ -29,14 +36,39 @@ window.__levelScene = scene;
 window.__levelNavPlugin = navPlugin;
 
 loadProfile();
+// Visible menu-only cloud status; never claim a save succeeded until the
+// transaction and its deduplication receipt have committed.
+const _syncLabel=document.createElement('p');
+_syncLabel.id='profileCloudStatus';
+_syncLabel.style.cssText='font:11px monospace;color:#a8c38b;text-align:center;margin:9px auto';
+document.getElementById('menuScreen')?.appendChild(_syncLabel);
+setInterval(()=>{
+ const status=getProfileSyncStatus();
+ _syncLabel.textContent=status==='saved'?'☁ CLOUD SAVED':
+   status==='pending'?'☁ SYNC PENDING (RECOVERY BUFFERED)':
+   '☁ CLOUD OFFLINE / SIGN IN';
+ _syncLabel.style.color=status==='saved'?'#a8c38b':'#f4bf67';
+},2000);
 
 // ── Callbacks ──────────────────────────────────────────────────
 cb.hitRobot      = hitRobot;
+cb.getDamageableActors = getDamageableActors;
+cb.onRobotDestroyed = localArenaRobotKilled;
+cb.onArenaActorHit = localArenaActorHit;
 cb.hurtPlayer    = hurtPlayer;
 cb.markHudDirty  = () => updateHUD();
 cb.endGame       = endGame;
 cb.showHitMarker = showHitMarker;
 cb.isGameRunning = () => gameRunning;
+cb.isPvpActive = isFfaActive;
+cb.canUseMelee = () => {
+  if(isFfaActive())return false;
+  if(!isLocalArenaActive())return true;
+  const state=getLocalArenaSnapshot()?.state;
+  return state?.mode!=='gunGame'||state.gunOrder[state.gunIndex]==='KNIFE';
+};
+cb.isPvpDead = isLocalDead;
+cb.pvpHitscan = checkFfaHitScan;
 cb.resetWeaponHeat = resetWeaponHeat;
 
 // ── Input ──────────────────────────────────────────────────────
@@ -89,12 +121,66 @@ function _hideAllScreens() {
   const cb2 = document.getElementById('ffaConfigBanner');  if (cb2) cb2.style.display = 'none';
 }
 
-// ── Solo PvE ───────────────────────────────────────────────────
-function startGame(startWave = 0) {
+// ── Offline Survival and local robot arenas ───────────────────
+let _startingGame=false;
+function onAccountTakenOver(reason){
+  _startingGame=false;
+  gameRunning=false;paused=false;
+  stopLocalArena();
+  if(isFfaActive())stopFfa();
+  document.exitPointerLock?.();
+  document.getElementById('hud').style.display='none';
+  document.getElementById('pauseOverlay').style.display='none';
+  _hideAllScreens();
+  const menu=document.getElementById('menuScreen');
+  if(menu)menu.className='screen visible';
+  let note=document.getElementById('sessionTakeoverNotice');
+  if(!note&&menu){
+    note=document.createElement('p');
+    note.id='sessionTakeoverNotice';
+    note.style.cssText='color:#ffcc88;background:#281c0d;border:1px solid #b18a48;padding:12px;font:13px monospace;text-align:center;max-width:600px;margin:12px auto';
+    menu.appendChild(note);
+  }
+  if(note)note.textContent=reason||'This account is now playing in another browser.';
+}
+async function startGame(startWave = 0, difficulty = 'normal', localMode = null) {
+  if(_startingGame)return;
+  _startingGame=true;
+  try{
+    await startProfileGameSession(onAccountTakenOver);
+  }catch(error){
+    _startingGame=false;gameRunning=false;
+    const menu=document.getElementById('menuScreen');
+    if(menu)menu.className='screen visible';
+    let warning=document.getElementById('startupErrorNotice');
+    if(!warning){
+      warning=document.createElement('p');
+      warning.id='startupErrorNotice';
+      warning.style.cssText='color:#ffc17a;font:13px monospace;text-align:center;padding:12px';
+      (menu||document.body).appendChild(warning);
+    }
+    warning.textContent='CLOUD SESSION UNAVAILABLE: '+(error?.message||error);
+    return;
+  }
+  document.getElementById('sessionTakeoverNotice')?.remove();
+  const launchSessionId=activeGameSession()?.id;
+  if(!localMode)startSurvivalRewardLedger();
+  else stopSurvivalRewardLedger();
+  stopLocalArena();
+  document.getElementById('startupErrorNotice')?.remove();
+  if(!['normal','hard','nightmare'].includes(difficulty))difficulty='normal';
+  player.difficulty=difficulty;
+  setActiveHardWave(null);
+  if (isFfaActive()) stopFfa();
   // Capture Hard Mode state BEFORE resetting everything
-  player.hardMode = document.getElementById('hardModeToggle')?.checked || false;
+  player.hardMode = difficulty !== 'normal';
   ensureAudio();
-  player.hp = 100; player.armor = 0; player.score = 0;
+  // PvE ranks and wave-earned equipment apply to Survival only, never
+  // the local competitive arenas or future human multiplayer rooms.
+  player.survivalModifiers=localMode?null:pveModifiers(normalizedPveBuild(profile),'survival');
+  const pv=player.survivalModifiers;
+  player.maxHp=pv?.maxHp||100;
+  player.hp=player.maxHp;player.armor=pv?.startingArmor||0;player.score=0;
   player.yVel = 0; player.onGround = true; player.buffs = {};
 
   import('./progression.js').then(({ getLoadout }) => {
@@ -111,7 +197,9 @@ function startGame(startWave = 0) {
       w.ammo = hasEndless ? Infinity : (w.startAmmo || 0);
     }
   });
-  inventory[2] = 'PISTOL'; inventory[1] = null; inventory[0] = null;
+  // Solo Survival always begins with the standard Pistol.
+  inventory[2] = 'PISTOL';
+  inventory[1] = null; inventory[0] = null;
   setActiveSlot(2);
 
   setCurWave(startWave);
@@ -145,14 +233,34 @@ function startGame(startWave = 0) {
   window.__levelNavPlugin = navPlugin;
 
   buildMap(currentMap).then(({ hazardZones, movingPlatforms, powerSwitches }) => {
+    // A displaced browser may still finish an asynchronous map build.
+    // Never start a match after its session was taken over.
+    if(activeGameSession()?.id!==launchSessionId){_startingGame=false;return}
     window._hazardZones = hazardZones;
     window._movingPlatforms = movingPlatforms;
     window._powerSwitches = powerSwitches;
-    
     finishStart();
+  }).catch(error=>{
+    console.error('[SCRAPPY/STARTUP] Failed to build or start map '+currentMap,error);
+    _startingGame=false;gameRunning=false;
+    void stopProfileGameSession();
+    const hud=document.getElementById('hud');
+    if(hud)hud.style.display='none';
+    const screen=document.getElementById('menuScreen');
+    if(screen)screen.className='screen visible';
+    let notice=document.getElementById('startupErrorNotice');
+    if(!notice){
+      notice=document.createElement('div');
+      notice.id='startupErrorNotice';
+      notice.style.cssText='color:#ffae9d;font-size:12px;max-width:360px;text-align:center;padding:10px;border:1px solid #c44;font-family:monospace';
+      screen?.appendChild(notice);
+    }
+    notice.textContent='Map failed to start: '+(error?.message||String(error))+
+      '. Open the page Console (F12) for the full [SCRAPPY/STARTUP] error.';
   });
   
   function finishStart() {
+    _startingGame=false;
     rebuildMeshMap();
 
     const meta = getMapMeta(currentMap);
@@ -168,17 +276,87 @@ function startGame(startWave = 0) {
     gameRunning = true;
     paused = false;
     initSecretKits();
-    initWeaponSpawns();
-    document.getElementById('c').requestPointerLock();
+    if(!localMode || localMode.mode!=='gunGame')initWeaponSpawns();
+    if(localMode){
+      const chosen=normalizeCompetitiveLoadout(profile.pvpLoadout||selectedMatchLoadout,WDEFS);
+      const arenaStartXp=profile.totalXp||0;
+      const arenaStartWeaponXp={...(profile.stats?.weaponXp||{})};
+      startLocalArena({...localMode,loadout:chosen},state=>{
+        // Small capped result rewards: avoid paying out for instant resets.
+        const elapsed=Math.max(0,(localMode.duration||600)-state.secondsLeft);
+        const participation=elapsed>=120&&state.kills>=1?25:0;
+        const victory=state.result==='VICTORY'&&elapsed>=60&&state.kills>=3?80:0;
+        const objectiveXp=Math.max(0,state.tagXp||0);
+        const eliminationXp=Math.max(0,(profile.totalXp||0)-arenaStartXp-objectiveXp);
+        if(participation+victory)awardXp(participation+victory);
+        gameRunning=false;
+        void stopProfileGameSession();
+        document.exitPointerLock();
+        document.getElementById('hud').style.display='none';
+        _hideAllScreens();
+        const panel=document.getElementById('pvpEndScreen');
+        if(panel)panel.className='screen visible';
+        const res=document.getElementById('pvpEndResult');
+        const labels={gunGame:'GUN GAME',killConfirmed:'KILL CONFIRMED',
+          ffa:'FREE FOR ALL',tdm:'TEAM DEATHMATCH'};
+        if(res)res.textContent=state.result+' · '+(labels[state.mode]||state.mode);
+        const scores=document.getElementById('pvpEndScore');
+        if(scores){
+          const earned=Math.max(0,(profile.totalXp||0)-arenaStartXp);
+          const weaponGains=Object.entries(profile.stats?.weaponXp||{})
+            .map(([id,xp])=>[id,Math.max(0,(xp||0)-(arenaStartWeaponXp[id]||0))])
+            .filter(([,xp])=>xp>0).sort((a,b)=>b[1]-a[1])
+            .map(([id,xp])=>id+' +'+xp).join(', ')||'NONE';
+          scores.textContent='FRAGS '+state.kills+' · POINTS '+state.score+
+            ' · BOT POINTS '+state.opposition+' · DEATHS '+state.deaths+
+            ' · XP +'+earned+' (KILLS +'+eliminationXp+
+            ', OBJECTIVES +'+objectiveXp+', PARTICIPATION +'+participation+', VICTORY +'+victory+')'+
+            ' · SCRAPS +0 (ARENA)'+' · WEAPON XP: '+weaponGains;
+          const rivals=(state.participants||[]).slice(0,5)
+            .map(a=>a.name+' ['+a.team+'] '+a.kills+' K / '+a.deaths+' D')
+            .join('  ·  ');
+          if(rivals){
+            scores.style.whiteSpace='pre-line';
+            scores.textContent+='\nBOT SCOREBOARD: '+rivals;
+          }
+        }
+      },damage=>hurtPlayer(damage));
+      updateHUD();
+    }
+    document.getElementById('c').requestPointerLock().catch(()=>{});
   }
 }
 
 function endGame() {
+    if(isLocalArenaActive()){
+      gameRunning=false;
+      const accepted=localArenaPlayerDead(()=>{
+        if(!isLocalArenaActive())return;
+        const meta=getMapMeta(getCurrentMap());
+        resetPlayer(meta.spawn.x,PH+meta.spawn.yOffset,meta.spawn.z);
+        player.hp=100;player.armor=0;
+        gameRunning=true;paused=false;
+        updateHUD();
+      });
+      if(accepted)return;
+    }
     gameRunning = false;
     document.exitPointerLock();
     document.getElementById('hud').style.display = 'none';
-    document.getElementById('deathStats').textContent =
-        `FINAL SCORE: ${player.score}   \u2014   WAVES: ${curWave}`;
+    const rewards=stopSurvivalRewardLedger();
+    const weaponXp=Object.entries(rewards?.weaponXp||{})
+      .sort((a,b)=>b[1]-a[1]).map(([k,x])=>k+' +'+x).join(', ')||'NONE';
+    const converted=Object.entries(rewards?.conversionScraps||{})
+      .sort((a,b)=>b[1]-a[1]).map(([k,x])=>k+' +'+x).join(', ')||'NONE';
+    const stats=document.getElementById('deathStats');
+    if(stats){
+      stats.style.whiteSpace='pre-line';
+      stats.textContent='FINAL SCORE: '+player.score+'  —  WAVES: '+curWave+
+        '\nACCOUNT XP +'+(rewards?.accountXp||0)+'  ·  WEAPON XP: '+weaponXp+
+        '\nSCRAPS EARNED +'+(rewards?.totalEarnedScraps||0)+
+        '  ·  CONVERSION: '+converted+
+        '  ·  QUESTS: +'+(rewards?.questScraps||0);
+    }
     const inp = document.getElementById('playerNameInput');
     const btn = document.getElementById('submitScoreBtn');
     import('./progression.js').then(({ profile, flushProfileToCloud }) => {
@@ -191,7 +369,8 @@ function endGame() {
 
 // ── Pause ──────────────────────────────────────────────────────
 function togglePause() {
-  if (isFfaActive() || isFfaInPreLobby()) return;
+  if (isFfaInPreLobby()) return;
+  if (isFfaActive()) { togglePvpScoreboard(); return; }
   paused = !paused;
   const overlay = document.getElementById('pauseOverlay');
   if (overlay) {
@@ -213,7 +392,7 @@ function openFfaLobby() {
     },
     onStart: ({ name, server, roomId, config, isHost }) => {
       ensureAudio();
-
+      player.survivalModifiers=null;player.maxHp=100;
       player.hp = 100; player.armor = 0; player.score = 0;
       player.yVel = 0; player.onGround = true; player.buffs = {};
 
@@ -237,6 +416,7 @@ function openFfaLobby() {
       _clearEntities();
       resetBarrels();
       rebuildMeshMap();
+      const currentMap = getCurrentMap();
       const meta = getMapMeta(currentMap);
       resetPlayer(meta.spawn.x, PH + meta.spawn.yOffset, meta.spawn.z);
 
@@ -323,27 +503,68 @@ function _populateMapDropdown() {
       container.appendChild(db);
     }
 
-    // ── Menu overhaul: Solo/map-dropdown/hard-mode collapse into one PLAY
-    // button → Play page (Create Room / Browse Rooms). Now using the real
-    // index.html structure: #mapSelectSection wraps the map dropdown AND
-    // the hard-mode label/checkbox/description as one block, so hiding
-    // that single container is clean — no stray label text left behind
-    // (pvpBtn is already commented out in the markup, nothing to hide).
+    // The main menu only opens the unified Play configuration; maps,
+    // difficulty, mode and room settings live on that single page.
     const mapSelectSection = document.getElementById('mapSelectSection');
     if (mapSelectSection) mapSelectSection.style.display = 'none';
     startBtn.style.display = 'none';
-    if (!document.getElementById('playBtn')) {
-      const playBtn = document.createElement('button');
-      playBtn.id = 'playBtn';
-      playBtn.textContent = '▶ PLAY';
-      playBtn.className = startBtn.className;
+    // The button is in index.html so Firebase can reveal it even when
+    // authentication finishes before this module completes initialization.
+    const playBtn = document.getElementById('playBtn');
+    if (playBtn) {
+      playBtn.style.display = window.__scrappyAuthenticated ? 'inline-block' : 'none';
       playBtn.onclick = () => {
+        if (!window.__scrappyAuthenticated) return;
         document.getElementById('menuScreen').className = 'screen hidden';
         showPlayPage();
       };
-      container.insertBefore(playBtn, startBtn);
     }
 
+    // Quests are a separate green main-menu destination, not a Loadout tab.
+    if (!document.getElementById('questsBtn')) {
+      const questsBtn=document.createElement('button');
+      questsBtn.id='questsBtn';
+      questsBtn.textContent='📋 QUESTS';
+      questsBtn.className='btn';
+      questsBtn.style.cssText='display:none;width:calc(100% - 12px);min-width:0;box-sizing:border-box;padding-left:0;padding-right:0;text-align:center';
+      questsBtn.onclick=async()=>{
+        if(!window.__scrappyAuthenticated)return;
+        document.getElementById('menuScreen').className='screen hidden';
+        try{
+          const {showQuestPage}=await import('./questPage.js');
+          showQuestPage(()=>{
+            document.getElementById('menuScreen').className='screen visible';
+          });
+        }catch(error){
+          console.error('[quests] Unable to open quest page',error);
+          document.getElementById('menuScreen').className='screen visible';
+        }
+      };
+      (playBtn?.parentElement||container).appendChild(questsBtn);
+      questsBtn.style.display=window.__scrappyAuthenticated?'block':'none';
+    }
+    // Cosmetic / direct-XP shop uses the same Firebase account and currency
+    // earned from quests, without a separate paid backend.
+    if (!document.getElementById('shopBtn')) {
+      const shopBtn=document.createElement('button');
+      shopBtn.id='shopBtn';
+      shopBtn.textContent='🛒 SCRAPS SHOP';
+      shopBtn.className='btn';
+      shopBtn.style.cssText='display:none;width:calc(100% - 12px);min-width:0;box-sizing:border-box;padding-left:0;padding-right:0;text-align:center';
+      shopBtn.onclick=async()=>{
+        if(!window.__scrappyAuthenticated)return;
+        document.getElementById('menuScreen').className='screen hidden';
+        try{
+          const {showShopPage}=await import('./shopPage.js');
+          showShopPage(()=>{document.getElementById('menuScreen').className='screen visible'});
+        }catch(error){
+          console.error('[shop] Unable to open',error);
+          document.getElementById('menuScreen').className='screen visible';
+        }
+      };
+      (playBtn?.parentElement||container).appendChild(shopBtn);
+      shopBtn.style.display=window.__scrappyAuthenticated?'block':'none';
+    }
     // ── Leaderboard moves to its own subpage. #leaderboardSection (the
     // STANDARD/HARD toggle + score list) gets relocated into it on first
     // open rather than duplicated — see leaderboardPage.js.
@@ -353,13 +574,14 @@ function _populateMapDropdown() {
       const lbBtn = document.createElement('button');
       lbBtn.id = 'leaderboardsBtn';
       lbBtn.textContent = '🏆 LEADERBOARDS';
-      lbBtn.className = 'btn-sm';
-      lbBtn.style.marginTop = '8px';
+      lbBtn.className = 'btn';
+      lbBtn.style.cssText = 'width:calc(100% - 12px);min-width:0;box-sizing:border-box;padding-left:0;padding-right:0;text-align:center;';
+      lbBtn.style.display = window.__scrappyAuthenticated ? 'inline-block' : 'none';
       lbBtn.onclick = () => {
         document.getElementById('menuScreen').className = 'screen hidden';
         showLeaderboardPage();
       };
-      container.appendChild(lbBtn);
+      (playBtn?.parentElement || container).appendChild(lbBtn);
     }
   }
   
@@ -422,13 +644,12 @@ function _populateMapDropdown() {
       qb.onclick = () => {
           paused = false;
           gameRunning = false;
+          stopLocalArena();
+          void stopProfileGameSession();
           document.exitPointerLock();
           document.getElementById('pauseOverlay').style.display = 'none';
           document.getElementById('hud').style.display = 'none';
-          import('./progression.js').then(({ saveProfile, flushProfileToCloud }) => {
-              saveProfile();
-              flushProfileToCloud();
-          });
+          // Session shutdown already flushes the pending recovery journal.
           import('./leaderboard.js').then(({ renderLeaderboard }) => renderLeaderboard());
           document.getElementById('menuScreen').className = 'screen visible';
       };
@@ -447,23 +668,6 @@ wireDeathSubmit((name, score) => {
 // ── UI Refresh ────────────────────────────────────────────────
 function refreshMenuUI() {
   const currentMapId = getCurrentMap();
-  const hasHardMode = isHardModeUnlocked(currentMapId);
-  const lvlData = getLevelProgress();
-  
-  const hardModeToggle = document.getElementById('hardModeToggle');
-  const hardModeDesc = document.getElementById('hardModeDesc');
-  if (hardModeToggle && hardModeDesc) {
-    hardModeToggle.disabled = !hasHardMode;
-    if (hasHardMode) {
-        hardModeDesc.textContent = "Tougher enemies, 2x Score.";
-        hardModeDesc.style.color = "#E85E76";
-    } else {
-        hardModeToggle.checked = false; 
-        hardModeDesc.textContent = "Unlock by clearing a boss wave";
-        hardModeDesc.style.color = "#848591";
-    }
-  }
-
   const pvpBtn = document.getElementById('pvpBtn');
   if (pvpBtn) {
       if (lvlData.level >= 5) {
@@ -512,17 +716,21 @@ if (!texturesReady) {
 
 // ── Button bindings ────────────────────────────────────────────
 document.getElementById('startBtn')    ?.addEventListener('click', () => startGame(0));
-document.getElementById('victoryBtn')  ?.addEventListener('click', () => startGame(0));
-document.getElementById('respawnBtn')?.addEventListener('click', () => {
+document.getElementById('victoryBtn')  ?.addEventListener('click', () => startGame(0,player.difficulty||'normal'));
+const _returnToMenu = () => {
   document.getElementById('deathScreen').className  = 'screen hidden';
   document.getElementById('menuScreen').className   = 'screen visible';
+  void stopProfileGameSession();
   renderLeaderboard();
   refreshMenuUI();
-});
+};
+document.getElementById('respawnBtn')?.addEventListener('click', _returnToMenu);
+document.getElementById('victoryMenuBtn')?.addEventListener('click', _returnToMenu);
 document.getElementById('loadoutBtn')  ?.addEventListener('click', () => openLoadout(false));
 document.getElementById('pvpBtn')      ?.addEventListener('click', openFfaLobby);
 
 document.getElementById('pvpEndPlayAgain')?.addEventListener('click', () => {
+  if(isFfaActive())stopFfa();
   document.getElementById('pvpEndScreen').className = 'screen hidden';
   document.getElementById('menuScreen').className   = 'screen visible';
   renderLeaderboard();
@@ -554,19 +762,124 @@ renderLeaderboard();
 initAttachmentVisuals();
 engine.resize();
 refreshMenuUI();
+// Load community catalog without blocking built-in map startup.
+registerCommunityMaps().then(ids=>{
+  if(!ids.length)return;
+  const before=getCurrentMap();
+  _populateMapDropdown();
+  const dropdown=document.getElementById('mapDropdown');
+  if(dropdown)dropdown.value=before;
+  refreshMenuUI();
+  console.info('[maps] Registered community maps:',ids);
+}).catch(err=>console.warn('[maps] Could not register custom maps:',err));
 window.addEventListener('resize', () => engine.resize());
 
-// Survival is the only mode with a real match behind it right now — the
-// Create Room screen hands off a plain {mapId, hardMode} config here, and
-// this just routes it into the existing solo flow. TDM/FFA/Gun Game don't
-// have a hookup yet (their match runtime is a later phase); roomFlow.js
-// tells the player that plainly instead of pretending Start works.
+// Competitive room runtime, using the EXISTING WebSocket and FFA renderer.
+// All map work must finish before network handlers replay queued start events.
+let selectedMatchLoadout={primary:'SMG',secondary:'SHOTGUN'};
+async function launchCompetitiveRoom(cfg,session) {
+  try {
+    ensureAudio();
+    gameRunning=false;paused=false;
+    player.hardMode=false;
+    player.difficulty='normal';
+    player.survivalModifiers=null;player.maxHp=100;
+    player.hp=100;player.armor=0;player.score=0;
+    player.onGround=true;player.yVel=0;player.buffs={};
+    setCurrentMap(cfg.mapId);
+    _clearEntities();
+    const weaponMeshes=new Set();
+    for(const node of Object.values(wepModels))node.getChildMeshes().forEach(m=>weaponMeshes.add(m));
+    scene.meshes.slice().forEach(m=>{
+      if(m.name==='_playerBody'||m.name.startsWith('wep_')||m.name.startsWith('wm_')||weaponMeshes.has(m))return;
+      m.dispose();
+    });
+    scene.lights.slice().forEach(l=>{
+      if(!l.name.startsWith('hemi')&&!l.name.startsWith('fill')&&l.name!=='lanternLight'&&!l.name.startsWith('burnLight'))l.dispose();
+    });
+    window.__levelScene=scene;window.__levelNavPlugin=navPlugin;
+    const map=await buildMap(cfg.mapId);
+    window._hazardZones=map.hazardZones;
+    window._movingPlatforms=map.movingPlatforms;
+    window._powerSwitches=map.powerSwitches;
+    rebuildMeshMap();
+    const meta=getMapMeta(cfg.mapId);
+    resetPlayer(meta.spawn.x,PH+meta.spawn.yOffset,meta.spawn.z);
+    for(const def of Object.values(WDEFS)){
+      if(def.useHeat){def.heat=0;def.isOverheated=false}
+      if(def.magSize)def.currentMag=def.magSize;
+      def.ammo=def.startAmmo||0;
+    }
+    // Normalize persisted PvP selections so Melee/Wonder guns cannot be
+    // smuggled into standard two-firearm rooms. Gun Game keeps its Knife finale.
+    const configuredLoadout=normalizeCompetitiveLoadout(profile.pvpLoadout||selectedMatchLoadout,WDEFS);
+    const mainSlot=configuredLoadout.primary;
+    const offSlot=configuredLoadout.secondary;
+    inventory[0]=cfg.mode==='gunGame'?'PISTOL':mainSlot;
+    inventory[1]=cfg.mode==='gunGame'?null:offSlot;
+    inventory[2]=cfg.mode==='gunGame'?null:'PISTOL';
+    setActiveSlot(0);
+    const name=profileDisplayName();
+    const onGameStart=()=>{
+      session.closeLobby();
+      _hideAllScreens();
+      gameRunning=true;paused=false;
+      setWeapon(inventory[0]);
+      wepGroup.setEnabled(true);
+      document.getElementById('hud').style.display='block';
+      updateHUD();
+      document.getElementById('c').requestPointerLock().catch(()=>{});
+    };
+    const onRoundEnd=(winner,rows)=>{
+      gameRunning=false;
+      document.exitPointerLock();
+      if(winner==='CANCELLED'){
+        session.closeLobby();
+        stopFfa();
+      }
+      hideFfaHUD();
+      document.getElementById('hud').style.display='none';
+      const screen=document.getElementById('pvpEndScreen');
+      if(screen)screen.className='screen visible';
+      const result=document.getElementById('pvpEndResult');
+      if(result)result.textContent=winner==='CANCELLED'?'MATCH CANCELLED':(winner||'DRAW')+' WINS';
+      const score=document.getElementById('pvpEndScore');
+      if(score)score.textContent=(rows||[]).map((p,i)=>`${i+1}. ${p.name}: ${p.score}`).join('   ');
+    };
+    // Bot fill remains disabled until it is driven by server-side player AI.
+    startFfa('',name,session.welcome.roomId,{...cfg,addBots:false,weaponSpawns:false},
+      !!session.welcome.isHost,onGameStart,onRoundEnd,session);
+  } catch(error) {
+    console.error('[match] Could not initialize network match:',error);
+    session.socket?.close();
+    session.closeLobby();
+    document.getElementById('menuScreen').className='screen visible';
+  }
+}
+function profileDisplayName(){
+  return document.getElementById('playerNameInput')?.value||'PLAYER';
+}
+
+// Local Play launches Survival or offline robot challenges without sockets.
+// The legacy WebSocket room path is retained but experimental; human PvP
+// and actual bot-versus-bot FFA/TDM are intentionally deferred.
 initRoomFlow({
+  onSelectLoadout: (cfg,onChosen)=>{
+    showLoadout(slots=>{
+      // BACK cancels selection while leaving the room view underneath intact.
+      if(!slots)return;
+      selectedMatchLoadout=slots;
+      onChosen?.(slots);
+    },cfg.mode);
+  },
+  onStartMatch: launchCompetitiveRoom,
   onStartSurvival: (cfg) => {
     setCurrentMap(cfg.mapId);
-    const hmToggle = document.getElementById('hardModeToggle');
-    if (hmToggle) hmToggle.checked = !!cfg.hardMode;
-    startGame(0);
+    startGame(0,cfg.difficulty||((cfg.hardMode)?'hard':'normal'));
+  },
+  onStartLocalMode: cfg=>{
+    setCurrentMap(cfg.mapId);
+    startGame(0,'normal',cfg);
   },
 });
 
@@ -584,6 +897,16 @@ engine.runRenderLoop(() => {
     return;
   }
 
+  if (isFfaActive() && isLocalDead()) {
+    updateFfa(dt);
+    scene.render();
+    return;
+  }
+
+  // Arena opponents and match clock continue acting while the human waits
+  // for their five-second respawn; do not pause bot-versus-bot matches.
+  if(!gameRunning&&!paused&&isLocalArenaActive())updateLocalArena(dt);
+
   // Main game updates – skip if game not running, or paused
   if (gameRunning && !paused) {
     updatePlayer(dt, gameRunning, paused);
@@ -598,7 +921,8 @@ engine.runRenderLoop(() => {
       updateProjs(dt);
       updatePickups(dt);
       updateWeaponDrops(dt);
-      updateWaves(dt, gameRunning);
+      if(isLocalArenaActive())updateLocalArena(dt);
+      else updateWaves(dt, gameRunning);
       updateBarrels(dt);
     }
     updateParticles(dt);
@@ -635,7 +959,7 @@ engine.runRenderLoop(() => {
     }
 
     // Hazard zones
-    if (window._hazardZones && window._hazardZones.length > 0) {
+    if (!isFfaActive() && window._hazardZones && window._hazardZones.length > 0) {
       for (const haz of window._hazardZones) {
         const px = camera.position.x;
         const pz = camera.position.z;

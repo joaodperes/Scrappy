@@ -8,6 +8,8 @@ import {
 } from './progression.js';
 import { WDEFS, applyLoadoutToScene } from './weapons.js';
 import { MAPS } from './mapManager.js';
+import { isCompetitiveFirearm, normalizeCompetitiveLoadout } from './weaponCategories.js';
+import { renderPveBuild } from './pveBuildPage.js';
 
 let _activeWeapon = 'PISTOL';
 let _activeTab    = 'attachments';
@@ -24,7 +26,8 @@ export function showLoadout(onClose, mode = null) {
   document.getElementById('loadoutPanel')?.remove();
   _currentMode = mode;
   _modeSlotTarget = 'primary';
-  _modeSlots = { primary: null, secondary: null };
+  if(mode)_activeTab='attachments';
+  _modeSlots = normalizeCompetitiveLoadout(profile.pvpLoadout,WDEFS);
   document.body.appendChild(_buildPanel(onClose, mode));
   _renderContent();
 }
@@ -95,6 +98,7 @@ function _pill(label, n, d, col) {
 function _wIcon(w) {
   return {
     PISTOL:       '🔫',
+    KNIFE:        '🔪',
     SMG:          '💨',
     SHOTGUN:      '💥',
     CHAINGUN:     '⛓️',
@@ -174,6 +178,7 @@ function _buildPanel(onClose, mode = null) {
       });
       return;
     }
+    profile.pvpLoadout={...slots};
     saveProfile();
     _currentMode = null;
     hideLoadout();
@@ -188,10 +193,10 @@ topBar.appendChild(deployBtn);
       '← BACK'
     );
     backBtn.onclick = () => {
+      // Cancel without saving a new selection. Preserve the room behind us.
       _currentMode = null;
       hideLoadout();
-      document.getElementById('menuScreen').className = 'screen visible';
-      renderLeaderboard();
+      onClose?.(null);
     };
     topBar.appendChild(backBtn);
 
@@ -241,13 +246,16 @@ topBar.appendChild(deployBtn);
     { id:'skins',       label:'WEAPON SKINS' },
     {id:'player',       label:'PLAYER SKIN'  },
     { id:'progress',    label:'PROGRESS'     },
+    { id:'pve',         label:'SURVIVAL GEAR' },
+    { id:'pvp',         label:'PVP LOADOUT'  },
   ];
   const tabBar = _el('div',
-    `display:flex;background:${C.bgMid};border-bottom:1.5px solid ${C.border};padding:0 28px;flex-shrink:0`
+    `display:flex;background:${C.bgMid};border-bottom:1.5px solid ${C.border};padding:0 28px;flex-shrink:0;overflow-x:auto;white-space:nowrap`
   );
   if (mode) tabBar.style.display = 'none'; // hide tabs in mode context
   tabs.forEach(t => {
     const b = _el('button', _tabStyle(_activeTab === t.id), t.label);
+    b.style.flexShrink='0'; // Quests/Secondary tabs can scroll on narrow screens.
     b.dataset.tabId = t.id;
     b.onclick = () => { _activeTab = t.id; _renderContent(); };
     tabBar.appendChild(b);
@@ -262,8 +270,9 @@ topBar.appendChild(deployBtn);
   );
   sidebar.id = 'loadoutSidebar';
   Object.keys(WDEFS).forEach(wName => {
+    if (_currentMode && !isCompetitiveFirearm(wName,WDEFS)) return;
     if (WDEFS[wName].wonderWeapon) return;
-    if (_currentMode && wName === 'PISTOL') return;
+    // Pistol is a valid selectable competitive slot; Gun Game stays automatic.
 
     const wxp = profile.stats?.weaponXp?.[wName] || 0;
     const isDiscovered = wxp > 0 || wName === 'PISTOL';
@@ -275,6 +284,17 @@ topBar.appendChild(deployBtn);
       `<span style="font-size:15px">${_wIcon(wName)}</span>` +
       `<span style="margin-left:8px">${_esc(title)}</span>`;
 
+    btn.onclick=()=>{
+      _activeWeapon=wName;
+      if(_currentMode){
+        _modeSlots[_modeSlotTarget]=wName;
+        // The two deployment weapons must be distinct.
+        const other=_modeSlotTarget==='primary'?'secondary':'primary';
+        if(_modeSlots[other]===wName)_modeSlots[other]=null;
+        _refreshSlotBoxes();
+      }
+      _renderContent();
+    };
     sidebar.appendChild(btn);
   });
   body.appendChild(sidebar);
@@ -483,7 +503,7 @@ function _renderContent() {
     b.style.cssText = _tabStyle(b.dataset.tabId === _activeTab);
   });
   const sidebar  = document.getElementById('loadoutSidebar');
-  const noSidebar = _activeTab === 'player' || _activeTab === 'progress';
+  const noSidebar = ['player','progress','pve','pvp'].includes(_activeTab);
   if (sidebar) sidebar.style.display = noSidebar ? 'none' : 'block';
   sidebar?.querySelectorAll('[data-w-name]').forEach(c => {
     c.style.cssText = _wcardStyle(c.dataset.wName === _activeWeapon);
@@ -494,6 +514,8 @@ function _renderContent() {
   else if (_activeTab === 'skins')       _renderWeaponSkins(main);
   else if (_activeTab === 'player')      _renderPlayerSkins(main);
   else if (_activeTab === 'progress')    _renderProgress(main);
+  else if (_activeTab === 'pve')         renderPveBuild(main);
+  else if (_activeTab === 'pvp')         _renderPvpSetup(main);
 }
 
 // ── Weapon level banner ───────────────────────────────────────
@@ -724,18 +746,31 @@ function _renderAttachments(main) {
 
 // ── WEAPON SKINS tab ──────────────────────────────────────────
 function _renderWeaponSkins(main) {
+  if(!document.getElementById('collectorPreviewStyles')){
+    const style=document.createElement('style');
+    style.id='collectorPreviewStyles';
+    style.textContent=`
+      @keyframes collectorAurora {0%,100%{filter:hue-rotate(-12deg) brightness(.85)}50%{filter:hue-rotate(38deg) brightness(1.35)}}
+      @keyframes collectorNebula {0%,100%{filter:hue-rotate(0deg) brightness(.85)}50%{filter:hue-rotate(90deg) brightness(1.3)}}
+      @keyframes collectorCinder {0%,100%{filter:brightness(.75)}45%{filter:brightness(1.55)}70%{filter:brightness(.9)}}
+      @keyframes collectorTundra {0%,100%{filter:hue-rotate(-10deg) brightness(1)}50%{filter:hue-rotate(16deg) brightness(1.4)}}
+    `;
+    document.head.appendChild(style);
+  }
   const wName = _activeWeapon;
   const lo    = getLoadout(wName);
   main.appendChild(_weaponLevelBanner(wName));
   main.appendChild(_el('div',`font-size:12px;color:${C.dim};letter-spacing:2px;margin-bottom:12px`,
     `SKINS FOR: ${_esc(WDEFS[wName].name)}`));
 
-  // Only grab skins that have an unlock challenge for THIS specific weapon
-  const availableSkins = Object.values(WEAPON_SKINS).filter(skin => 
+  // Collector finishes are granted by weekly quests, not the standard
+  // permanent weapon challenge table.
+  const availableSkins = Object.values(WEAPON_SKINS).filter(skin =>
+      skin.category==='Collector' || skin.category==='Shop' ||
       UNLOCK_TABLE.some(u => u.type === 'weaponSkin' && u.weapon === wName && u.id === skin.id)
   );
 
-  const categories = ['Gameplay', 'Mastery', 'Collector'];
+  const categories = ['Gameplay', 'Mastery', 'Collector', 'Shop'];
   
   categories.forEach(cat => {
     const skinsInCat = availableSkins.filter(s => s.category === cat);
@@ -757,10 +792,26 @@ function _renderWeaponSkins(main) {
       const sw = _el('div','display:flex;gap:2px;height:13px;border-radius:2px;overflow:hidden');
       sw.innerHTML = `<div style="flex:2;background:rgb(${Math.round(br*255)},${Math.round(bg*255)},${Math.round(bb*255)})"></div>
         <div style="flex:1;background:rgb(${Math.round(ar*255)},${Math.round(ag*255)},${Math.round(ab*255)})"></div>`;
+      if(skin.category==='Collector'){
+        sw.style.height='22px';
+        sw.style.animation='collector'+skin.id[0].toUpperCase()+skin.id.slice(1)+' 2.7s ease-in-out infinite';
+        sw.style.boxShadow='0 0 9px rgba(130,220,255,.35)';
+        sw.style.border='1px solid '+C.accent;
+      }
       card.appendChild(sw);
+      if(skin.category==='Collector')
+        card.appendChild(_el('div','font-size:10px;font-weight:bold;color:'+C.accentGreen,'✦ ANIMATED COLLECTOR'));
       card.appendChild(_el('div',`font-size:11px;font-weight:bold;color:${isEquipped?C.accentPurple:C.text}`,_esc(skin.name)));
       card.appendChild(_el('div',`font-size:11px;color:${C.dim}`,_esc(skin.desc)));
-      if (!isOwned) { const f=_el('div',''); f.innerHTML=_lockHTML(skin.id, wName, 'weaponSkin'); card.appendChild(f); }
+      if (!isOwned) {
+        const f=_el('div','');
+        f.innerHTML=skin.category==='Collector'
+          ? '<span style="font-size:11px">🔒 Weekly Collector quest reward</span>'
+          :skin.category==='Shop'
+          ? '<span style="font-size:11px">🛒 Available in Scraps Shop</span>'
+          : _lockHTML(skin.id,wName,'weaponSkin');
+        card.appendChild(f);
+      }
       else if (isEquipped) card.appendChild(_el('div',`font-size:11px;color:${C.accentGreen}`,'✓ EQUIPPED'));
       if (isOwned) card.onclick = () => { setWeaponSkin(wName, skin.id); applyLoadoutToScene(wName); _renderContent(); };
       grid.appendChild(card);
@@ -797,11 +848,14 @@ function _renderPlayerSkins(main) {
   };
   updateViewer(PLAYER_SKINS[profile.playerSkin] || PLAYER_SKINS.default);
 
-  const sorted = Object.values(PLAYER_SKINS).sort((a, b) => {
-    const uA = UNLOCK_TABLE.find(u => u.id === a.id && u.type === 'playerSkin');
-    const uB = UNLOCK_TABLE.find(u => u.id === b.id && u.type === 'playerSkin');
-    return (uA?.level || 999) - (uB?.level || 999);
-  });
+  // Present in expected progression order, with Standard fixed first.
+  const unlockRank=skin=>{
+    if(skin.id==='default')return 0;
+    const u=UNLOCK_TABLE.find(entry=>entry.id===skin.id&&entry.type==='playerSkin');
+    return u?.level??(u?.challenge?.conditions?.pvp?250:999);
+  };
+  const sorted=Object.values(PLAYER_SKINS).sort((a,b)=>
+    unlockRank(a)-unlockRank(b)||a.name.localeCompare(b.name));
   sorted.forEach(skin => {
     const isOwned    = isSkinUnlocked(skin.id);
     const isEquipped = profile.playerSkin === skin.id;
@@ -817,7 +871,14 @@ function _renderPlayerSkins(main) {
       <div style="flex:1;background:rgb(${Math.round(vr*255)},${Math.round(vg*255)},${Math.round(vb*255)})"></div>`;
     card.appendChild(sw);
     card.appendChild(_el('div',`font-size:12px;font-weight:bold;color:${isEquipped?C.accentPurple:C.text}`,_esc(skin.name)));
-    if (!isOwned) { const f=_el('div',''); f.innerHTML=_lockHTML(skin.id, null, 'playerSkin'); card.appendChild(f); }
+    if(!isOwned){
+      // Player-level progress is already displayed in Progress: don't
+      // repeat "Reach Level N (you are X)" plus another bar on every suit.
+      const unlock=UNLOCK_TABLE.find(u=>u.id===skin.id&&u.type==='playerSkin');
+      const label=['scavenger','reclaimer'].includes(skin.id)?'🛒 Available in Scraps Shop':
+        (unlock?.level?'🔒 LOCKED': '🔒 '+(unlock?getUnlockHint(unlock):'Locked'));
+      card.appendChild(_el('div','font-size:11px;color:'+C.dim,label));
+    }
     else if (isEquipped) card.appendChild(_el('div',`font-size:12px;color:${C.accentGreen};font-weight:bold`,'✓ EQUIPPED'));
     if (isOwned) card.onclick = () => { setPlayerSkin(skin.id); _renderContent(); };
     grid.appendChild(card);
@@ -825,6 +886,51 @@ function _renderPlayerSkins(main) {
   container.appendChild(grid);
   container.appendChild(viewer);
   main.appendChild(container);
+}
+
+// ── PVP LOADOUT tab ──────────────────────────────────────────
+function _renderPvpSetup(main){
+  main.appendChild(_el('h2','color:'+C.accent+';margin:0 0 12px','PVP MATCH LOADOUT'));
+  main.appendChild(_el('p','color:'+C.textDim+';line-height:1.6;max-width:650px',
+    'Select two different weapons below. Changes are saved immediately, without leaving Loadout. Configure attachments and skins in their existing tabs. Gun Game ignores this selection.'));
+  const usable=Object.keys(WDEFS).filter(id=>isCompetitiveFirearm(id,WDEFS));
+  const old=profile.pvpLoadout||{};
+  const {primary,secondary}=normalizeCompetitiveLoadout(old,WDEFS);
+  const row=_el('div','display:flex;flex-wrap:wrap;gap:18px;margin:18px 0');
+  const inputs={};
+  function makePicker(slot,value){
+    const section=_el('label','display:flex;flex-direction:column;gap:8px;font-size:12px;color:'+C.accentHi,slot.toUpperCase());
+    const select=_el('select','background:'+C.bgCard+';color:'+C.text+';padding:12px 14px;border:1px solid '+C.border+';border-radius:4px;font-family:'+F+';min-width:220px');
+    for(const id of usable){
+      const opt=_el('option','',WDEFS[id].name);
+      opt.value=id;
+      select.appendChild(opt);
+    }
+    select.value=value;
+    inputs[slot]=select;
+    section.appendChild(select);row.appendChild(section);
+    select.onchange=()=>{
+      const other=slot==='primary'?'secondary':'primary';
+      if(select.value===inputs[other].value){
+        const replacement=usable.find(id=>id!==select.value);
+        inputs[other].value=replacement;
+      }
+      profile.pvpLoadout={primary:inputs.primary.value,secondary:inputs.secondary.value};
+      saveProfile();
+      note.textContent='✓ SAVED — '+profile.pvpLoadout.primary+' + '+profile.pvpLoadout.secondary;
+    };
+  }
+  makePicker('primary',primary);
+  makePicker('secondary',secondary);
+  main.appendChild(row);
+  const note=_el('p','font-size:12px;color:'+C.accentGreen,
+    '✓ SAVED — '+primary+' + '+secondary);
+  main.appendChild(note);
+  // Repair old saves containing a missing/duplicate weapon.
+  if(old.primary!==primary || old.secondary!==secondary){
+    profile.pvpLoadout={primary,secondary};
+    saveProfile();
+  }
 }
 
 // ── PROGRESS tab ──────────────────────────────────────────────

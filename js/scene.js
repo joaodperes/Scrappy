@@ -1,55 +1,44 @@
-// scene.js – provides the Babylon scene, camera, engine, and navPlugin.
-// If window.__levelScene is already set (e.g., from the editor), reuse it.
+// Shared Babylon scene. Gameplay uses the existing #c canvas; editor.html
+// injects its own scene and deliberately skips gameplay navigation.
 const BABYLON = window.BABYLON;
-
 let scene, camera, engine, navPlugin;
 
-if (typeof window !== 'undefined' && window.__levelScene) {
-  // --- Reuse the existing scene (e.g., from editor.html) ---
+if (window.__levelScene) {
   scene = window.__levelScene;
   camera = scene.activeCamera;
   engine = scene.getEngine();
-  // Use the provided nav plugin or a no-op fallback
   navPlugin = window.__levelNavPlugin || { createNavMesh: () => {} };
-  //console.log('[scene.js] Reusing existing scene from window.__levelScene');
 } else {
-  // --- Create a brand new scene (normal game startup) ---
-  const canvas = document.createElement('canvas');
-  canvas.id = 'renderCanvas';
-  document.body.prepend(canvas);
-  canvas.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; display:block;';
-
-  engine = new BABYLON.Engine(canvas, true);
+  const canvas = document.getElementById('c');
+  if (!canvas) throw new Error('[scene] Missing #c gameplay canvas');
+  engine = new BABYLON.Engine(canvas, false, {
+    powerPreference: 'high-performance', limitDeviceRatio: 1.5,
+  });
   scene = new BABYLON.Scene(engine);
-  scene.clearColor = new BABYLON.Color3(0.1, 0.1, 0.15);
+  scene.clearColor = new BABYLON.Color4(0x30/255, 0x28/255, 0x1e/255, 1);
+  scene.fogMode = BABYLON.Scene.FOGMODE_LINEAR;
+  scene.fogColor = new BABYLON.Color3(0x30/255, 0x28/255, 0x1e/255);
+  scene.fogStart = 40;
+  scene.fogEnd = 140;
+  scene.gravity = new BABYLON.Vector3(0, -26, 0);
 
-  // FPS camera — player.js drives .position and .rotation.x/y manually every
-  // frame. Do NOT use ArcRotateCamera here: its view matrix is rebuilt every
-  // frame from alpha/beta/radius/target, silently overwriting any manual
-  // .position/.rotation. That's correct for editor.html's free-orbit camera,
-  // but for gameplay it means the camera just sits at target(0,0,0)+radius(120)
-  // forever — outside every map's walls — regardless of WASD/mouse input.
-  camera = new BABYLON.UniversalCamera('camera', new BABYLON.Vector3(0, 1.72, 0), scene);
-  camera.minZ = 0.05;
+  camera = new BABYLON.UniversalCamera('cam', new BABYLON.Vector3(0, 1.72, 0), scene);
+  camera.minZ = 0.15;
+  camera.maxZ = 200;
   camera.fov = 1.48;
+  camera.inputs.clear();
+  camera.setTarget(new BABYLON.Vector3(0, 1.72, 1));
   scene.activeCamera = camera;
-  // no attachControl() — player.js's pointer-lock mouse-look + WASD own input
 
-  const light = new BABYLON.HemisphericLight('light', new BABYLON.Vector3(0, 1, 0), scene);
-  light.intensity = 0.8;
-
-  navPlugin = {
-    createNavMesh: (meshes, params) => {
-      //console.warn('[scene.js] NavMesh plugin not initialised – using no-op.');
-    },
-    getClosestPoint: (point) => point,
-    computePath: (start, end) => [start, end],
-  };
-
+  // Recast is required: a straight-line fallback silently breaks stairs,
+  // map obstacles, and off-mesh traversal. Fail visibly if the CDN is down.
+  if (typeof window.Recast !== 'function') {
+    throw new Error('[scene] Recast is unavailable; check recast.js script loading');
+  }
+  const recast = await window.Recast();
+  navPlugin = new BABYLON.RecastJSPlugin(recast);
   window.__levelScene = scene;
   window.__levelNavPlugin = navPlugin;
-
-  //console.log('[scene.js] Created new scene');
 }
 
 export { scene, camera, engine, navPlugin };

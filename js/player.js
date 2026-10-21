@@ -5,10 +5,12 @@ import { jumpPads } from './level.js';
 import { player, cb, enemies } from './gameState.js';
 import { sfx } from './audio.js';
 import { WDEFS, inventory, activeSlot, curWep, wepCooldown, swingT, AUTO_WEAPONS, setWepCooldown, setSwingT, setActiveSlot, refreshSlotHUD, setWeaponVisibility } from './weapons.js';
-import { hitscan, fireRocket, firePlasma, fireGrenade, fireFlame, spawnLightningArc, fireRivet } from './projectiles.js';
+import { hitscan, meleeStrike, fireRocket, firePlasma, fireGrenade, fireFlame, spawnLightningArc, fireRivet } from './projectiles.js';
 import { _meshToEnemy } from './enemies.js';
 import { spawnSparks } from './particles.js';
 import { getCurrentMap, getMapMeta } from './mapManager.js';
+import { blocksBullet } from './bulletCollision.js';
+import { updateAegisLocks, getAegisFireTargets, hasDeadAegisLock } from './aegisTargeting.js';
 
 // Static imports eradicate the Promise crashes in the shoot/input loop!
 import {
@@ -44,6 +46,7 @@ let _nvPostProcess = null;
 let _nvgActive = false;
 let _nvgHl = null;
 let _aegisHl = null;
+let _aegisHudVisible = false;
 export let jetpackHeat = 0;
 let _jetpackOverheated = false;
 
@@ -129,16 +132,34 @@ export function hurtPlayer(rawDmg, { hazardType = null} = {}) {
   const fl = document.getElementById('damageFlash');
   if (fl) { fl.classList.add('flash'); setTimeout(() => fl.classList.remove('flash'), 170); }
   markHudDirty();
-  if (player.hp <= 0) {
+  if (player.hp <= 0 && !cb.isPvpActive?.()) {
     cb.endGame?.();
   }
 }
 
+let _pendingMelee=null;
 export function shoot() {
+  if (cb.isPvpDead?.()) return;
   // Synchronous burst cooldown block prevents full-auto bypass
   if (wepCooldown > 0 || player.isReloading || _burstCooldown > 0) return;
   const W = WDEFS[curWep];
+  if(W?.melee){
+    sfx.knife();
+    setWepCooldown(W.cd);
+    setSwingT(1);
+    // Strike at the blade animation's contact window rather than the
+    // button-down frame. Switching weapons or dying cancels the strike.
+    _pendingMelee={weapon:curWep,damage:W.dmg,range:W.range,time:.11};
+    refreshSlotHUD();
+    return;
+  }
   const EW = getEffectiveStats(curWep, W); // Grab effective stats immediately
+  // A kill elsewhere may occur between animation frames. Never fire with
+  // a stale Aegis group that already contains a dead locked enemy.
+  if(curWep==='AEGIS' && hasDeadAegisLock(paintedTargets)){
+    _clearAegisLocks();
+    _aegisReacquireDelay=Math.max(_aegisReacquireDelay,EW.cd||W.cd||0.3);
+  }
 
   const hasInfiniteAmmo = player.buffs['infinite_ammo'] > 0 || EW.ammo === Infinity;
   const isEnergy = W.useHeat || (curWep === 'PLASMA' && hasEnergyConverter());
@@ -356,7 +377,7 @@ export function shoot() {
           
           for (let i = 0; i < chainCount; i++) {
               let closest = null, closestDist = chainRange;
-              for (const e of enemies) {
+              for (const e of (cb.getDamageableActors?.()||enemies)) {
                   if (!e.alive || chained.has(e)) continue;
                   const d = BABYLON.Vector3.Distance(lastPos, e.group.position);
                   if (d < closestDist) { closestDist = d; closest = e; }
@@ -439,8 +460,12 @@ export function shoot() {
       break;
     case 'PLASMA':
       if (!hasSuppressor('PLASMA')) sfx.plasma();
-      if (player.plasmaAltMode) { hitscan(_meshToEnemy, spread * spreadMult, modDmg, range, 0); }
-      else { firePlasma(modDmg); }
+      if (player.plasmaAltMode) {
+        hitscan(_meshToEnemy, spread * spreadMult, modDmg, range, 0,
+          new BABYLON.Color3(.27,.53,1),0x4488ff,0x335577);
+      } else {
+        firePlasma(modDmg,EW.speed);
+      }
       break;
     case 'ROCKET':
       if (!hasSuppressor('ROCKET')) sfx.rocket();
@@ -465,7 +490,7 @@ export function shoot() {
           if (isDragonsBreath && hitRes?.hit && hitRes?.target) {
               const e = hitRes.target;
               if (!e._dots) e._dots = [];
-              e._dots.push({ dmg: EW.dotDamage || 12, remaining: EW.dotDuration || 3 });
+              e._dots.push({ dmg: EW.dotDamage || 12, remaining: EW.dotDuration || 3, source:'DRAGONS_BREATH',weapon:'SHOTGUN' });
               spawnSparks(e.group.position, 0xff4400, 8); // Fiery visual feedback
           }
       }
@@ -497,7 +522,7 @@ export function shoot() {
       camera.getForwardRay(1).direction.normalizeToRef(pushFwd);
 
       // 1. AFFECT ENEMIES
-      for (const e of enemies) {
+      for (const e of (cb.getDamageableActors?.()||enemies)) {
           if (!e.alive) continue;
           const toEnemy = e.group.position.subtract(pushCenter);
           const dist = toEnemy.length();
@@ -539,7 +564,7 @@ export function shoot() {
         sfx.plasma();
         const boltCenter = camera.position.clone();
         boltCenter.y += 0.5;
-        for (const e of enemies) {
+        for (const e of (cb.getDamageableActors?.()||enemies)) {
             if (!e.alive) continue;
             const d = BABYLON.Vector3.Distance(boltCenter, e.group.position);
             if (d <= EW.range) {
@@ -571,7 +596,7 @@ export function shoot() {
                 import('./projectiles.js').then(({ boom }) => boom(impactPos, 12, modDmg, true));
                 return;
             }
-            for (const e of enemies) {
+            for (const e of (cb.getDamageableActors?.()||enemies)) {
                 if (!e.alive) continue;
                 const d = BABYLON.Vector3.Distance(impactPos, e.group.position);
                 if (d < 12) {
@@ -601,7 +626,7 @@ export function shoot() {
         sfx.rocket();
         const osCenter = camera.position.clone(); osCenter.y += 0.5;
         // Lightning Phase
-        for (const e of enemies) {
+        for (const e of (cb.getDamageableActors?.()||enemies)) {
             if (!e.alive) continue;
             if (BABYLON.Vector3.Distance(osCenter, e.group.position) <= 25) {
                 cb.hitRobot(e, modDmg, false, false, 'OMEGA_STORM');
@@ -629,14 +654,13 @@ export function shoot() {
                 import('./projectiles.js').then(({ boom }) => boom(osPos, 15, modDmg * 1.5, true));
                 return;
             }
-            for (const e of enemies) {
+            for (const e of (cb.getDamageableActors?.()||enemies)) {
                 if (!e.alive) continue;
                 const d = BABYLON.Vector3.Distance(osPos, e.group.position);
                 if (d < 15) {
                     const dir = osPos.subtract(e.group.position).normalize();
                     e.group.position.addInPlace(dir.scale(10 * 0.1));
-                    e.hp -= 25 * 0.1; // Passive vacuum damage
-                    if (e.hp <= 0) cb.hitRobot(e, 999);
+                    cb.hitRobot(e, 25*0.1, false, false, 'OMEGA_STORM'); // route all DOT through attribution
                 }
             }
         }, 100);
@@ -671,32 +695,33 @@ export function shoot() {
       });
       break;
 
-    case 'AEGIS':
+    case 'AEGIS': {
       if (!hasSuppressor('AEGIS')) sfx.pistol();
-      
-      if (paintedTargets.length > 0) {
-        const hasInfinite = player.buffs['infinite_ammo'] > 0;
-        let shotsFired = 0;
-        
-        for (const e of paintedTargets) {
-          if (!e.alive) continue;
-          
-          // Ensure we don't shoot more targets than we have bullets 
-          // (ballisticCost already deducted 1 bullet at the top of shoot())
-          if (!hasInfinite && W.currentMag <= 0 && shotsFired > 0) break;
-          
-          if (!hasInfinite && shotsFired > 0) W.currentMag--; 
-          shotsFired++;
-          
-          cb.hitRobot(e, modDmg, false, false, 'AEGIS');
-          spawnSparks(e.group.position.clone().add(new BABYLON.Vector3(0, 1.0, 0)), 0xff3333, 8);
+      // Each trigger pull consumes one pistol round (deducted above), but
+      // hits every still-visible ADS lock. Crosshair direction at firing time
+      // deliberately does not affect locked targets.
+      if (isScoped && paintedTargets.length) {
+        const targets=getAegisFireTargets(paintedTargets,
+          e=>_aegisIsValid(e,EW.range||range),
+          e=>_aegisHasLineOfSight(e));
+        for(const e of targets){
+          cb.hitRobot?.(e,modDmg,false,false,'AEGIS');
+          spawnSparks(_aegisTargetPoint(e),0xff3333,8);
         }
-        
-        paintedTargets = []; // Clear queue so the auto-painter can grab them again if LMB is held
-        if (_aegisHl) _aegisHl.removeAllMeshes();
+        // Each smart-pistol discharge consumes the entire lock queue.
+        // A fresh acquisition is required for subsequent smart shots.
       } else {
-        hitscan(_meshToEnemy, spread * spreadMult, modDmg, range, falloff);
+        hitscan(_meshToEnemy,spread*spreadMult,modDmg,range,falloff);
       }
+      _clearAegisLocks();
+      // Keep the reset visible and prevent an immediate same-frame relock.
+      // The next ADS scan may acquire a fresh group after the pistol cooldown.
+      _aegisReacquireDelay=Math.max(_aegisReacquireDelay,EW.cd||W.cd||0.3);
+      break;
+    }
+    case 'KNIFE':
+      // Melee strikes are exclusively dispatched by the contact-window
+      // branch above. Never fall back to a gunshot/hitscan here.
       break;
     case 'DMR':
       if (!hasSuppressor('DMR')) sfx.railgun(); // Using railgun sfx as a placeholder for a heavy rifle sound
@@ -789,6 +814,7 @@ function getCameraRight() {
 
 export function resetPlayer(x, y, z) {
   window.__modeDead = false;
+  _pendingMelee=null;
   _playerBody.position.set(x, y, z);
   camera.position.set(x, y, z);
   _yVel = 0;
@@ -820,46 +846,110 @@ export function resetWeaponHeat(wName) {
   markHudDirty();
 }
 
-function _updateAegisTargeting() {
-  if (curWep !== 'AEGIS' || !isScoped) {
-    paintedTargets = [];
-    if (_aegisHl) _aegisHl.removeAllMeshes();
-    return;
+function _aegisTargetPoint(e){
+  // Keep a stable center-of-mass aim point; smart bullets do not depend on
+  // the reticle's current direction after an ADS lock has been acquired.
+  return e.group.getAbsolutePosition().add(new BABYLON.Vector3(0,1,0));
+}
+function _aegisIsValid(e,range){
+  return !!(e?.alive && e.group && !e.group.isDisposed?.() &&
+    BABYLON.Vector3.Distance(camera.position,_aegisTargetPoint(e))<=range);
+}
+function _aegisHasLineOfSight(e){
+  const dest=_aegisTargetPoint(e),delta=dest.subtract(camera.position);
+  const length=delta.length();
+  if(length<0.1)return true;
+  const ray=new BABYLON.Ray(camera.position.clone(),delta.scale(1/length),Math.max(.01,length-.15));
+  const block=scene.pickWithRay(ray,blocksBullet);
+  return !block?.hit;
+}
+function _showAegisLockCount(count,max,visible){
+  _aegisHudVisible = visible;
+  let hud=document.getElementById('aegisLockHud');
+  if(!hud && visible){
+    hud=document.createElement('div');
+    hud.id='aegisLockHud';
+    hud.style.cssText='position:fixed;top:60%;left:50%;transform:translateX(-50%);'+
+      'z-index:720;pointer-events:none;color:#ff7474;background:rgba(15,16,24,.75);'+
+      'border:1px solid #e45b5b;border-radius:5px;padding:5px 11px;'+
+      'font:700 13px monospace;letter-spacing:1px;text-shadow:0 0 6px #a00000;';
+    document.body.appendChild(hud);
   }
-  if (!_aegisHl) {
-    _aegisHl = new BABYLON.HighlightLayer('aegisHl', scene);
-    _aegisHl.outerGlow = true;
-    _aegisHl.innerGlow = true;
-  }
-  const EW = getEffectiveStats('AEGIS', WDEFS.AEGIS);
-  const maxTargets  = EW.maxTargets || 3;
-  const requiredDot = EW.lockCone ?? 0.95;
-  const fwd = getCameraForward();
-
-  for (const e of enemies) {
-    if (!e.alive) continue;
-    if (paintedTargets.includes(e)) {
-      e.group.getChildMeshes().forEach(m => {
-        if (!_aegisHl.hasMesh(m)) _aegisHl.addMesh(m, new BABYLON.Color3(1, 0, 0));
-      });
-      continue;
-    }
-    if (paintedTargets.length >= maxTargets) continue;
-    
-    // Shift target up by 1 unit to test against Center of Mass instead of toes
-    const enemyCenter = e.group.position.add(new BABYLON.Vector3(0, 1.0, 0));
-    const toEnemy = enemyCenter.subtract(camera.position).normalize();
-    
-    if (BABYLON.Vector3.Dot(fwd, toEnemy) > requiredDot) {
-      paintedTargets.push(e);
-      sfx.pickup();
-    }
+  if(hud){
+    hud.style.display=visible?'block':'none';
+    if(visible)hud.textContent='AEGIS LOCKS '+count+' / '+max;
   }
 }
+let _aegisReacquireDelay=0;
+function _clearAegisLocks(){
+  paintedTargets=[];
+  _aegisHl?.removeAllMeshes();
+  _aegisHighlighted.clear();
+  _showAegisLockCount(0,3,false);
+}
+function _updateAegisTargeting(){
+  if(curWep!=='AEGIS'||!isScoped){_clearAegisLocks();return;}
+  if(!_aegisHl){
+    _aegisHl=new BABYLON.HighlightLayer('aegisHl',scene);
+    _aegisHl.outerGlow=true;
+    _aegisHl.innerGlow=true;
+  }
+  const EW=getEffectiveStats('AEGIS',WDEFS.AEGIS);
+  const cap=Math.max(1,Math.floor(EW.maxTargets||3));
+  // A dead former lock invalidates the whole painted group, even when
+  // other targets are still alive. The player must reacquire those targets.
+  if(hasDeadAegisLock(paintedTargets)){
+    _clearAegisLocks();
+    _aegisReacquireDelay=Math.max(_aegisReacquireDelay,EW.cd||WDEFS.AEGIS.cd||0.3);
+  }
+  if(_aegisReacquireDelay>0){
+    _showAegisLockCount(0,cap,true);
+    return;
+  }
+  const cone=EW.lockCone??0.95;
+  const forward=getCameraForward();
+  const prior=paintedTargets;
+  const valid=e=>_aegisIsValid(e,EW.range||WDEFS.AEGIS.range);
+  const canAcquire=e=>{
+    const delta=_aegisTargetPoint(e).subtract(camera.position).normalize();
+    return BABYLON.Vector3.Dot(forward,delta)>=cone && _aegisHasLineOfSight(e);
+  };
+  // Prioritize the nearest reticle alignment, rather than spawn-array order,
+  // while keeping already acquired locks even if the crosshair moves away.
+  const candidates=(cb.getDamageableActors?.()||enemies).filter(valid).sort((a,b)=>{
+    const da=BABYLON.Vector3.Dot(forward,_aegisTargetPoint(a).subtract(camera.position).normalize());
+    const db=BABYLON.Vector3.Dot(forward,_aegisTargetPoint(b).subtract(camera.position).normalize());
+    return db-da;
+  });
+  paintedTargets=updateAegisLocks(prior,candidates,cap,valid,canAcquire);
+  if(paintedTargets.some(e=>!prior.includes(e)))sfx.pickup();
+  const wanted=new Set();
+  for(const e of paintedTargets){
+    for(const mesh of e.group.getChildMeshes(false)){
+      if(mesh.isDisposed?.())continue;
+      wanted.add(mesh);
+      if(!_aegisHl.hasMesh(mesh))_aegisHl.addMesh(mesh,new BABYLON.Color3(1,0,0));
+    }
+  }
+  // Remove stale highlights (dead targets, swapped targets, despawned bots).
+  for(const mesh of _aegisHighlighted){
+    if(!wanted.has(mesh)&&!mesh.isDisposed?.())_aegisHl.removeMesh(mesh);
+  }
+  _aegisHighlighted=wanted;
+  _showAegisLockCount(paintedTargets.length,cap,true);
+}
+let _aegisHighlighted=new Set();
 
 export let paintedTargets = [];
+// Weapon switching lives in weapons.js; register a synchronous hook so
+// clearing doesn't depend on the existing asynchronous setScope(false).
+cb.clearAegisLocks=()=>{
+  _clearAegisLocks();
+  _aegisReacquireDelay=0;
+};
 
 export function updatePlayer(dt, gameRunning, paused) {
+  _aegisReacquireDelay=Math.max(0,_aegisReacquireDelay-dt);
   for (const key in player.buffs) { 
     if (player.buffs[key] > 0) { 
       player.buffs[key] -= dt; 
@@ -872,13 +962,26 @@ export function updatePlayer(dt, gameRunning, paused) {
 
   // ── Lock movement while dead in mode matches ────────────
   if (window.__modeDead) {
+    _pendingMelee=null;
     // Still process buffs/timers but skip ALL movement and input
     if (wepCooldown > 0) setWepCooldown(wepCooldown - dt);
     if (_burstCooldown > 0) _burstCooldown = Math.max(0, _burstCooldown - dt);
     return;
   }
   
-  if (!gameRunning || paused) return;
+  if (!gameRunning){_pendingMelee=null;return}
+  if (paused) return;
+  if(_pendingMelee){
+    if(curWep!==_pendingMelee.weapon)_pendingMelee=null;
+    else{
+      _pendingMelee.time-=dt;
+      if(_pendingMelee.time<=0){
+        const strike=_pendingMelee;
+        _pendingMelee=null;
+        meleeStrike(_meshToEnemy,strike.damage,strike.range);
+      }
+    }
+  }
   const mapMeta = getMapMeta(getCurrentMap());
 
   if (wepCooldown > 0) setWepCooldown(wepCooldown - dt);
@@ -910,11 +1013,8 @@ export function updatePlayer(dt, gameRunning, paused) {
       markHudDirty();
     }
   }
-  if (curWep === 'AEGIS' && isScoped) {
-     _updateAegisTargeting();
-  } else {
-      paintedTargets = []; // Clear if we drop ADS or swap weapons
-  }
+  if(curWep==='AEGIS'&&isScoped)_updateAegisTargeting();
+  else if(paintedTargets.length||_aegisHighlighted.size||_aegisHudVisible)_clearAegisLocks();
 
   // ── Background Weapon Heat & Scope Heating Loop ──
     for (const wName in WDEFS) {
@@ -949,7 +1049,7 @@ export function updatePlayer(dt, gameRunning, paused) {
     }
   
   const sprint = keys['ShiftLeft'] || keys['ShiftRight'];
-  const speedMult   = getSpeedMult(curWep);
+  const speedMult   = getSpeedMult(curWep) * (player.survivalModifiers?.speedMult||1);
   const spd   = (sprint ? SPD_SPRINT : SPD_WALK) * speedMult;
   // use moveSpeed instead of the raw constant in the movement vector
   const fwd    = getCameraForward();
@@ -1000,9 +1100,11 @@ export function updatePlayer(dt, gameRunning, paused) {
               _jetpackOverheated = true; // Lock the jetpack
           }
           
-          import('./particles.js').then(({ spawnSparks }) => {
-              spawnSparks(new BABYLON.Vector3(_playerBody.position.x, _playerBody.position.y - PH + 0.1, _playerBody.position.z), 0x00ffff, 2);
-          });
+          // Already imported above: avoid scheduling a module Promise every
+          // active jetpack frame on Moon Base.
+          spawnSparks(new BABYLON.Vector3(
+            _playerBody.position.x,_playerBody.position.y-PH+0.1,
+            _playerBody.position.z),0x00ffff,2);
       } else {
           jetpackHeat = Math.max(0, jetpackHeat - dt * 0.25); // Cools down in 4s
           if (jetpackHeat <= 0) {
@@ -1065,8 +1167,14 @@ export function updatePlayer(dt, gameRunning, paused) {
   const preY  = _playerBody.position.y;
   _playerBody.moveWithCollisions(new BABYLON.Vector3(dispX, dispY, dispZ));
 
-  if (_playerBody.position.y < -25) { // Update reset threshold to -25 to prevent accidental resets on mine (levelJungle.js)
-    _playerBody.position.y = PH; _yVel = 0; player.onGround = true; _wasOnGround = true;
+  // Respect a map-specific void boundary: Jungle's fourth mine level is
+  // y=-45. Return to the actual spawn after a real fall, never mid-mine.
+  const currentMeta=getMapMeta(getCurrentMap());
+  if (_playerBody.position.y < (currentMeta.fallResetY ?? -25)) {
+    const start=currentMeta.spawn;
+    _playerBody.position.set(start.x,PH+(start.yOffset??0),start.z);
+    _yVel=0;_xVel=0;_zVel=0;
+    player.onGround=true;_wasOnGround=true;
   }
   camera.position.copyFrom(_playerBody.position);
 
@@ -1100,7 +1208,8 @@ export function updatePlayer(dt, gameRunning, paused) {
   }
   _lastStuckPos.copyFrom(_playerBody.position);
 
-  if (camera.position.y < -27) resetPlayer(-19, PH, -12);
+  // Fall recovery is handled above using map metadata; a second hardcoded
+  // y=-27 reset would eject players from Jungle's -30/-45 mine floors.
 
   if (mLen2 > 0.01 && player.onGround) {
     camera.position.y += Math.sin(Date.now() * .001 * (sprint ? 11 : 6.5)) * .042;
@@ -1210,6 +1319,10 @@ export function updatePlayer(dt, gameRunning, paused) {
   export function setScope(enable) {
     const overlay = document.getElementById('scopeOverlay');
     if (enable && isAkimbo(curWep)) return;
+    if(!enable && (paintedTargets.length||_aegisHighlighted.size||_aegisHudVisible)){
+      _clearAegisLocks();
+      _aegisReacquireDelay=0;
+    }
     isScoped = enable;
     player.isScoped = enable; 
     
@@ -1364,6 +1477,7 @@ export function setupInput(getGameRunning, getPaused, onTogglePause, onPickupWea
     if (e.code === 'Digit1') setActiveSlot(0);
     if (e.code === 'Digit2') setActiveSlot(1);
     if (e.code === 'Digit3') setActiveSlot(2);
+    if (e.code === 'Digit4' && cb.canUseMelee?.()!==false) setActiveSlot(3);
 
     if (e.code === 'KeyQ') {
       let other = activeSlot === 0 ? 1 : 0;
@@ -1413,7 +1527,7 @@ export function setupInput(getGameRunning, getPaused, onTogglePause, onPickupWea
           setTimeout(() => { player.blastCooldown = false; }, 2000);
 
           const blastCenter = camera.position.clone();
-          for (const e of enemies) {
+          for (const e of (cb.getDamageableActors?.()||enemies)) {
             if (!e.alive) continue;
             const dist = BABYLON.Vector3.Distance(blastCenter, e.group.position);
             

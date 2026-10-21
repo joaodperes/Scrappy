@@ -19,6 +19,8 @@ export const player = {
   onGround: false, yVel: 0,
   buffs: {},
   hardMode: false,
+  difficulty: 'normal',
+  survivalModifiers:null, // earned PvE bonuses, never applied to arena/PvP
   
   // New weapon state tracking:
   wepHeat: 0,
@@ -30,14 +32,23 @@ export const player = {
 // Cross-module callbacks registered after module init to avoid circular deps
 export const cb = {
   hitRobot:    null,
+  onRobotDestroyed: null, // optional offline arena kill event
+  onArenaActorHit: null, // distinct player-model target damage handler
+  getDamageableActors: null, // shared projectile/explosion targets
+  canUseMelee: null, // disabled in early Gun Game rungs and network mode
   hurtPlayer:  null,
   markHudDirty: null,
   endGame: null,
   isGameRunning: null,
+  isPvpActive: null,
+  isPvpDead: null,
+  pvpHitscan: null,
   /** @type {(() => void)|null} */
   showHitMarker: null,
   /** @type {((wName: string) => void)|null} */
   resetWeaponHeat: null,
+  /** @type {(() => void)|null} Clears scoped smart-pistol locks before swapping. */
+  clearAegisLocks: null,
 };
 
 // PvP remote player map: socketId → { group, hp, team, name }

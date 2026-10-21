@@ -1,0 +1,328 @@
+{
+  "version": 1,
+  "personalities": [
+    {
+      "id": "vanguard",
+      "name": "Vanguard",
+      "role": "assault",
+      "aggression": 0.9,
+      "aim": 0.57,
+      "reactionMs": 380,
+      "preferredRange": 13,
+      "loadout": {
+        "primary": "SMG",
+        "secondary": "PISTOL",
+        "attachments": {
+          "SMG": {
+            "barrel": "heavy_barrel"
+          }
+        }
+      },
+      "skin": "default"
+    },
+    {
+      "id": "sentinel",
+      "name": "Sentinel",
+      "role": "defense",
+      "aggression": 0.34,
+      "aim": 0.73,
+      "reactionMs": 530,
+      "preferredRange": 24,
+      "loadout": {
+        "primary": "DMR",
+        "secondary": "PISTOL",
+        "attachments": {
+          "DMR": {
+            "sight": "acog"
+          }
+        }
+      },
+      "skin": "forest"
+    },
+    {
+      "id": "breacher",
+      "name": "Breacher",
+      "role": "close",
+      "aggression": 0.88,
+      "aim": 0.48,
+      "reactionMs": 310,
+      "preferredRange": 7,
+      "loadout": {
+        "primary": "SHOTGUN",
+        "secondary": "PISTOL",
+        "attachments": {
+          "SHOTGUN": {
+            "magazine": "extended_mag",
+            "special": "dragons_breath"
+          }
+        }
+      },
+      "skin": "oni"
+    },
+    {
+      "id": "skirmisher",
+      "name": "Skirmisher",
+      "role": "flank",
+      "aggression": 0.65,
+      "aim": 0.61,
+      "reactionMs": 290,
+      "preferredRange": 17,
+      "loadout": {
+        "primary": "COMET",
+        "secondary": "PISTOL",
+        "attachments": {
+          "COMET": {
+            "grip": "vertical_grip"
+          }
+        }
+      },
+      "skin": "ghost"
+    },
+    {
+      "id": "tracker",
+      "name": "Tracker",
+      "role": "precision",
+      "aggression": 0.4,
+      "aim": 0.8,
+      "reactionMs": 670,
+      "preferredRange": 34,
+      "loadout": {
+        "primary": "RAILGUN",
+        "secondary": "PISTOL",
+        "attachments": {
+          "RAILGUN": {
+            "barrel": "extended_barrel"
+          }
+        }
+      },
+      "skin": "void"
+    },
+    {
+      "id": "sparker",
+      "name": "Sparker",
+      "role": "support",
+      "aggression": 0.56,
+      "aim": 0.6,
+      "reactionMs": 440,
+      "preferredRange": 19,
+      "loadout": {
+        "primary": "ELECTRON",
+        "secondary": "PISTOL"
+      },
+      "skin": "default"
+    },
+    {
+      "id": "rocketeer",
+      "name": "Rocketeer",
+      "role": "demolition",
+      "aggression": 0.48,
+      "aim": 0.56,
+      "reactionMs": 560,
+      "preferredRange": 27,
+      "loadout": {
+        "primary": "ROCKET",
+        "secondary": "PISTOL",
+        "attachments": {
+          "ROCKET": {
+            "magazine": "quick_swap_mag",
+            "special": "rocket_burst"
+          }
+        }
+      },
+      "skin": "oni"
+    },
+    {
+      "id": "arclight",
+      "name": "Arclight",
+      "role": "control",
+      "aggression": 0.69,
+      "aim": 0.63,
+      "reactionMs": 490,
+      "preferredRange": 18,
+      "loadout": {
+        "primary": "TESLA",
+        "secondary": "PISTOL",
+        "attachments": {
+          "TESLA": {
+            "barrel": "extended_barrel",
+            "special": "magnet_coil"
+          }
+        }
+      },
+      "skin": "ghost"
+    },
+    {
+      "id": "artillerist",
+      "name": "Artillerist",
+      "role": "explosives",
+      "aggression": 0.43,
+      "aim": 0.59,
+      "reactionMs": 610,
+      "preferredRange": 29,
+      "loadout": {
+        "primary": "GLAUNCHER",
+        "secondary": "PISTOL",
+        "attachments": {
+          "GLAUNCHER": {
+            "magazine": "extended_mag",
+            "special": "cluster_rounds"
+          }
+        }
+      },
+      "skin": "forest"
+    },
+    {
+      "id": "incinerator",
+      "name": "Incinerator",
+      "role": "area-denial",
+      "aggression": 0.72,
+      "aim": 0.53,
+      "reactionMs": 420,
+      "preferredRange": 13,
+      "loadout": {
+        "primary": "FLAMETHROWER",
+        "secondary": "PISTOL",
+        "attachments": {
+          "FLAMETHROWER": {
+            "barrel": "heavy_barrel"
+          }
+        }
+      },
+      "skin": "oni"
+    },
+    {
+      "id": "ionseer",
+      "name": "Ionseer",
+      "role": "precision",
+      "aggression": 0.42,
+      "aim": 0.82,
+      "reactionMs": 680,
+      "preferredRange": 38,
+      "skin": "void",
+      "loadout": {
+        "primary": "ION",
+        "secondary": "PISTOL",
+        "attachments": {
+          "ION": {
+            "special": "energy_coil"
+          }
+        }
+      }
+    },
+    {
+      "id": "plasmancer",
+      "name": "Plasmancer",
+      "role": "assault",
+      "aggression": 0.69,
+      "aim": 0.59,
+      "reactionMs": 435,
+      "preferredRange": 24,
+      "skin": "ghost",
+      "loadout": {
+        "primary": "PLASMA",
+        "secondary": "PISTOL",
+        "attachments": {
+          "PLASMA": {
+            "special": "dual_trigger"
+          }
+        }
+      }
+    },
+    {
+      "id": "silentbolt",
+      "name": "Silentbolt",
+      "role": "precision",
+      "aggression": 0.45,
+      "aim": 0.83,
+      "reactionMs": 625,
+      "preferredRange": 37,
+      "skin": "forest",
+      "loadout": {
+        "primary": "CROSSBOW",
+        "secondary": "PISTOL",
+        "attachments": {
+          "CROSSBOW": {
+            "special": "coated_tips"
+          }
+        }
+      }
+    },
+    {
+      "id": "nailstorm",
+      "name": "Nailstorm",
+      "role": "flank",
+      "aggression": 0.82,
+      "aim": 0.63,
+      "reactionMs": 330,
+      "preferredRange": 16,
+      "skin": "oni",
+      "loadout": {
+        "primary": "RIVETER",
+        "secondary": "PISTOL",
+        "attachments": {
+          "RIVETER": {
+            "special": "superheated_rivets"
+          }
+        }
+      }
+    },
+    {
+      "id": "sonicguard",
+      "name": "Sonicguard",
+      "role": "control",
+      "aggression": 0.64,
+      "aim": 0.6,
+      "reactionMs": 515,
+      "preferredRange": 13,
+      "skin": "default",
+      "loadout": {
+        "primary": "PHALANX",
+        "secondary": "PISTOL",
+        "attachments": {
+          "PHALANX": {
+            "barrel": "sonic_amplifier",
+            "special": "resonance_cascade"
+          }
+        }
+      }
+    },
+    {
+      "id": "locksmith",
+      "name": "Locksmith",
+      "role": "precision",
+      "aggression": 0.63,
+      "aim": 0.86,
+      "reactionMs": 405,
+      "preferredRange": 22,
+      "skin": "void",
+      "loadout": {
+        "primary": "AEGIS",
+        "secondary": "PISTOL",
+        "attachments": {
+          "AEGIS": {
+            "special": "multi_thread"
+          }
+        }
+      }
+    },
+    {
+      "id": "minotaur",
+      "name": "Minotaur",
+      "role": "defense",
+      "aggression": 0.76,
+      "aim": 0.56,
+      "reactionMs": 550,
+      "preferredRange": 17,
+      "skin": "oni",
+      "loadout": {
+        "primary": "CHAINGUN",
+        "secondary": "PISTOL",
+        "attachments": {
+          "CHAINGUN": {
+            "special": "spinning_module"
+          }
+        }
+      }
+    }
+  ]
+}

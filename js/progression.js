@@ -3,6 +3,12 @@
 import { player } from './gameState.js';
 import { getCurrentMap } from './mapManager.js';
 import { WDEFS } from './weapons.js';
+import { crossedMilestone, notificationKey, upgradeNotificationHistory } from './milestoneNotifications.js';
+import { questDefinitions, ensureQuestState, trackQuestEvent, questProgress, claimQuest, convertMaxedWeaponXp } from './questRules.js';
+import {SHOP_ITEMS,normalizeShopWallet,shopAvailableScraps,purchaseShopItem} from './shopRules.js';
+import {reconcileProfile,importLegacyProfile} from './profileSyncRules.js';
+import {acquireGameSession,releaseGameSession,activeGameSession,clearSessionOnSignOut} from './profileSession.js';
+let _shopWallet=normalizeShopWallet(null),_shopReady=false;
 
 const XP_BASE = 200, XP_EXP = 1.4;
 export function xpForLevel(level) { return Math.floor(XP_BASE * Math.pow(level, XP_EXP)); }
@@ -21,7 +27,7 @@ export const XP_GRANTS = {
 export const WEAPON_XP_GRANTS = {
   scout:15, heavy:30, sniper:18, drone:14, shotgun:16, rocket:20,
   pistol:9, grenadier:17, giantbot:150, pvp:35,
-  electron_bot:16, ion_sniper:22,
+  electron_bot:16, ion_sniper:22, arena:12,
   medic_bot:14, shield_bot:20, teleport_bot:16, swarm_host:28,
 };
 
@@ -29,7 +35,7 @@ export const WEAPON_XP_GRANTS = {
 const WEAPON_LEVEL_THRESHOLDS = [0, 250, 600, 1200, 2200, 3800, 6000, 9000, 13000, 18000];
 
 export function getWeaponLevel(wName) {
-  const xp = profile.stats.weaponXp?.[wName] || 0;
+  const xp = (profile.stats.weaponXp?.[wName] || 0)+(_shopWallet.xpBonuses[wName]||0);
   let level = 1;
   for (let i = 1; i < WEAPON_LEVEL_THRESHOLDS.length; i++) {
     if (xp >= WEAPON_LEVEL_THRESHOLDS[i]) level = i + 1; else break;
@@ -38,7 +44,7 @@ export function getWeaponLevel(wName) {
 }
 
 export function getWeaponLevelProgress(wName) {
-  const xp    = profile.stats.weaponXp?.[wName] || 0;
+  const xp    = (profile.stats.weaponXp?.[wName] || 0)+(_shopWallet.xpBonuses[wName]||0);
   const level = getWeaponLevel(wName);
   const isMax = level >= WEAPON_LEVEL_THRESHOLDS.length;
   const cur   = WEAPON_LEVEL_THRESHOLDS[level - 1] || 0;
@@ -453,7 +459,7 @@ export const ATTACHMENTS = {
   superheated_rivets: { id:'superheated_rivets', name:'Superheated Rivets', slot:'special', weapon:'RIVETER', desc:'Replaces raw damage with a severe burn effect.', icon:'🔥', mods:{ damage: -0.80 } },
   resonance_cascade: { id:'resonance_cascade', name:'Resonance Cascade', slot:'special', weapon:'PHALANX', desc:'Enemies knocked into walls take massive shatter damage.', icon:'💥', mods:{} },
   emp_frequency: { id:'emp_frequency', name:'EMP Frequency', slot:'special', weapon:'PHALANX', desc:'Converts knockback into a 1.5s EMP stun.', icon:'⚡', mods:{} },
-  multi_thread: { id:'multi_thread', name:'Multi-Thread Processor', slot:'special', weapon:'AEGIS', desc:'Increases maximum painted targets from 3 to 6.', icon:'🎯', mods:{ maxTargets: 3 } },
+  multi_thread: { id:'multi_thread', name:'Multi-Thread Processor', slot:'special', weapon:'AEGIS', desc:'Increases maximum painted targets from 3 to 6, but reduces damage per target to 66% of normal.', icon:'🎯', mods:{ maxTargets: 3, dmgMult: 0.66 } },
   bypass_algorithms: { id:'bypass_algorithms', name:'Bypass Algorithms', slot:'special', weapon:'AEGIS', desc:'Smart rounds bypass enemy armor and shields.', icon:'🔓', mods:{} },
   sonic_amplifier: {
     id:'sonic_amplifier', name:'Sonic Amplifier', slot:'barrel',
@@ -479,8 +485,8 @@ export const ATTACHMENTS = {
   },
   single_thread: {
     id:'single_thread', name:'Single-Thread Override', slot:'special', weapon:'AEGIS',
-    desc:'Focuses targeting. Limits max painted targets to 1, but increases smart round damage by 150%.',
-    icon:'🎯', mods:{ maxTargetsOverride: 1, dmgMult: 2.5 },
+    desc:'Focuses targeting. Limits max painted targets to 1, but increases smart round damage to 3.5× normal.',
+    icon:'🎯', mods:{ maxTargetsOverride: 1, dmgMult: 3.5 },
     incompatibleWith:['multi_thread']
   },
   slug_rounds: {
@@ -624,6 +630,13 @@ export const WEAPON_SKINS = {
 
   // --- COLLECTOR SKINS ---
   aurora:     {id:'aurora',     category:'Collector',name:'Aurora',    desc:'Ethereal green pulse.',     body:[0.01,0.10,0.03], accent:[0.10,0.90,0.30], grip:[0.02,0.15,0.05], pulseMult: 1.5},
+  nebula:     {id:'nebula',     category:'Collector',name:'Nebula',    desc:'Violet lunar clouds.',     body:[0.08,0.03,0.19], accent:[0.66,0.29,1.0], grip:[0.10,0.06,0.24]},
+  cinder:     {id:'cinder',     category:'Collector',name:'Cinder',    desc:'Meteor ember finish.',    body:[0.17,0.04,0.02], accent:[1.0,0.35,0.06], grip:[0.21,0.08,0.04]},
+  tundra:     {id:'tundra',     category:'Collector',name:'Tundra',    desc:'Cryogenic ice-metal.',    body:[0.55,0.72,0.77], accent:[0.26,0.82,1.0], grip:[0.22,0.40,0.46]},
+  patina: {id:'patina',category:'Shop',name:'Patina',desc:'Weathered green copper.',body:[.16,.42,.26],accent:[.39,.69,.51],grip:[.12,.22,.19]},
+  volt: {id:'volt',category:'Shop',name:'Volt',desc:'Electric cyan.',body:[.03,.13,.29],accent:[.08,.92,.94],grip:[.09,.18,.29]},
+  emberfall: {id:'emberfall',category:'Shop',name:'Emberfall',desc:'Molten orange.',body:[.16,.08,.06],accent:[.99,.35,.05],grip:[.21,.10,.04]},
+  sunburst: {id:'sunburst',category:'Shop',name:'Sunburst',desc:'Polished bronze and gold.',body:[.53,.35,.08],accent:[1,.8,.22],grip:[.38,.23,.08]},
 };
 
 export const SKIN_DIFFICULTY_ORDER = [
@@ -639,6 +652,8 @@ export const PLAYER_SKINS = {
   void:   {id:'void',   name:'Void',    body:[0.04,0.02,0.08],visor:[0.50,0.10,0.90]},
   gold:   {id:'gold',   name:'Prestige',body:[0.70,0.55,0.08],visor:[1.00,0.85,0.20]},
   gladiator: {id:'gladiator', name:'Gladiator', body:[0.2,0.2,0.2], visor:[1.0,0.0,0.2]}, // Red/Black PvP skin
+  scavenger: {id:'scavenger',name:'Scavenger',body:[.30,.35,.18],visor:[.92,.67,.18]},
+  reclaimer: {id:'reclaimer',name:'Reclaimer',body:[.21,.39,.44],visor:[.26,.91,.81]},
 };
 
 // ── Unlock table ──────────────────────────────────────────────
@@ -1278,7 +1293,7 @@ export const UNLOCK_TABLE = [
 
   // TESLA
   { id:'amplifier_coil', weapon:'TESLA', type:'attachment', secret:true,
-    challenge:{ event:'KILL', conditions:{ weapon:'TESLA_CHAIN' }, target:15,
+    challenge:{ event:'KILL', conditions:{ weapon:'TESLA', killMethod:'TESLA_CHAIN' }, target:15,
       desc:'Kill {target} enemies with Tesla Chain Lightning' } },
   { id:'capacitor_bank', weapon:'TESLA', type:'attachment',
     challenge:{ event:'KILL', conditions:{ weapon:'TESLA', targetType:'shield_bot' }, target:10,
@@ -1311,7 +1326,7 @@ export const UNLOCK_TABLE = [
     challenge:{ event:'KILL', conditions:{ weapon:'TESLA', explosive:true }, target:20,
       desc:'Get {target} explosive kills with the Tesla Cannon' } },
   { id:'magnet_coil', weapon:'TESLA', type:'attachment', secret:true,
-    challenge:{ event:'KILL', conditions:{ weapon:'TESLA_CHAIN' }, target:40,
+    challenge:{ event:'KILL', conditions:{ weapon:'TESLA', killMethod:'TESLA_CHAIN' }, target:40,
       desc:'Kill {target} enemies with Tesla Chain Lightning' } },
   { id:'compensator', weapon:'TESLA', type:'attachment',
     challenge:{ event:'KILL', conditions:{ weapon:'TESLA', targetType:'drone' }, target:20,
@@ -2340,8 +2355,8 @@ export const UNLOCK_TABLE = [
   { id:'oni',       type:'playerSkin', level:25 },
   { id:'void',      type:'playerSkin', level:30 },
   { id:'gold',      type:'playerSkin', level:40 },
-  { id:'gladiator', type:'playerSkin', challenge:{ event:'KILL', conditions:{ pvp:true }, target:25,
-      desc:'Defeat {target} players in FFA' } },
+  { id:'gladiator', type:'playerSkin', challenge:{ event:'KILL', conditions:{ pvp:true }, target:250,
+      desc:'Get {target} PvP kills across all competitive modes' } },
   
   // Tests
 /*   { id:'credits_1', weapon:'GLOBAL', type:'currency', rewardName:'100 Credits',
@@ -2384,12 +2399,20 @@ const _defaultProfile = () => ({
     RIVETER:{skin:'default',attachments:{}},PHALANX:{skin:'default',attachments:{}},AEGIS:{skin:'default',attachments:{}},
   },
   playerSkin:'default',
+  pvpLoadout:{primary:'SMG',secondary:'SHOTGUN'},
+  scraps:0,
+  questProgress:{},
+  weaponScrapRemainders:{},
+  pveBuild:{ranks:{vitality:0,mobility:0,scavenger:0},equipment:null},
+
   firebaseUid:null,
   stats:{totalKills:0,pvpKills:0,bossWaveClears:0,maxWave:0,killsOfType:{},killsWith:{},killsWhileJumping:{},killsWhileScoped:{},energyPickups:{},bossKillsWith:{}},
   maxWaveHard: 0,
   hardModeClears: 0,
   wonderWeaponsCollected: [],
   unlockedWeapons: [],
+  progressNoticeVersion: 0,
+  progressNoticeSeen: {},
 });
 
 const EXCLUSIONS_TO_TRACK = [...new Set(
@@ -2403,77 +2426,310 @@ const EXCLUSIONS_TO_TRACK = [...new Set(
 
 export let profile = _defaultProfile();
 
-// ── Firebase cross-session persistence ────────────────────────
-let _fbReady = false;
+// Firestore is the canonical profile. Browser storage holds only a pending
+// change/recovery journal tied to a single authenticated Google UID.
+const RECOVERY_PREFIX='scrappy_pending_sync_v1:';
+const _copy=value=>value===undefined?undefined:JSON.parse(JSON.stringify(value));
+let _fbReady=false,_profileLoadedUid=null,_profileLoadError=null;
+let _cloudBase=null,_recovery=null,_legacyCache=null,_authEpoch=0;
+let _cloudSyncTimer=null;
+const _profileReadyWaiters=[];
+const _sameGoogleUser=uid=>typeof firebase!=='undefined'&&
+  firebase.auth().currentUser?.uid===uid;
+function _resolveProfileReady(uid,error=null){
+ for(let i=_profileReadyWaiters.length-1;i>=0;i--){
+  const wait=_profileReadyWaiters[i];
+  if(wait.uid!==uid)continue;
+  _profileReadyWaiters.splice(i,1);
+  clearTimeout(wait.timer);
+  if(error)wait.reject(error);else wait.resolve();
+ }
+}
+export function waitForProfileReady(uid=firebase?.auth?.()?.currentUser?.uid){
+ if(!uid)return Promise.reject(new Error('Sign in with Google first.'));
+ if(_profileLoadedUid===uid)return Promise.resolve();
+ if(_profileLoadError)return Promise.reject(_profileLoadError);
+ return new Promise((resolve,reject)=>{
+  const wait={uid,resolve,reject,timer:null};
+  wait.timer=setTimeout(()=>{
+   const index=_profileReadyWaiters.indexOf(wait);
+   if(index>=0)_profileReadyWaiters.splice(index,1);
+   reject(new Error('The Google profile did not load. Check your connection.'));
+  },15000);
+  _profileReadyWaiters.push(wait);
+ });
+}
+function _recoveryKey(uid){return RECOVERY_PREFIX+uid}
+function _readRecovery(uid){
+ try{
+  const data=JSON.parse(localStorage.getItem(_recoveryKey(uid))||'null');
+  return data?.uid===uid&&data.base&&data.profile&&data.id?data:null;
+ }catch{return null}
+}
+function _saveRecovery(){
+ if(!_recovery||!_recovery.uid)return;
+ try{localStorage.setItem(_recoveryKey(_recovery.uid),JSON.stringify(_recovery))}
+ catch(err){console.warn('[profile] Recovery buffer unavailable',err)}
+}
+function _forgetRecovery(uid){
+ if(!uid)return;
+ try{localStorage.removeItem(_recoveryKey(uid))}catch{}
+ if(_recovery?.uid===uid)_recovery=null;
+}
+function _profileCaps(wallet=_shopWallet){
+ const caps={};
+ for(const [gun,bonus]of Object.entries(wallet?.xpBonuses||{}))
+  caps[gun]=Math.max(0,WEAPON_LEVEL_THRESHOLDS.at(-1)-(Number(bonus)||0));
+ return caps;
+}
+function _mergeProgress(base,local,cloud,wallet=_shopWallet){
+ return reconcileProfile(base,local,cloud,{
+  levelForXp:levelFromTotalXp,weaponXpCaps:_profileCaps(wallet)});
+}
+function _restoreCloudProfile(uid,remote,receipts={}){
+ // The journal contains only changes since its baseline; do not compare
+ // entire old browser profiles by XP or upload stale snapshots at login.
+ const baseline=_deepMerge(_defaultProfile(),{...remote,firebaseUid:uid});
+ let recovered=baseline;
+ _recovery=_readRecovery(uid);
+ if(_recovery){
+  const recorded=Number(receipts[_recovery.id]||0);
+  if(recorded>=_recovery.version){
+   _forgetRecovery(uid);
+  }else{
+   const savedBase=_recovery.inFlight&&recorded>=_recovery.inFlight.version
+     ?_recovery.inFlight.profile:_recovery.base;
+   recovered=_mergeProgress(savedBase,_recovery.profile,baseline);
+   _recovery={..._recovery,base:_copy(baseline),
+     profile:_copy(recovered),inFlight:null};
+   _saveRecovery();
+  }
+ }else if(_legacyCache?.firebaseUid===uid){
+  // One-time migration from the old full local profile. Because the old
+  // format has no baseline, take max/union rather than adding unknown XP.
+  recovered=importLegacyProfile(_legacyCache,baseline);
+ }
+ _cloudBase=_copy(baseline);
+ _cloudRevision++;
+ profile=_deepMerge(_defaultProfile(),recovered);
+ profile.firebaseUid=uid;
+ profile.level=levelFromTotalXp(profile.totalXp||0);
+ _sanitizeUnlocks();_primeProgressNoticeHistory();
+ const hasPending=!!_recovery||
+   JSON.stringify(profile)!==JSON.stringify(baseline);
+ _cloudDirty=hasPending;
+ if(hasPending){
+  if(!_recovery)_recovery={uid,id:_syncClientId(uid),version:_nextSyncVersion(uid),
+    base:_copy(baseline),profile:_copy(profile),inFlight:null};
+  _saveRecovery();
+ }
+ // Retire the old unscoped full-profile cache only once Firestore loaded.
+ if(!_legacyCache||_legacyCache.firebaseUid===uid){
+  try{localStorage.removeItem(STORAGE_KEY)}catch{}
+  _legacyCache=null;
+ }
+}
+function _newSyncId(){
+ const bytes=new Uint8Array(16);
+ crypto.getRandomValues(bytes);
+ return Array.from(bytes,x=>x.toString(16).padStart(2,'0')).join('');
+}
+export function getProfileSyncStatus(){
+ return !_fbReady?'offline':_cloudDirty?'pending':'saved';
+}
+export async function startProfileGameSession(onLost){
+ const uid=firebase?.auth?.()?.currentUser?.uid;
+ await waitForProfileReady(uid);
+ if(!_sameGoogleUser(uid))throw new Error('Google account changed.');
+ if(_cloudDirty)await flushProfileToCloud();
+ const state=await acquireGameSession({
+  onLost,
+  onBeforeHandoff:()=>flushProfileToCloud(),
+ });
+ if(state.profile){
+  _restoreCloudProfile(uid,state.profile,state.receipts);
+  _profileLoadedUid=uid;
+ }
+ if(_cloudDirty)await flushProfileToCloud();
+ return true;
+}
+export async function stopProfileGameSession(){
+ await flushProfileToCloud();
+ await releaseGameSession();
+}
+export function initFirebaseAuth(){
+ if(typeof firebase==='undefined')return;
+ firebase.auth().onAuthStateChanged(async user=>{
+  const epoch=++_authEpoch;
+  if(_cloudSyncTimer){clearTimeout(_cloudSyncTimer);_cloudSyncTimer=null}
+  _profileLoadError=null;
+  if(!user){
+   _fbReady=false;_shopWallet=normalizeShopWallet(null);_shopReady=false;
+   clearSessionOnSignOut();
+   _profileLoadedUid=null;_cloudBase=null;_recovery=null;
+   _cloudDirty=false;_cloudRevision++;
+   profile=_defaultProfile();
+   return;
+  }
+  const uid=user.uid;
+  _fbReady=false;_profileLoadedUid=null;
+  try{
+   const ref=firebase.firestore().collection('player_profiles').doc(uid);
+   // Create a fresh profile only after a successful server transaction.
+   // Network failure must never be interpreted as 'new account'.
+   const initial=await firebase.firestore().runTransaction(async tx=>{
+    const snapshot=await tx.get(ref);
+    const data=snapshot.data()||{};
+    if(data.profile)return {profile:data.profile,receipts:data.profileSyncReceipts||{}};
+    const first={..._defaultProfile(),firebaseUid:uid};
+    tx.set(ref,{profile:first,
+      updated_at:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
+    return {profile:first,receipts:{}};
+   });
+   if(epoch!==_authEpoch||!_sameGoogleUser(uid))return;
+   _fbReady=true;
+   _restoreCloudProfile(uid,initial.profile,initial.receipts);
+   _profileLoadedUid=uid;
+   _resolveProfileReady(uid);
+   window.refreshMenuUI?.();
+   await refreshProfileShopWallet(uid);
+   if(_cloudDirty)_scheduleCloudSync();
+  }catch(err){
+   if(epoch!==_authEpoch)return;
+   _profileLoadError=new Error('Cannot load your Google cloud profile. Reconnect and reload.');
+   console.error('[profile] Cloud load failed',err);
+   _resolveProfileReady(uid,_profileLoadError);
+  }
+ });
+}
 
-export function initFirebaseAuth() {
-  if (typeof firebase === 'undefined') return;
-  
-  firebase.auth().onAuthStateChanged(async (user) => {
-    if (user) {
-      _fbReady = true;
-      const uid = user.uid;
-
-      // SECURITY CHECK: If the local cached profile belongs to a DIFFERENT Firebase user, wipe it immediately!
-      if (profile.firebaseUid && profile.firebaseUid !== uid) {
-          console.log('[progression] Different user detected. Wiping local profile.');
-          Object.assign(profile, _defaultProfile()); // Reset to defaults
-      }
-
-      const cloudProfile = await _loadFromFirestore(uid);
-
-      if (cloudProfile) {
-        // We have cloud data. Prefer the cloud data unless local is strictly verified as ahead for this exact UID.
-        if (profile.totalXp > cloudProfile.totalXp && profile.firebaseUid === uid) {
-            await _saveToFirestore();
-        } else {
-            profile = _deepMerge(_defaultProfile(), cloudProfile);
-            profile.firebaseUid = uid;
-            _sanitizeUnlocks();
-            _saveToLocalStorage();
-            //console.log('[progression] Cross-session profile restored from cloud');
-        }
-      } else {
-        // Brand new cloud account. 
-        profile.firebaseUid = uid;
-        await _saveToFirestore();
-        _saveToLocalStorage();
-        //console.log('[progression] New cloud profile created');
-      }
-    } else {
-      _fbReady = false;
-    }
+// The shop ledger sits beside the normal "profile" map on the SAME
+// Firestore user document. Regular profile sync writes never overwrite it.
+// The gross quest-earnings counter stays on profile.scraps; available scraps
+// are always gross earnings minus transactional ledger.spent.
+function _applyShopEntitlements(){
+ for(const itemId of _shopWallet.owned){
+  const item=SHOP_ITEMS.find(entry=>entry.id===itemId);
+  if(!item)continue;
+  if(item.kind==='playerSkin'){
+   if(!Array.isArray(profile.unlocked))profile.unlocked=['default'];
+   if(!profile.unlocked.includes(item.skin))profile.unlocked.push(item.skin);
+  }else if(item.kind==='weaponSkin'){
+   if(!profile.unlockedWeaponSkins||typeof profile.unlockedWeaponSkins!=='object')
+     profile.unlockedWeaponSkins={};
+   const list=profile.unlockedWeaponSkins[item.weapon]||[];
+   if(!list.includes(item.skin))profile.unlockedWeaponSkins[item.weapon]=[...list,item.skin];
+  }
+ }
+}
+export function getShopSnapshot(){
+ return {ready:_shopReady,owned:[..._shopWallet.owned],
+  earnedScraps:Math.max(0,profile.scraps||0),spentScraps:_shopWallet.spent||0,
+  scraps:shopAvailableScraps(profile.scraps||0,_shopWallet),
+  xpBonuses:{..._shopWallet.xpBonuses},loggedIn:!!_fbReady};
+}
+export async function refreshProfileShopWallet(uid=profile.firebaseUid){
+ if(!_fbReady||!uid||typeof firebase==='undefined'){_shopReady=false;return false}
+ try{
+  const documentRef=firebase.firestore().collection('player_profiles').doc(uid);
+  const snapshot=await documentRef.get();
+  if(profile.firebaseUid!==uid)return false;
+  _shopWallet=normalizeShopWallet(snapshot.data()?.shopWallet);
+  _shopReady=true;
+  _applyShopEntitlements();
+  return true;
+ }catch(error){
+  console.warn('[shop] Unable to read account wallet',error);
+  _shopReady=false;return false;
+ }
+}
+export async function purchaseProfileShopItem(itemId,requestId){
+ const uid=profile.firebaseUid;
+ if(!_fbReady||!uid||typeof firebase==='undefined')
+   return {ok:false,reason:'Sign in before purchasing'};
+ if(!_shopReady)return {ok:false,reason:'Shop wallet not loaded'};
+ await flushProfileToCloud();
+ if(_cloudDirty)return {ok:false,reason:'Profile changes not synced. Reconnect before purchasing'};
+ try{
+  const db=firebase.firestore();
+  const documentRef=db.collection('player_profiles').doc(uid);
+  const result=await db.runTransaction(async transaction=>{
+   const snapshot=await transaction.get(documentRef);
+   if(!snapshot.exists)return {ok:false,reason:'Player profile not found'};
+   const cloud=snapshot.data()||{};
+   const item=SHOP_ITEMS.find(entry=>entry.id===itemId);
+   const baseWeaponXp=Number(cloud.profile?.stats?.weaponXp?.[item?.weapon]||0);
+   const purchase=purchaseShopItem(
+     Number(cloud.profile?.scraps||0),cloud.shopWallet,itemId,requestId,baseWeaponXp);
+   if(!purchase.ok||purchase.duplicate)return purchase;
+   transaction.set(documentRef,{shopWallet:purchase.wallet},{merge:true});
+   return purchase;
   });
-}
-
-async function _saveToFirestore() {
-  if (!_fbReady || !profile.firebaseUid) return false;
-  try {
-    await firebase.firestore().collection('player_profiles').doc(profile.firebaseUid).set(
-      { profile, updated_at: firebase.firestore.FieldValue.serverTimestamp() },
-      { merge: true }
-    );
-    return true;
-  } catch (e) {
-      if (e.message.includes('CORS') || e.message.includes('offline') || e.message.includes('network')) {
-          return false;
-      }
-      console.warn('[progression] Firestore sync paused:', e.message);
-      return false;
+  if(profile.firebaseUid!==uid)return {ok:false,reason:'Account changed'};
+  if(result.ok){
+   _shopWallet=normalizeShopWallet(result.wallet);
+   _shopReady=true;_applyShopEntitlements();
   }
+  return result;
+ }catch(error){
+  console.warn('[shop] Purchase not committed',error);
+  return {ok:false,reason:'Purchase could not be completed; no Scraps charged'};
+ }
 }
 
-async function _loadFromFirestore(uid) {
-  try {
-    const doc = await firebase.firestore().collection('player_profiles').doc(uid).get();
-    return doc.exists ? doc.data().profile : null;
-  } catch (e) { 
-      return null; 
-  }
+// Every persisted change is a transaction against the authoritative UID
+// profile. Session ownership is checked in the same atomic transaction.
+async function _saveToFirestore(uid,localSnapshot,baseSnapshot,buffer){
+ if(!_fbReady||!_sameGoogleUser(uid))return {ok:false,reason:'auth'};
+ try{
+  const db=firebase.firestore(),ref=db.collection('player_profiles').doc(uid);
+  const result=await db.runTransaction(async tx=>{
+   const doc=await tx.get(ref),data=doc.data()||{};
+   if(!data.profile)throw new Error('CLOUD_PROFILE_MISSING');
+   const owner=activeGameSession();
+   const lease=data.activeSession?.id||null;
+   if(owner?(owner.uid!==uid||lease!==owner.id):!!lease)
+    throw new Error('SESSION_CONFLICT');
+   const receipt=Number(data.profileSyncReceipts?.[buffer.id]||0);
+   if(receipt>=buffer.version)return {merged:data.profile,duplicate:true};
+   const merged=_mergeProgress(baseSnapshot,localSnapshot,data.profile,
+     normalizeShopWallet(data.shopWallet));
+   merged.firebaseUid=uid;
+   const receipts={...(data.profileSyncReceipts||{})};
+   receipts[buffer.id]=buffer.version;
+   // Bounded per-device receipts make crash/retry saves idempotent.
+   if(Object.keys(receipts).length>64)throw new Error('SYNC_DEVICE_LIMIT');
+   tx.update(ref,{profile:merged,profileSyncReceipts:receipts,
+     updated_at:firebase.firestore.FieldValue.serverTimestamp()});
+   return {merged,duplicate:false};
+  });
+  return {ok:true,merged:result.merged};
+ }catch(err){
+  console.warn('[profile] Cloud save postponed',err);
+  return {ok:false,reason:err?.message||'network'};
+ }
 }
-
-function _saveToLocalStorage() {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(profile)); } catch {}
+function _syncClientId(uid){
+ const key=RECOVERY_PREFIX+'client:'+uid;
+ try{
+  let id=localStorage.getItem(key);
+  if(id)return id;
+  id=_newSyncId();localStorage.setItem(key,id);return id;
+ }catch{return _newSyncId()}
+}
+function _nextSyncVersion(uid){
+ const key=RECOVERY_PREFIX+'version:'+uid;
+ try{
+  const next=Math.max(0,Number(localStorage.getItem(key))||0)+1;
+  localStorage.setItem(key,String(next));return next;
+ }catch{return Date.now()}
+}
+function _scheduleCloudSync(delay=20000){
+ if(_cloudSyncTimer||!_fbReady||!_cloudDirty)return;
+ _cloudSyncTimer=setTimeout(()=>{
+  _cloudSyncTimer=null;
+  void flushProfileToCloud();
+ },delay);
 }
 
 export function checkFirstTimePickup(wName) {
@@ -2528,6 +2784,11 @@ function _sanitizeUnlocks() {
         profile.unlockedAttachments[wName] = profile.unlockedAttachments[wName].filter(id => allowedAtts.has(id));
         
         const allowedSkins = validSkins[wName] || new Set();
+        // Collector rewards are issued by the UTC quest claim ledger rather
+        // than UNLOCK_TABLE; preserve legitimate reward IDs after reloading.
+        for(const [id,def] of Object.entries(WEAPON_SKINS)){
+          if(def.category==='Collector'||def.category==='Shop')allowedSkins.add(id);
+        }
         if (profile.unlockedWeaponSkins[wName]) {
              profile.unlockedWeaponSkins[wName] = profile.unlockedWeaponSkins[wName].filter(id => allowedSkins.has(id));
         }
@@ -2543,13 +2804,25 @@ function _sanitizeUnlocks() {
     }
 }
 
-export function loadProfile() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) { const saved = JSON.parse(raw); profile = _deepMerge(_defaultProfile(), saved); _migrateOldWeaponSkins(); }
-  } catch {}
-  _sanitizeUnlocks();
-  initFirebaseAuth();
+export function loadProfile(){
+ // Legacy full-profile cache is considered only after verifying the UID.
+ try{_legacyCache=JSON.parse(localStorage.getItem(STORAGE_KEY)||'null')}catch{}
+ _sanitizeUnlocks();_primeProgressNoticeHistory();
+ initFirebaseAuth();
+ if(typeof document!=='undefined')
+  document.addEventListener('visibilitychange',()=>{
+   if(document.hidden&&_cloudDirty)void flushProfileToCloud();
+  });
+ if(typeof window!=='undefined'){
+  window.addEventListener('online',()=>{
+   if(_cloudDirty&&_fbReady)void flushProfileToCloud();
+  });
+  window.addEventListener('pagehide',()=>{
+   // Firestore cannot guarantee completion after pagehide; the recovery
+   // checkpoint was already stored synchronously by saveProfile.
+   if(_cloudDirty)void flushProfileToCloud();
+  });
+ }
 }
 
 /**
@@ -2600,17 +2873,144 @@ export function ensureDisplayName() {
     });
 }
 
-let _cloudDirty = false;
-
-export function saveProfile() {
-  _saveToLocalStorage();
-  _cloudDirty = true;
+// Ephemeral, session-scoped reward accounting. No new cloud schema or trust boundary.
+let _survivalRewards=null;
+export function startSurvivalRewardLedger(){
+  _survivalRewards={active:true,accountXp:0,weaponXp:{},conversionScraps:{},
+    questScraps:0,questClaims:0};
+}
+export function getSurvivalRewardLedger(){
+  const r=_survivalRewards;
+  if(!r)return null;
+  return {accountXp:r.accountXp,weaponXp:{...r.weaponXp},
+    conversionScraps:{...r.conversionScraps},questScraps:r.questScraps,
+    questClaims:r.questClaims,totalEarnedScraps:r.questScraps+
+      Object.values(r.conversionScraps).reduce((a,b)=>a+b,0)};
+}
+export function stopSurvivalRewardLedger(){
+  if(!_survivalRewards?.active)return null;
+  const summary=getSurvivalRewardLedger();
+  _survivalRewards.active=false;
+  return summary;
+}
+function _rewardWeaponXp(weapon,amount){
+  if(_survivalRewards?.active&&amount>0)
+    _survivalRewards.weaponXp[weapon]=(_survivalRewards.weaponXp[weapon]||0)+amount;
+}
+function _rewardConvertedScraps(weapon,amount){
+  if(_survivalRewards?.active&&amount>0)
+    _survivalRewards.conversionScraps[weapon]=(_survivalRewards.conversionScraps[weapon]||0)+amount;
 }
 
-export async function flushProfileToCloud() {
-  if (!_cloudDirty) return;
-  const ok = await _saveToFirestore();
-  if (ok) _cloudDirty = false;
+let _cloudDirty = false;
+let _cloudRevision = 0;
+let _cloudFlushPromise = Promise.resolve();
+
+export function getQuestBoard(date=new Date()){
+  const state=ensureQuestState(profile,date);
+  return {scraps:shopAvailableScraps(profile.scraps||0,_shopWallet),
+    quests:questDefinitions(date).map(def=>({...def,...questProgress(profile,def,date)}))};
+}
+// Claims are transactionally paid once per UTC period. Concurrent browsers
+// cannot both grant Scraps simply by carrying stale local claim flags.
+export async function claimProfileQuest(id,date=new Date()){
+ const uid=profile.firebaseUid;
+ if(!_fbReady||!_sameGoogleUser(uid))
+  return {ok:false,reason:'Sign in and reconnect to claim rewards'};
+ await flushProfileToCloud();
+ if(_cloudDirty)return {ok:false,reason:'Save progress to the cloud before claiming'};
+ const before=_copy(_cloudBase);
+ try{
+  const db=firebase.firestore(),ref=db.collection('player_profiles').doc(uid);
+  const outcome=await db.runTransaction(async tx=>{
+   const doc=await tx.get(ref),data=doc.data()||{};
+   if(!data.profile)throw new Error('Cloud profile missing');
+   const owner=activeGameSession();
+   if(owner?(owner.uid!==uid||data.activeSession?.id!==owner.id):!!data.activeSession?.id)
+    throw new Error('Account is active in another browser');
+   const updated=_deepMerge(_defaultProfile(),data.profile);
+   const result=claimQuest(updated,id,date);
+   if(!result.ok)return result;
+   tx.update(ref,{profile:updated,
+     updated_at:firebase.firestore.FieldValue.serverTimestamp()});
+   return {...result,profile:updated};
+  });
+  if(!outcome.ok)return outcome;
+  if(!_sameGoogleUser(uid))return {ok:false,reason:'Google account changed'};
+  const authoritative=_deepMerge(_defaultProfile(),outcome.profile);
+  profile=_deepMerge(_defaultProfile(),_mergeProgress(before,profile,authoritative));
+  _cloudBase=_copy(authoritative);
+  if(_cloudDirty&&_recovery?.uid===uid){
+   _recovery.base=_copy(authoritative);
+   _recovery.profile=_copy(profile);
+   _saveRecovery();_scheduleCloudSync();
+  }
+  _sanitizeUnlocks();
+  if(_survivalRewards?.active){
+   _survivalRewards.questScraps+=outcome.scraps||0;
+   _survivalRewards.questClaims++;
+  }
+  const reward=outcome.skin?outcome.skin.id.toUpperCase()+' · '+outcome.skin.weapon:
+    outcome.scraps+' Scraps';
+  _showQuestToast('REWARD CLAIMED',reward);
+  return {ok:true,scraps:outcome.scraps,skin:outcome.skin};
+ }catch(err){
+  console.warn('[quests] Transaction failed',err);
+  return {ok:false,reason:err?.message||'Cloud reward unavailable'};
+ }
+}
+
+export function saveProfile(){
+ _cloudRevision++;_cloudDirty=true;
+ const uid=profile.firebaseUid;
+ if(_profileLoadedUid===uid&&uid&&_cloudBase){
+  if(!_recovery||_recovery.uid!==uid)
+   _recovery={uid,id:_syncClientId(uid),version:_nextSyncVersion(uid),
+     base:_copy(_cloudBase),profile:_copy(profile),inFlight:null};
+  else{
+   _recovery.version=_nextSyncVersion(uid);
+   _recovery.profile=_copy(profile);
+  }
+  _saveRecovery();_scheduleCloudSync();
+ }
+}
+export async function flushProfileToCloud(){
+ const task=_cloudFlushPromise.catch(()=>{}).then(async()=>{
+  if(!_cloudDirty||!_recovery)return;
+  const uid=_recovery.uid;
+  if(!_sameGoogleUser(uid)||_profileLoadedUid!==uid)return;
+  const revision=_cloudRevision,epoch=_authEpoch;
+  const buffer={id:_recovery.id,version:_recovery.version};
+  const snapshot=_copy(_recovery.profile),base=_copy(_recovery.base);
+  _recovery.inFlight={version:buffer.version,profile:snapshot};
+  _saveRecovery(); // checkpoint before a possibly successful cloud commit
+  const result=await _saveToFirestore(uid,snapshot,base,buffer);
+  if(!result.ok||uid!==profile.firebaseUid||epoch!==_authEpoch){
+   // A transient network error must not strand the journal forever if the
+   // player remains in the game and earns no additional progression.
+   // Displaced sessions wait until the user explicitly takes control again.
+   if(result.reason!=='SESSION_CONFLICT'&&
+      uid===profile.firebaseUid&&epoch===_authEpoch)
+    _scheduleCloudSync(30000);
+   return;
+  }
+  const merged=_deepMerge(_defaultProfile(),result.merged);
+  _cloudBase=_copy(merged);
+  // Changes made during the network request remain pending.
+  profile=_deepMerge(_defaultProfile(),_mergeProgress(snapshot,profile,merged));
+  profile.firebaseUid=uid;
+  _sanitizeUnlocks();_primeProgressNoticeHistory();
+  if(revision===_cloudRevision&&buffer.version===_recovery?.version){
+   _cloudDirty=false;_forgetRecovery(uid);
+  }else if(_recovery?.uid===uid){
+   _recovery.base=_copy(merged);
+   _recovery.profile=_copy(profile);
+   _recovery.inFlight=null;
+   _saveRecovery();_scheduleCloudSync();
+  }
+ });
+ _cloudFlushPromise=task;
+ return task;
 }
 
 function _migrateOldWeaponSkins() {
@@ -2639,7 +3039,8 @@ function _deepMerge(base, override) {
 
 // ── XP ────────────────────────────────────────────────────────
 export function awardXp(amount) {
-  if (amount<=0) return [];
+  if (!Number.isFinite(amount)||amount<=0) return [];
+  if(_survivalRewards?.active)_survivalRewards.accountXp+=amount;
   profile.totalXp+=amount;
   const oldLevel=profile.level;
   profile.level=levelFromTotalXp(profile.totalXp);
@@ -2677,11 +3078,26 @@ export function emitEvent(eventName, payload) {
       const {
         botType, weaponKey, isJumping = false, isScoped = false,
         isHeadshot = false, isExplosiveKill = false,
-        source = 'PLAYER', xpMult = 1
+        source = 'PLAYER', killMethod = null, arenaMode = null, xpMult = 1
       } = payload;
 
       _bump(s, 'totalKills');
       _bump(s, `totalKills_${mapId}`);
+      // Preserve the actual finishing mechanism alongside the base firearm.
+      // Old weapon kill challenges and Tesla-chain counters stay compatible.
+      const method=typeof killMethod==='string' && /^[A-Z_]{2,40}$/.test(killMethod)
+        ?killMethod:(source!=='PLAYER'?source:(isExplosiveKill?'EXPLOSION':'DIRECT'));
+      _bumpPerMap(s,'killsByMethod',method,mapId);
+      if(weaponKey)_bumpPerMap(s,'killsByWeaponMethod',`${weaponKey}_${method}`,mapId);
+      if(source==='ARENA'&&['ffa','tdm','gunGame','killConfirmed'].includes(arenaMode)){
+        _bump(s,'arenaKills');
+        _bumpPerMap(s,'arenaKillsByMode',arenaMode,mapId);
+        if(weaponKey){
+          _bumpPerMap(s,'arenaKillsWith',arenaMode+'_'+weaponKey,mapId);
+          _bumpPerMap(s,'arenaKillsByWeaponMethod',
+            arenaMode+'_'+weaponKey+'_'+method,mapId);
+        }
+      }
 
       if (botType === 'pvp') s.pvpKills = (s.pvpKills || 0) + 1;
       else {
@@ -2749,8 +3165,27 @@ export function emitEvent(eventName, payload) {
           const prevWepLevel = getWeaponLevel(weaponKey);
 
           const wxp = ((WEAPON_XP_GRANTS[botType] || 8) * xpMult);
-          s.weaponXp[weaponKey] = (s.weaponXp[weaponKey] || 0) + wxp;
+          const maxWeaponXp=WEAPON_LEVEL_THRESHOLDS.at(-1);
+          const baseCap=Math.max(0,maxWeaponXp-(_shopWallet.xpBonuses[weaponKey]||0));
+          const beforeEarned=Math.max(0,Number(s.weaponXp[weaponKey])||0);
+          if(botType==='arena'||source==='ARENA'){
+            // Offline competitive bots grant weapon XP, but never Survival's
+            // overflow-to-Scraps reward. Respect direct-applied shop XP too.
+            s.weaponXp[weaponKey]=Math.min(baseCap,
+              Math.max(0,Number(s.weaponXp[weaponKey])||0)+wxp);
+          }else if(botType!=='pvp' && source!=='PVP' && source!=='ENVIRONMENT'){
+            // Bought XP reduces remaining base XP space; overflow still
+            // converts to Scraps only when earned in genuine Survival PvE.
+            const converted=convertMaxedWeaponXp(profile,weaponKey,wxp,baseCap);
+            _rewardConvertedScraps(weaponKey,converted);
+          }else{
+            // PvP currency conversion is disabled until server-authoritative
+            // kill validation and signed economy events are in place.
+            s.weaponXp[weaponKey]=(s.weaponXp[weaponKey]||0)+wxp;
+          }
 
+          if(botType!=='arena'&&source!=='ARENA'&&botType!=='pvp'&&source!=='PVP')
+            _rewardWeaponXp(weaponKey,Math.max(0,(Number(s.weaponXp[weaponKey])||0)-beforeEarned));
           const newWepLevel = getWeaponLevel(weaponKey);
           if (newWepLevel > prevWepLevel) {
               _showWeaponLevelUpToast(weaponKey, newWepLevel);
@@ -2809,6 +3244,12 @@ export function emitEvent(eventName, payload) {
       if (isBoss) {
         s.bossWaveClears = (s.bossWaveClears || 0) + 1;
         s[`bossWaveClears_${waveMapId}`] = (s[`bossWaveClears_${waveMapId}`] || 0) + 1;
+        if(player.difficulty==='hard'){
+          s[`bossWaveClearsHard_${waveMapId}`] = (s[`bossWaveClearsHard_${waveMapId}`] || 0) + 1;
+        }
+        if(player.difficulty==='nightmare'){
+          s[`bossWaveClearsNightmare_${waveMapId}`] = (s[`bossWaveClearsNightmare_${waveMapId}`] || 0) + 1;
+        }
       }
       break;
     }
@@ -2818,6 +3259,20 @@ export function emitEvent(eventName, payload) {
       break;
   }
 
+  // Daily/weekly progression tracks completed gameplay events. Currency
+  // is only issued by a deliberate, idempotent claim, never per event.
+  if(['KILL','DAMAGE_DEALT','WAVE_COMPLETE'].includes(eventName)){
+    const when=new Date();
+    const definitions=questDefinitions(when);
+    const incomplete=definitions.filter(q=>!questProgress(profile,q,when).complete);
+    trackQuestEvent(profile,eventName,payload,when);
+    for(const q of incomplete){
+      const current=questProgress(profile,q,when);
+      if(current.complete && !current.claimed){
+        _showQuestToast('QUEST COMPLETE',q.label+' — claim on the main menu');
+      }
+    }
+  }
   // Evaluate challenges immediately (except damage, which is debounced above)
   if (eventName !== 'DAMAGE_DEALT') {
     const n = _checkChallenges(); if (n.length) _showUnlockToasts(n);
@@ -2842,8 +3297,8 @@ export function recordBarrelDestroyed() {
 export function recordRailgunPickup() {
   emitEvent('PICKUP', { type: 'railgun' });
 }
-export function recordDamage(weaponKey, amount) {
-  emitEvent('DAMAGE_DEALT', { weaponKey, amount });
+export function recordDamage(weaponKey, amount, source='PLAYER') {
+  emitEvent('DAMAGE_DEALT', { weaponKey, amount, source });
 }
 export function recordWaveComplete(waveNum, isBoss, mapId) {
   emitEvent('WAVE_COMPLETE', { waveNum, isBoss, mapId });
@@ -2973,39 +3428,37 @@ export function isWonderWeaponUnlocked(wName) {
          (profile.unlockedWeapons?.includes(wName) ?? false);
 }
 
-// ── Progress milestones (in-game notification at 25/50/75%) ───
-// Persisted in localStorage so we don't re-show on reload.
-const _MILESTONE_STORAGE = 'botarena_milestones';
-let _shownMilestones = null;
-
-function _loadShownMilestones() {
-  if (_shownMilestones) return;
-  try { _shownMilestones = new Set(JSON.parse(localStorage.getItem(_MILESTONE_STORAGE) ?? '[]')); }
-  catch { _shownMilestones = new Set(); }
-}
-function _saveShownMilestones() {
-  try { localStorage.setItem(_MILESTONE_STORAGE, JSON.stringify([..._shownMilestones])); } catch {}
+// ── Persistent progress notifications (Firebase profile + local cache) ──
+function _primeProgressNoticeHistory(){
+  // On first use with an existing profile, record its current progression
+  // rather than replaying notifications earned before this feature shipped.
+  return upgradeNotificationHistory(profile,UNLOCK_TABLE,getChallengeProgress);
 }
 
-export function checkProgressMilestones() {
-  _loadShownMilestones();
-  const THRESHOLDS = [0.25, 0.50, 0.75];
-  for (const u of UNLOCK_TABLE) {
-    if (!u.challenge) continue;
-    // Skip already fully unlocked items
-    if (u.type==='attachment' && profile.unlockedAttachments[u.weapon]?.includes(u.id)) continue;
-    if (u.type==='weaponSkin' && profile.unlockedWeaponSkins[u.weapon]?.includes(u.id)) continue;
-    if (u.type==='playerSkin' && profile.unlocked?.includes(u.id)) continue;
+function _ownsChallengeReward(u){
+  if(u.type==='attachment')return !!profile.unlockedAttachments?.[u.weapon]?.includes(u.id);
+  if(u.type==='weaponSkin')return !!profile.unlockedWeaponSkins?.[u.weapon]?.includes(u.id);
+  if(u.type==='weaponUnlock')return !!profile.unlockedWeapons?.includes(u.id);
+  if(u.type==='playerSkin'||u.type==='currency')
+    return !!profile.unlocked?.includes(u.id);
+  return false;
+}
 
-    const prog = getChallengeProgress(u.challenge);
-    for (const t of THRESHOLDS) {
-      if (prog.pct < t) continue;
-      const key = `${u.id}:${u.weapon??''}:${Math.round(t*100)}`;
-      if (_shownMilestones.has(key)) continue;
-      _shownMilestones.add(key);
-      _saveShownMilestones();
-      _showMilestoneToast(u, prog, t);
-    }
+export function checkProgressMilestones(){
+  if(_primeProgressNoticeHistory())return;
+  const seen=profile.progressNoticeSeen;
+  for(const u of UNLOCK_TABLE){
+    if(!u.challenge)continue;
+    const key=notificationKey(u);
+    const p=getChallengeProgress(u.challenge);
+    const current=Number.isFinite(p.pct)?Math.max(0,Math.min(1,p.pct)):0;
+    const previous=Number.isFinite(seen[key])?seen[key]:current;
+    // Keep the high-water mark so a profile sync or map/rule change can't
+    // produce repeated "lost progress" alerts for older earned progress.
+    seen[key]=Math.max(previous,current);
+    if(_ownsChallengeReward(u))continue;
+    const crossed=crossedMilestone(u.challenge,previous,current);
+    if(crossed!==null)_showMilestoneToast(u,p,crossed);
   }
 }
 
@@ -3079,8 +3532,10 @@ export function getSpeedMult(wName) {
   return mult;
 }
 
-export function getEffectiveStats(wName, baseDefs) {
-  const lo = getLoadout(wName); 
+// Shared attachment calculation for human loadouts and offline bot personas.
+// Bot calls supply a separate attachment map, never the player's equipment.
+export function getEffectiveStatsForLoadout(wName, baseDefs, attachments={}) {
+  const lo = {attachments:attachments||{}};
   const out = { ...baseDefs };
   
   for (const [, id] of Object.entries(lo.attachments)) {
@@ -3144,6 +3599,9 @@ export function getEffectiveStats(wName, baseDefs) {
   }
   return out;
 }
+export function getEffectiveStats(wName,baseDefs){
+  return getEffectiveStatsForLoadout(wName,baseDefs,getLoadout(wName).attachments);
+}
 
 export function getAdsFov(wName) {
   const id = getLoadout(wName).attachments?.sight;
@@ -3204,17 +3662,27 @@ export function getLevelProgress(){
 // ── Generic Stat Resolvers ─────────────────────────────────────
 // Determines which condition takes precedence if multiple exist
 const STAT_PRIORITY = [
-  'weaponLevel', 'allChallenges', 'maxCombo', 'pvp', 'explosive',
+  'arenaMode', 'weaponLevel', 'allChallenges', 'maxCombo', 'pvp', 'killMethod', 'explosive', 
   'withAttachment', 'targetType', 'map', 'boss', 'playerState',
   'multiKill', 'isHeadshot', 'fullyEquipped', 'bareWeapon'
 ];
 
 // Maps a specific condition to its legacy location in profile.stats
 const STAT_RESOLVERS = {
+  arenaMode: (c,s) => c.weapon
+    ?Number((c.killMethod?s.arenaKillsByWeaponMethod?.[c.arenaMode+'_'+c.weapon+'_'+c.killMethod]:
+      s.arenaKillsWith?.[c.arenaMode+'_'+c.weapon])||0)
+    :Number(s.arenaKillsByMode?.[c.arenaMode]||0),
   weaponLevel:    (c) => getWeaponLevel(c.weapon),
   allChallenges:  (c) => _allWeaponChallengesComplete(c.weapon) ? 1 : 0,
   maxCombo:       (c, s) => s.maxKillCombo,
   pvp:            (c, s) => s.pvpKills,
+  // Separate firearm ownership from finishing mechanism. Preserve the
+  // old TESLA_CHAIN pseudo-weapon counter when reading existing saves.
+  killMethod:     (c, s) => Math.max(
+    Number(s.killsByWeaponMethod?.[c.weapon+'_'+c.killMethod]||0),
+    c.weapon==='TESLA'&&c.killMethod==='TESLA_CHAIN'
+      ?Number(s.killsWith?.TESLA_CHAIN||0):0),
   explosive:      (c, s) => s.explosiveKills,
   withAttachment: (c, s) => s.killsWithAttOnMap?.[`${c.withAttachment}_${c.weapon}_${c.map}`],
   
@@ -3366,6 +3834,22 @@ function _showUnlockToasts(unlocks){
     const css = 'position:fixed;bottom:90px;right:20px;background:rgba(0,0,0,.85);border:1px solid rgba(216,240,48,.4);padding:10px 18px;z-index:1100;font-family:"Courier New",monospace;font-size:15px;color:#d8f030;animation:_fadeToast 2.0s forwards';
     _enqueueToast(html, 2100, css);
   });
+}
+
+function _showQuestToast(title,desc){
+  // Uses the same sequential queue as unlock/challenge toasts, avoiding
+  // overlapping notifications when multiple quests finish in one wave.
+  const safe=value=>String(value).replace(/[&<>"']/g,c=>({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;',
+  })[c]);
+  const html='<div style="color:#b9ed83;font-size:11px;letter-spacing:2px">'+
+    safe(title)+'</div><div style="color:#d8f030;font-size:15px;font-weight:bold;margin-top:4px">'+
+    safe(desc)+'</div>';
+  const css='position:fixed;bottom:115px;right:20px;max-width:340px;'+
+    'background:rgba(4,16,4,.94);color:#d8f030;border:1px solid #7a9940;'+
+    'padding:12px 18px;z-index:1200;font-family:"Courier New",monospace;'+
+    'pointer-events:none;animation:_fadeToast 3.8s forwards';
+  _enqueueToast(html,3800,css);
 }
 
 function _showWeaponLevelUpToast(wName, newLv) {

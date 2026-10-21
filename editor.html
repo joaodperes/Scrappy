@@ -3,98 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>Level Editor – Standalone</title>
-    <style>
-        body { margin: 0; overflow: hidden; background: #111; }
-        #editorPanel {
-            position: fixed; top: 20px; right: 20px;
-            background: rgba(20,20,30,0.92);
-            color: #ddd;
-            padding: 14px;
-            border-radius: 10px;
-            font-family: monospace;
-            display: none;
-            flex-direction: column;
-            gap: 6px;
-            z-index: 9999;
-            min-width: 170px;
-            border: 1px solid #666;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.6);
-            pointer-events: none;
-        }
-        #editorPanel > * { pointer-events: auto; }
-        #editorPanel button {
-            background: #2a4a6a;
-            border: none;
-            color: white;
-            padding: 6px 10px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-family: inherit;
-        }
-        #editorPanel button:hover { background: #3a6a8a; }
-        #editorPanel .danger { color: #ff6666; }
-        #editorPanel .success { color: #66ff66; }
-        #editorPanel .warning { color: #ffcc66; }
-        #editorPanel .live { color: #66ccff; }
-        #editorPanel kbd {
-            background: #333;
-            padding: 1px 6px;
-            border-radius: 3px;
-            font-size: 11px;
-        }
-        #editorPanel hr {
-            border-color: #555;
-            width: 100%;
-            margin: 4px 0;
-        }
-        #info {
-            position: fixed;
-            bottom: 20px;
-            left: 20px;
-            color: #888;
-            font-family: monospace;
-            font-size: 12px;
-            pointer-events: none;
-            text-shadow: 0 0 10px rgba(0,0,0,0.8);
-        }
-        #mapSwitcher {
-            position: fixed;
-            top: 20px;
-            left: 20px;
-            font-family: monospace;
-            font-size: 11px;
-            color: #888;
-            background: rgba(20,20,30,0.7);
-            padding: 8px 10px;
-            border-radius: 6px;
-            z-index: 9999;
-        }
-        #mapSwitcher a {
-            color: #6af;
-            text-decoration: none;
-            margin-right: 8px;
-        }
-        #mapSwitcher a.active { color: #9f6; font-weight: bold; }
-        #error {
-            position: fixed;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            color: #ff6666;
-            font-family: monospace;
-            background: rgba(0,0,0,0.8);
-            padding: 10px 20px;
-            border-radius: 8px;
-            display: none;
-            z-index: 10000;
-        }
-        #navRebuildBtn {
-            background: #4a6a2a;
-        }
-        #navRebuildBtn:hover {
-            background: #6a8a4a;
-        }
-    </style>
+    <link rel="stylesheet" href="css/editor.css">
 </head>
 <body>
     <div id="error"></div>
@@ -110,8 +19,20 @@
         <div style="font-size:11px; color:#aaa; margin-bottom:8px;">
             <kbd>F4</kbd> toggle &nbsp;|&nbsp; <kbd>G</kbd> <kbd>R</kbd> <kbd>S</kbd> mode<br>
             <kbd>P</kbd> print &nbsp;|&nbsp; <kbd>Del</kbd> delete<br>
-            <kbd>←↑↓→</kbd> nudge &nbsp; <kbd>PgUp/PgDn</kbd> Y
+            <kbd>←↑↓→</kbd> nudge &nbsp; <kbd>PgUp/PgDn</kbd> Y<br>
+            Gizmo handles constrain movement to X / Y / Z axes.
         </div>
+        <fieldset id="editorSnapControls">
+            <legend>Alignment / Snapping</legend>
+            <label><input id="gridSnapEnabled" type="checkbox"> Snap position to grid</label>
+            <label>Grid units <input id="gridSnapStep" type="number" min="0.05" max="100" step="0.25" value="1"></label>
+            <label><input id="angleSnapEnabled" type="checkbox"> Snap rotation to angle</label>
+            <label>Degrees <input id="angleSnapStep" type="number" min="1" max="180" step="1" value="15"></label>
+            <div class="editorSnapActions">
+                <button id="alignPosBtn" type="button">Align position</button>
+                <button id="alignRotBtn" type="button">Align rotation</button>
+            </div>
+        </fieldset>
         <hr>
         <button data-action="addSlab">+ Slab</button>
         <button data-action="addWall">+ Wall</button>
@@ -120,22 +41,44 @@
         <button data-action="addGlass">+ Glass</button>
         <button data-action="addRamp">+ Ramp</button>
         <button data-action="addRampDirectional">+ Ramp (Rise)</button>
+        <button data-action="addStaircase">+ Staircase (composite)</button>
         <button data-action="addBarrel">+ Barrel</button>
         <button data-action="addCrate">+ Crate</button>
+        <button data-action="addCarWreck">+ Car Wreck (roof pad)</button>
         <button data-action="addLava" class="warning">+ Lava</button>
         <button data-action="addDestWall">+ Dest. Wall</button>
         <button data-action="addSpike" class="warning">+ Spikes</button>
+        <button data-action="addJumpPad">+ Jump Pad</button>
+        <button data-action="addMovingPlatform">+ Moving Platform</button>
+        <button data-action="addZipline">+ Zipline / Cable Car</button>
+        <button data-action="addRooftopLift">+ Rooftop Lift</button>
+        <button data-action="addSkybridge">+ Skybridge</button>
+        <button data-action="addPowerSwitch">+ Power Switch</button>
+        <button data-action="addCeiling">+ Ceiling</button>
+        <hr>
+        <div style="font-size:12px;font-weight:bold;color:#aaf">GAMEPLAY MARKERS</div>
+        <button data-marker="playerSpawn">+ Player Spawn</button>
+        <button data-marker="enemySpawn">+ Enemy Spawn</button>
+        <button data-marker="pvpSpawn">+ PvP Spawn</button>
+        <button data-marker="weaponPickup">+ Weapon</button>
+        <button data-marker="healthPickup">+ Health</button>
+        <button data-marker="armorPickup">+ Armor</button>
+        <button data-marker="ammoPickup">+ Ammo</button>
+        <div id="editorInspector" style="margin:12px 0;font-size:11px;color:#ddd"></div>
         <hr>
         <button data-action="delete" class="danger">🗑 Delete</button>
         <button data-action="export" class="success">📦 Export JSON</button>
         <button data-action="import" class="warning">📂 Import JSON</button>
         <button data-action="loadLive" class="live">📡 Load Live (assets/maps/)</button>
         <button id="navRebuildBtn" class="warning" style="background:#4a6a2a;">🔄 Rebuild NavMesh</button>
+        <button id="navDebugBtn">Show NavMesh</button>
+        <div id="editorStatus" role="status" style="margin:8px 0;font-size:11px;color:#aaf"></div>
+        <a href="docs/MAP_AUTHORING.md" target="_blank" rel="noopener">Map authoring guide ↗</a>
     </div>
     <div id="info">🛠️ Standalone Editor – press F4 to start</div>
 
     <!-- Load Babylon from local file (same as index.html) -->
-    <script src="/js/babylon.max.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/babylonjs@9.14.0/babylon.js"></script>
     <!-- Recast for navmesh (level builder might use it) -->
     <script src="https://cdn.babylonjs.com/recast.js"></script>
 
@@ -154,8 +97,27 @@
             city:      { path: '/js/levelCity.js',     buildFn: 'buildCityLevel' },
             terminal:  { path: '/js/levelTerminal.js', buildFn: 'buildTerminalLevel' },
         };
+        const { loadMapCatalog } = await import('/js/mapCatalog.js');
+        let communityMaps=[];
+        try{communityMaps=await loadMapCatalog()}
+        catch(error){console.warn('[editor] Map catalog unavailable:',error)}
+        for(const meta of communityMaps){
+            const link=document.createElement('a');
+            link.href='?map='+encodeURIComponent(meta.id);
+            link.dataset.map=meta.id;
+            link.textContent=(meta.icon||'🗺️')+' '+meta.name;
+            document.getElementById('mapSwitcher').appendChild(link);
+        }
         const mapId = new URLSearchParams(location.search).get('map') || 'jungle';
-        const { path: levelPath, buildFn } = MAP_MODULES[mapId] || MAP_MODULES.jungle;
+        const community=communityMaps.find(m=>m.id===mapId);
+        const mapDef=MAP_MODULES[mapId] ||
+            (community?{path:'/js/levelCommunity.js',buildFn:'buildCommunityLevel'}:null);
+        if(!mapDef){
+            errorEl.textContent='Unknown map ID: '+mapId+'. Register it in assets/maps/catalog.json';
+            errorEl.style.display='block';
+            throw Error('Unknown map ID: '+mapId);
+        }
+        const { path: levelPath, buildFn } = mapDef;
         document.querySelectorAll('#mapSwitcher a').forEach(a => {
             if (a.dataset.map === mapId) a.classList.add('active');
         });
@@ -169,30 +131,45 @@
 
             const engine = new BABYLON.Engine(canvas, true);
             const scene = new BABYLON.Scene(engine);
-            scene.clearColor = new BABYLON.Color3(0.1, 0.1, 0.15);
+            // Editor-only neutral fill, independent of a map's artistic lighting.
+            scene.clearColor = new BABYLON.Color4(0.26, 0.30, 0.35, 1);
 
             const camera = new BABYLON.ArcRotateCamera('camera', -Math.PI/2, Math.PI/3, 120, BABYLON.Vector3.Zero(), scene);
             camera.attachControl(canvas, true);
-            camera.wheelPrecision = 50;
+            camera.wheelPrecision = 12; // Faster scroll-wheel zoom.
+            camera.wheelDeltaPercentage = 0.05; // Scale zoom speed with distance.
+            camera.lowerRadiusLimit = 2;
+            camera.upperRadiusLimit = 600;
 
             const light = new BABYLON.HemisphericLight('light', new BABYLON.Vector3(0, 1, 0), scene);
-            light.intensity = 0.8;
+            light.intensity = 1.3;
+            const editorFill = new BABYLON.HemisphericLight('editorFill',
+                new BABYLON.Vector3(0, -1, 0), scene);
+            editorFill.intensity = 0.55;
 
             // ---- Set globals for the level builder ----
             window.__levelScene = scene;
-            // Provide a no-op navPlugin for the editor (we don't need navmesh)
-            window.__levelNavPlugin = { createNavMesh: () => {} };
+            window.__levelEditorMode = true;
+            if(typeof window.Recast!=='function')throw Error('Recast did not load');
+            const recast=await window.Recast();
+            const navPlugin=new BABYLON.RecastJSPlugin(recast);
+            window.__levelNavPlugin = navPlugin;
 
             // ---- Dynamically import the chosen level module + shared helpers ----
             const levelMod = await import(levelPath);
             const NAVMESH_PARAMS = levelMod.NAVMESH_PARAMS;
             const {
                 createSlab, createWall, createPillar, createColumn, createGlass,
-                createRampBox, createRamp, createLava, createDestructibleWall, createSpikeTrap,
-                createBarrel, createCrate,
-                applyEditableLayout, loadMapOverride,
+                createRampBox, createRamp, createStaircase, createLava, createDestructibleWall, createSpikeTrap,
+                createBarrel, createCrate, createCarWreck, createCeiling, createJumpPad, createMovingPlatform, createZipline, createRooftopLift, createSkybridge, createPowerSwitch,
+                applyEditableLayout, loadMapDocument,
             } = await import('/js/levelHelpers.js');
-            const { walkableMeshes, explosiveBarrels } = await import('/js/level.js');
+            const { walkableMeshes, explosiveBarrels, jumpPads } = await import('/js/level.js');
+            const { MAP_SCHEMA_VERSION, validateMapDocument, serializeEditableMesh,
+                ENTITY_DEFINITIONS, MARKER_DEFINITIONS } = await import('/js/mapSchema.js');
+            const { getLoadedMapDocument } = await import('/js/mapLayoutStore.js');
+            const { RAD_TO_DEG, DEG_TO_RAD, snapVector,
+                validateTransformGroup } = await import('/js/editorTransforms.js');
             // hazardZones/destructibleWalls are declared PER MAP (each level*.js
             // owns its own array, same as walkableMeshes is shared/global but
             // these aren't) — pull whichever ones this specific map exports.
@@ -200,13 +177,15 @@
             // module that doesn't happen to export them.
             const hazardZones       = levelMod.hazardZones       || [];
             const destructibleWalls = levelMod.destructibleWalls || [];
+            const movingPlatforms = levelMod.movingPlatforms || [];
+            const powerSwitches = levelMod.powerSwitches || [];
 
             console.log('[Editor] All modules loaded for map:', mapId);
 
             // ---- Build the level (every buildXLevel() now takes the same
             // optional customScene param and is async — it awaits its own
             // assets/maps/<mapId>.json fetch before baking the NavMesh) ----
-            await levelMod[buildFn](scene);
+            await levelMod[buildFn](scene,mapId);
 
             // ---- Editor ----
             class StandaloneEditor {
@@ -215,6 +194,14 @@
                     this.canvas = canvas;
                     this.enabled = false;
                     this.selectedMesh = null;
+                    this.markerMeshes = [];
+                    this.baseDocument = getLoadedMapDocument(mapId);
+                    this.navDebugMesh = null;
+                    this.transformInputs = null;
+                    this.gridSnapEnabled = false;
+                    this.gridSnapStep = 1;
+                    this.angleSnapEnabled = false;
+                    this.angleSnapDegrees = 15;
                     this.gizmoManager = new BABYLON.GizmoManager(scene);
                     this.gizmoManager.positionGizmoEnabled = true;
                     this.gizmoManager.rotationGizmoEnabled = true;
@@ -224,16 +211,20 @@
                     this.setupPicking();
                     this.setupKeys();
                     this.setupUI();
+                    this.configureSnapping();
+                    this.loadMarkers(this.baseDocument?.markers || []);
                 }
 
                 setupPicking() {
                     this.scene.onPointerObservable.add((pointerInfo) => {
                         if (!this.enabled) return;
                         if (pointerInfo.type !== BABYLON.PointerEventTypes.POINTERPICK) return;
-                        const mesh = pointerInfo.pickInfo?.pickedMesh;
+                        const mesh = this.scene.pick(this.scene.pointerX, this.scene.pointerY,
+                            m => m.isEnabled() && !!m.metadata?.editable)?.pickedMesh;
                         if (!mesh || !mesh.metadata?.editable) return;
                         this.selectedMesh = mesh;
                         this.gizmoManager.attachToMesh(mesh);
+                        this.showInspector();
                         console.log(`[Editor] Selected: ${mesh.name}`);
                     });
                 }
@@ -246,6 +237,7 @@
                             return;
                         }
                         if (!this.enabled) return;
+                        if(['INPUT','TEXTAREA','SELECT'].includes(e.target?.tagName))return;
 
                         if (e.key === 'g') {
                             this.gizmoManager.positionGizmoEnabled = true;
@@ -276,7 +268,11 @@
                             case 'PageUp':    this.selectedMesh.position.y += step; moved = true; break;
                             case 'PageDown':  this.selectedMesh.position.y -= step; moved = true; break;
                         }
-                        if (moved) e.preventDefault();
+                        if (moved) {
+                            e.preventDefault();
+                            this.applyTransformSnap('position');
+                            this.finishTransform();
+                        }
                     });
                 }
 
@@ -293,21 +289,204 @@
                             else if (action === 'addGlass') this.addObject('glass');
                             else if (action === 'addRamp') this.addObject('ramp');
                             else if (action === 'addRampDirectional') this.addObject('rampDirectional');
+                            else if (action === 'addStaircase') this.addObject('staircase');
                             else if (action === 'addBarrel') this.addObject('barrel');
                             else if (action === 'addCrate') this.addObject('crate');
+                            else if (action === 'addCarWreck') this.addObject('carWreck');
                             else if (action === 'addLava') this.addObject('lava');
                             else if (action === 'addDestWall') this.addObject('destWall');
                             else if (action === 'addSpike') this.addObject('spike');
+                            else if (action === 'addJumpPad') this.addObject('jumpPad');
+                            else if (action === 'addMovingPlatform') this.addObject('movingPlatform');
+                            else if (action === 'addZipline') this.addObject('zipline');
+                            else if (action === 'addRooftopLift') this.addObject('rooftopLift');
+                            else if (action === 'addSkybridge') this.addObject('skybridge');
+                            else if (action === 'addPowerSwitch') this.addObject('powerSwitch');
+                            else if (action === 'addCeiling') this.addObject('ceiling');
                             else if (action === 'delete') this.deleteSelected();
                             else if (action === 'export') this.exportLevel();
                             else if (action === 'import') this.importLevel();
                             else if (action === 'loadLive') this.loadLiveLayout();
                         });
                     });
-                    // NavMesh rebuild button
-                    document.getElementById('navRebuildBtn').addEventListener('click', () => {
-                        this.rebuildNavMesh();
+                    panel.querySelectorAll('button[data-marker]').forEach(btn=>{
+                        btn.onclick=()=>this.addMarker(btn.dataset.marker);
                     });
+                    document.getElementById('navRebuildBtn').onclick=()=>this.rebuildNavMesh();
+                    document.getElementById('navDebugBtn').onclick=()=>{
+                        if(!this.navDebugMesh)this.rebuildNavMesh();
+                        if(this.navDebugMesh){
+                            this.navDebugMesh.setEnabled(!this.navDebugMesh.isEnabled());
+                            document.getElementById('navDebugBtn').textContent=
+                                this.navDebugMesh.isEnabled()?'Hide NavMesh':'Show NavMesh';
+                        }
+                    };
+                }
+
+                configureSnapping() {
+                    const grid=document.getElementById('gridSnapEnabled');
+                    const step=document.getElementById('gridSnapStep');
+                    const angle=document.getElementById('angleSnapEnabled');
+                    const degrees=document.getElementById('angleSnapStep');
+                    const update=()=>{
+                        const newStep=Number(step.value);
+                        const newAngle=Number(degrees.value);
+                        if(!Number.isFinite(newStep)||newStep<0.05||newStep>100||
+                            !Number.isFinite(newAngle)||newAngle<1||newAngle>180) {
+                            this.status('Grid must be 0.05–100; rotation 1–180 degrees',true);
+                            return;
+                        }
+                        this.gridSnapEnabled=grid.checked;
+                        this.gridSnapStep=newStep;
+                        this.angleSnapEnabled=angle.checked;
+                        this.angleSnapDegrees=newAngle;
+                        const g=this.gizmoManager.gizmos;
+                        for(const axis of ['xGizmo','yGizmo','zGizmo']){
+                            if(g.positionGizmo?.[axis])
+                                g.positionGizmo[axis].snapDistance=this.gridSnapEnabled?newStep:0;
+                            if(g.rotationGizmo?.[axis])
+                                g.rotationGizmo[axis].snapDistance=this.angleSnapEnabled
+                                    ?newAngle*DEG_TO_RAD:0;
+                        }
+                    };
+                    for(const el of [grid,step,angle,degrees]){
+                        el.addEventListener('change',update);
+                    }
+                    document.getElementById('alignPosBtn').onclick=()=>{
+                        if(!this.selectedMesh)return this.status('Select an object first',true);
+                        this.applyTransformSnap('position',true);
+                        this.finishTransform();
+                    };
+                    document.getElementById('alignRotBtn').onclick=()=>{
+                        if(!this.selectedMesh)return this.status('Select an object first',true);
+                        this.applyTransformSnap('rotation',true);
+                        this.finishTransform();
+                    };
+                    update();
+                    // Each Babylon gizmo axis constrains drag to its own axis.
+                    // Snapping on release guarantees absolute world-grid alignment,
+                    // not merely multiples of the drag distance.
+                    for(const [kind,gizmo] of [
+                        ['position',this.gizmoManager.gizmos.positionGizmo],
+                        ['rotation',this.gizmoManager.gizmos.rotationGizmo],
+                        ['scaling',this.gizmoManager.gizmos.scaleGizmo],
+                    ]){
+                        for(const axis of ['xGizmo','yGizmo','zGizmo']){
+                            gizmo?.[axis]?.dragBehavior?.onDragEndObservable?.add(()=>{
+                                this.applyTransformSnap(kind);
+                                this.finishTransform();
+                            });
+                        }
+                        gizmo?.uniformScaleGizmo?.dragBehavior?.onDragEndObservable?.add(
+                            ()=>this.finishTransform());
+                    }
+                }
+
+                // Rotation gizmos can store a quaternion. Convert it back to
+                // Euler before saving so JSON round-trips preserve rotations.
+                currentEuler(mesh) {
+                    return mesh.rotationQuaternion?.toEulerAngles() || mesh.rotation;
+                }
+
+                applyTransformSnap(kind,force=false) {
+                    const mesh=this.selectedMesh;
+                    if(!mesh)return;
+                    if(kind==='position' && (force||this.gridSnapEnabled)){
+                        const snapped=snapVector(mesh.position,this.gridSnapStep);
+                        mesh.position.set(snapped.x,snapped.y,snapped.z);
+                    }
+                    if(kind==='rotation') {
+                        const rotation=this.currentEuler(mesh);
+                        if(force||this.angleSnapEnabled){
+                            const deg=snapVector({
+                                x:rotation.x*RAD_TO_DEG,
+                                y:rotation.y*RAD_TO_DEG,
+                                z:rotation.z*RAD_TO_DEG,
+                            },this.angleSnapDegrees);
+                            mesh.rotationQuaternion=null;
+                            mesh.rotation.set(deg.x*DEG_TO_RAD,deg.y*DEG_TO_RAD,deg.z*DEG_TO_RAD);
+                        }
+                    }
+                }
+
+                finishTransform(){
+                    const mesh=this.selectedMesh;
+                    if(!mesh)return;
+                    mesh.computeWorldMatrix(true);
+                    if(mesh.metadata?.hazard){
+                        const p=mesh.metadata.params||{};
+                        if(Number.isFinite(p.sx))
+                            mesh.metadata.halfWidth=p.sx*Math.abs(mesh.scaling.x)/2;
+                        if(Number.isFinite(p.sz))
+                            mesh.metadata.halfDepth=p.sz*Math.abs(mesh.scaling.z)/2;
+                    }
+                    if(mesh.metadata?.generator==='createCarWreck' && mesh.metadata.roofPad){
+                        const padMesh=mesh.metadata.roofPad;
+                        padMesh.computeWorldMatrix(true);
+                        const pad=jumpPads.find(p=>p.mesh===padMesh);
+                        if(pad){
+                            pad.pos.copyFrom(padMesh.getAbsolutePosition());
+                            const yaw=this.currentEuler(mesh).y;
+                            pad.thrustX=Math.sin(yaw)*pad.force*.45;
+                            pad.thrustZ=Math.cos(yaw)*pad.force*.45;
+                        }
+                    }
+                    // Update the runtime objects linked to edited geometry.
+                    if(mesh.metadata?.generator==='createJumpPad'){
+                        const pad=jumpPads.find(p=>p.mesh===mesh);
+                        if(pad){
+                            pad.pos.copyFrom(mesh.position);
+                            const rot=this.currentEuler(mesh).y;
+                            pad.thrustX=Math.sin(rot)*pad.force*0.45;
+                            pad.thrustZ=Math.cos(rot)*pad.force*0.45;
+                        }
+                    }
+                    if(mesh._moveData){
+                        const data=mesh._moveData;
+                        const delta=mesh.position.subtract(data.start);
+                        data.start.addInPlace(delta);
+                        data.end.addInPlace(delta);
+                        mesh.metadata?.auxiliaryMeshes?.forEach(cable=>cable.position.addInPlace(delta));
+                    }
+                    this.refreshTransformFields();
+                }
+
+                refreshTransformFields(){
+                    if(!this.selectedMesh||!this.transformInputs)return;
+                    const mesh=this.selectedMesh;
+                    const rotation=this.currentEuler(mesh);
+                    const groups={
+                        position:mesh.position,
+                        rotation:{x:rotation.x*RAD_TO_DEG,y:rotation.y*RAD_TO_DEG,z:rotation.z*RAD_TO_DEG},
+                        scaling:mesh.scaling,
+                    };
+                    for(const [group,axes] of Object.entries(this.transformInputs)){
+                        for(const axis of ['x','y','z']){
+                            if(document.activeElement===axes[axis])continue;
+                            axes[axis].value=Number(groups[group][axis].toFixed(4));
+                        }
+                    }
+                }
+
+                applyExactTransform(){
+                    const mesh=this.selectedMesh;
+                    if(!mesh||!this.transformInputs)return;
+                    try{
+                        const entries={};
+                        for(const [group,axes] of Object.entries(this.transformInputs)){
+                            const values=Object.fromEntries(['x','y','z'].map(axis=>[axis,axes[axis].value]));
+                            entries[group]=validateTransformGroup(group,values);
+                        }
+                        mesh.position.set(entries.position.x,entries.position.y,entries.position.z);
+                        mesh.rotationQuaternion=null;
+                        mesh.rotation.set(entries.rotation.x*DEG_TO_RAD,
+                            entries.rotation.y*DEG_TO_RAD,entries.rotation.z*DEG_TO_RAD);
+                        mesh.scaling.set(entries.scaling.x,entries.scaling.y,entries.scaling.z);
+                        this.applyTransformSnap('position');
+                        this.applyTransformSnap('rotation');
+                        this.finishTransform();
+                        this.status('Exact transform applied; export JSON to save changes');
+                    }catch(e){this.status(e.message,true)}
                 }
 
                 toggle() {
@@ -320,7 +499,177 @@
                     if (!this.enabled) {
                         this.gizmoManager.attachToMesh(null);
                         this.selectedMesh = null;
+                        this.showInspector();
                     }
+                }
+
+                status(message,failed=false){
+                    const el=document.getElementById('editorStatus');
+                    if(el){el.textContent=message;el.style.color=failed?'#f77':'#8be9db'}
+                    (failed?console.error:console.log)('[Editor]',message);
+                }
+
+                markerFromMesh(mesh){
+                    return {...mesh.metadata.markerData,
+                        position:{x:mesh.position.x,y:mesh.position.y,z:mesh.position.z}};
+                }
+
+                loadMarkers(markers){
+                    for(const mesh of this.markerMeshes)if(!mesh.isDisposed())mesh.dispose();
+                    this.markerMeshes=[];
+                    for(const data of markers){
+                        const mesh=BABYLON.MeshBuilder.CreateSphere('marker_'+data.type,
+                            {diameter:1.7,segments:8},this.scene);
+                        mesh.position.set(data.position.x,data.position.y,data.position.z);
+                        mesh.checkCollisions=false;
+                        mesh.isPickable=true;
+                        const mat=new BABYLON.StandardMaterial('markerMat',this.scene);
+                        mat.emissiveColor=data.type.includes('Spawn')?
+                            new BABYLON.Color3(0,0.9,0.8):new BABYLON.Color3(0.9,0.7,0.1);
+                        mat.alpha=0.65;mesh.material=mat;
+                        mesh.metadata={editable:true,isMarker:true,editorId:data.id,markerData:{...data}};
+                        this.markerMeshes.push(mesh);
+                    }
+                }
+
+                addMarker(type){
+                    if(!MARKER_DEFINITIONS[type])return;
+                    const pos=camera.position.add(camera.getForwardRay().direction.scale(6));
+                    const data={id:'m_'+crypto.randomUUID(),type,
+                        position:{x:pos.x,y:pos.y,z:pos.z}};
+                    if(type==='weaponPickup')data.weapon='PISTOL';
+                    this.loadMarkers([...this.markerMeshes.map(m=>this.markerFromMesh(m)),data]);
+                    this.selectedMesh=this.markerMeshes.at(-1);
+                    this.gizmoManager.attachToMesh(this.selectedMesh);
+                    this.showInspector();
+                }
+
+                snapshot(){
+                    const objects=this.scene.meshes.filter(m=>m.metadata?.editable&&m.metadata.generator)
+                        .map(m=>{
+                            if(!m.metadata.editorId)m.metadata.editorId='e_'+crypto.randomUUID();
+                            return serializeEditableMesh(m);
+                        });
+                    const markers=this.markerMeshes.filter(m=>!m.isDisposed())
+                        .map(m=>this.markerFromMesh(m));
+                    return {...(this.baseDocument||{}),version:MAP_SCHEMA_VERSION,
+                        map:mapId,objects,markers};
+                }
+
+                showInspector(){
+                    const host=document.getElementById('editorInspector');
+                    if(!host)return;
+                    host.replaceChildren();
+                    const mesh=this.selectedMesh;
+                    this.transformInputs=null;
+                    if(!mesh?.metadata?.editable)return;
+                    if(!mesh.metadata.editorId)mesh.metadata.editorId='e_'+crypto.randomUUID();
+                    const isMarker=!!mesh.metadata.isMarker;
+                    const id=mesh.metadata.editorId;
+                    const name=isMarker?mesh.metadata.markerData.type:mesh.metadata.generator;
+                    const caption=document.createElement('p');
+                    caption.textContent=(isMarker?(MARKER_DEFINITIONS[name]?.label||name)
+                        :(ENTITY_DEFINITIONS[name]?.label||name))+' · ID: '+id;
+                    host.appendChild(caption);
+                    const help=document.createElement('p');
+                    help.style.cssText='font-size:10px;color:#aaa';
+                    help.textContent=isMarker?'Move the sphere with gizmo; edit marker options below.'
+                      :'Edit generator parameters; Save rebuilds geometry. Move with gizmo.';
+                    host.appendChild(help);
+                    const box=document.createElement('textarea');
+                    box.style.cssText='width:100%;min-height:95px;background:#111;color:#fff;font:10px monospace';
+                    const raw=isMarker?
+                        (()=>{const {position,id,...props}=mesh.metadata.markerData;return props})()
+                        :mesh.metadata.params;
+                    box.value=JSON.stringify(raw,null,2);
+                    host.appendChild(box);
+                    const save=document.createElement('button');
+                    save.textContent='APPLY & VALIDATE';
+                    save.onclick=()=>{
+                        try{
+                            const parsed=JSON.parse(box.value);
+                            if(!parsed||Array.isArray(parsed)||typeof parsed!=='object')throw Error('Expected JSON object');
+                            const doc=this.snapshot();
+                            if(isMarker){
+                                const marker=doc.markers.find(m=>m.id===id);
+                                if(!marker)throw Error('Marker not found');
+                                Object.assign(marker,parsed);
+                                marker.id=id;marker.position=this.markerFromMesh(mesh).position;
+                            }else{
+                                const object=doc.objects.find(o=>o.id===id);
+                                if(!object)throw Error('Object not found');
+                                object.params=parsed;
+                            }
+                            this.importFromData(doc,id);
+                            this.status('Parameters applied and scene rebuilt: '+id);
+                        }catch(e){this.status(e.message,true)}
+                    };
+                    host.appendChild(save);
+
+                    // Exact per-axis transforms are distinct from generator
+                    // dimensions. Reset scale never changes the base params.
+                    const heading=document.createElement('p');
+                    heading.className='editorTransformHeading';
+                    heading.textContent='EXACT TRANSFORM';
+                    host.appendChild(heading);
+                    this.transformInputs={};
+                    for(const [group,label,unit,step] of [
+                        ['position','Position','world units','0.25'],
+                        ['rotation','Rotation','degrees','5'],
+                        ['scaling','Scale','multiplier','0.1'],
+                    ]){
+                        const fieldset=document.createElement('fieldset');
+                        fieldset.className='transformFieldset';
+                        const legend=document.createElement('legend');
+                        legend.textContent=label+' ('+unit+')';
+                        fieldset.appendChild(legend);
+                        const row=document.createElement('div');
+                        row.className='transformAxes';
+                        const axes={};
+                        for(const axis of ['x','y','z']){
+                            const labelEl=document.createElement('label');
+                            labelEl.textContent=axis.toUpperCase();
+                            const input=document.createElement('input');
+                            input.type='number';
+                            input.step=step;
+                            input.setAttribute('aria-label',label+' '+axis.toUpperCase());
+                            input.dataset.transformGroup=group;
+                            input.dataset.axis=axis;
+                            input.addEventListener('keydown',e=>{
+                                if(e.key==='Enter'){
+                                    e.preventDefault();
+                                    this.applyExactTransform();
+                                    input.blur();
+                                }
+                            });
+                            labelEl.appendChild(input);
+                            row.appendChild(labelEl);
+                            axes[axis]=input;
+                        }
+                        this.transformInputs[group]=axes;
+                        fieldset.appendChild(row);
+                        host.appendChild(fieldset);
+                    }
+                    const controls=document.createElement('div');
+                    controls.className='transformButtons';
+                    const apply=document.createElement('button');
+                    apply.type='button';
+                    apply.textContent='Apply exact transform';
+                    apply.onclick=()=>this.applyExactTransform();
+                    controls.appendChild(apply);
+                    const resetScale=document.createElement('button');
+                    resetScale.type='button';
+                    resetScale.textContent='Reset scale (1, 1, 1)';
+                    resetScale.title='Restore the original generator size multiplier without modifying its dimensions';
+                    resetScale.onclick=()=>{
+                        if(!this.selectedMesh)return;
+                        this.selectedMesh.scaling.set(1,1,1);
+                        this.finishTransform();
+                        this.status('Scale reset to 1 on all axes; base geometry dimensions unchanged');
+                    };
+                    controls.appendChild(resetScale);
+                    host.appendChild(controls);
+                    this.refreshTransformFields();
                 }
 
                 addObject(type) {
@@ -336,15 +685,27 @@
                         case 'glass':  mesh = createGlass(pos.x, y, pos.z, 3, 3, 0.2); break;
                         case 'ramp':   mesh = createRampBox(pos.x, y, pos.z, 4, 0.5, 6, 0.3, 0); break;
                         case 'rampDirectional': mesh = createRamp(pos.x, pos.z, 'N', 4, y, y - 2, 8); break;
+                        case 'staircase': mesh = createStaircase(pos.x, y, pos.z, 4, 8, 10, 0, 1, 0.5, false); break;
                         case 'barrel': mesh = createBarrel(pos.x, pos.z, 0); break;
                         case 'crate':  mesh = createCrate(pos.x, y+1, pos.z, 2, 2, 2); break;
+                        case 'carWreck': mesh=createCarWreck(pos.x,pos.z,0);break;
                         case 'lava':   mesh = createLava(pos.x, pos.z, 6, 6, { hazardZones }); break;
                         case 'destWall': mesh = createDestructibleWall(pos.x, y, pos.z, 4, 4, 1, 140, { destructibleWalls }); break;
                         case 'spike':  mesh = createSpikeTrap(pos.x, pos.z, 4, 4, y, { hazardZones }); break;
+                        case 'jumpPad': mesh=createJumpPad(pos.x,y,pos.z,24,0);break;
+                        case 'movingPlatform': mesh=createMovingPlatform(pos.x,y,pos.z,pos.x,y+8,pos.z,
+                          5,5,0.25,1.5,{movingPlatforms});break;
+                        case 'zipline': mesh=createZipline('custom_zipline',pos.x,y,pos.z,
+                          pos.x+15,y,pos.z,11.5,4,4,{movingPlatforms});break;
+                        case 'rooftopLift': mesh=createRooftopLift(pos.x,pos.z,12,'E',0,{movingPlatforms});break;
+                        case 'skybridge': mesh=createSkybridge(pos.x,pos.z,'X',12,4,y,y);break;
+                        case 'powerSwitch': mesh=createPowerSwitch(pos.x,y,pos.z,[],{powerSwitches});break;
+                        case 'ceiling': mesh=createCeiling(pos.x,y,pos.z,5,5);break;
                     }
                     if (mesh) {
                         this.selectedMesh = mesh;
                         this.gizmoManager.attachToMesh(mesh);
+                        this.showInspector();
                         console.log(`[Editor] Added ${type}`);
                     }
                 }
@@ -352,8 +713,16 @@
                 deleteSelected() {
                     if (!this.selectedMesh) return;
                     const m = this.selectedMesh;
-                    const idx = walkableMeshes.indexOf(m);
-                    if (idx !== -1) walkableMeshes.splice(idx, 1);
+                    if(m.metadata?.isMarker){
+                        this.markerMeshes=this.markerMeshes.filter(x=>x!==m);
+                        m.dispose();this.selectedMesh=null;
+                        this.gizmoManager.attachToMesh(null);this.showInspector();return;
+                    }
+                    const children = m.getChildMeshes(false);
+                    for (const item of [m,...children]) {
+                        const idx=walkableMeshes.indexOf(item);
+                        if(idx!==-1)walkableMeshes.splice(idx,1);
+                    }
 
                     // Barrels are multi-mesh (body + 2 hoop bands) — only the
                     // body is individually selectable, but deleting it should
@@ -376,9 +745,18 @@
                     // nothing stale is left pointing at a disposed mesh.
                     const hzIdx = hazardZones.indexOf(m);
                     if (hzIdx !== -1) hazardZones.splice(hzIdx, 1);
+                    const owned=new Set([m,...m.getChildMeshes(false)]);
+                    for(let i=jumpPads.length-1;i>=0;i--)
+                        if(owned.has(jumpPads[i].mesh))jumpPads.splice(i,1);
+                    for(const a of [movingPlatforms,powerSwitches]){
+                      const ix=a.indexOf(m);if(ix!==-1)a.splice(ix,1);
+                    }
                     const dwIdx = destructibleWalls.indexOf(m);
                     if (dwIdx !== -1) destructibleWalls.splice(dwIdx, 1);
 
+                    m.metadata?.auxiliaryMeshes?.forEach(aux=>{
+                        if(!aux.isDisposed())aux.dispose();
+                    });
                     // Spike trap child spikes are parented to the floor mesh and
                     // dispose automatically (Babylon's dispose() recurses into
                     // children by default), so no extra cleanup needed for them.
@@ -392,32 +770,21 @@
                 // serializes generator+params+transform. Re-creating uses
                 // applyEditableLayout() from levelHelpers.js — same function
                 // the live game calls when it loads assets/maps/<mapId>.json.
-                exportLevel() {
-                    const editableMeshes = [];
-                    this.scene.meshes.forEach(m => {
-                        if (m.metadata?.editable && m.metadata?.generator) {
-                            editableMeshes.push({
-                                generator: m.metadata.generator,
-                                params: m.metadata.params,
-                                position: { x: m.position.x, y: m.position.y, z: m.position.z },
-                                rotation: { x: m.rotation.x, y: m.rotation.y, z: m.rotation.z },
-                                scaling: { x: m.scaling.x, y: m.scaling.y, z: m.scaling.z }
-                            });
-                        }
-                    });
-                    const data = { version: '1.0', map: mapId, objects: editableMeshes };
-                    const json = JSON.stringify(data, null, 2);
-                    const blob = new Blob([json], { type: 'application/json' });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = mapId + '.json';
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
+                exportLevel(){
+                    const data=this.snapshot();
+                    const checked=validateMapDocument(data,{expectedMap:mapId});
+                    if(!checked.valid){
+                        this.status('Export blocked: '+checked.errors.slice(0,8).join(' | '),true);
+                        return;
+                    }
+                    const json=JSON.stringify(checked.document,null,2);
+                    const url=URL.createObjectURL(new Blob([json],{type:'application/json'}));
+                    const a=document.createElement('a');
+                    a.href=url;a.download=mapId+'.json';
+                    document.body.appendChild(a);a.click();a.remove();
                     URL.revokeObjectURL(url);
-                    console.log(`[Editor] Exported ${editableMeshes.length} objects as "${mapId}.json".`);
-                    console.log(`[Editor] Place it at assets/maps/${mapId}.json to make it live — the game fetches that path automatically on load.`);
+                    this.status('Exported '+data.objects.length+' entities and '+
+                        data.markers.length+' markers as '+mapId+'.json');
                 }
 
                 importLevel() {
@@ -441,37 +808,54 @@
                     input.click();
                 }
 
-                importFromData(data) {
-                    const objects = data?.objects || [];
-                    applyEditableLayout(objects, { hazardZones, destructibleWalls }); // clears + rebuilds the editable layer
-                    console.log('[Editor] Imported', objects.length, 'objects');
+                importFromData(data,selectedId=null){
+                    const checked=validateMapDocument(data,{expectedMap:mapId,strictIds:false});
+                    if(!checked.valid)throw Error(checked.errors.slice(0,15).join(' | '));
+                    this.gizmoManager.attachToMesh(null);
+                    this.selectedMesh=null;
+                    this.transformInputs=null;
+                    applyEditableLayout(checked.document.objects,
+                        {hazardZones,destructibleWalls,movingPlatforms,powerSwitches});
+                    this.baseDocument=checked.document;
+                    this.loadMarkers(checked.document.markers);
+                    if(selectedId){
+                        this.selectedMesh=this.scene.meshes.find(m=>m.metadata?.editorId===selectedId)||null;
+                        this.gizmoManager.attachToMesh(this.selectedMesh);
+                    }
+                    this.showInspector();
                     this.rebuildNavMesh();
+                    this.status('Imported '+checked.document.objects.length+' entities and '+
+                        checked.document.markers.length+' markers');
                 }
 
-                // Fetches the map's CURRENTLY LIVE layout straight from
-                // assets/maps/<mapId>.json — handy for pulling down whatever
-                // is actually deployed right now to keep tweaking it, instead
-                // of having to track down the last exported file on disk.
-                async loadLiveLayout() {
-                    const objects = await loadMapOverride(mapId);
-                    if (!objects) {
-                        console.warn(`[Editor] No live layout found at assets/maps/${mapId}.json — nothing to load.`);
-                        return;
-                    }
-                    applyEditableLayout(objects, { hazardZones, destructibleWalls });
-                    this.rebuildNavMesh();
-                    console.log(`[Editor] Loaded live layout from assets/maps/${mapId}.json (${objects.length} objects).`);
+                async loadLiveLayout(){
+                    try{
+                        const doc=await loadMapDocument(mapId);
+                        this.importFromData(doc);
+                    }catch(e){this.status(e.message,true)}
                 }
 
-                rebuildNavMesh() {
-                    const navPlugin = window.__levelNavPlugin;
-                    if (navPlugin && navPlugin.createNavMesh) {
-                        walkableMeshes.forEach(m => m.computeWorldMatrix(true));
-                        navPlugin.createNavMesh(walkableMeshes, NAVMESH_PARAMS);
-                        console.log('[Editor] NavMesh rebuilt');
-                    } else {
-                        console.warn('[Editor] NavMesh plugin not available');
-                    }
+                rebuildNavMesh(){
+                    try{
+                        if(this.navDebugMesh){this.navDebugMesh.dispose();this.navDebugMesh=null}
+                        const plugin=window.__levelNavPlugin;
+                        if(!plugin?.createNavMesh)throw Error('Recast plugin unavailable');
+                        const surfaces=walkableMeshes.filter(m=>m.isEnabled());
+                        surfaces.forEach(m=>m.computeWorldMatrix(true));
+                        plugin.createNavMesh(surfaces,NAVMESH_PARAMS);
+                        this.navDebugMesh=plugin.createDebugNavMesh(this.scene);
+                        if(this.navDebugMesh){
+                            this.navDebugMesh.name='_navDebugOnly';
+                            this.navDebugMesh.isPickable=false;
+                            this.navDebugMesh.checkCollisions=false;
+                            const mat=new BABYLON.StandardMaterial('navDebugMat',this.scene);
+                            mat.diffuseColor=new BABYLON.Color3(0.15,0.92,0.6);
+                            mat.alpha=0.4;mat.wireframe=true;
+                            this.navDebugMesh.material=mat;this.navDebugMesh.setEnabled(false);
+                        }
+                        document.getElementById('navDebugBtn').textContent='Show NavMesh';
+                        this.status('Recast NavMesh rebuilt from '+surfaces.length+' meshes');
+                    }catch(e){this.status('NavMesh failed: '+e.message,true)}
                 }
 
                 printSelected() {

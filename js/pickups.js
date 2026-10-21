@@ -7,6 +7,7 @@ import { WDEFS, WCOLORS, inventory, activeSlot, makeScaledWeaponModel, setWeapon
 import { sfx } from './audio.js';
 import { TIER_1, TIER_2, TIER_3, TIER_4, TIER_5 } from './constants.js';
 import { getCurrentMap, getSecretKits, getWeaponSpawns, resolveMapData } from './mapManager.js';
+import { getMapMarkers } from './mapLayoutStore.js';
 import { getLoadout, ATTACHMENTS, recordWonderWeaponCollected } from './progression.js';
 
 // Energy weapons refill heat rather than ammo when picked up.
@@ -52,6 +53,14 @@ export function initSecretKits() {
   const map = getCurrentMap();
   const kits = getSecretKits(map); // already resolved with fallback
   kits.filter(kit => _kitAllowed(kit.type)).forEach(_spawnSecretKit);
+  // Optional v2 map editor markers augment the built-in secret kits.
+  for(const [markerType,pickupType] of [
+    ['healthPickup','health'],['armorPickup','armor'],['ammoPickup','ammo']]){
+    for(const marker of getMapMarkers(map,markerType,'survival')){
+      const pos=new BABYLON.Vector3(marker.position.x,marker.position.y,marker.position.z);
+      spawnTypedPickup(pos,pickupType,{tag:marker.id,persistent:true,respawnSec:300});
+    }
+  }
 }
 
 // Weapon spawns – now fetched from config
@@ -202,6 +211,7 @@ export function updatePickups(dt) {
             if (scavAtt?.mods?.scavengerBonus) {
                 bonus = Math.round(bonus * (1 + scavAtt.mods.scavengerBonus));
             }
+            bonus=Math.max(1,Math.ceil(bonus*(player.survivalModifiers?.ammoDropMult||1)));
             if (W.ammo < (W.max || 999)) {
                 W.ammo += bonus;
                 if (W.max) W.ammo = Math.min(W.ammo, W.max);

@@ -1,5 +1,5 @@
 {
-  "version": "1.0",
+  "version": 2,
   "map": "terminal",
   "objects": [
     {
@@ -27,7 +27,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "terminal-entity-0001"
     },
     {
       "generator": "createWall",
@@ -54,7 +55,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "terminal-entity-0002"
     },
     {
       "generator": "createWall",
@@ -81,7 +83,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "terminal-entity-0003"
     },
     {
       "generator": "createWall",
@@ -108,7 +111,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "terminal-entity-0004"
     },
     {
       "generator": "createSlab",
@@ -136,7 +140,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "terminal-entity-0005"
     },
     {
       "generator": "createWall",
@@ -163,7 +168,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "terminal-entity-0006"
     },
     {
       "generator": "createWall",
@@ -190,7 +196,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "terminal-entity-0007"
     },
     {
       "generator": "createSlab",
@@ -218,7 +225,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "terminal-entity-0008"
     },
     {
       "generator": "createWall",
@@ -245,7 +253,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "terminal-entity-0009"
     },
     {
       "generator": "createWall",
@@ -272,7 +281,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "terminal-entity-0010"
     },
     {
       "generator": "createWall",
@@ -299,7 +309,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "terminal-entity-0011"
     },
     {
       "generator": "createSlab",
@@ -327,7 +338,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "terminal-entity-0012"
     },
     {
       "generator": "createWall",
@@ -354,7 +366,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "terminal-entity-0013"
     },
     {
       "generator": "createWall",
@@ -381,7 +394,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "terminal-entity-0014"
     },
     {
       "generator": "createWall",
@@ -408,7 +422,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "terminal-entity-0015"
     },
     {
       "generator": "createSlab",
@@ -436,7 +451,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "terminal-entity-0016"
     },
     {
       "generator": "createWall",
@@ -463,7 +479,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "terminal-entity-0017"
     },
     {
       "generator": "createWall",
@@ -490,7 +507,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "terminal-entity-0018"
     },
     {
       "generator": "createWall",
@@ -517,7 +535,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "terminal-entity-0019"
     },
     {
       "generator": "createSlab",
@@ -545,7 +564,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "terminal-entity-0020"
     },
     {
       "generator": "createWall",
@@ -572,7 +592,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "terminal-entity-0021"
     },
     {
       "generator": "createWall",
@@ -599,7 +620,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "terminal-entity-0022"
     },
     {
       "generator": "createWall",
@@ -626,7 +648,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "terminal-entity-0023"
     },
     {
       "generator": "createSlab",
@@ -654,7 +677,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "terminal-entity-0024"
     },
     {
       "generator": "createSlab",
@@ -682,7 +706,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "terminal-entity-0025"
     },
     {
       "generator": "createSlab",
@@ -710,7 +735,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "terminal-entity-0026"
     },
     {
       "generator": "createSlab",
@@ -738,7 +764,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "terminal-entity-0027"
     },
     {
       "generator": "createRampBox",
@@ -767,7 +794,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "terminal-entity-0028"
     },
     {
       "generator": "createRampBox",
@@ -796,7 +824,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "terminal-entity-0029"
     },
     {
       "generator": "createRampBox",
@@ -825,7 +854,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "terminal-entity-0030"
     },
     {
       "generator": "createRampBox",
@@ -854,7 +884,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "terminal-entity-0031"
     },
     {
       "generator": "createSlab",
@@ -882,7 +913,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "terminal-entity-0032"
     },
     {
       "generator": "createSlab",
@@ -910,7 +942,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "terminal-entity-0033"
     },
     {
       "generator": "createSlab",
@@ -938,7 +971,8 @@
         "x": 1,
         "y": 1,
         "z": 1
-      }
+      },
+      "id": "terminal-entity-0034"
     },
     {
       "generator": "createSlab",
@@ -966,7 +1000,2107 @@
         "x": 1,
         "y": 1,
         "z": 1
+      },
+      "id": "terminal-entity-0035"
+    },
+    {
+      "id": "moon-floater-west-south",
+      "generator": "createSlab",
+      "params": {
+        "px": -20,
+        "surfY": 14,
+        "pz": -24,
+        "sx": 12,
+        "sz": 12,
+        "mat": "termBridge",
+        "lift": true,
+        "thickness": 0.8
+      },
+      "position": {
+        "x": -20,
+        "y": 13.82,
+        "z": -24
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
       }
+    },
+    {
+      "id": "moon-floater-west-south-ramp",
+      "generator": "createRampBox",
+      "params": {
+        "px": -20,
+        "py": 10.65,
+        "pz": -36.25,
+        "sx": 5,
+        "sy": 0.7,
+        "sz": 16.492354826475214,
+        "rotX": -0.3923401442155158,
+        "rotZ": 0,
+        "mat": "termBridge"
+      },
+      "position": {
+        "x": -20,
+        "y": 10.65,
+        "z": -36.25
+      },
+      "rotation": {
+        "x": -0.3923401442155158,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "moon-floater-west-south-ramp-guard-left",
+      "generator": "createRampBox",
+      "params": {
+        "px": -22.85,
+        "py": 11.34,
+        "pz": -36.25,
+        "sx": 0.38,
+        "sy": 1.3,
+        "sz": 16.492354826475214,
+        "rotX": -0.3923401442155158,
+        "rotZ": 0,
+        "mat": "gunmetal"
+      },
+      "position": {
+        "x": -22.85,
+        "y": 11.34,
+        "z": -36.25
+      },
+      "rotation": {
+        "x": -0.3923401442155158,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "moon-floater-west-south-ramp-guard-right",
+      "generator": "createRampBox",
+      "params": {
+        "px": -17.15,
+        "py": 11.34,
+        "pz": -36.25,
+        "sx": 0.38,
+        "sy": 1.3,
+        "sz": 16.492354826475214,
+        "rotX": -0.3923401442155158,
+        "rotZ": 0,
+        "mat": "gunmetal"
+      },
+      "position": {
+        "x": -17.15,
+        "y": 11.34,
+        "z": -36.25
+      },
+      "rotation": {
+        "x": -0.3923401442155158,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "moon-floater-west-south-cover-inner",
+      "generator": "createWall",
+      "params": {
+        "px": -20,
+        "py": 14.65,
+        "pz": -18.9,
+        "sx": 9,
+        "sy": 1.3,
+        "sz": 0.65,
+        "mat": "gunmetal"
+      },
+      "position": {
+        "x": -20,
+        "y": 14.65,
+        "z": -18.9
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "moon-floater-west-south-cover-left",
+      "generator": "createWall",
+      "params": {
+        "px": -25.3,
+        "py": 14.65,
+        "pz": -24,
+        "sx": 0.65,
+        "sy": 1.3,
+        "sz": 8,
+        "mat": "gunmetal"
+      },
+      "position": {
+        "x": -25.3,
+        "y": 14.65,
+        "z": -24
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "moon-floater-west-south-cover-right",
+      "generator": "createWall",
+      "params": {
+        "px": -14.7,
+        "py": 14.65,
+        "pz": -24,
+        "sx": 0.65,
+        "sy": 1.3,
+        "sz": 8,
+        "mat": "gunmetal"
+      },
+      "position": {
+        "x": -14.7,
+        "y": 14.65,
+        "z": -24
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "moon-floater-west-south-half-cover",
+      "generator": "createWall",
+      "params": {
+        "px": -20,
+        "py": 14.55,
+        "pz": -24,
+        "sx": 2.2,
+        "sy": 1.1,
+        "sz": 1.1,
+        "mat": "gunmetal"
+      },
+      "position": {
+        "x": -20,
+        "y": 14.55,
+        "z": -24
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "moon-floater-west-north",
+      "generator": "createSlab",
+      "params": {
+        "px": -20,
+        "surfY": 14,
+        "pz": 24,
+        "sx": 12,
+        "sz": 12,
+        "mat": "termBridge",
+        "lift": true,
+        "thickness": 0.8
+      },
+      "position": {
+        "x": -20,
+        "y": 13.82,
+        "z": 24
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "moon-floater-west-north-ramp",
+      "generator": "createRampBox",
+      "params": {
+        "px": -20,
+        "py": 10.65,
+        "pz": 36.25,
+        "sx": 5,
+        "sy": 0.7,
+        "sz": 16.492354826475214,
+        "rotX": 0.3923401442155158,
+        "rotZ": 0,
+        "mat": "termBridge"
+      },
+      "position": {
+        "x": -20,
+        "y": 10.65,
+        "z": 36.25
+      },
+      "rotation": {
+        "x": 0.3923401442155158,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "moon-floater-west-north-ramp-guard-left",
+      "generator": "createRampBox",
+      "params": {
+        "px": -22.85,
+        "py": 11.34,
+        "pz": 36.25,
+        "sx": 0.38,
+        "sy": 1.3,
+        "sz": 16.492354826475214,
+        "rotX": 0.3923401442155158,
+        "rotZ": 0,
+        "mat": "gunmetal"
+      },
+      "position": {
+        "x": -22.85,
+        "y": 11.34,
+        "z": 36.25
+      },
+      "rotation": {
+        "x": 0.3923401442155158,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "moon-floater-west-north-ramp-guard-right",
+      "generator": "createRampBox",
+      "params": {
+        "px": -17.15,
+        "py": 11.34,
+        "pz": 36.25,
+        "sx": 0.38,
+        "sy": 1.3,
+        "sz": 16.492354826475214,
+        "rotX": 0.3923401442155158,
+        "rotZ": 0,
+        "mat": "gunmetal"
+      },
+      "position": {
+        "x": -17.15,
+        "y": 11.34,
+        "z": 36.25
+      },
+      "rotation": {
+        "x": 0.3923401442155158,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "moon-floater-west-north-cover-inner",
+      "generator": "createWall",
+      "params": {
+        "px": -20,
+        "py": 14.65,
+        "pz": 18.9,
+        "sx": 9,
+        "sy": 1.3,
+        "sz": 0.65,
+        "mat": "gunmetal"
+      },
+      "position": {
+        "x": -20,
+        "y": 14.65,
+        "z": 18.9
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "moon-floater-west-north-cover-left",
+      "generator": "createWall",
+      "params": {
+        "px": -25.3,
+        "py": 14.65,
+        "pz": 24,
+        "sx": 0.65,
+        "sy": 1.3,
+        "sz": 8,
+        "mat": "gunmetal"
+      },
+      "position": {
+        "x": -25.3,
+        "y": 14.65,
+        "z": 24
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "moon-floater-west-north-cover-right",
+      "generator": "createWall",
+      "params": {
+        "px": -14.7,
+        "py": 14.65,
+        "pz": 24,
+        "sx": 0.65,
+        "sy": 1.3,
+        "sz": 8,
+        "mat": "gunmetal"
+      },
+      "position": {
+        "x": -14.7,
+        "y": 14.65,
+        "z": 24
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "moon-floater-west-north-half-cover",
+      "generator": "createWall",
+      "params": {
+        "px": -20,
+        "py": 14.55,
+        "pz": 24,
+        "sx": 2.2,
+        "sy": 1.1,
+        "sz": 1.1,
+        "mat": "gunmetal"
+      },
+      "position": {
+        "x": -20,
+        "y": 14.55,
+        "z": 24
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "moon-floater-east-south",
+      "generator": "createSlab",
+      "params": {
+        "px": 20,
+        "surfY": 14,
+        "pz": -24,
+        "sx": 12,
+        "sz": 12,
+        "mat": "termBridge",
+        "lift": true,
+        "thickness": 0.8
+      },
+      "position": {
+        "x": 20,
+        "y": 13.82,
+        "z": -24
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "moon-floater-east-south-ramp",
+      "generator": "createRampBox",
+      "params": {
+        "px": 20,
+        "py": 10.65,
+        "pz": -36.25,
+        "sx": 5,
+        "sy": 0.7,
+        "sz": 16.492354826475214,
+        "rotX": -0.3923401442155158,
+        "rotZ": 0,
+        "mat": "termBridge"
+      },
+      "position": {
+        "x": 20,
+        "y": 10.65,
+        "z": -36.25
+      },
+      "rotation": {
+        "x": -0.3923401442155158,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "moon-floater-east-south-ramp-guard-left",
+      "generator": "createRampBox",
+      "params": {
+        "px": 17.15,
+        "py": 11.34,
+        "pz": -36.25,
+        "sx": 0.38,
+        "sy": 1.3,
+        "sz": 16.492354826475214,
+        "rotX": -0.3923401442155158,
+        "rotZ": 0,
+        "mat": "gunmetal"
+      },
+      "position": {
+        "x": 17.15,
+        "y": 11.34,
+        "z": -36.25
+      },
+      "rotation": {
+        "x": -0.3923401442155158,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "moon-floater-east-south-ramp-guard-right",
+      "generator": "createRampBox",
+      "params": {
+        "px": 22.85,
+        "py": 11.34,
+        "pz": -36.25,
+        "sx": 0.38,
+        "sy": 1.3,
+        "sz": 16.492354826475214,
+        "rotX": -0.3923401442155158,
+        "rotZ": 0,
+        "mat": "gunmetal"
+      },
+      "position": {
+        "x": 22.85,
+        "y": 11.34,
+        "z": -36.25
+      },
+      "rotation": {
+        "x": -0.3923401442155158,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "moon-floater-east-south-cover-inner",
+      "generator": "createWall",
+      "params": {
+        "px": 20,
+        "py": 14.65,
+        "pz": -18.9,
+        "sx": 9,
+        "sy": 1.3,
+        "sz": 0.65,
+        "mat": "gunmetal"
+      },
+      "position": {
+        "x": 20,
+        "y": 14.65,
+        "z": -18.9
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "moon-floater-east-south-cover-left",
+      "generator": "createWall",
+      "params": {
+        "px": 14.7,
+        "py": 14.65,
+        "pz": -24,
+        "sx": 0.65,
+        "sy": 1.3,
+        "sz": 8,
+        "mat": "gunmetal"
+      },
+      "position": {
+        "x": 14.7,
+        "y": 14.65,
+        "z": -24
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "moon-floater-east-south-cover-right",
+      "generator": "createWall",
+      "params": {
+        "px": 25.3,
+        "py": 14.65,
+        "pz": -24,
+        "sx": 0.65,
+        "sy": 1.3,
+        "sz": 8,
+        "mat": "gunmetal"
+      },
+      "position": {
+        "x": 25.3,
+        "y": 14.65,
+        "z": -24
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "moon-floater-east-south-half-cover",
+      "generator": "createWall",
+      "params": {
+        "px": 20,
+        "py": 14.55,
+        "pz": -24,
+        "sx": 2.2,
+        "sy": 1.1,
+        "sz": 1.1,
+        "mat": "gunmetal"
+      },
+      "position": {
+        "x": 20,
+        "y": 14.55,
+        "z": -24
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "moon-floater-east-north",
+      "generator": "createSlab",
+      "params": {
+        "px": 20,
+        "surfY": 14,
+        "pz": 24,
+        "sx": 12,
+        "sz": 12,
+        "mat": "termBridge",
+        "lift": true,
+        "thickness": 0.8
+      },
+      "position": {
+        "x": 20,
+        "y": 13.82,
+        "z": 24
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "moon-floater-east-north-ramp",
+      "generator": "createRampBox",
+      "params": {
+        "px": 20,
+        "py": 10.65,
+        "pz": 36.25,
+        "sx": 5,
+        "sy": 0.7,
+        "sz": 16.492354826475214,
+        "rotX": 0.3923401442155158,
+        "rotZ": 0,
+        "mat": "termBridge"
+      },
+      "position": {
+        "x": 20,
+        "y": 10.65,
+        "z": 36.25
+      },
+      "rotation": {
+        "x": 0.3923401442155158,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "moon-floater-east-north-ramp-guard-left",
+      "generator": "createRampBox",
+      "params": {
+        "px": 17.15,
+        "py": 11.34,
+        "pz": 36.25,
+        "sx": 0.38,
+        "sy": 1.3,
+        "sz": 16.492354826475214,
+        "rotX": 0.3923401442155158,
+        "rotZ": 0,
+        "mat": "gunmetal"
+      },
+      "position": {
+        "x": 17.15,
+        "y": 11.34,
+        "z": 36.25
+      },
+      "rotation": {
+        "x": 0.3923401442155158,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "moon-floater-east-north-ramp-guard-right",
+      "generator": "createRampBox",
+      "params": {
+        "px": 22.85,
+        "py": 11.34,
+        "pz": 36.25,
+        "sx": 0.38,
+        "sy": 1.3,
+        "sz": 16.492354826475214,
+        "rotX": 0.3923401442155158,
+        "rotZ": 0,
+        "mat": "gunmetal"
+      },
+      "position": {
+        "x": 22.85,
+        "y": 11.34,
+        "z": 36.25
+      },
+      "rotation": {
+        "x": 0.3923401442155158,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "moon-floater-east-north-cover-inner",
+      "generator": "createWall",
+      "params": {
+        "px": 20,
+        "py": 14.65,
+        "pz": 18.9,
+        "sx": 9,
+        "sy": 1.3,
+        "sz": 0.65,
+        "mat": "gunmetal"
+      },
+      "position": {
+        "x": 20,
+        "y": 14.65,
+        "z": 18.9
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "moon-floater-east-north-cover-left",
+      "generator": "createWall",
+      "params": {
+        "px": 14.7,
+        "py": 14.65,
+        "pz": 24,
+        "sx": 0.65,
+        "sy": 1.3,
+        "sz": 8,
+        "mat": "gunmetal"
+      },
+      "position": {
+        "x": 14.7,
+        "y": 14.65,
+        "z": 24
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "moon-floater-east-north-cover-right",
+      "generator": "createWall",
+      "params": {
+        "px": 25.3,
+        "py": 14.65,
+        "pz": 24,
+        "sx": 0.65,
+        "sy": 1.3,
+        "sz": 8,
+        "mat": "gunmetal"
+      },
+      "position": {
+        "x": 25.3,
+        "y": 14.65,
+        "z": 24
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "moon-floater-east-north-half-cover",
+      "generator": "createWall",
+      "params": {
+        "px": 20,
+        "py": 14.55,
+        "pz": 24,
+        "sx": 2.2,
+        "sy": 1.1,
+        "sz": 1.1,
+        "mat": "gunmetal"
+      },
+      "position": {
+        "x": 20,
+        "y": 14.55,
+        "z": 24
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "moon-balcony-south--36",
+      "generator": "createWall",
+      "params": {
+        "px": -36,
+        "py": 8.6,
+        "pz": -47.5,
+        "sx": 12,
+        "sy": 1.2,
+        "sz": 0.75,
+        "mat": "gunmetal"
+      },
+      "position": {
+        "x": -36,
+        "y": 8.6,
+        "z": -47.5
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "moon-balcony-south-0",
+      "generator": "createWall",
+      "params": {
+        "px": 0,
+        "py": 8.6,
+        "pz": -47.5,
+        "sx": 12,
+        "sy": 1.2,
+        "sz": 0.75,
+        "mat": "gunmetal"
+      },
+      "position": {
+        "x": 0,
+        "y": 8.6,
+        "z": -47.5
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "moon-balcony-south-36",
+      "generator": "createWall",
+      "params": {
+        "px": 36,
+        "py": 8.6,
+        "pz": -47.5,
+        "sx": 12,
+        "sy": 1.2,
+        "sz": 0.75,
+        "mat": "gunmetal"
+      },
+      "position": {
+        "x": 36,
+        "y": 8.6,
+        "z": -47.5
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "moon-balcony-west--26",
+      "generator": "createWall",
+      "params": {
+        "px": -57.5,
+        "py": 8.6,
+        "pz": -26,
+        "sx": 0.75,
+        "sy": 1.2,
+        "sz": 12,
+        "mat": "gunmetal"
+      },
+      "position": {
+        "x": -57.5,
+        "y": 8.6,
+        "z": -26
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "moon-balcony-west-0",
+      "generator": "createWall",
+      "params": {
+        "px": -57.5,
+        "py": 8.6,
+        "pz": 0,
+        "sx": 0.75,
+        "sy": 1.2,
+        "sz": 12,
+        "mat": "gunmetal"
+      },
+      "position": {
+        "x": -57.5,
+        "y": 8.6,
+        "z": 0
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "moon-balcony-west-26",
+      "generator": "createWall",
+      "params": {
+        "px": -57.5,
+        "py": 8.6,
+        "pz": 26,
+        "sx": 0.75,
+        "sy": 1.2,
+        "sz": 12,
+        "mat": "gunmetal"
+      },
+      "position": {
+        "x": -57.5,
+        "y": 8.6,
+        "z": 26
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "moon-balcony-north--36",
+      "generator": "createWall",
+      "params": {
+        "px": -36,
+        "py": 8.6,
+        "pz": 47.5,
+        "sx": 12,
+        "sy": 1.2,
+        "sz": 0.75,
+        "mat": "gunmetal"
+      },
+      "position": {
+        "x": -36,
+        "y": 8.6,
+        "z": 47.5
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "moon-balcony-north-0",
+      "generator": "createWall",
+      "params": {
+        "px": 0,
+        "py": 8.6,
+        "pz": 47.5,
+        "sx": 12,
+        "sy": 1.2,
+        "sz": 0.75,
+        "mat": "gunmetal"
+      },
+      "position": {
+        "x": 0,
+        "y": 8.6,
+        "z": 47.5
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "moon-balcony-north-36",
+      "generator": "createWall",
+      "params": {
+        "px": 36,
+        "py": 8.6,
+        "pz": 47.5,
+        "sx": 12,
+        "sy": 1.2,
+        "sz": 0.75,
+        "mat": "gunmetal"
+      },
+      "position": {
+        "x": 36,
+        "y": 8.6,
+        "z": 47.5
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "moon-balcony-east--26",
+      "generator": "createWall",
+      "params": {
+        "px": 57.5,
+        "py": 8.6,
+        "pz": -26,
+        "sx": 0.75,
+        "sy": 1.2,
+        "sz": 12,
+        "mat": "gunmetal"
+      },
+      "position": {
+        "x": 57.5,
+        "y": 8.6,
+        "z": -26
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "moon-balcony-east-0",
+      "generator": "createWall",
+      "params": {
+        "px": 57.5,
+        "py": 8.6,
+        "pz": 0,
+        "sx": 0.75,
+        "sy": 1.2,
+        "sz": 12,
+        "mat": "gunmetal"
+      },
+      "position": {
+        "x": 57.5,
+        "y": 8.6,
+        "z": 0
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "moon-balcony-east-26",
+      "generator": "createWall",
+      "params": {
+        "px": 57.5,
+        "py": 8.6,
+        "pz": 26,
+        "sx": 0.75,
+        "sy": 1.2,
+        "sz": 12,
+        "mat": "gunmetal"
+      },
+      "position": {
+        "x": 57.5,
+        "y": 8.6,
+        "z": 26
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "moon-high-central",
+      "generator": "createSlab",
+      "params": {
+        "px": 0,
+        "surfY": 32,
+        "pz": 0,
+        "sx": 10,
+        "sz": 10,
+        "mat": "gunmetal",
+        "lift": true,
+        "thickness": 0.8
+      },
+      "position": {
+        "x": 0,
+        "y": 31.82,
+        "z": 0
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "moon-high-central-back-cover",
+      "generator": "createWall",
+      "params": {
+        "px": 0,
+        "py": 32.6,
+        "pz": 3.7,
+        "sx": 7,
+        "sy": 1.2,
+        "sz": 0.65,
+        "mat": "steel"
+      },
+      "position": {
+        "x": 0,
+        "y": 32.6,
+        "z": 3.7
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "moon-high-central-left-cover",
+      "generator": "createWall",
+      "params": {
+        "px": -3.9,
+        "py": 32.6,
+        "pz": 0,
+        "sx": 0.65,
+        "sy": 1.2,
+        "sz": 7,
+        "mat": "steel"
+      },
+      "position": {
+        "x": -3.9,
+        "y": 32.6,
+        "z": 0
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "moon-high-central-right-cover",
+      "generator": "createWall",
+      "params": {
+        "px": 3.9,
+        "py": 32.6,
+        "pz": 0,
+        "sx": 0.65,
+        "sy": 1.2,
+        "sz": 7,
+        "mat": "steel"
+      },
+      "position": {
+        "x": 3.9,
+        "y": 32.6,
+        "z": 0
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "moon-high-west",
+      "generator": "createSlab",
+      "params": {
+        "px": -30,
+        "surfY": 28,
+        "pz": 0,
+        "sx": 10,
+        "sz": 10,
+        "mat": "gunmetal",
+        "lift": true,
+        "thickness": 0.8
+      },
+      "position": {
+        "x": -30,
+        "y": 27.82,
+        "z": 0
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "moon-high-west-back-cover",
+      "generator": "createWall",
+      "params": {
+        "px": -30,
+        "py": 28.6,
+        "pz": 3.7,
+        "sx": 7,
+        "sy": 1.2,
+        "sz": 0.65,
+        "mat": "steel"
+      },
+      "position": {
+        "x": -30,
+        "y": 28.6,
+        "z": 3.7
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "moon-high-west-left-cover",
+      "generator": "createWall",
+      "params": {
+        "px": -33.9,
+        "py": 28.6,
+        "pz": 0,
+        "sx": 0.65,
+        "sy": 1.2,
+        "sz": 7,
+        "mat": "steel"
+      },
+      "position": {
+        "x": -33.9,
+        "y": 28.6,
+        "z": 0
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "moon-high-west-right-cover",
+      "generator": "createWall",
+      "params": {
+        "px": -26.1,
+        "py": 28.6,
+        "pz": 0,
+        "sx": 0.65,
+        "sy": 1.2,
+        "sz": 7,
+        "mat": "steel"
+      },
+      "position": {
+        "x": -26.1,
+        "y": 28.6,
+        "z": 0
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "moon-high-east",
+      "generator": "createSlab",
+      "params": {
+        "px": 30,
+        "surfY": 28,
+        "pz": 0,
+        "sx": 10,
+        "sz": 10,
+        "mat": "gunmetal",
+        "lift": true,
+        "thickness": 0.8
+      },
+      "position": {
+        "x": 30,
+        "y": 27.82,
+        "z": 0
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "moon-high-east-back-cover",
+      "generator": "createWall",
+      "params": {
+        "px": 30,
+        "py": 28.6,
+        "pz": 3.7,
+        "sx": 7,
+        "sy": 1.2,
+        "sz": 0.65,
+        "mat": "steel"
+      },
+      "position": {
+        "x": 30,
+        "y": 28.6,
+        "z": 3.7
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "moon-high-east-left-cover",
+      "generator": "createWall",
+      "params": {
+        "px": 26.1,
+        "py": 28.6,
+        "pz": 0,
+        "sx": 0.65,
+        "sy": 1.2,
+        "sz": 7,
+        "mat": "steel"
+      },
+      "position": {
+        "x": 26.1,
+        "y": 28.6,
+        "z": 0
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "moon-high-east-right-cover",
+      "generator": "createWall",
+      "params": {
+        "px": 33.9,
+        "py": 28.6,
+        "pz": 0,
+        "sx": 0.65,
+        "sy": 1.2,
+        "sz": 7,
+        "mat": "steel"
+      },
+      "position": {
+        "x": 33.9,
+        "y": 28.6,
+        "z": 0
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "moon-high-south",
+      "generator": "createSlab",
+      "params": {
+        "px": 0,
+        "surfY": 28,
+        "pz": -25,
+        "sx": 10,
+        "sz": 10,
+        "mat": "gunmetal",
+        "lift": true,
+        "thickness": 0.8
+      },
+      "position": {
+        "x": 0,
+        "y": 27.82,
+        "z": -25
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "moon-high-south-back-cover",
+      "generator": "createWall",
+      "params": {
+        "px": 0,
+        "py": 28.6,
+        "pz": -21.3,
+        "sx": 7,
+        "sy": 1.2,
+        "sz": 0.65,
+        "mat": "steel"
+      },
+      "position": {
+        "x": 0,
+        "y": 28.6,
+        "z": -21.3
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "moon-high-south-left-cover",
+      "generator": "createWall",
+      "params": {
+        "px": -3.9,
+        "py": 28.6,
+        "pz": -25,
+        "sx": 0.65,
+        "sy": 1.2,
+        "sz": 7,
+        "mat": "steel"
+      },
+      "position": {
+        "x": -3.9,
+        "y": 28.6,
+        "z": -25
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "moon-high-south-right-cover",
+      "generator": "createWall",
+      "params": {
+        "px": 3.9,
+        "py": 28.6,
+        "pz": -25,
+        "sx": 0.65,
+        "sy": 1.2,
+        "sz": 7,
+        "mat": "steel"
+      },
+      "position": {
+        "x": 3.9,
+        "y": 28.6,
+        "z": -25
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "moon-high-north",
+      "generator": "createSlab",
+      "params": {
+        "px": 0,
+        "surfY": 28,
+        "pz": 25,
+        "sx": 10,
+        "sz": 10,
+        "mat": "gunmetal",
+        "lift": true,
+        "thickness": 0.8
+      },
+      "position": {
+        "x": 0,
+        "y": 27.82,
+        "z": 25
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "moon-high-north-back-cover",
+      "generator": "createWall",
+      "params": {
+        "px": 0,
+        "py": 28.6,
+        "pz": 28.7,
+        "sx": 7,
+        "sy": 1.2,
+        "sz": 0.65,
+        "mat": "steel"
+      },
+      "position": {
+        "x": 0,
+        "y": 28.6,
+        "z": 28.7
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "moon-high-north-left-cover",
+      "generator": "createWall",
+      "params": {
+        "px": -3.9,
+        "py": 28.6,
+        "pz": 25,
+        "sx": 0.65,
+        "sy": 1.2,
+        "sz": 7,
+        "mat": "steel"
+      },
+      "position": {
+        "x": -3.9,
+        "y": 28.6,
+        "z": 25
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "moon-high-north-right-cover",
+      "generator": "createWall",
+      "params": {
+        "px": 3.9,
+        "py": 28.6,
+        "pz": 25,
+        "sx": 0.65,
+        "sy": 1.2,
+        "sz": 7,
+        "mat": "steel"
+      },
+      "position": {
+        "x": 3.9,
+        "y": 28.6,
+        "z": 25
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "moon-original-west-south-rear-cover",
+      "generator": "createWall",
+      "params": {
+        "px": -40,
+        "py": 20.6,
+        "pz": -34.8,
+        "sx": 7,
+        "sy": 1.2,
+        "sz": 0.65,
+        "mat": "steel"
+      },
+      "position": {
+        "x": -40,
+        "y": 20.6,
+        "z": -34.8
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "moon-original-west-south-side-cover",
+      "generator": "createWall",
+      "params": {
+        "px": -44.8,
+        "py": 20.6,
+        "pz": -30,
+        "sx": 0.65,
+        "sy": 1.2,
+        "sz": 7,
+        "mat": "steel"
+      },
+      "position": {
+        "x": -44.8,
+        "y": 20.6,
+        "z": -30
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "moon-original-west-north-rear-cover",
+      "generator": "createWall",
+      "params": {
+        "px": -40,
+        "py": 20.6,
+        "pz": 34.8,
+        "sx": 7,
+        "sy": 1.2,
+        "sz": 0.65,
+        "mat": "steel"
+      },
+      "position": {
+        "x": -40,
+        "y": 20.6,
+        "z": 34.8
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "moon-original-west-north-side-cover",
+      "generator": "createWall",
+      "params": {
+        "px": -44.8,
+        "py": 20.6,
+        "pz": 30,
+        "sx": 0.65,
+        "sy": 1.2,
+        "sz": 7,
+        "mat": "steel"
+      },
+      "position": {
+        "x": -44.8,
+        "y": 20.6,
+        "z": 30
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "moon-original-east-south-rear-cover",
+      "generator": "createWall",
+      "params": {
+        "px": 40,
+        "py": 20.6,
+        "pz": -34.8,
+        "sx": 7,
+        "sy": 1.2,
+        "sz": 0.65,
+        "mat": "steel"
+      },
+      "position": {
+        "x": 40,
+        "y": 20.6,
+        "z": -34.8
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "moon-original-east-south-side-cover",
+      "generator": "createWall",
+      "params": {
+        "px": 44.8,
+        "py": 20.6,
+        "pz": -30,
+        "sx": 0.65,
+        "sy": 1.2,
+        "sz": 7,
+        "mat": "steel"
+      },
+      "position": {
+        "x": 44.8,
+        "y": 20.6,
+        "z": -30
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "moon-original-east-north-rear-cover",
+      "generator": "createWall",
+      "params": {
+        "px": 40,
+        "py": 20.6,
+        "pz": 34.8,
+        "sx": 7,
+        "sy": 1.2,
+        "sz": 0.65,
+        "mat": "steel"
+      },
+      "position": {
+        "x": 40,
+        "y": 20.6,
+        "z": 34.8
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "moon-original-east-north-side-cover",
+      "generator": "createWall",
+      "params": {
+        "px": 44.8,
+        "py": 20.6,
+        "pz": 30,
+        "sx": 0.65,
+        "sy": 1.2,
+        "sz": 7,
+        "mat": "steel"
+      },
+      "position": {
+        "x": 44.8,
+        "y": 20.6,
+        "z": 30
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scaling": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    }
+  ],
+  "markers": [
+    {
+      "id": "moon-floater-armor-west-north",
+      "type": "armorPickup",
+      "position": {
+        "x": -23,
+        "y": 14.9,
+        "z": 24
+      },
+      "modes": [
+        "survival"
+      ]
+    },
+    {
+      "id": "moon-floater-health-east-north",
+      "type": "healthPickup",
+      "position": {
+        "x": 23,
+        "y": 14.9,
+        "z": 24
+      },
+      "modes": [
+        "survival"
+      ]
+    },
+    {
+      "id": "moon-floater-health-west-south",
+      "type": "healthPickup",
+      "position": {
+        "x": -23,
+        "y": 14.9,
+        "z": -24
+      },
+      "modes": [
+        "survival"
+      ]
+    },
+    {
+      "id": "moon-floater-armor-east-south",
+      "type": "armorPickup",
+      "position": {
+        "x": 23,
+        "y": 14.9,
+        "z": -24
+      },
+      "modes": [
+        "survival"
+      ]
     }
   ]
 }

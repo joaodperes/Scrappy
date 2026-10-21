@@ -7,6 +7,10 @@ const BABYLON = window.BABYLON;
 
 // ── Helper to warn about missing entries ──
 const _warnedMissingMapData = new Set();
+import { getMapMarkers } from './mapLayoutStore.js';
+import { canUnlockNightmare } from './hardModeRules.js';
+import { loadMapCatalog } from './mapCatalog.js';
+
 export function resolveMapData(table, mapId, fallbackId = 'scrapyard', tableName = 'map data') {
   if (table[mapId] !== undefined) return table[mapId];
   const warnKey = tableName + ':' + mapId;
@@ -22,6 +26,7 @@ export const MAP_CONFIG = {
   scrapyard: {
     meta: {
       id: 'scrapyard',
+      teamSize: 4, supportedModes: ['survival','tdm','ffa','gunGame'],
       name: 'SCRAPYARD', icon: '🏭',
       desc: 'Multi-tiered industrial arena. Vertical combat across 5 floors.',
       levelModule: './level.js', buildFn: 'buildLevel',
@@ -98,10 +103,13 @@ export const MAP_CONFIG = {
   },
   jungle: {
     meta: {
-      id: 'jungle', name: 'TEMPLE RUINS', icon: '🌴',
+      id: 'jungle',
+      teamSize: 4, supportedModes: ['survival','tdm','ffa','gunGame'], name: 'TEMPLE RUINS', icon: '🌴',
       desc: 'Ancient jungle temple. Lava rivers, moving platforms, and destructible ruins.',
       levelModule: './levelJungle.js', buildFn: 'buildJungleLevel',
       spawn: { x: 15, yOffset: 1, z: -55 },
+      // The deepest Jungle chamber is at y=-45; do not reset mid-dungeon.
+      fallResetY: -58,
       unlockHint: 'Defeat a Boss in Scrapyard',
     },
     wave: { 
@@ -117,10 +125,13 @@ export const MAP_CONFIG = {
       spawns: [
         [-24,0,-22], [0,0,-30], [24,0,-22], [-32,0,-44], [0,0,-52], [32,0,-44],
         [-14,0,-60], [14,0,-60],
-        [-24,0,22], [0,0,30], [24,0,22], [-32,0,44], [0,0,52], [32,0,44],
+        [-24,0,22], [0,0,34], [24,0,22], [-32,0,44], [0,0,52], [32,0,44],
         [-25,3.5,-22], [25,3.5,-22], [-25,3.5,22], [25,3.5,22],
-        [0,-6,26], [0,-6,-26], [-20,-6,0], [20,-6,0], [0,-6,0],
-        [0,-12,57], [0,-12,47],
+        // Avoid the M1→M2 ramp opening at x=0,z=26.
+        [12,-6,26], [0,-6,-26], [-20,-6,0], [20,-6,0], [0,-6,0],
+        // Each deeper location has a physical floor and a ramp route up.
+        [0,-12,57], [0,-12,47], [-24,-28,37], [23,-28,-40],
+        [-20,-43,52], [22,-43,52],
       ],
     },
     secretKits: () => [
@@ -144,19 +155,21 @@ export const MAP_CONFIG = {
       { wName: 'GLAUNCHER',    x:  28, y: -45, z:  57 },
     ],
     walkableSpawns: [
-      [-30, 0,  30], [ 30, 0,  30], [-30, 0, -30], [ 30, 0, -30], 
-      [-22, 0,   0], [ 22, 0,   0], [  0, 0,  26], [  0, 0, -26],
-      [-34, 6,  34], [ 34, 6,  34], [-34, 6, -34], [ 34, 6, -34],
-      [  0, 12,  38], [-18, 12,  38], [ 18, 12,  38],
-      [  0, 12, -38], [-18, 12, -38], [ 18, 12, -38],
-      [-36, 12,  10], [-36, 12, -10],
-      [ 36, 12,  10], [ 36, 12, -10],
-      [ 0, 18,  20], [ 0, 18,  8], [ 0, 18, -8], [ 0, 18, -20],
+      // Surface and raised ruins
+      [-34,0,34],[34,0,34],[-34,0,-34],[34,0,-34],
+      [-14,0,0],[14,0,0],[0,0,-24],[0,0,24],
+      [-24,5,24],[24,5,24],[-24,5,-24],[24,5,-24],
+      // Underground floors (M1, M2, M3, M4).
+      [-20,-6,-20],[20,-6,22],[-42,-6,0],[42,-6,0],
+      [-20,-13,25],[20,-13,-25],[0,-13,-35],[0,-13,50],
+      [-22,-28,42],[20,-28,-40],[0,-28,-53],
+      [-20,-43,53],[20,-43,53],[0,-43,-35],
     ],
   },
   city: {
     meta: {
-      id: 'city', name: 'ROOFTOP CITY', icon: '🏙️',
+      id: 'city',
+      teamSize: 6, supportedModes: ['survival','tdm','ffa','gunGame'], name: 'ROOFTOP CITY', icon: '🏙️',
       desc: 'Glass skyscrapers and ziplines. Fight from street to penthouse.',
       levelModule: './levelCity.js', buildFn: 'buildCityLevel',
       spawn: { x: -18, yOffset: 0, z: -10 },
@@ -232,7 +245,8 @@ export const MAP_CONFIG = {
   },
   terminal: {
     meta: {
-      id: 'terminal', name: 'MOON BASE', icon: '🌙',
+      id: 'terminal',
+      teamSize: 4, supportedModes: ['survival','tdm','ffa','gunGame'], name: 'MOON BASE', icon: '🌙',
       desc: 'Futuristic space arena.',
       levelModule: './levelTerminal.js', buildFn: 'buildTerminalLevel',
       spawn: { x: -19, yOffset: 0, z: -12 },
@@ -245,15 +259,17 @@ export const MAP_CONFIG = {
       budgetMultiplier: 1.0,
       fixed:{},
       spawns: [
-        [0, 0, 0],
-        //[-20, 0, -10], [20, 0, -10], [-20, 0, 10], [20, 0, 10],
-        //[0, 0, -16], [0, 0, 16], [-15, 0, 0], [15, 0, 0], [0, 0, 0],
-        //[-20, 6, -16], [20, 6, -16], [-20, 6, 16], [20, 6, 16]
+        [0,0,0],[-20,0,-10],[20,0,-10],[-20,0,10],[20,0,10],
+        [0,0,-16],[0,0,16],[-15,0,0],[15,0,0],
+        [0,8,44],[0,8,-44],[-54,8,0],[54,8,0],
+        [-20,14,24],[20,14,24],[-20,14,-24],[20,14,-24],
       ],
     },
     secretKits: () => [
-      { tag: 'secret_health', type: 'secret_health', pos: new BABYLON.Vector3(-15, 6.22 + 1.0, -16) },
-      { tag: 'secret_armor',  type: 'secret_armor',  pos: new BABYLON.Vector3( 15, 6.22 + 1.0, -16) },
+      // Old y=6.22 locations had no support; these kits now sit safely
+      // above the ground concourse (floater kits use v2 JSON markers).
+      { tag: 'secret_health', type: 'secret_health', pos: new BABYLON.Vector3(-15, 1.0, -16) },
+      { tag: 'secret_armor',  type: 'secret_armor',  pos: new BABYLON.Vector3( 15, 1.0, -16) },
     ],
     weaponSpawns: () => [
       { wName: 'FLAMETHROWER',   x:  40, y: 20.77, z:  30 },
@@ -265,21 +281,62 @@ export const MAP_CONFIG = {
       { wName: 'ELECTRON',  x: -30, y: 28.77, z:   0 },
       { wName: 'TESLA',       x:   0, y: 28.77, z:  25 },
       { wName: 'ELECTRON', x:   0, y: 28.77, z: -25 },
+      // Priority 6 raised PvP/Survival resource platform weapons.
+      { wName: 'SMG',       x: -20, y: 14.77, z:  24 },
+      { wName: 'DMR',       x:  20, y: 14.77, z:  24 },
+      { wName: 'RIVETER',   x: -20, y: 14.77, z: -24 },
+      { wName: 'ROCKET',    x:  20, y: 14.77, z: -24 },
     ],
     walkableSpawns: [ 
       [-20, 0, -10], [20, 0, -10], [-20, 0, 10], [20, 0, 10],
       [0, 0, -16], [0, 0, 16], [-15, 0, 0], [15, 0, 0], [0, 0, 0],
-      [-20, 6, -16], [20, 6, -16], [-20, 6, 16], [20, 6, 16],
+      // Elevated areas spawn at actual floor heights rather than in mid-air.
+      // Raised balcony and ramp-accessible resource platforms.
+      [0,8,44],[0,8,-44],[-54,8,0],[54,8,0],
+      [-20,14,24],[20,14,24],[-20,14,-24],[20,14,-24],
     ],
   },
 };
 
+// Community maps use one catalog entry plus one map document and the same
+// generic builder. Existing built-in configurations remain unchanged.
+export async function registerCommunityMaps(){
+  const entries=await loadMapCatalog();
+  for(const item of entries){
+    if(MAP_CONFIG[item.id])throw Error('Map ID collision: '+item.id);
+    const meta={
+      ...item,id:item.id,unlockHint:null,
+      levelModule:'./levelCommunity.js',buildFn:'buildCommunityLevel',
+    };
+    MAP_CONFIG[item.id]={
+      meta,
+      wave:{
+        botPool:['scout','drone','heavy','shotgun','sniper'],
+        bossPool:['rocket','sniper'],
+        hardPool:['electron_bot','ion_sniper'],
+        budgetMultiplier:1,
+        fixed:{},
+        spawns:[[item.spawn.x,item.spawn.yOffset,item.spawn.z]],
+      },
+      secretKits:()=>[],
+      weaponSpawns:()=>[],
+      walkableSpawns:[[item.spawn.x,item.spawn.yOffset,item.spawn.z]],
+    };
+    MAPS[item.id]=meta;
+  }
+  return entries.map(m=>m.id);
+}
+
 // ── Helper getters ────────────────────────────────────────────
 export function getMapMeta(mapId) {
-  return resolveMapData(MAP_CONFIG, mapId, 'scrapyard', 'map meta').meta;
+  const meta=resolveMapData(MAP_CONFIG,mapId,'scrapyard','map meta').meta;
+  const sp=getMapMarkers(mapId,'playerSpawn')[0];
+  return sp?{...meta,spawn:{x:sp.position.x,yOffset:sp.position.y,z:sp.position.z}}:meta;
 }
 export function getWaveConfig(mapId) {
-  return resolveMapData(MAP_CONFIG, mapId, 'scrapyard', 'wave config').wave;
+  const wave=resolveMapData(MAP_CONFIG,mapId,'scrapyard','wave config').wave;
+  const markers=getMapMarkers(mapId,'enemySpawn','survival');
+  return markers.length?{...wave,spawns:markers.map(m=>[m.position.x,m.position.y,m.position.z])}:wave;
 }
 export function getSecretKits(mapId) {
   const cfg = resolveMapData(MAP_CONFIG, mapId, 'scrapyard', 'secret kits');
@@ -287,10 +344,22 @@ export function getSecretKits(mapId) {
 }
 export function getWeaponSpawns(mapId) {
   const cfg = resolveMapData(MAP_CONFIG, mapId, 'scrapyard', 'weapon spawns');
-  return (cfg.weaponSpawns || (() => []))();
+  const markers=getMapMarkers(mapId,'weaponPickup','survival');
+  return markers.length?markers.map(m=>({wName:m.weapon,x:m.position.x,y:m.position.y,z:m.position.z})):(cfg.weaponSpawns || (() => []))();
+}
+export function isModeSupported(mapId, mode) {
+  const meta = getMapMeta(mapId);
+  return !!meta?.supportedModes?.includes(mode);
+}
+export function getRoomCapacity(mapId, mode) {
+  if (mode === 'survival') return 2;
+  const meta = getMapMeta(mapId);
+  return Math.max(2, Math.min(24, (meta?.teamSize || 4) * 2));
 }
 export function getWalkableSpawns(mapId) {
-  return resolveMapData(MAP_CONFIG, mapId, 'scrapyard', 'walkable spawns').walkableSpawns || [];
+  const markers=getMapMarkers(mapId,'pvpSpawn');
+  return markers.length?markers.map(m=>[m.position.x,m.position.y,m.position.z]):
+    resolveMapData(MAP_CONFIG,mapId,'scrapyard','walkable spawns').walkableSpawns || [];
 }
 
 // ── Unlock logic ───────────────────────────────────────────────
@@ -300,7 +369,10 @@ export function isMapUnlocked(mapId) {
   if (mapId === 'jungle') return true;   // placeholder
   if (mapId === 'city') return true;
   if (mapId === 'terminal') return true;
-  return false;
+  return !!MAP_CONFIG[mapId]; // Catalog-registered maps are publicly playable.
+}
+export function isNightmareUnlocked(mapId){
+  return canUnlockNightmare(profile.stats||{},mapId);
 }
 export function isHardModeUnlocked(mapId) {
   const stats = profile.stats || {};
@@ -326,7 +398,7 @@ export async function buildMap(mapId) {
   // buildXLevel() is async — it awaits an assets/maps/<mapId>.json layout
   // fetch before baking the NavMesh, so this MUST be awaited too, or
   // callers could start spawning enemies against a stale/incomplete navmesh.
-  await mod[meta.buildFn]();
+  await mod[meta.buildFn](undefined,mapId);
   return {
     hazardZones:     mod.hazardZones     || [],
     movingPlatforms: mod.movingPlatforms || [],
