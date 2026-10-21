@@ -5,6 +5,8 @@ import { getCurrentMap } from './mapManager.js';
 import { WDEFS } from './weapons.js';
 import { crossedMilestone, notificationKey, upgradeNotificationHistory } from './milestoneNotifications.js';
 import { questDefinitions, ensureQuestState, trackQuestEvent, questProgress, claimQuest, convertMaxedWeaponXp } from './questRules.js';
+import {SHOP_ITEMS,normalizeShopWallet,shopAvailableScraps,purchaseShopItem} from './shopRules.js';
+let _shopWallet=normalizeShopWallet(null),_shopReady=false;
 
 const XP_BASE = 200, XP_EXP = 1.4;
 export function xpForLevel(level) { return Math.floor(XP_BASE * Math.pow(level, XP_EXP)); }
@@ -31,7 +33,7 @@ export const WEAPON_XP_GRANTS = {
 const WEAPON_LEVEL_THRESHOLDS = [0, 250, 600, 1200, 2200, 3800, 6000, 9000, 13000, 18000];
 
 export function getWeaponLevel(wName) {
-  const xp = profile.stats.weaponXp?.[wName] || 0;
+  const xp = (profile.stats.weaponXp?.[wName] || 0)+(_shopWallet.xpBonuses[wName]||0);
   let level = 1;
   for (let i = 1; i < WEAPON_LEVEL_THRESHOLDS.length; i++) {
     if (xp >= WEAPON_LEVEL_THRESHOLDS[i]) level = i + 1; else break;
@@ -40,7 +42,7 @@ export function getWeaponLevel(wName) {
 }
 
 export function getWeaponLevelProgress(wName) {
-  const xp    = profile.stats.weaponXp?.[wName] || 0;
+  const xp    = (profile.stats.weaponXp?.[wName] || 0)+(_shopWallet.xpBonuses[wName]||0);
   const level = getWeaponLevel(wName);
   const isMax = level >= WEAPON_LEVEL_THRESHOLDS.length;
   const cur   = WEAPON_LEVEL_THRESHOLDS[level - 1] || 0;
@@ -629,6 +631,10 @@ export const WEAPON_SKINS = {
   nebula:     {id:'nebula',     category:'Collector',name:'Nebula',    desc:'Violet lunar clouds.',     body:[0.08,0.03,0.19], accent:[0.66,0.29,1.0], grip:[0.10,0.06,0.24]},
   cinder:     {id:'cinder',     category:'Collector',name:'Cinder',    desc:'Meteor ember finish.',    body:[0.17,0.04,0.02], accent:[1.0,0.35,0.06], grip:[0.21,0.08,0.04]},
   tundra:     {id:'tundra',     category:'Collector',name:'Tundra',    desc:'Cryogenic ice-metal.',    body:[0.55,0.72,0.77], accent:[0.26,0.82,1.0], grip:[0.22,0.40,0.46]},
+  patina: {id:'patina',category:'Shop',name:'Patina',desc:'Weathered green copper.',body:[.16,.42,.26],accent:[.39,.69,.51],grip:[.12,.22,.19]},
+  volt: {id:'volt',category:'Shop',name:'Volt',desc:'Electric cyan.',body:[.03,.13,.29],accent:[.08,.92,.94],grip:[.09,.18,.29]},
+  emberfall: {id:'emberfall',category:'Shop',name:'Emberfall',desc:'Molten orange.',body:[.16,.08,.06],accent:[.99,.35,.05],grip:[.21,.10,.04]},
+  sunburst: {id:'sunburst',category:'Shop',name:'Sunburst',desc:'Polished bronze and gold.',body:[.53,.35,.08],accent:[1,.8,.22],grip:[.38,.23,.08]},
 };
 
 export const SKIN_DIFFICULTY_ORDER = [
@@ -644,6 +650,8 @@ export const PLAYER_SKINS = {
   void:   {id:'void',   name:'Void',    body:[0.04,0.02,0.08],visor:[0.50,0.10,0.90]},
   gold:   {id:'gold',   name:'Prestige',body:[0.70,0.55,0.08],visor:[1.00,0.85,0.20]},
   gladiator: {id:'gladiator', name:'Gladiator', body:[0.2,0.2,0.2], visor:[1.0,0.0,0.2]}, // Red/Black PvP skin
+  scavenger: {id:'scavenger',name:'Scavenger',body:[.30,.35,.18],visor:[.92,.67,.18]},
+  reclaimer: {id:'reclaimer',name:'Reclaimer',body:[.21,.39,.44],visor:[.26,.91,.81]},
 };
 
 // ── Unlock table ──────────────────────────────────────────────
@@ -2431,6 +2439,7 @@ export function initFirebaseAuth() {
       if (profile.firebaseUid && profile.firebaseUid !== uid) {
           console.log('[progression] Different user detected. Wiping local profile.');
           Object.assign(profile, _defaultProfile()); // Reset to defaults
+          _shopWallet=normalizeShopWallet(null);_shopReady=false;
       }
 
       const cloudProfile = await _loadFromFirestore(uid);
@@ -2455,8 +2464,9 @@ export function initFirebaseAuth() {
         _saveToLocalStorage();
         //console.log('[progression] New cloud profile created');
       }
+      await refreshProfileShopWallet(uid);
     } else {
-      _fbReady = false;
+      _fbReady = false;_shopWallet=normalizeShopWallet(null);_shopReady=false;
     }
   });
 }
@@ -2546,7 +2556,7 @@ function _sanitizeUnlocks() {
         // Collector rewards are issued by the UTC quest claim ledger rather
         // than UNLOCK_TABLE; preserve legitimate reward IDs after reloading.
         for(const [id,def] of Object.entries(WEAPON_SKINS)){
-          if(def.category==='Collector')allowedSkins.add(id);
+          if(def.category==='Collector'||def.category==='Shop')allowedSkins.add(id);
         }
         if (profile.unlockedWeaponSkins[wName]) {
              profile.unlockedWeaponSkins[wName] = profile.unlockedWeaponSkins[wName].filter(id => allowedSkins.has(id));
@@ -2625,7 +2635,7 @@ let _cloudDirty = false;
 
 export function getQuestBoard(date=new Date()){
   const state=ensureQuestState(profile,date);
-  return {scraps:profile.scraps||0,
+  return {scraps:shopAvailableScraps(profile.scraps||0,_shopWallet),
     quests:questDefinitions(date).map(def=>({...def,...questProgress(profile,def,date)}))};
 }
 export function claimProfileQuest(id,date=new Date()){
