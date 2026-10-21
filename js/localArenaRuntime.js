@@ -263,9 +263,13 @@ export function updateLocalArena(dt){
    onShot:actorShoots,
    onRespawn:actor=>{
      const spawn=chooseArenaSpawn(active.actors.filter(other=>other!==actor));
-     if(respawnArenaActor(actor,spawn)&&active.state.mode==='gunGame'){
-       const rung=active.state.botGuns[actor.id]||0;
-       setArenaActorWeapon(actor,active.state.gunOrder[rung]);
+     if(respawnArenaActor(actor,spawn)){
+       if(active.state.mode==='gunGame'){
+         const rung=active.state.botGuns[actor.id]||0;
+         setArenaActorWeapon(actor,active.state.gunOrder[rung]);
+       }else{
+         setArenaActorWeapon(actor,actor.persona.loadout?.primary||'PISTOL');
+       }
      }
    },
  });
