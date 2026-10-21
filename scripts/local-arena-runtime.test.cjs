@@ -125,3 +125,21 @@ test('opponents collect tags, scoring only opponent tags; team tags can be denie
  h2.api.updateLocalArena(.1);
  assert.equal(h2.api.getLocalArenaSnapshot().state.opposition,1);
 });
+
+
+test('player special attacks still credit arena kills, but environmental hits do not',async()=>{
+ const h=harness();await h.start('ffa');
+ const [victim,protectedActor]=h.actors;
+ h.api.localArenaActorHit(victim,99,'ENVIRONMENT');
+ assert.equal(victim.hp,100);
+ h.api.localArenaActorHit(victim,99,'TESLA_CHAIN');
+ assert.equal(victim.hp,1);
+ h.api.localArenaActorHit(victim,8,'AEGIS');
+ assert.equal(victim.alive,false);
+ const snap=h.api.getLocalArenaSnapshot();
+ assert.equal(snap.state.kills,1);
+ assert.equal(h.context.kills.length,1);
+ assert.equal(h.context.damages.length,2);
+ h.api.localArenaActorHit(protectedActor,100,'FLAMETHROWER');
+ assert.equal(h.api.getLocalArenaSnapshot().state.kills,2);
+});
