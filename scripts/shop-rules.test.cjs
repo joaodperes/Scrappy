@@ -58,3 +58,20 @@ test('same profile Firestore document isolates wallet from normal profile saves'
  assert.match(p,/transaction\.set\(documentRef,\{shopWallet:purchase.wallet\},\{merge:true\}\)/);
  assert.match(p,/\.set\(\s*\{ profile, updated_at:/);
 });
+
+test('shop caps receipt history without losing old purchase idempotency',async()=>{
+ const {purchaseShopItem,MAX_SHOP_RECEIPTS}=await rules;
+ const receipts={};
+ for(let i=0;i<MAX_SHOP_RECEIPTS;i++)
+  receipts['purchase_'+String(i).padStart(7,'0')]='xp_TESLA_250';
+ const ledger={spent:400,owned:[],receipts,xpBonuses:{TESLA:250}};
+ const duplicate=purchaseShopItem(1000,ledger,'xp_TESLA_250','purchase_0000000',0);
+ assert.equal(duplicate.ok,true);
+ assert.equal(duplicate.duplicate,true);
+ assert.equal(duplicate.wallet.spent,400);
+ const rejected=purchaseShopItem(1000,ledger,'player_scavenger','purchase_new_001',0);
+ assert.equal(rejected.ok,false);
+ assert.equal(rejected.reason,'Purchase history full; contact the game owner');
+ assert.equal(rejected.wallet.spent,400);
+ assert.equal(Object.keys(rejected.wallet.receipts).length,MAX_SHOP_RECEIPTS);
+});
