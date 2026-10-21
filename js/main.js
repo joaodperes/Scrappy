@@ -224,6 +224,7 @@ function startGame(startWave = 0, difficulty = 'normal', localMode = null) {
         const elapsed=Math.max(0,(localMode.duration||600)-state.secondsLeft);
         const participation=elapsed>=120&&state.kills>=1?25:0;
         const victory=state.result==='VICTORY'&&elapsed>=60&&state.kills>=3?80:0;
+        const eliminationXp=Math.max(0,(profile.totalXp||0)-arenaStartXp);
         if(participation+victory)awardXp(participation+victory);
         gameRunning=false;
         document.exitPointerLock();
@@ -240,7 +241,9 @@ function startGame(startWave = 0, difficulty = 'normal', localMode = null) {
           const earned=Math.max(0,(profile.totalXp||0)-arenaStartXp);
           scores.textContent='FRAGS '+state.kills+' · POINTS '+state.score+
             ' · BOT POINTS '+state.opposition+' · DEATHS '+state.deaths+
-            ' · MATCH XP +'+earned+' · SCRAPS +0 (ARENA)';
+            ' · XP +'+earned+' (KILLS +'+eliminationXp+
+            ', PARTICIPATION +'+participation+', VICTORY +'+victory+')'+
+            ' · SCRAPS +0 (ARENA)';
         }
       },damage=>hurtPlayer(damage));
       updateHUD();
