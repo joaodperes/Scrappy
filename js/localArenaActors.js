@@ -118,7 +118,7 @@ export function killArenaActor(actor){
  actor.respawnIn=5;actor.targetId=null;
  // A new life cannot inherit old fire/poison or stale path decisions.
  actor._dots=[];actor._poisonDots=[];
- actor.pathCursor=null;actor.walkClock=0;actor.tagTargetId=null;actor.tagScanClock=0;
+ actor.pathCursor=null;actor.pathPoints=null;actor.walkClock=0;actor.tagTargetId=null;actor.tagScanClock=0;
  actor.group.setEnabled(false);
  rebuildMeshMap();
 }
@@ -133,7 +133,7 @@ export function respawnArenaActor(actor,spawn){
  actor.ammo=spec.useHeat?Infinity:Math.max(1,spec.magSize||30);
  actor.heat=0;
  actor._dots=[];actor._poisonDots=[];
- actor.pathCursor=null;actor.walkClock=0;actor.reaction=0;
+ actor.pathCursor=null;actor.pathPoints=null;actor.walkClock=0;actor.reaction=0;
  actor.tagTargetId=null;actor.tagScanClock=0;
  rebuildMeshMap();
  return true;
@@ -236,7 +236,8 @@ export function updateArenaActors(actors,dt,mode,
     distance:B.Vector3.Distance(a.group.position,goal.mesh.position),objective:true}:
     pickTarget(a,actors,mode,humanAlive);
   if(!target){a.targetId=null;continue}
-  if(a.targetId!==target.id){a.targetId=target.id;a.reaction=(a.persona.reactionMs||450)/1000}
+  if(a.targetId!==target.id){a.targetId=target.id;a.reaction=(a.persona.reactionMs||450)/1000;
+   a.pathPoints=null;a.pathCursor=null;a.walkClock=0;}
   a.reaction=Math.max(0,a.reaction-dt);
   const own=a.group.position,targetPos=target.point;
   const dx=targetPos.x-own.x,dz=targetPos.z-own.z;
@@ -250,12 +251,18 @@ export function updateArenaActors(actors,dt,mode,
    const targetFeet=new B.Vector3(targetPos.x,
      targetPos.y-(target.objective?.65:1.55),targetPos.z);
    let route=null;try{route=botNavPath(navPlugin,feet,targetFeet)}catch{}
-   // If Recast cannot reach the destination, do not bypass it with a
-   // straight-line step across a void or through an unconnected floor.
-   a.pathCursor=route?.points?.[1]||null;
+   // Persist all returned Recast waypoints; a single [1] target can cause
+   // looping at ramp bends and never advance to upper-floor corridors.
+   a.pathPoints=route?.points?.slice(1)||[];
+   a.pathCursor=a.pathPoints.find(p=>valid(p)&&
+     B.Vector3.Distance(p,own)>.65)||null;
    a.walkClock=.4+Math.random()*.25;
   }
   if(near||far||!target.visible||(!target.objective&&flat>1.5)){
+   if(a.pathCursor&&B.Vector3.Distance(a.pathCursor,own)<.85){
+    a.pathPoints?.shift();
+    a.pathCursor=a.pathPoints?.[0]||null;
+   }
    const navGoal=a.pathCursor;
    if(navGoal&&valid(navGoal)){
     const off=new B.Vector3(navGoal.x-own.x,0,navGoal.z-own.z);
