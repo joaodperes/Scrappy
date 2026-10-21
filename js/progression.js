@@ -2705,6 +2705,34 @@ export function ensureDisplayName() {
     });
 }
 
+// Ephemeral, session-scoped reward accounting. No new cloud schema or trust boundary.
+let _survivalRewards=null;
+export function startSurvivalRewardLedger(){
+  _survivalRewards={active:true,accountXp:0,weaponXp:{},conversionScraps:{},
+    questScraps:0,questClaims:0};
+}
+export function getSurvivalRewardLedger(){
+  const r=_survivalRewards;
+  if(!r)return null;
+  return {accountXp:r.accountXp,weaponXp:{...r.weaponXp},
+    conversionScraps:{...r.conversionScraps},questScraps:r.questScraps,
+    questClaims:r.questClaims,totalEarnedScraps:r.questScraps+
+      Object.values(r.conversionScraps).reduce((a,b)=>a+b,0)};
+}
+export function stopSurvivalRewardLedger(){
+  const summary=getSurvivalRewardLedger();
+  if(_survivalRewards)_survivalRewards.active=false;
+  return summary;
+}
+function _rewardWeaponXp(weapon,amount){
+  if(_survivalRewards?.active&&amount>0)
+    _survivalRewards.weaponXp[weapon]=(_survivalRewards.weaponXp[weapon]||0)+amount;
+}
+function _rewardConvertedScraps(weapon,amount){
+  if(_survivalRewards?.active&&amount>0)
+    _survivalRewards.conversionScraps[weapon]=(_survivalRewards.conversionScraps[weapon]||0)+amount;
+}
+
 let _cloudDirty = false;
 let _cloudRevision = 0;
 let _cloudFlushPromise = Promise.resolve();
@@ -2717,6 +2745,10 @@ export function getQuestBoard(date=new Date()){
 export function claimProfileQuest(id,date=new Date()){
   const result=claimQuest(profile,id,date);
   if(result.ok){
+    if(_survivalRewards?.active){
+      _survivalRewards.questScraps+=result.scraps||0;
+      _survivalRewards.questClaims++;
+    }
     saveProfile();
     const reward=result.skin?result.skin.id.toUpperCase()+' · '+result.skin.weapon:
       result.scraps+' Scraps';
@@ -2773,7 +2805,8 @@ function _deepMerge(base, override) {
 
 // ── XP ────────────────────────────────────────────────────────
 export function awardXp(amount) {
-  if (amount<=0) return [];
+  if (!Number.isFinite(amount)||amount<=0) return [];
+  if(_survivalRewards?.active)_survivalRewards.accountXp+=amount;
   profile.totalXp+=amount;
   const oldLevel=profile.level;
   profile.level=levelFromTotalXp(profile.totalXp);
@@ -2891,6 +2924,7 @@ export function emitEvent(eventName, payload) {
           const wxp = ((WEAPON_XP_GRANTS[botType] || 8) * xpMult);
           const maxWeaponXp=WEAPON_LEVEL_THRESHOLDS.at(-1);
           const baseCap=Math.max(0,maxWeaponXp-(_shopWallet.xpBonuses[weaponKey]||0));
+          const beforeEarned=Math.max(0,Number(s.weaponXp[weaponKey])||0);
           if(botType==='arena'||source==='ARENA'){
             // Offline competitive bots grant weapon XP, but never Survival's
             // overflow-to-Scraps reward. Respect direct-applied shop XP too.
@@ -2899,13 +2933,16 @@ export function emitEvent(eventName, payload) {
           }else if(botType!=='pvp' && source!=='PVP' && source!=='ENVIRONMENT'){
             // Bought XP reduces remaining base XP space; overflow still
             // converts to Scraps only when earned in genuine Survival PvE.
-            convertMaxedWeaponXp(profile,weaponKey,wxp,baseCap);
+            const converted=convertMaxedWeaponXp(profile,weaponKey,wxp,baseCap);
+            _rewardConvertedScraps(weaponKey,converted);
           }else{
             // PvP currency conversion is disabled until server-authoritative
             // kill validation and signed economy events are in place.
             s.weaponXp[weaponKey]=(s.weaponXp[weaponKey]||0)+wxp;
           }
 
+          if(botType!=='arena'&&source!=='ARENA'&&botType!=='pvp'&&source!=='PVP')
+            _rewardWeaponXp(weaponKey,Math.max(0,(Number(s.weaponXp[weaponKey])||0)-beforeEarned));
           const newWepLevel = getWeaponLevel(weaponKey);
           if (newWepLevel > prevWepLevel) {
               _showWeaponLevelUpToast(weaponKey, newWepLevel);
