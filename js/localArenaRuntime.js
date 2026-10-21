@@ -8,7 +8,7 @@ import {rebuildMeshMap} from './enemies.js';
 import {awardXp,recordKill,recordDamage} from './progression.js';
 import {resolveKillAttribution,SPECIAL_KILL_WEAPONS} from './killAttribution.js';
 import {fetchArenaPersonas,createArenaActor,destroyArenaActors,
-  chooseArenaSpawn,setArenaActorWeapon,killArenaActor,respawnArenaActor,
+  chooseArenaSpawn,setArenaActorWeapon,killArenaActor,flashArenaActor,respawnArenaActor,
   updateArenaActors,getArenaActorWeaponSpec} from './localArenaActors.js';
 const BABYLON=window.BABYLON;
 let active=null,hud=null,tags=[],generation=0,tagSerial=0;
@@ -193,6 +193,7 @@ export function localArenaActorHit(actor,dmg,source='PLAYER',weaponOverride=null
  if(['tdm','killConfirmed'].includes(active.state.mode)&&actor.team==='RED')return;
  const dealt=Math.min(actor.hp,Math.min(500,dmg));
  actor.hp=Math.max(0,actor.hp-dealt);
+ flashArenaActor(actor);
  if(credit.weaponKey)recordDamage(credit.weaponKey,dealt,'ARENA');
  if(actor.hp===0)onActorKilled(actor,'human',credit.weaponKey,credit.killMethod);
 }
@@ -234,6 +235,7 @@ function botImpact(shooter,victim,damage,weapon,method='DIRECT'){
  if(victim){
   if(!victim.alive)return;
   victim.hp=Math.max(0,victim.hp-damage);
+  flashArenaActor(victim);
   if(victim.hp===0)onActorKilled(victim,shooter,weapon,method);
  }else if(!active.playerDead){
   active.lastAttacker=shooter;
