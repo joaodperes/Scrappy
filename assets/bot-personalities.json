@@ -304,6 +304,25 @@
           }
         }
       }
+    },
+    {
+      "id": "minotaur",
+      "name": "Minotaur",
+      "role": "defense",
+      "aggression": 0.76,
+      "aim": 0.56,
+      "reactionMs": 550,
+      "preferredRange": 17,
+      "skin": "oni",
+      "loadout": {
+        "primary": "CHAINGUN",
+        "secondary": "PISTOL",
+        "attachments": {
+          "CHAINGUN": {
+            "special": "spinning_module"
+          }
+        }
+      }
     }
   ]
 }
