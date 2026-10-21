@@ -6,6 +6,8 @@ import { WDEFS } from './weapons.js';
 import { crossedMilestone, notificationKey, upgradeNotificationHistory } from './milestoneNotifications.js';
 import { questDefinitions, ensureQuestState, trackQuestEvent, questProgress, claimQuest, convertMaxedWeaponXp } from './questRules.js';
 import {SHOP_ITEMS,normalizeShopWallet,shopAvailableScraps,purchaseShopItem} from './shopRules.js';
+import {reconcileProfile,importLegacyProfile} from './profileSyncRules.js';
+import {acquireGameSession,releaseGameSession,activeGameSession,clearSessionOnSignOut} from './profileSession.js';
 let _shopWallet=normalizeShopWallet(null),_shopReady=false;
 
 const XP_BASE = 200, XP_EXP = 1.4;
@@ -2424,51 +2426,173 @@ const EXCLUSIONS_TO_TRACK = [...new Set(
 
 export let profile = _defaultProfile();
 
-// ── Firebase cross-session persistence ────────────────────────
-let _fbReady = false;
-
-export function initFirebaseAuth() {
-  if (typeof firebase === 'undefined') return;
-  
-  firebase.auth().onAuthStateChanged(async (user) => {
-    if (user) {
-      _fbReady = true;
-      const uid = user.uid;
-
-      // SECURITY CHECK: If the local cached profile belongs to a DIFFERENT Firebase user, wipe it immediately!
-      if (profile.firebaseUid && profile.firebaseUid !== uid) {
-          console.log('[progression] Different user detected. Wiping local profile.');
-          Object.assign(profile, _defaultProfile()); // Reset to defaults
-          _shopWallet=normalizeShopWallet(null);_shopReady=false;
-      }
-
-      const cloudProfile = await _loadFromFirestore(uid);
-
-      if (cloudProfile) {
-        // We have cloud data. Prefer the cloud data unless local is strictly verified as ahead for this exact UID.
-        if (profile.totalXp > cloudProfile.totalXp && profile.firebaseUid === uid) {
-            await _saveToFirestore();
-        } else {
-            profile = _deepMerge(_defaultProfile(), cloudProfile);
-            profile.firebaseUid = uid;
-            _sanitizeUnlocks();
-            _primeProgressNoticeHistory();
-            _saveToLocalStorage();
-            //console.log('[progression] Cross-session profile restored from cloud');
-        }
-      } else {
-        // Brand new cloud account. 
-        profile.firebaseUid = uid;
-        _primeProgressNoticeHistory();
-        await _saveToFirestore();
-        _saveToLocalStorage();
-        //console.log('[progression] New cloud profile created');
-      }
-      await refreshProfileShopWallet(uid);
-    } else {
-      _fbReady = false;_shopWallet=normalizeShopWallet(null);_shopReady=false;
-    }
-  });
+// Firestore is the canonical profile. Browser storage holds only a pending
+// change/recovery journal tied to a single authenticated Google UID.
+const RECOVERY_PREFIX='scrappy_pending_sync_v1:';
+const _copy=value=>value===undefined?undefined:JSON.parse(JSON.stringify(value));
+let _fbReady=false,_profileLoadedUid=null,_profileLoadError=null;
+let _cloudBase=null,_recovery=null,_legacyCache=null,_authEpoch=0;
+let _cloudSyncTimer=null;
+const _profileReadyWaiters=[];
+const _sameGoogleUser=uid=>typeof firebase!=='undefined'&&
+  firebase.auth().currentUser?.uid===uid;
+function _resolveProfileReady(uid,error=null){
+ for(let i=_profileReadyWaiters.length-1;i>=0;i--){
+  const wait=_profileReadyWaiters[i];
+  if(wait.uid!==uid)continue;
+  _profileReadyWaiters.splice(i,1);
+  clearTimeout(wait.timer);
+  if(error)wait.reject(error);else wait.resolve();
+ }
+}
+export function waitForProfileReady(uid=firebase?.auth?.()?.currentUser?.uid){
+ if(!uid)return Promise.reject(new Error('Sign in with Google first.'));
+ if(_profileLoadedUid===uid)return Promise.resolve();
+ if(_profileLoadError)return Promise.reject(_profileLoadError);
+ return new Promise((resolve,reject)=>{
+  const wait={uid,resolve,reject,timer:null};
+  wait.timer=setTimeout(()=>{
+   const index=_profileReadyWaiters.indexOf(wait);
+   if(index>=0)_profileReadyWaiters.splice(index,1);
+   reject(new Error('The Google profile did not load. Check your connection.'));
+  },15000);
+  _profileReadyWaiters.push(wait);
+ });
+}
+function _recoveryKey(uid){return RECOVERY_PREFIX+uid}
+function _readRecovery(uid){
+ try{
+  const data=JSON.parse(localStorage.getItem(_recoveryKey(uid))||'null');
+  return data?.uid===uid&&data.base&&data.profile&&data.id?data:null;
+ }catch{return null}
+}
+function _saveRecovery(){
+ if(!_recovery||!_recovery.uid)return;
+ try{localStorage.setItem(_recoveryKey(_recovery.uid),JSON.stringify(_recovery))}
+ catch(err){console.warn('[profile] Recovery buffer unavailable',err)}
+}
+function _forgetRecovery(uid){
+ if(!uid)return;
+ try{localStorage.removeItem(_recoveryKey(uid))}catch{}
+ if(_recovery?.uid===uid)_recovery=null;
+}
+function _profileCaps(wallet=_shopWallet){
+ const caps={};
+ for(const [gun,bonus]of Object.entries(wallet?.xpBonuses||{}))
+  caps[gun]=Math.max(0,WEAPON_LEVEL_THRESHOLDS.at(-1)-(Number(bonus)||0));
+ return caps;
+}
+function _mergeProgress(base,local,cloud,wallet=_shopWallet){
+ return reconcileProfile(base,local,cloud,{
+  levelForXp:levelFromTotalXp,weaponXpCaps:_profileCaps(wallet)});
+}
+function _restoreCloudProfile(uid,remote,receipts={}){
+ // The journal contains only changes since its baseline; do not compare
+ // entire old browser profiles by XP or upload stale snapshots at login.
+ const baseline=_deepMerge(_defaultProfile(),{...remote,firebaseUid:uid});
+ let recovered=baseline;
+ _recovery=_readRecovery(uid);
+ if(_recovery){
+  const recorded=Number(receipts[_recovery.id]||0);
+  if(recorded>=_recovery.version){
+   _forgetRecovery(uid);
+  }else{
+   const savedBase=_recovery.inFlight&&recorded>=_recovery.inFlight.version
+     ?_recovery.inFlight.profile:_recovery.base;
+   recovered=_mergeProgress(savedBase,_recovery.profile,baseline);
+   _recovery={..._recovery,base:_copy(baseline),
+     profile:_copy(recovered),inFlight:null};
+   _saveRecovery();
+  }
+ }else if(_legacyCache?.firebaseUid===uid){
+  // One-time migration from the old full local profile. Because the old
+  // format has no baseline, take max/union rather than adding unknown XP.
+  recovered=importLegacyProfile(_legacyCache,baseline);
+ }
+ _cloudBase=_copy(baseline);
+ profile=_deepMerge(_defaultProfile(),recovered);
+ profile.firebaseUid=uid;
+ _sanitizeUnlocks();_primeProgressNoticeHistory();
+ const hasPending=!!_recovery||
+   JSON.stringify(profile)!==JSON.stringify(baseline);
+ _cloudDirty=hasPending;
+ if(hasPending){
+  if(!_recovery)_recovery={uid,id:_newSyncId(),version:1,
+    base:_copy(baseline),profile:_copy(profile),inFlight:null};
+  _saveRecovery();
+ }
+ // Retire the old unscoped full-profile cache only once Firestore loaded.
+ try{localStorage.removeItem(STORAGE_KEY)}catch{}
+ _legacyCache=null;
+}
+function _newSyncId(){
+ const bytes=new Uint8Array(16);
+ crypto.getRandomValues(bytes);
+ return Array.from(bytes,x=>x.toString(16).padStart(2,'0')).join('');
+}
+export function getProfileSyncStatus(){
+ return !_fbReady?'offline':_cloudDirty?'pending':'saved';
+}
+export async function startProfileGameSession(onLost){
+ const uid=firebase?.auth?.()?.currentUser?.uid;
+ await waitForProfileReady(uid);
+ if(!_sameGoogleUser(uid))throw new Error('Google account changed.');
+ const state=await acquireGameSession({
+  onLost,
+  onBeforeHandoff:()=>flushProfileToCloud(),
+ });
+ if(state.profile){
+  _restoreCloudProfile(uid,state.profile,state.receipts);
+  _profileLoadedUid=uid;
+ }
+ if(_cloudDirty)await flushProfileToCloud();
+ return true;
+}
+export async function stopProfileGameSession(){
+ await flushProfileToCloud();
+ await releaseGameSession();
+}
+export function initFirebaseAuth(){
+ if(typeof firebase==='undefined')return;
+ firebase.auth().onAuthStateChanged(async user=>{
+  const epoch=++_authEpoch;
+  _profileLoadError=null;
+  if(!user){
+   _fbReady=false;_shopWallet=normalizeShopWallet(null);_shopReady=false;
+   clearSessionOnSignOut();
+   _profileLoadedUid=null;_cloudBase=null;_recovery=null;
+   profile=_defaultProfile();
+   return;
+  }
+  const uid=user.uid;
+  _fbReady=false;_profileLoadedUid=null;
+  try{
+   const ref=firebase.firestore().collection('player_profiles').doc(uid);
+   // Create a fresh profile only after a successful server transaction.
+   // Network failure must never be interpreted as 'new account'.
+   const initial=await firebase.firestore().runTransaction(async tx=>{
+    const snapshot=await tx.get(ref);
+    const data=snapshot.data()||{};
+    if(data.profile)return {profile:data.profile,receipts:data.profileSyncReceipts||{}};
+    const first={..._defaultProfile(),firebaseUid:uid};
+    tx.set(ref,{profile:first,
+      updated_at:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
+    return {profile:first,receipts:{}};
+   });
+   if(epoch!==_authEpoch||!_sameGoogleUser(uid))return;
+   _fbReady=true;
+   _restoreCloudProfile(uid,initial.profile,initial.receipts);
+   _profileLoadedUid=uid;
+   _resolveProfileReady(uid);
+   await refreshProfileShopWallet(uid);
+   if(_cloudDirty)_scheduleCloudSync();
+  }catch(err){
+   if(epoch!==_authEpoch)return;
+   _profileLoadError=new Error('Cannot load your Google cloud profile. Reconnect and reload.');
+   console.error('[profile] Cloud load failed',err);
+   _resolveProfileReady(uid,_profileLoadError);
+  }
+ });
 }
 
 // The shop ledger sits beside the normal "profile" map on the SAME
