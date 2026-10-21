@@ -121,6 +121,10 @@ function finish(){
  if(!isActive())return;
  active.finished=true;
  const {onFinish,state}=active;
+ // Only completed victorious offline matches grant a fixed account-XP
+ // bonus. The guard above guarantees exactly one award per match; no
+ // currency or Survival quest credit is created by this reward.
+ if(state.complete&&state.result==='VICTORY')awardXp(80);
  stopLocalArena();
  onFinish?.(state);
 }
