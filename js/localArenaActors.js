@@ -80,8 +80,9 @@ function gunVisual(actor,weapon){
 export function setArenaActorWeapon(actor,weapon){
  const id=WDEFS[weapon]?weapon:'PISTOL';
  if(actor.weapon===id&&actor.gunModel)return;
- actor.weapon=id;actor.ammo=Math.max(1,WDEFS[id].magSize||30);
- actor.reload=0;gunVisual(actor,id);
+ actor.weapon=id;
+ actor.ammo=WDEFS[id].useHeat?Infinity:Math.max(1,WDEFS[id].magSize||30);
+ actor.heat=0;actor.reload=0;gunVisual(actor,id);
 }
 export function chooseArenaSpawn(existing=[],playerPosition=camera.position){
  const spawns=getWalkableSpawns(getCurrentMap());
@@ -128,7 +129,9 @@ export function respawnArenaActor(actor,spawn){
  actor.cooldown=.75;actor.reload=0;actor.respawnIn=0;actor.targetId=null;
  // setArenaActorWeapon is intentionally a no-op when the model already holds
  // that weapon. Reload it explicitly on respawn, including Gun Game rungs.
- actor.ammo=Math.max(1,WDEFS[actor.weapon]?.magSize||30);
+ const spec=WDEFS[actor.weapon]||WDEFS.PISTOL;
+ actor.ammo=spec.useHeat?Infinity:Math.max(1,spec.magSize||30);
+ actor.heat=0;
  actor._dots=[];actor._poisonDots=[];
  actor.pathCursor=null;actor.walkClock=0;actor.reaction=0;
  actor.tagTargetId=null;actor.tagScanClock=0;
@@ -198,11 +201,18 @@ function pickTarget(actor,actors,mode,humanAlive){
  }
  return found;
 }
-export function updateArenaActors(actors,dt,mode,{humanAlive=true,onShot,onRespawn,objectives=[]}={}){
+export function updateArenaActors(actors,dt,mode,
+ {humanAlive=true,onShot,onRespawn,objectives=[],isMatchActive=()=>true}={}){
+ if(!Number.isFinite(dt)||dt<=0)return;
  for(const a of actors){
+  // The final elimination may dispose the actor meshes from onShot.
+  if(!isMatchActive())break;
   if(!a.alive){a.respawnIn-=dt;if(a.respawnIn<=0)onRespawn?.(a);continue}
   a.cooldown=Math.max(0,a.cooldown-dt);
   a.reload=Math.max(0,a.reload-dt);
+  const held=WDEFS[a.weapon]||WDEFS.PISTOL;
+  if(held.useHeat)
+    a.heat=Math.max(0,(a.heat||0)-Math.max(0,held.coolRate||0)*dt);
   // A non-Gun-Game bot has the same primary/sidearm distinction as a
   // human loadout. Switch to its equipped Pistol when the primary magazine
   // runs empty; Gun Game must never bypass its current ladder weapon.
@@ -211,6 +221,15 @@ export function updateArenaActors(actors,dt,mode,{humanAlive=true,onShot,onRespa
       WDEFS[a.persona.loadout?.secondary]&&
       a.persona.loadout.secondary!==a.weapon){
     setArenaActorWeapon(a,a.persona.loadout.secondary);
+  }else if(mode!=='gunGame'&&a.ammo<=0&&
+      a.weapon===a.persona.loadout?.secondary&&
+      WDEFS[a.persona.loadout?.primary]&&
+      a.persona.loadout.primary!==a.weapon){
+    // After the sidearm is exhausted, rearm the primary instead of remaining
+    // on a permanently refilling Pistol for the rest of the match.
+    const primary=a.persona.loadout.primary;
+    setArenaActorWeapon(a,primary);
+    a.reload=Math.max(.7,WDEFS[primary].reloadTime||1.4);
   }
   const goal=mode==='killConfirmed'?reachableArenaTag(a,objectives,dt):null;
   const target=goal?{id:'tag_'+goal.id,actor:null,point:goal.mesh.position.clone(),visible:true,
@@ -269,19 +288,41 @@ export function updateArenaActors(actors,dt,mode,{humanAlive=true,onShot,onRespa
   if(target.objective||a.reload>0||a.reaction>0||a.cooldown>0||!target.visible)continue;
   const distance=B.Vector3.Distance(own.add(new B.Vector3(0,1.5,0)),targetPos);
   if(distance>(spec.range||55)||distance>110)continue;
-  if(a.ammo<=0){a.reload=Math.max(.7,spec.reloadTime||1.4);a.ammo=Math.max(1,spec.magSize||30);continue}
-  a.ammo--;a.cooldown=Math.max(.16,(spec.cd||.35)*(1.3-(a.persona.aggression||.5)*.3));
+  if(a.ammo<=0){
+    a.reload=Math.max(.7,spec.reloadTime||1.4);
+    a.ammo=Math.max(1,spec.magSize||30);
+    continue;
+  }
+  // Heat weapons have no magazine. Convert WDEFS' fractional heat-per-shot
+  // into its maxHeat scale, and let coolRate dissipate it over real time.
+  if(spec.useHeat){
+    const maxHeat=spec.maxHeat||100;
+    const cost=(spec.heatPerShot||0)*maxHeat;
+    if((a.heat||0)+cost>maxHeat+1e-6)continue;
+    a.heat=(a.heat||0)+cost;
+  }
+  // COMET and other burst guns spend the correct number of rounds per
+  // trigger, and approximate their grouped impacts as one scored hit.
+  const rounds=spec.useHeat?1:Math.min(a.ammo,Math.max(1,spec.burstCount||1));
+  if(!spec.useHeat)a.ammo-=rounds;
+  a.cooldown=Math.max(.08,(spec.cd||.35)*(1.3-(a.persona.aggression||.5)*.3));
   const chance=clamp(.34+(a.persona.aim||.6)*.65-distance*.004,.12,.9);
-  if(Math.random()>chance)continue;
-  const raw=spec.dmg*(a.weapon==='SHOTGUN'?.75:1);
-  const dmg=clamp(raw,1,110);
+  const hit=Math.random()<=chance;
+  const endpoint=hit?targetPos:targetPos.add(new B.Vector3(
+    (Math.random()-.5)*3,(Math.random()-.5)*1.2,(Math.random()-.5)*3));
+  // Missed fire is still visible: do not render a tracer only on damage.
   const muzzle=own.add(new B.Vector3(0,1.45,0));
   const tracer=B.MeshBuilder.CreateLines('arena_fire_'+a.id,
-    {points:[muzzle,targetPos]},scene);
+    {points:[muzzle,endpoint]},scene);
   tracer.isPickable=false;
   tracer.color=a.team==='RED'
     ?new B.Color3(1,.40,.27):new B.Color3(.27,.68,1);
   setTimeout(()=>{if(!tracer.isDisposed?.())tracer.dispose()},110);
+  if(!hit)continue;
+  const pelletFactor=a.weapon==='SHOTGUN'
+    ?clamp(2.5-distance/Math.max(1,spec.range||25)*1.5,1,2.5):1;
+  const raw=(Number.isFinite(spec.dmg)?spec.dmg:0)*rounds*pelletFactor;
+  const dmg=clamp(raw,1,110);
   onShot?.(a,target.actor,dmg,a.weapon,targetPos.clone());
  }
 }
