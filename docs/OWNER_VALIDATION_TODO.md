@@ -130,3 +130,16 @@ The following checks are deferred to the owner's later playtest, not claims of s
 - [ ] Claim the same completed quest concurrently from two browsers; exactly one reward transaction succeeds. Verify Google account switch and no profile/recovery inheritance.
 - [ ] Confirm cloud status displays Saved only after acknowledged upload, Pending while buffered, and that a network error does not initialize a fresh zero-XP profile. Verify browser close/reopen recovery on Firefox and Chromium.
 - [ ] Confirm deployed Firestore account-owner rules allow the new session and receipt fields without granting other accounts read/write access. Measure Spark quota impact. Do not deploy rule changes without approval.
+
+## October 22 owner priority playtest — last code checkpoint
+
+These are **not marked passed**. Source builds and CI do not replace browser acceptance.
+
+- [ ] **Five Jungle ramps:** starting on both surface entrances, descend and return via M1→M2→M3→M4 without jumping; inspect lava collisions, all four boundary sides, underground roofs and the Lantern/NVG visual contrast. Also ensure bots can use the same routes.
+- [ ] **Moon Base:** walk all four ground-to-ring ramps and four ring-to-floater guarded ramps. Collect all four floater HP/armor markers, visit the raised high platforms with jetpack, and confirm enemies path without hovering or clipping.
+- [ ] **Five local bots:** repeat FFA, TDM, Gun Game and Kill Confirmed on every map. Observe varied 17 bot personas, all regular firearms, team-safe gunfire, Aegis multi-paint, Plasma burst/sniper cycle, spin-up Chaingun, rocket/grenade projectiles, and Knife finale animation/sound/hit timing. Spot-check result XP/score and no double deaths/tags.
+- [ ] **Survival & economy:** test Normal/Hard/Nightmare, earned Survival Gear ranks and equipment, max-rank weapon-XP-to-Scraps conversion, daily/weekly quest claims, duplicate-collector payouts, cosmetic and XP shop purchases across reloads, including negative/unavailable currency states.
+- [ ] **Cloud profile:** Browser A running then B logging in **without Play** must leave A alone. B pressing Play transfers active game session; A flushes pending progress and receives a notice. Repeat with A disconnected and verify UID recovery once the account is active again. Check logout/account switch, Firestore rules, and no duplicate claims/purchases.
+- [ ] **Regression:** load the editor and import/export each map, check glass/walls/barrels, Sniper Aegis ADS, select/unselect Knife and skins, close/restart after a match, and capture browser-console errors.
+
+Automated source checks added: `scripts/jungle-ramp-topology.test.cjs`, `scripts/moon-platform-topology.test.cjs`, `scripts/bot-personality-coverage.test.cjs`, alongside prior profile, mode, weapon, quest and shop suites. CI on the last branch HEAD must be green.
