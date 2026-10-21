@@ -107,7 +107,10 @@ export function createArenaActor(persona,team,spawn,index){
  const actor={id,name:persona.name,persona,team,group,mats,label,alive:true,
   hp:100,maxHp:100,arenaActor:true,weapon:null,gunModel:null,
   score:0,kills:0,deaths:0,cooldown:.8+index*.13,reload:0,ammo:0,
-  respawnIn:0,targetId:null,reaction:0,walkClock:0,pathCursor:null};
+  respawnIn:0,targetId:null,reaction:0,walkClock:0,pathCursor:null,
+  pathPoints:null,walkPhase:0,recoil:0,
+  limbs:{arms:group.getChildMeshes().filter(m=>m.name.startsWith('arena_arm_')),
+    legs:group.getChildMeshes().filter(m=>m.name.startsWith('arena_leg_'))}};
  setArenaActorWeapon(actor,persona.loadout?.primary||'PISTOL');
  registerArenaTarget(actor);
  return actor;
@@ -131,7 +134,8 @@ export function respawnArenaActor(actor,spawn){
  // that weapon. Reload it explicitly on respawn, including Gun Game rungs.
  const spec=WDEFS[actor.weapon]||WDEFS.PISTOL;
  actor.ammo=spec.useHeat?Infinity:Math.max(1,spec.magSize||30);
- actor.heat=0;
+ actor.heat=0;actor.recoil=0;actor.walkPhase=0;
+ for(const limb of [...(actor.limbs?.arms||[]),...(actor.limbs?.legs||[])])limb.rotation.x=0;
  actor._dots=[];actor._poisonDots=[];
  actor.pathCursor=null;actor.pathPoints=null;actor.walkClock=0;actor.reaction=0;
  actor.tagTargetId=null;actor.tagScanClock=0;
@@ -209,6 +213,8 @@ export function updateArenaActors(actors,dt,mode,
   if(!isMatchActive())break;
   if(!a.alive){a.respawnIn-=dt;if(a.respawnIn<=0)onRespawn?.(a);continue}
   a.cooldown=Math.max(0,a.cooldown-dt);
+  a.recoil=Math.max(0,(a.recoil||0)-dt*4);
+  if(a.gunModel)a.gunModel.position.z=.38-(a.recoil||0)*.15;
   a.reload=Math.max(0,a.reload-dt);
   const held=WDEFS[a.weapon]||WDEFS.PISTOL;
   if(held.useHeat)
@@ -240,6 +246,7 @@ export function updateArenaActors(actors,dt,mode,
    a.pathPoints=null;a.pathCursor=null;a.walkClock=0;}
   a.reaction=Math.max(0,a.reaction-dt);
   const own=a.group.position,targetPos=target.point;
+  const previous=own.clone();
   const dx=targetPos.x-own.x,dz=targetPos.z-own.z;
   const flat=Math.hypot(dx,dz);
   if(flat>.01)a.group.rotation.y=Math.atan2(dx,dz);
@@ -291,6 +298,14 @@ export function updateArenaActors(actors,dt,mode,
     }
    }
   }
+  // Lightweight walk cycle: limbs move only when the navmesh step succeeds.
+  const movement=Math.hypot(own.x-previous.x,own.z-previous.z);
+  a.walkPhase=(a.walkPhase||0)+movement*6.5;
+  const swing=movement>.005?Math.min(.42,movement/Math.max(dt,.01)*.10):0;
+  for(const [index,leg] of (a.limbs?.legs||[]).entries())
+   leg.rotation.x=Math.sin(a.walkPhase+index*Math.PI)*swing;
+  for(const [index,arm] of (a.limbs?.arms||[]).entries())
+   arm.rotation.x=-Math.sin(a.walkPhase+index*Math.PI)*swing*.65;
   const spec=WDEFS[a.weapon]||WDEFS.PISTOL;
   if(target.objective||a.reload>0||a.reaction>0||a.cooldown>0||!target.visible)continue;
   const distance=B.Vector3.Distance(own.add(new B.Vector3(0,1.5,0)),targetPos);
@@ -312,6 +327,7 @@ export function updateArenaActors(actors,dt,mode,
   // trigger, and approximate their grouped impacts as one scored hit.
   const rounds=spec.useHeat?1:Math.min(a.ammo,Math.max(1,spec.burstCount||1));
   if(!spec.useHeat)a.ammo-=rounds;
+  a.recoil=1;
   a.cooldown=Math.max(.08,(spec.cd||.35)*(1.3-(a.persona.aggression||.5)*.3));
   const chance=clamp(.34+(a.persona.aim||.6)*.65-distance*.004,.12,.9);
   const hit=Math.random()<=chance;
