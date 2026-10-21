@@ -7,12 +7,20 @@ const read=p=>fs.readFileSync(path.join(root,p),'utf8')
  .replace(/^export\s+/gm,'');
 const source=read('js/killAttribution.js')+'\n'+read('js/localArenaRules.js')+'\n'+read('js/localArenaRuntime.js');
 const vec=(x=0,y=0,z=0)=>({x,y,z,clone(){return vec(this.x,this.y,this.z)},
- copyFrom(p){this.x=p.x;this.y=p.y;this.z=p.z}});
+ copyFrom(p){this.x=p.x;this.y=p.y;this.z=p.z},
+ add(p){return vec(this.x+p.x,this.y+p.y,this.z+p.z)},
+ subtract(p){return vec(this.x-p.x,this.y-p.y,this.z-p.z)},
+ scale(n){return vec(this.x*n,this.y*n,this.z*n)},
+ length(){return Math.hypot(this.x,this.y,this.z)}});
 function harness(){
  const actors=[],guns=[],timers=[],elements=[],tags=[];
+ const awards=[],kills=[],damages=[];
  const B={
   Color3:class{constructor(r,g,b){this.r=r;this.g=g;this.b=b}},
-  Vector3:{Distance:(a,b)=>Math.hypot(a.x-b.x,a.y-b.y,a.z-b.z)},
+  Vector3:class{
+   constructor(x=0,y=0,z=0){Object.assign(this,vec(x,y,z))}
+   static Distance(a,b){return Math.hypot(a.x-b.x,a.y-b.y,a.z-b.z)}
+  },
   MeshBuilder:{CreateCylinder:()=>{const mesh={
     position:vec(),rotation:{y:0},dispose(){this.disposed=true}
    };tags.push(mesh);return mesh}},
@@ -29,10 +37,10 @@ function harness(){
  }));
  const context={
   window:{BABYLON:B},BABYLON:B,document,camera,scene:{},inventory:[],WDEFS:{PISTOL:{},SMG:{},SHOTGUN:{},KNIFE:{}},
-  curWep:'PISTOL',setActiveSlot(){},setWeapon(w){this.curWep=w;guns.push(['human',w])},
-  awards:[],kills:[],damages:[],awardXp(n){this.awards.push(n)},
-  recordKill(type,w,opts){this.kills.push({type,w,opts})},
-  recordDamage(w,d){this.damages.push({w,d})},
+  curWep:'PISTOL',setActiveSlot(){},setWeapon(w){context.curWep=w;guns.push(['human',w])},
+  awards,kills,damages,awardXp(n){awards.push(n)},
+  recordKill(type,w,opts){kills.push({type,w,opts})},
+  recordDamage(w,d){damages.push({w,d})},
   fetchArenaPersonas:()=>Promise.resolve(profiles),
   chooseArenaSpawn:()=>vec(10+idx*3,0,0),
   createArenaActor:(persona,team,pos)=>{
