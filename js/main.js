@@ -244,6 +244,13 @@ function startGame(startWave = 0, difficulty = 'normal', localMode = null) {
             ' · XP +'+earned+' (KILLS +'+eliminationXp+
             ', PARTICIPATION +'+participation+', VICTORY +'+victory+')'+
             ' · SCRAPS +0 (ARENA)';
+          const rivals=(state.participants||[]).slice(0,5)
+            .map(a=>a.name+' ['+a.team+'] '+a.kills+' K / '+a.deaths+' D')
+            .join('  ·  ');
+          if(rivals){
+            scores.style.whiteSpace='pre-line';
+            scores.textContent+='\nBOT SCOREBOARD: '+rivals;
+          }
         }
       },damage=>hurtPlayer(damage));
       updateHUD();
