@@ -468,7 +468,13 @@ export function updateArenaActors(actors,dt,mode,
   if(!hit)continue;
   const pelletFactor=a.weapon==='SHOTGUN'
     ?clamp(2.5-distance/Math.max(1,spec.range||25)*1.5,1,2.5):1;
-  const raw=(Number.isFinite(spec.dmg)?spec.dmg:0)*rounds*pelletFactor;
+  // Use the same distance falloff and competitive damage tuning declared
+  // in WDEFS instead of applying full point-blank damage at max range.
+  const range=Math.max(1,spec.range||55);
+  const falloff=clamp(1-Math.max(0,spec.falloff||0)*(distance/range),.2,1);
+  const competitive=clamp(spec.pvpDmgMult||1,.1,2);
+  const raw=(Number.isFinite(spec.dmg)?spec.dmg:0)*rounds*
+    pelletFactor*falloff*competitive;
   const dmg=clamp(raw,1,110);
   onShot?.(a,target.actor,dmg,a.weapon,targetPos.clone());
  }
