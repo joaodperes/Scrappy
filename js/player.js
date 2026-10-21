@@ -1100,9 +1100,11 @@ export function updatePlayer(dt, gameRunning, paused) {
               _jetpackOverheated = true; // Lock the jetpack
           }
           
-          import('./particles.js').then(({ spawnSparks }) => {
-              spawnSparks(new BABYLON.Vector3(_playerBody.position.x, _playerBody.position.y - PH + 0.1, _playerBody.position.z), 0x00ffff, 2);
-          });
+          // Already imported above: avoid scheduling a module Promise every
+          // active jetpack frame on Moon Base.
+          spawnSparks(new BABYLON.Vector3(
+            _playerBody.position.x,_playerBody.position.y-PH+0.1,
+            _playerBody.position.z),0x00ffff,2);
       } else {
           jetpackHeat = Math.max(0, jetpackHeat - dt * 0.25); // Cools down in 4s
           if (jetpackHeat <= 0) {
