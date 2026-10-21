@@ -233,12 +233,26 @@ export function updateArenaActors(actors,dt,mode,
    a._hopY+=a._yVel*dt;
    const air=new B.Vector3((a._airVX||0)*dt,0,(a._airVZ||0)*dt);
    if(air.lengthSquared()>0){
-    const dir=air.normalize();
+    const dir=air.clone().normalize();
     const collision=scene.pickWithRay(new B.Ray(
       a.group.position.add(new B.Vector3(0,1.2,0)),dir,air.length()+.5),
       m=>m.isEnabled()&&m.checkCollisions&&!m.metadata?.arenaActorId&&!m.metadata?.enemy);
     if(!collision?.hit){
      a.group.position.x+=air.x;a.group.position.z+=air.z;
+    }
+   }
+   // Descending actors can land on a HIGHER platform before returning to
+   // the launch floor; check solid top surfaces, not a fixed takeoff height.
+   if(a._yVel<=0&&a._hopY>0){
+    const altitude=a._floorY+a._hopY;
+    const ground=scene.pickWithRay(new B.Ray(
+      new B.Vector3(a.group.position.x,altitude+.45,a.group.position.z),
+      new B.Vector3(0,-1,0),.8),
+      m=>m.isEnabled()&&m.checkCollisions&&!m.metadata?.arenaActorId&&!m.metadata?.enemy);
+    if(ground?.hit&&ground.pickedPoint?.y>a._floorY+1&&
+       ground.pickedPoint.y<=altitude+.2){
+      a._floorY=ground.pickedPoint.y;
+      a._hopY=0;a._yVel=0;
     }
    }
    if(a._hopY<=0){
@@ -294,7 +308,7 @@ export function updateArenaActors(actors,dt,mode,
   let transitionTarget=null;
   const targetFeet=new B.Vector3(targetPos.x,
     targetPos.y-(target.objective?.65:1.55),targetPos.z);
-  try{transitionTarget=botTravelTarget(a,targetFeet,navPlugin,jumpPads,
+  if(a._hopY<=0)try{transitionTarget=botTravelTarget(a,targetFeet,navPlugin,jumpPads,
     window._movingPlatforms||[],dt)}catch{}
   const travelTarget=transitionTarget||targetFeet;
   a.walkClock-=dt;
