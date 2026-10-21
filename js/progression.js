@@ -2591,6 +2591,7 @@ export function initFirebaseAuth(){
    _restoreCloudProfile(uid,initial.profile,initial.receipts);
    _profileLoadedUid=uid;
    _resolveProfileReady(uid);
+   window.refreshMenuUI?.();
    await refreshProfileShopWallet(uid);
    if(_cloudDirty)_scheduleCloudSync();
   }catch(err){
