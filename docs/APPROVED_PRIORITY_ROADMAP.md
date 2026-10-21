@@ -17,7 +17,7 @@ for later; do not gate local modes on WebSockets or Firebase paid services.
 | A | Retain already-accepted map/editor, Hard/Nightmare and Elite milestones | Regression only; avoid redesigning Scrapyard/City |
 | B | Finish Jungle and Moon Base source QA corrections; weapon categories/Knife/melee | Firefox/Chromium walkthrough, geometry, combat and editor tests |
 | C | Finish offline daily/weekly quests/Scraps, Firebase Spark transaction-safe cosmetic shop, earned PvE stats/equipment | Friends-only profile compatibility, no paid services, duplicate-purchase/claim tests |
-| D | **Local robot match modes**: Gun Game, Kill Confirmed, FFA and TDM, with bot personas/team AI | Real bot-versus-bot fights required to call FFA/TDM complete; currently the visible menu labels these **PRACTICE** because existing PvE robots only target the player |
+| D | **Local robot match modes**: Gun Game, Kill Confirmed, FFA and TDM, with bot personas/team AI | Player-shaped local bots, factions, held guns, bot-vs-bot combat, Gun Game ladders and tag scoring now exist in source; **browser/navmesh/weapon-parity QA still required** |
 | E | **Documentation cleanup in this PR**: replace stale Three.js README, reconcile local developer instructions and roadmap, audit references/assets | Run complete tests; only do safe source moves/deletions after working browser smoke checks |
 | F | Owner validates the [offline QA checklist](OWNER_VALIDATION_TODO.md), then reviews draft PR #2 | Close/merge the branch only on owner's instruction, never automatically |
 | LATER | **Separate multiplayer scope**: network rooms, PvP/FFA/TDM/Gun Game against humans, authoritative net hits, networked bots, 2-player co-op, reconnect, deployment | Do not block current offline milestones or provision paid hosting |
@@ -26,17 +26,11 @@ for later; do not gate local modes on WebSockets or Firebase paid services.
 
 - `js/localArenaRules.js` has seeded Gun Game Pistol→Knife progression,
   Kill Confirmed tag accounting, score/time goals and death/restart rules.
-- `js/localArenaRuntime.js` reuses existing single-player robot AI, local
-  map geometry and combat; spawns replacement robots, provides match HUD,
-  local Gun Game weapon switching and collectable Kill Confirmed tags.
+- `js/localArenaRuntime.js` and `js/localArenaActors.js` now spawn player-shaped local bots with persona loadouts and team/individual target selection, match HUD, player-equivalent weapon visuals, bot-vs-bot kills, per-bot Gun Game ladders, collectable/deniable Kill Confirmed tags and timed respawns.
 - `js/main.js`, `js/enemies.js` and `js/roomFlow.js` now route local
   matches without connecting to a room server.
-- **Known limitation**: present robot models target only the human, not one
-  another. As a result FFA/TDM use explicit **Practice** labels and are **not
-  accepted full game modes**. Add bot factions/team combat, kill attribution,
-  AI loadouts/player-like skins and friendly-fire rules before dropping
-  that label. Gun Game and Kill Confirmed likewise await human browser
-  testing before owner acceptance.
+- **Remaining limitations**: player-shaped bots now target each other and the human, but specialized firearm effects (heat/attachments/projectiles), stairs/jump pads and multi-floor navigation are approximations requiring real Babylon browser testing. None of the local modes is owner-accepted yet. Player special attacks are now correctly attributed, while local arena XP does not advance Survival-only daily quests.
+- **Survival gear**: `js/pveBuildPage.js` exposes earned ranks, wave-locked equipment, equip/unequip and free respec in Loadout. `js/main.js`, `js/player.js` and `js/pickups.js` apply health, armor, movement and ammo effects **only** during Survival. Firebase login/reload persistence and browser balance still need testing.
 - The pre-existing Node server prototypes and their tests stay versioned,
   but new network features and hardening must not compete with offline work.
 - The owner has also approved Firebase Spark/friends-only persistence and
