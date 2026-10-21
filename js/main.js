@@ -24,7 +24,7 @@ import { initRoomFlow, showPlayPage } from './roomFlow.js';
 import { setActiveHardWave } from './hardModeRules.js';
 import {normalizedPveBuild,pveModifiers} from './pveStatsRules.js';
 import { showLeaderboardPage } from './leaderboardPage.js';
-import { startLocalArena,stopLocalArena,isLocalArenaActive,updateLocalArena,localArenaRobotKilled,localArenaActorHit,localArenaPlayerDead } from './localArenaRuntime.js';
+import { startLocalArena,stopLocalArena,isLocalArenaActive,updateLocalArena,localArenaRobotKilled,localArenaActorHit,localArenaPlayerDead,getLocalArenaSnapshot } from './localArenaRuntime.js';
 
 let gameRunning = false;
 let paused      = false;
@@ -45,6 +45,12 @@ cb.endGame       = endGame;
 cb.showHitMarker = showHitMarker;
 cb.isGameRunning = () => gameRunning;
 cb.isPvpActive = isFfaActive;
+cb.canUseMelee = () => {
+  if(isFfaActive())return false;
+  if(!isLocalArenaActive())return true;
+  const state=getLocalArenaSnapshot()?.state;
+  return state?.mode!=='gunGame'||state.gunOrder[state.gunIndex]==='KNIFE';
+};
 cb.isPvpDead = isLocalDead;
 cb.pvpHitscan = checkFfaHitScan;
 cb.resetWeaponHeat = resetWeaponHeat;
