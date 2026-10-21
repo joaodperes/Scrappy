@@ -17,7 +17,8 @@ import { updateHUD, tickHitMarker, wireDeathSubmit, showHitMarker, hideFfaHUD } 
 import { submitScore, renderLeaderboard } from './leaderboard.js';
 import { startFfa, stopFfa, updateFfa, isFfaActive, isFfaInPreLobby, showFfaLobby, isLocalDead, togglePvpScoreboard, checkFfaHitScan } from './pvp.js';
 import { loadProfile, getLevelProgress, levelFromTotalXp, profile,
-  startSurvivalRewardLedger,stopSurvivalRewardLedger,awardXp } from './progression.js';
+  startSurvivalRewardLedger,stopSurvivalRewardLedger,awardXp,
+  startProfileGameSession,stopProfileGameSession,getProfileSyncStatus } from './progression.js';
 import { showLoadout } from './loadout.js';
 import { normalizeCompetitiveLoadout } from './weaponCategories.js';
 import { getCurrentMap, setCurrentMap, MAPS, getMapMeta, buildMap, isMapUnlocked, registerCommunityMaps } from './mapManager.js';
@@ -107,7 +108,43 @@ function _hideAllScreens() {
 }
 
 // ── Offline Survival and local robot arenas ───────────────────
-function startGame(startWave = 0, difficulty = 'normal', localMode = null) {
+function onAccountTakenOver(reason){
+  gameRunning=false;paused=false;
+  stopLocalArena();
+  if(isFfaActive())stopFfa();
+  document.exitPointerLock?.();
+  document.getElementById('hud').style.display='none';
+  document.getElementById('pauseOverlay').style.display='none';
+  _hideAllScreens();
+  const menu=document.getElementById('menuScreen');
+  if(menu)menu.className='screen visible';
+  let note=document.getElementById('sessionTakeoverNotice');
+  if(!note&&menu){
+    note=document.createElement('p');
+    note.id='sessionTakeoverNotice';
+    note.style.cssText='color:#ffcc88;background:#281c0d;border:1px solid #b18a48;padding:12px;font:13px monospace;text-align:center;max-width:600px;margin:12px auto';
+    menu.appendChild(note);
+  }
+  if(note)note.textContent=reason||'This account is now playing in another browser.';
+}
+async function startGame(startWave = 0, difficulty = 'normal', localMode = null) {
+  try{
+    await startProfileGameSession(onAccountTakenOver);
+  }catch(error){
+    gameRunning=false;
+    const menu=document.getElementById('menuScreen');
+    if(menu)menu.className='screen visible';
+    let warning=document.getElementById('startupErrorNotice');
+    if(!warning){
+      warning=document.createElement('p');
+      warning.id='startupErrorNotice';
+      warning.style.cssText='color:#ffc17a;font:13px monospace;text-align:center;padding:12px';
+      (menu||document.body).appendChild(warning);
+    }
+    warning.textContent='CLOUD SESSION UNAVAILABLE: '+(error?.message||error);
+    return;
+  }
+  document.getElementById('sessionTakeoverNotice')?.remove();
   if(!localMode)startSurvivalRewardLedger();
   else stopSurvivalRewardLedger();
   stopLocalArena();
