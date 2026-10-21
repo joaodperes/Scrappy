@@ -111,3 +111,16 @@ test('confirmed multiplayer damage explicitly identifies its PvP source',()=>{
  const pvp=fs.readFileSync(path.join(__dirname,'../js/pvp.js'),'utf8');
  assert.match(pvp,/emitEvent\('DAMAGE_DEALT',\{weaponKey:msg\.weapon\|\|curWep,amount:msg\.damage,source:'PVP'\}\)/);
 });
+
+test('local competitive arena events do not advance Survival-only quests',async()=>{
+ const {ensureQuestState,trackQuestEvent}=await mod;
+ const d=date('2026-10-19T18:00:00Z');
+ const profile={};
+ ensureQuestState(profile,d);
+ trackQuestEvent(profile,'KILL',{botType:'arena',weaponKey:'SMG',source:'ARENA'},d);
+ trackQuestEvent(profile,'DAMAGE_DEALT',{weaponKey:'SMG',amount:8000,source:'ARENA'},d);
+ assert.equal(profile.questProgress.daily.metrics.pveKills,0);
+ assert.equal(profile.questProgress.daily.metrics.damage,0);
+ trackQuestEvent(profile,'KILL',{botType:'scout',source:'PLAYER'},d);
+ assert.equal(profile.questProgress.daily.metrics.pveKills,1);
+});
