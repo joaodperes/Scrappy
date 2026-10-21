@@ -20,6 +20,7 @@ export const player = {
   buffs: {},
   hardMode: false,
   difficulty: 'normal',
+  survivalModifiers:null, // earned PvE bonuses, never applied to arena/PvP
   
   // New weapon state tracking:
   wepHeat: 0,
