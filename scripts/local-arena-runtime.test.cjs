@@ -143,3 +143,12 @@ test('player special attacks still credit arena kills, but environmental hits do
  h.api.localArenaActorHit(protectedActor,100,'FLAMETHROWER');
  assert.equal(h.api.getLocalArenaSnapshot().state.kills,2);
 });
+
+test('arena combat source never masquerades as Survival quest damage',async()=>{
+ const h=harness();await h.start('ffa');
+ h.api.localArenaActorHit(h.actors[0],120,'TESLA_CHAIN');
+ assert.equal(h.context.kills[0].opts.source,'ARENA');
+ assert.equal(h.context.damages.length,1);
+ const src=fs.readFileSync(path.join(root,'js/localArenaRuntime.js'),'utf8');
+ assert.match(src,/recordDamage\(curWep,dealt,'ARENA'\)/);
+});
