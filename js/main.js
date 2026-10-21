@@ -225,7 +225,8 @@ function startGame(startWave = 0, difficulty = 'normal', localMode = null) {
         const elapsed=Math.max(0,(localMode.duration||600)-state.secondsLeft);
         const participation=elapsed>=120&&state.kills>=1?25:0;
         const victory=state.result==='VICTORY'&&elapsed>=60&&state.kills>=3?80:0;
-        const eliminationXp=Math.max(0,(profile.totalXp||0)-arenaStartXp);
+        const objectiveXp=Math.max(0,state.tagXp||0);
+        const eliminationXp=Math.max(0,(profile.totalXp||0)-arenaStartXp-objectiveXp);
         if(participation+victory)awardXp(participation+victory);
         gameRunning=false;
         document.exitPointerLock();
@@ -247,7 +248,7 @@ function startGame(startWave = 0, difficulty = 'normal', localMode = null) {
           scores.textContent='FRAGS '+state.kills+' · POINTS '+state.score+
             ' · BOT POINTS '+state.opposition+' · DEATHS '+state.deaths+
             ' · XP +'+earned+' (KILLS +'+eliminationXp+
-            ', PARTICIPATION +'+participation+', VICTORY +'+victory+')'+
+            ', OBJECTIVES +'+objectiveXp+', PARTICIPATION +'+participation+', VICTORY +'+victory+')'+
             ' · SCRAPS +0 (ARENA)'+' · WEAPON XP: '+weaponGains;
           const rivals=(state.participants||[]).slice(0,5)
             .map(a=>a.name+' ['+a.team+'] '+a.kills+' K / '+a.deaths+' D')
