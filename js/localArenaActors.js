@@ -235,6 +235,20 @@ export function updateArenaActors(actors,dt,mode,
   if(a._hopY>0||a._yVel>0){
    a._yVel-=35*(getMapMeta(getCurrentMap())?.gravityMult||1)*dt;
    a._hopY+=a._yVel*dt;
+   // Prevent a jump pad from sending a bot through a solid mine ceiling.
+   if(a._yVel>0){
+    const rise=a._floorY+a._hopY-a.group.position.y;
+    if(rise>.001){
+     const roof=scene.pickWithRay(new B.Ray(
+       a.group.position.add(new B.Vector3(0,1.95,0)),
+       new B.Vector3(0,1,0),rise+.1),
+       m=>m.isEnabled()&&m.checkCollisions&&!m.metadata?.arenaActorId&&!m.metadata?.enemy);
+     if(roof?.hit){
+      a._hopY=Math.max(0,roof.pickedPoint.y-1.98-a._floorY);
+      a._yVel=0;
+     }
+    }
+   }
    const air=new B.Vector3((a._airVX||0)*dt,0,(a._airVZ||0)*dt);
    if(air.lengthSquared()>0){
     const dir=air.clone().normalize();
