@@ -283,7 +283,10 @@ function updateTags(dt){
  }
 }
 export function updateLocalArena(dt){
- if(!isActive())return;
+ if(!isActive()||!Number.isFinite(dt)||dt<=0)return;
+ // Keep physics, status damage, respawns and match time on the same bounded
+ // simulation step after a background-tab stall or debugger pause.
+ dt=Math.min(dt,.25);
  const s=tickLocalArena(active.state,dt);
  applyResult(s);
  if(!isActive())return;
