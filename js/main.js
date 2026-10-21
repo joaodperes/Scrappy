@@ -22,6 +22,7 @@ import { normalizeCompetitiveLoadout } from './weaponCategories.js';
 import { getCurrentMap, setCurrentMap, MAPS, getMapMeta, buildMap, isMapUnlocked, registerCommunityMaps } from './mapManager.js';
 import { initRoomFlow, showPlayPage } from './roomFlow.js';
 import { setActiveHardWave } from './hardModeRules.js';
+import {normalizedPveBuild,pveModifiers} from './pveStatsRules.js';
 import { showLeaderboardPage } from './leaderboardPage.js';
 import { startLocalArena,stopLocalArena,isLocalArenaActive,updateLocalArena,localArenaRobotKilled,localArenaActorHit,localArenaPlayerDead } from './localArenaRuntime.js';
 
@@ -108,7 +109,12 @@ function startGame(startWave = 0, difficulty = 'normal', localMode = null) {
   // Capture Hard Mode state BEFORE resetting everything
   player.hardMode = difficulty !== 'normal';
   ensureAudio();
-  player.maxHp = 100;player.hp = 100; player.armor = 0; player.score = 0;
+  // PvE ranks and wave-earned equipment apply to Survival only, never
+  // the local competitive arenas or future human multiplayer rooms.
+  player.survivalModifiers=localMode?null:pveModifiers(normalizedPveBuild(profile),'survival');
+  const pv=player.survivalModifiers;
+  player.maxHp=pv?.maxHp||100;
+  player.hp=player.maxHp;player.armor=pv?.startingArmor||0;player.score=0;
   player.yVel = 0; player.onGround = true; player.buffs = {};
 
   import('./progression.js').then(({ getLoadout }) => {
@@ -276,7 +282,7 @@ function openFfaLobby() {
     },
     onStart: ({ name, server, roomId, config, isHost }) => {
       ensureAudio();
-
+      player.survivalModifiers=null;player.maxHp=100;
       player.hp = 100; player.armor = 0; player.score = 0;
       player.yVel = 0; player.onGround = true; player.buffs = {};
 
@@ -646,6 +652,7 @@ async function launchCompetitiveRoom(cfg,session) {
     gameRunning=false;paused=false;
     player.hardMode=false;
     player.difficulty='normal';
+    player.survivalModifiers=null;player.maxHp=100;
     player.hp=100;player.armor=0;player.score=0;
     player.onGround=true;player.yVel=0;player.buffs={};
     setCurrentMap(cfg.mapId);
