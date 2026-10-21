@@ -19,6 +19,9 @@ export const FALLBACK_PERSONAS=[
  {id:'skirmisher',name:'Skirmisher',aggression:.65,aim:.61,reactionMs:290,preferredRange:17,skin:'ghost',loadout:{primary:'COMET',secondary:'PISTOL'}},
  {id:'tracker',name:'Tracker',aggression:.4,aim:.80,reactionMs:670,preferredRange:34,skin:'void',loadout:{primary:'RAILGUN',secondary:'PISTOL'}},
  {id:'sparker',name:'Sparker',aggression:.56,aim:.60,reactionMs:440,preferredRange:19,skin:'default',loadout:{primary:'ELECTRON',secondary:'PISTOL'}},
+ {id:'rocketeer',name:'Rocketeer',aggression:.48,aim:.56,reactionMs:560,preferredRange:27,skin:'oni',loadout:{primary:'ROCKET',secondary:'PISTOL'}},
+ {id:'arclight',name:'Arclight',aggression:.69,aim:.63,reactionMs:490,preferredRange:18,skin:'ghost',loadout:{primary:'TESLA',secondary:'PISTOL'}},
+ {id:'artillerist',name:'Artillerist',aggression:.43,aim:.59,reactionMs:610,preferredRange:29,skin:'forest',loadout:{primary:'GLAUNCHER',secondary:'PISTOL'}},
 ];
 export async function fetchArenaPersonas(){
  try{
