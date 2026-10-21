@@ -52,7 +52,8 @@
         "secondary": "PISTOL",
         "attachments": {
           "SHOTGUN": {
-            "magazine": "extended_mag"
+            "magazine": "extended_mag",
+            "special": "dragons_breath"
           }
         }
       },
@@ -123,7 +124,8 @@
         "secondary": "PISTOL",
         "attachments": {
           "ROCKET": {
-            "magazine": "quick_swap_mag"
+            "magazine": "quick_swap_mag",
+            "special": "rocket_burst"
           }
         }
       },
@@ -142,7 +144,8 @@
         "secondary": "PISTOL",
         "attachments": {
           "TESLA": {
-            "barrel": "extended_barrel"
+            "barrel": "extended_barrel",
+            "special": "magnet_coil"
           }
         }
       },
@@ -161,7 +164,8 @@
         "secondary": "PISTOL",
         "attachments": {
           "GLAUNCHER": {
-            "magazine": "extended_mag"
+            "magazine": "extended_mag",
+            "special": "cluster_rounds"
           }
         }
       },
@@ -185,6 +189,121 @@
         }
       },
       "skin": "oni"
+    },
+    {
+      "id": "ionseer",
+      "name": "Ionseer",
+      "role": "precision",
+      "aggression": 0.42,
+      "aim": 0.82,
+      "reactionMs": 680,
+      "preferredRange": 38,
+      "skin": "void",
+      "loadout": {
+        "primary": "ION",
+        "secondary": "PISTOL",
+        "attachments": {
+          "ION": {
+            "special": "energy_coil"
+          }
+        }
+      }
+    },
+    {
+      "id": "plasmancer",
+      "name": "Plasmancer",
+      "role": "assault",
+      "aggression": 0.69,
+      "aim": 0.59,
+      "reactionMs": 435,
+      "preferredRange": 24,
+      "skin": "ghost",
+      "loadout": {
+        "primary": "PLASMA",
+        "secondary": "PISTOL",
+        "attachments": {
+          "PLASMA": {
+            "special": "dual_trigger"
+          }
+        }
+      }
+    },
+    {
+      "id": "silentbolt",
+      "name": "Silentbolt",
+      "role": "precision",
+      "aggression": 0.45,
+      "aim": 0.83,
+      "reactionMs": 625,
+      "preferredRange": 37,
+      "skin": "forest",
+      "loadout": {
+        "primary": "CROSSBOW",
+        "secondary": "PISTOL",
+        "attachments": {
+          "CROSSBOW": {
+            "special": "coated_tips"
+          }
+        }
+      }
+    },
+    {
+      "id": "nailstorm",
+      "name": "Nailstorm",
+      "role": "flank",
+      "aggression": 0.82,
+      "aim": 0.63,
+      "reactionMs": 330,
+      "preferredRange": 16,
+      "skin": "oni",
+      "loadout": {
+        "primary": "RIVETER",
+        "secondary": "PISTOL",
+        "attachments": {
+          "RIVETER": {
+            "special": "superheated_rivets"
+          }
+        }
+      }
+    },
+    {
+      "id": "sonicguard",
+      "name": "Sonicguard",
+      "role": "control",
+      "aggression": 0.64,
+      "aim": 0.6,
+      "reactionMs": 515,
+      "preferredRange": 13,
+      "skin": "default",
+      "loadout": {
+        "primary": "PHALANX",
+        "secondary": "PISTOL",
+        "attachments": {
+          "PHALANX": {
+            "barrel": "sonic_amplifier",
+            "special": "resonance_cascade"
+          }
+        }
+      }
+    },
+    {
+      "id": "locksmith",
+      "name": "Locksmith",
+      "role": "precision",
+      "aggression": 0.63,
+      "aim": 0.86,
+      "reactionMs": 405,
+      "preferredRange": 22,
+      "skin": "void",
+      "loadout": {
+        "primary": "AEGIS",
+        "secondary": "PISTOL",
+        "attachments": {
+          "AEGIS": {
+            "special": "multi_thread"
+          }
+        }
+      }
     }
   ]
 }
