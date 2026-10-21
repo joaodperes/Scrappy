@@ -477,7 +477,7 @@ export function updateArenaActors(actors,dt,mode,
   tracer.color=spec.melee?new B.Color3(.9,.95,1):
     a.team==='RED'?new B.Color3(1,.40,.27):new B.Color3(.27,.68,1);
   setTimeout(()=>{if(!tracer.isDisposed?.())tracer.dispose()},spec.melee?160:110);
-  if(!hit)continue;
+  if(!hit&&spec.hitscan!==false)continue;
   const pelletFactor=a.weapon==='SHOTGUN'
     ?clamp(2.5-distance/Math.max(1,spec.range||25)*1.5,1,2.5):1;
   // Use the same distance falloff and competitive damage tuning declared
@@ -488,6 +488,9 @@ export function updateArenaActors(actors,dt,mode,
   const raw=(Number.isFinite(spec.dmg)?spec.dmg:0)*rounds*
     pelletFactor*falloff*competitive;
   const dmg=clamp(raw,1,110);
-  onShot?.(a,target.actor,dmg,a.weapon,targetPos.clone());
+  // Missed physical projectiles still travel, collide and (for explosives)
+  // inflict area damage at their true impact point. Hitscan misses remain
+  // harmless tracers; never credit a miss as a direct victim hit.
+  onShot?.(a,hit?target.actor:null,dmg,a.weapon,endpoint.clone(),!hit);
  }
 }
