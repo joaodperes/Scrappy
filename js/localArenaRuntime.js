@@ -3,6 +3,7 @@
 import {createLocalArena,localArenaKill,localArenaBotKill,localArenaTag,
   localArenaBotTag,localArenaTagExpired,localArenaDeath,tickLocalArena} from './localArenaRules.js';
 import {scene,camera} from './scene.js';
+import {getCurrentMap,getMapMeta} from './mapManager.js';
 import {inventory,setWeapon,setActiveSlot,curWep,WDEFS} from './weapons.js';
 import {rebuildMeshMap} from './enemies.js';
 import {awardXp,recordKill,recordDamage} from './progression.js';
@@ -237,7 +238,29 @@ function botImpact(shooter,victim,damage,weapon,method='DIRECT'){
   if(!victim.alive)return;
   victim.hp=Math.max(0,victim.hp-damage);
   flashArenaActor(victim);
-  if(victim.hp===0)onActorKilled(victim,shooter,weapon,method);
+  if(victim.hp===0){onActorKilled(victim,shooter,weapon,method);return}
+  if(method==='DIRECT'){
+   const attachments=shooter.persona?.loadout?.attachments?.[weapon]||{};
+   const special=attachments.special;
+   if(weapon==='PHALANX'){
+    if(special==='emp_frequency')victim._stunned=Math.max(victim._stunned||0,1.5);
+    else{
+     const origin=shooter.group.position,point=victim.group.position;
+     const dx=point.x-origin.x,dz=point.z-origin.z,len=Math.hypot(dx,dz)||1;
+     const amp=attachments.barrel==='sonic_amplifier'?1.3:1;
+     victim._knockback={x:dx/len,z:dz/len,speed:14*amp,
+       shatter:special==='resonance_cascade',shooter};
+    }
+   }
+   if(weapon==='FLAMETHROWER')
+    addBotBurn(shooter,victim,getArenaActorWeaponSpec(shooter),'FLAME_DOT');
+   else if(weapon==='SHOTGUN'&&special==='dragons_breath')
+    addBotBurn(shooter,victim,{dotDamage:12,dotDuration:3},'DRAGONS_BREATH');
+   else if(weapon==='RIVETER'&&special==='superheated_rivets')
+    addBotBurn(shooter,victim,{dotDamage:20,dotDuration:4},'SUPERHEATED_RIVETS');
+   if(special==='emp_rounds'&&Math.random()<.15)
+    victim._stunned=Math.max(victim._stunned||0,1);
+  }
  }else if(!active.playerDead){
   active.lastAttacker=shooter;
   active.onPlayerHit?.(damage);
@@ -275,12 +298,12 @@ function arenaExplosion(shooter,point,damage,weapon,radius){
     weapon,'EXPLOSION');
  }
 }
-function addBotBurn(shooter,victim,spec){
+function addBotBurn(shooter,victim,spec,method='FLAME_DOT'){
  if(!isActive()||!hostile(shooter,victim)||
    (victim&&!victim.alive)||(!victim&&active.playerDead))return;
- const existing=active.burns.find(b=>b.shooter===shooter&&b.victim===victim);
+ const existing=active.burns.find(b=>b.shooter===shooter&&b.victim===victim&&b.method===method);
  if(existing){existing.remaining=spec.dotDuration||4;return}
- active.burns.push({shooter,victim,weapon:shooter.weapon,
+ active.burns.push({shooter,victim,weapon:shooter.weapon,method,
   remaining:spec.dotDuration||4,dps:spec.dotDamage||8});
 }
 function updateArenaBotBurns(dt){
@@ -290,7 +313,7 @@ function updateArenaBotBurns(dt){
   if(!isActive())return;
   if((b.victim&&!b.victim.alive)||(!b.victim&&active.playerDead))continue;
   const seconds=Math.min(dt,b.remaining);
-  botImpact(b.shooter,b.victim,b.dps*seconds,b.weapon,'FLAME_DOT');
+  botImpact(b.shooter,b.victim,b.dps*seconds,b.weapon,b.method||'FLAME_DOT');
   b.remaining-=dt;
   if(b.remaining>0&&(b.victim?b.victim.alive:!active.playerDead))next.push(b);
  }
@@ -315,7 +338,6 @@ function actorShoots(shooter,victim,damage,weapon,aimPoint,missed=false){
   if(!spec.hitscan&&BABYLON.Vector3.Distance(current,impactPoint)>1.6)return;
   botImpact(shooter,victim,damage,weapon);
   if(!isActive())return;
-  if(weapon==='FLAMETHROWER')addBotBurn(shooter,victim,spec);
   if(weapon==='RAILGUN'){
    const from=shooter.group.position.add(new BABYLON.Vector3(0,1.45,0));
    const aim=point.subtract(from),aimLen=aim.length();
@@ -374,7 +396,7 @@ function actorShoots(shooter,victim,damage,weapon,aimPoint,missed=false){
   // impact point; actual collision or fuse still determines detonation.
   const flight=Math.max(.35,Math.min(2.2,
     Math.hypot(delta.x,delta.z)/Math.max(8,spec.projSpeed||30)));
-  const gravity=18;
+  const gravity=18*Math.max(.1,getMapMeta(getCurrentMap())?.gravityMult||1);
   const velocity=lob?new BABYLON.Vector3(
     delta.x/flight,(delta.y+.5*gravity*flight*flight)/flight,
     delta.z/flight):null;
@@ -382,7 +404,10 @@ function actorShoots(shooter,victim,damage,weapon,aimPoint,missed=false){
     travelled:0,speed:Math.max(8,spec.speed||spec.projSpeed||35),
     splash:(spec.splash||0)>0,impact,lob,velocity,gravity,fuse:3.2,
     bounces:lob?1:0,flightTime:lob?flight:0,
-    ricochets:weapon==='RIVETER'?Math.max(0,spec.bounces||0):0});
+    ricochets:weapon==='RIVETER'?Math.max(0,spec.bounces||0):0,
+    homing:weapon==='RIVETER'&&
+      shooter.persona?.loadout?.attachments?.RIVETER?.special==='magnetic_coils'
+      ?victim:null});
  }
 }
 function updateArenaProjectiles(dt){
@@ -432,6 +457,14 @@ function updateArenaProjectiles(dt){
     p.impact(end);
    }
    continue;
+  }
+  // Magnetic Coils steer a Riveter toward its original target only when
+  // already passing nearby; they never home through solid map geometry.
+  if(p.homing?.alive){
+   const target=p.homing.group.position.add(new BABYLON.Vector3(0,1.35,0));
+   const delta=target.subtract(p.mesh.position);
+   if(delta.length()>.01&&delta.length()<1.5)
+    p.direction=p.direction.scale(.75).add(delta.normalize().scale(.25)).normalize();
   }
   const step=Math.min(p.speed*dt,p.distance-p.travelled);
   const start=p.mesh.position.clone();
