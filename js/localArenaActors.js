@@ -115,6 +115,9 @@ export function killArenaActor(actor){
  if(!actor.alive)return;
  actor.alive=false;actor.hp=0;actor.deaths++;
  actor.respawnIn=5;actor.targetId=null;
+ // A new life cannot inherit old fire/poison or stale path decisions.
+ actor._dots=[];actor._poisonDots=[];
+ actor.pathCursor=null;actor.walkClock=0;actor.tagTargetId=null;actor.tagScanClock=0;
  actor.group.setEnabled(false);
  rebuildMeshMap();
 }
@@ -123,6 +126,12 @@ export function respawnArenaActor(actor,spawn){
  actor.group.position.copyFrom(spawn);actor.group.setEnabled(true);
  actor.hp=actor.maxHp;actor.alive=true;
  actor.cooldown=.75;actor.reload=0;actor.respawnIn=0;actor.targetId=null;
+ // setArenaActorWeapon is intentionally a no-op when the model already holds
+ // that weapon. Reload it explicitly on respawn, including Gun Game rungs.
+ actor.ammo=Math.max(1,WDEFS[actor.weapon]?.magSize||30);
+ actor._dots=[];actor._poisonDots=[];
+ actor.pathCursor=null;actor.walkClock=0;actor.reaction=0;
+ actor.tagTargetId=null;actor.tagScanClock=0;
  rebuildMeshMap();
  return true;
 }
@@ -146,6 +155,31 @@ function unobstructed(a,b){
  const hit=scene.pickWithRay(new B.Ray(a,delta.scale(1/len),len),
    m=>m.isEnabled()&&m.checkCollisions&&!m.metadata?.arenaActorId&&!m.metadata?.enemy);
  return !hit?.hit||hit.distance>=len-.35;
+}
+function reachableArenaTag(actor,objectives,dt){
+ if(!objectives.length){actor.tagTargetId=null;return null}
+ actor.tagScanClock=(actor.tagScanClock||0)-dt;
+ const available=objectives.filter(tag=>tag?.mesh&&!tag.mesh.isDisposed?.());
+ const current=available.find(tag=>tag.id===actor.tagTargetId);
+ if(current&&actor.tagScanClock>0)return current;
+ // Recast paths may wind around cover or between floors; straight-line
+ // distance can favor an unreachable tag and strand a bot for its lifetime.
+ // Cache scans briefly rather than requesting multiple Recast paths per frame.
+ actor.tagScanClock=.4+Math.random()*.15;
+ const feet=actor.group.position;
+ let best=null,bestLength=Infinity;
+ for(const tag of available){
+  const dest=tag.mesh.position;
+  const end=new B.Vector3(dest.x,dest.y-.65,dest.z);
+  if(B.Vector3.Distance(feet,end)>32)continue;
+  let path=null;
+  try{path=botNavPath(navPlugin,feet,end)}catch{}
+  if(!path)continue;
+  const length=Number.isFinite(path.length)?path.length:B.Vector3.Distance(feet,end);
+  if(length<bestLength){bestLength=length;best=tag}
+ }
+ actor.tagTargetId=best?.id??null;
+ return best;
 }
 function pickTarget(actor,actors,mode,humanAlive){
  const targets=actors.filter(other=>arenaTeamEnemy(actor,other,mode)).map(a=>({
@@ -178,10 +212,9 @@ export function updateArenaActors(actors,dt,mode,{humanAlive=true,onShot,onRespa
       a.persona.loadout.secondary!==a.weapon){
     setArenaActorWeapon(a,a.persona.loadout.secondary);
   }
-  const goal=mode==='killConfirmed'?objectives.filter(o=>o&&o.mesh&&!o.mesh.isDisposed?.())
-    .map(o=>({tag:o,d:B.Vector3.Distance(a.group.position,o.mesh.position)}))
-    .filter(o=>o.d<32).sort((x,y)=>x.d-y.d)[0]:null;
-  const target=goal?{id:'tag_'+goal.tag.id,actor:null,point:goal.tag.mesh.position.clone(),visible:true,distance:goal.d,objective:true}:
+  const goal=mode==='killConfirmed'?reachableArenaTag(a,objectives,dt):null;
+  const target=goal?{id:'tag_'+goal.id,actor:null,point:goal.mesh.position.clone(),visible:true,
+    distance:B.Vector3.Distance(a.group.position,goal.mesh.position),objective:true}:
     pickTarget(a,actors,mode,humanAlive);
   if(!target){a.targetId=null;continue}
   if(a.targetId!==target.id){a.targetId=target.id;a.reaction=(a.persona.reactionMs||450)/1000}
@@ -195,9 +228,12 @@ export function updateArenaActors(actors,dt,mode,{humanAlive=true,onShot,onRespa
   a.walkClock-=dt;
   if(a.walkClock<=0||!a.pathCursor){
    const feet=new B.Vector3(own.x,own.y,own.z);
-   const targetFeet=new B.Vector3(targetPos.x,targetPos.y-1.55,targetPos.z);
+   const targetFeet=new B.Vector3(targetPos.x,
+     targetPos.y-(target.objective?.65:1.55),targetPos.z);
    let route=null;try{route=botNavPath(navPlugin,feet,targetFeet)}catch{}
-   a.pathCursor=route?.points?.[1]||(!target.visible?null:targetFeet);
+   // If Recast cannot reach the destination, do not bypass it with a
+   // straight-line step across a void or through an unconnected floor.
+   a.pathCursor=route?.points?.[1]||null;
    a.walkClock=.4+Math.random()*.25;
   }
   if(near||far||!target.visible||(!target.objective&&flat>1.5)){
