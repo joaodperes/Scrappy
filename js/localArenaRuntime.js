@@ -340,6 +340,11 @@ function actorShoots(shooter,victim,damage,weapon,aimPoint){
     traceAbility(last,next.pos);
     visited.add(next.actor||'human');
     botImpact(shooter,next.actor,amount,weapon,'TESLA_CHAIN');
+    // Tesla returns a little heat capacity for every successful jump.
+    // This heat belongs to the shooter, not the shared weapon definition.
+    if(spec.chainHeatReduce>0)
+      shooter.heat=Math.max(0,(shooter.heat||0)-
+        spec.chainHeatReduce*(spec.maxHeat||100));
     if(!isActive())break;
     last=next.pos;amount*=.65;
    }
