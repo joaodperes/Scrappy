@@ -37,6 +37,8 @@ export function renderShopPage(){
  const wallet=getShopSnapshot();
  body.appendChild(el('p',`font-size:21px;font-weight:bold;color:${C.accent}`,
    'AVAILABLE SCRAPS: '+wallet.scraps));
+ body.appendChild(el('p',`font-size:12px;color:${C.muted}`,
+   'EARNED '+wallet.earnedScraps+'  ·  SPENT '+wallet.spentScraps));
  body.appendChild(el('p',`font-size:12px;color:${C.muted};line-height:1.55`,
    'Cosmetics never change combat statistics. Weapon XP is applied instantly to that gun, not stored as a consumable. Purchases use your existing Firebase login and a transaction; no paid backend required.'));
  if(notice)body.appendChild(el('p',`color:#f4bf67;font-size:13px`,notice));
@@ -60,7 +62,9 @@ export function renderShopPage(){
   selector.value=weapon;selector.onchange=()=>{weapon=selector.value;renderShopPage()};line.appendChild(selector);
   if(filter==='weaponXp'){
    const status=getWeaponLevelProgress(weapon);
-   line.appendChild(el('span','color:'+C.muted+';font-size:12px','Current level: '+status.level+' · XP: '+status.xp));
+   line.appendChild(el('span','color:'+C.muted+';font-size:12px',
+     'LEVEL '+status.level+' · '+status.xp+'/18000 XP · '+
+       (status.isMax?'MAXED':(18000-status.xp)+' XP TO CAP'));
   }
  }
  const list=SHOP_ITEMS.filter(item=>item.kind===filter&&(!item.weapon||item.weapon===weapon));
@@ -80,8 +84,16 @@ export function renderShopPage(){
    item.kind==='weaponXp'?'Directly adds XP to '+item.weapon:
    item.kind==='weaponSkin'?'Cosmetic finish for '+item.weapon:'Player appearance'));
   card.appendChild(el('p','font-size:13px;color:#f4bf67',item.cost+' SCRAPS'));
+  const capped=item.kind==='weaponXp'&&
+    getWeaponLevelProgress(item.weapon).xp+item.amount>18000;
+  if(capped)card.appendChild(el('p','font-size:12px;color:#f4bf67',
+    'Cannot apply full XP pack: weapon is at or near maximum.'));
   const btn=rowButton(card,owned?'✓ OWNED':busy?'PROCESSING…':'BUY',async()=>{
-   if(busy||owned)return;
+   if(busy||owned||capped)return;
+   const description=item.kind==='weaponXp'
+     ?'Apply '+item.amount+' XP directly to '+item.weapon+'?'
+     :'Unlock '+item.label+'?';
+   if(!window.confirm('Spend '+item.cost+' Scraps?\n'+description))return;
    busy=true;notice='';renderShopPage();
    // A unique request ID prevents accidental double-charging if retried.
    const req='shop_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,11);
@@ -91,7 +103,7 @@ export function renderShopPage(){
      result.reason||'Unable to complete purchase';
    renderShopPage();
   });
-  btn.disabled=busy||owned||wallet.scraps<item.cost;
+  btn.disabled=busy||owned||capped||wallet.scraps<item.cost;
   if(btn.disabled)btn.style.opacity='.6';
   grid.appendChild(card);
  }
