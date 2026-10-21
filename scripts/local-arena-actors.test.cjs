@@ -62,7 +62,10 @@ test('bot uses own configured firearm stats, magazine and visible attack tracer'
     {humanAlive:false,onShot:(a,target,dmg,weapon)=>shots.push({a,target,dmg,weapon})});
  }
  assert.ok(shots.length>0);
- assert.ok(shots.every(s=>s.weapon==='SMG'&&s.dmg===11));
+ assert.ok(shots.some(s=>s.weapon==='SMG'&&s.dmg===11));
+ assert.ok(shots.some(s=>s.weapon==='PISTOL'&&s.dmg===20));
+ assert.ok(shots.every(s=>(s.weapon==='SMG'&&s.dmg===11)||
+   (s.weapon==='PISTOL'&&s.dmg===20)));
  assert.ok(h.lines.length>0);
  h.api.setArenaActorWeapon(shooter,'DMR');
  assert.equal(shooter.weapon,'DMR');
