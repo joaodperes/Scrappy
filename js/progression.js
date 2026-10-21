@@ -2613,7 +2613,6 @@ function _applyShopEntitlements(){
    if(!list.includes(item.skin))profile.unlockedWeaponSkins[item.weapon]=[...list,item.skin];
   }
  }
- _saveToLocalStorage();
 }
 export function getShopSnapshot(){
  return {ready:_shopReady,owned:[..._shopWallet.owned],
@@ -2670,34 +2669,59 @@ export async function purchaseProfileShopItem(itemId,requestId){
  }
 }
 
-async function _saveToFirestore() {
-  if (!_fbReady || !profile.firebaseUid) return false;
-  try {
-    await firebase.firestore().collection('player_profiles').doc(profile.firebaseUid).set(
-      { profile, updated_at: firebase.firestore.FieldValue.serverTimestamp() },
-      { merge: true }
-    );
-    return true;
-  } catch (e) {
-      if (e.message.includes('CORS') || e.message.includes('offline') || e.message.includes('network')) {
-          return false;
-      }
-      console.warn('[progression] Firestore sync paused:', e.message);
-      return false;
-  }
+// Every persisted change is a transaction against the authoritative UID
+// profile. Session ownership is checked in the same atomic transaction.
+async function _saveToFirestore(uid,localSnapshot,baseSnapshot,buffer){
+ if(!_fbReady||!_sameGoogleUser(uid))return {ok:false,reason:'auth'};
+ try{
+  const db=firebase.firestore(),ref=db.collection('player_profiles').doc(uid);
+  const result=await db.runTransaction(async tx=>{
+   const doc=await tx.get(ref),data=doc.data()||{};
+   if(!data.profile)throw new Error('CLOUD_PROFILE_MISSING');
+   const owner=activeGameSession();
+   const lease=data.activeSession?.id;
+   if(lease&&(!owner||owner.uid!==uid||lease!==owner.id))
+    throw new Error('SESSION_CONFLICT');
+   const receipt=Number(data.profileSyncReceipts?.[buffer.id]||0);
+   if(receipt>=buffer.version)return {merged:data.profile,duplicate:true};
+   const merged=_mergeProgress(baseSnapshot,localSnapshot,data.profile,
+     normalizeShopWallet(data.shopWallet));
+   merged.firebaseUid=uid;
+   const receipts={...(data.profileSyncReceipts||{})};
+   receipts[buffer.id]=buffer.version;
+   // Bounded per-device receipts make crash/retry saves idempotent.
+   if(Object.keys(receipts).length>64)throw new Error('SYNC_DEVICE_LIMIT');
+   tx.update(ref,{profile:merged,profileSyncReceipts:receipts,
+     updated_at:firebase.firestore.FieldValue.serverTimestamp()});
+   return {merged,duplicate:false};
+  });
+  return {ok:true,merged:result.merged};
+ }catch(err){
+  console.warn('[profile] Cloud save postponed',err);
+  return {ok:false,reason:err?.message||'network'};
+ }
 }
-
-async function _loadFromFirestore(uid) {
-  try {
-    const doc = await firebase.firestore().collection('player_profiles').doc(uid).get();
-    return doc.exists ? doc.data().profile : null;
-  } catch (e) { 
-      return null; 
-  }
+function _syncClientId(uid){
+ const key=RECOVERY_PREFIX+'client:'+uid;
+ try{
+  let id=localStorage.getItem(key);
+  if(id)return id;
+  id=_newSyncId();localStorage.setItem(key,id);return id;
+ }catch{return _newSyncId()}
 }
-
-function _saveToLocalStorage() {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(profile)); } catch {}
+function _nextSyncVersion(uid){
+ const key=RECOVERY_PREFIX+'version:'+uid;
+ try{
+  const next=Math.max(0,Number(localStorage.getItem(key))||0)+1;
+  localStorage.setItem(key,String(next));return next;
+ }catch{return Date.now()}
+}
+function _scheduleCloudSync(){
+ if(_cloudSyncTimer||!_fbReady||!_cloudDirty)return;
+ _cloudSyncTimer=setTimeout(()=>{
+  _cloudSyncTimer=null;
+  void flushProfileToCloud();
+ },12000);
 }
 
 export function checkFirstTimePickup(wName) {
