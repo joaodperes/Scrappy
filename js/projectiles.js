@@ -496,7 +496,7 @@ export function updateProjs(dt) {
             if (!e._flameDotted) {
                 e._flameDotted = true;
                 if (!e._dots) e._dots = [];
-                e._dots.push({ dmg: dotDmg, remaining: 3 });
+                e._dots.push({ dmg: dotDmg, remaining: 3,source:'FLAME_DOT',weapon:'FLAMETHROWER' });
                 setTimeout(() => { if (e) e._flameDotted = false; }, 500);
             }
 
@@ -532,7 +532,7 @@ export function updateProjs(dt) {
                 cb.hitRobot?.(e, p.damage, false, false, 'FLAMETHROWER');
                 if (!e._dots) e._dots = [];
                 // Use the dotDmg stored when the patch was created
-                e._dots.push({ dmg: p.dotDmg, remaining: 1.0 }); 
+                e._dots.push({ dmg: p.dotDmg, remaining: 1.0,source:'FLAME_DOT',weapon:'FLAMETHROWER' }); 
             }
         }
     }
@@ -614,7 +614,7 @@ export function updateProjs(dt) {
               if (BABYLON.Vector3.Distance(p.mesh.position, bodyCenter) < 1.2) {
                   if (p.isSuperheated) {
                       if (!e._dots) e._dots = [];
-                      e._dots.push({ dmg: 15, remaining: 4.0 }); 
+                      e._dots.push({ dmg: 15, remaining: 4.0,source:'SUPERHEATED_RIVET',weapon:'RIVETER' }); 
                       spawnSparks(bodyCenter, 0xff4400, 10);
                   } else {
                       cb.hitRobot(e,p.dmg,false,false,'PLAYER','RIVETER');
