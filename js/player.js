@@ -1028,7 +1028,7 @@ export function updatePlayer(dt, gameRunning, paused) {
     }
   
   const sprint = keys['ShiftLeft'] || keys['ShiftRight'];
-  const speedMult   = getSpeedMult(curWep);
+  const speedMult   = getSpeedMult(curWep) * (player.survivalModifiers?.speedMult||1);
   const spd   = (sprint ? SPD_SPRINT : SPD_WALK) * speedMult;
   // use moveSpeed instead of the raw constant in the movement vector
   const fwd    = getCameraForward();
