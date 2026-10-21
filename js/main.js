@@ -106,7 +106,9 @@ function _hideAllScreens() {
 }
 
 // ── Offline Survival and local robot arenas ───────────────────
+let survivalRunStart=null;
 function startGame(startWave = 0, difficulty = 'normal', localMode = null) {
+  survivalRunStart=localMode?null:{xp:profile.totalXp||0,scraps:profile.scraps||0};
   stopLocalArena();
   document.getElementById('startupErrorNotice')?.remove();
   if(!['normal','hard','nightmare'].includes(difficulty))difficulty='normal';
@@ -257,8 +259,10 @@ function endGame() {
     gameRunning = false;
     document.exitPointerLock();
     document.getElementById('hud').style.display = 'none';
+    const runXp=Math.max(0,(profile.totalXp||0)-(survivalRunStart?.xp??(profile.totalXp||0)));
+    const runScraps=Math.max(0,(profile.scraps||0)-(survivalRunStart?.scraps??(profile.scraps||0)));
     document.getElementById('deathStats').textContent =
-        `FINAL SCORE: ${player.score}   \u2014   WAVES: ${curWave}`;
+        `FINAL SCORE: ${player.score}   \u2014   WAVES: ${curWave}   —   XP +${runXp}   —   SCRAPS +${runScraps}`;
     const inp = document.getElementById('playerNameInput');
     const btn = document.getElementById('submitScoreBtn');
     import('./progression.js').then(({ profile, flushProfileToCloud }) => {
