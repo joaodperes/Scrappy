@@ -2721,8 +2721,9 @@ export function getSurvivalRewardLedger(){
       Object.values(r.conversionScraps).reduce((a,b)=>a+b,0)};
 }
 export function stopSurvivalRewardLedger(){
+  if(!_survivalRewards?.active)return null;
   const summary=getSurvivalRewardLedger();
-  if(_survivalRewards)_survivalRewards.active=false;
+  _survivalRewards.active=false;
   return summary;
 }
 function _rewardWeaponXp(weapon,amount){
