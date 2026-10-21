@@ -720,9 +720,8 @@ export function shoot() {
       break;
     }
     case 'KNIFE':
-      // Babylon melee hitbox ray. The final Gun Game rung now does damage.
-      sfx.pistol();
-      hitscan(_meshToEnemy,0,modDmg,Math.min(3,range),0);
+      // Melee strikes are exclusively dispatched by the contact-window
+      // branch above. Never fall back to a gunshot/hitscan here.
       break;
     case 'DMR':
       if (!hasSuppressor('DMR')) sfx.railgun(); // Using railgun sfx as a placeholder for a heavy rifle sound
