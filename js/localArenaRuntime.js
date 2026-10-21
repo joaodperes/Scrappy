@@ -165,7 +165,7 @@ const HUMAN_DAMAGE_SOURCES=new Set([
  'PLAYER','FLAMETHROWER','PHALANX_SHATTER','TESLA_CHAIN',
  'THUNDERBOLT','OMEGA_STORM','AEGIS',
 ]);
-export function localArenaActorHit(actor,dmg,source='PLAYER'){
+export function localArenaActorHit(actor,dmg,source='PLAYER',weaponOverride=null,isExplosive=false){
  if(!isActive()||!actor?.alive||!Number.isFinite(dmg)||dmg<=0||
     !HUMAN_DAMAGE_SOURCES.has(source))return;
  // Gun Game's ladder cannot be bypassed by another equipped firearm.
