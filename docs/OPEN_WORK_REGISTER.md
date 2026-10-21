@@ -125,3 +125,6 @@
 
 - Per-bot energy weapons now use the bot's own heat for Ion charge scaling and account for equipped heat modifiers; Tesla chain hops refund bot heat. This avoids applying the local player's global weapon heat to independent bots.
 - Local bots briefly flash on successful damage, including bot-on-bot hits; the flash clears on respawn and does not replace team visor colors. Lobbed launcher rounds detonate at their flight-time target rather than travelling past character hitboxes until the fuse expires.
+
+- Arena bot physical misses now spawn real collision-checked projectile visuals, including explosives with splash at actual impact; missed direct projectiles cannot hit the player accidentally.
+- Moon Base jetpack exhaust now uses its existing particle import synchronously, avoiding per-frame dynamic import promises.
