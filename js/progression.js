@@ -2510,6 +2510,7 @@ function _restoreCloudProfile(uid,remote,receipts={}){
   recovered=importLegacyProfile(_legacyCache,baseline);
  }
  _cloudBase=_copy(baseline);
+ _cloudRevision++;
  profile=_deepMerge(_defaultProfile(),recovered);
  profile.firebaseUid=uid;
  profile.level=levelFromTotalXp(profile.totalXp||0);
@@ -2540,6 +2541,7 @@ export async function startProfileGameSession(onLost){
  const uid=firebase?.auth?.()?.currentUser?.uid;
  await waitForProfileReady(uid);
  if(!_sameGoogleUser(uid))throw new Error('Google account changed.');
+ if(_cloudDirty)await flushProfileToCloud();
  const state=await acquireGameSession({
   onLost,
   onBeforeHandoff:()=>flushProfileToCloud(),
@@ -2559,6 +2561,7 @@ export function initFirebaseAuth(){
  if(typeof firebase==='undefined')return;
  firebase.auth().onAuthStateChanged(async user=>{
   const epoch=++_authEpoch;
+  if(_cloudSyncTimer){clearTimeout(_cloudSyncTimer);_cloudSyncTimer=null}
   _profileLoadError=null;
   if(!user){
    _fbReady=false;_shopWallet=normalizeShopWallet(null);_shopReady=false;
@@ -2965,13 +2968,13 @@ export async function flushProfileToCloud(){
   if(!_cloudDirty||!_recovery)return;
   const uid=_recovery.uid;
   if(!_sameGoogleUser(uid)||_profileLoadedUid!==uid)return;
-  const revision=_cloudRevision;
+  const revision=_cloudRevision,epoch=_authEpoch;
   const buffer={id:_recovery.id,version:_recovery.version};
   const snapshot=_copy(_recovery.profile),base=_copy(_recovery.base);
   _recovery.inFlight={version:buffer.version,profile:snapshot};
   _saveRecovery(); // checkpoint before a possibly successful cloud commit
   const result=await _saveToFirestore(uid,snapshot,base,buffer);
-  if(!result.ok||uid!==profile.firebaseUid)return;
+  if(!result.ok||uid!==profile.firebaseUid||epoch!==_authEpoch)return;
   const merged=_deepMerge(_defaultProfile(),result.merged);
   _cloudBase=_copy(merged);
   // Changes made during the network request remain pending.
