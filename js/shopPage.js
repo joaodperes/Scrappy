@@ -64,7 +64,7 @@ export function renderShopPage(){
    const status=getWeaponLevelProgress(weapon);
    line.appendChild(el('span','color:'+C.muted+';font-size:12px',
      'LEVEL '+status.level+' · '+status.xp+'/18000 XP · '+
-       (status.isMax?'MAXED':(18000-status.xp)+' XP TO CAP'));
+       (status.isMax?'MAXED':(18000-status.xp)+' XP TO CAP')));
   }
  }
  const list=SHOP_ITEMS.filter(item=>item.kind===filter&&(!item.weapon||item.weapon===weapon));
