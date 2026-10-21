@@ -145,6 +145,36 @@ export async function boom(pos, splashR, baseDmg, hurtBots, weaponKey=null, barr
   applyExplosionImpulse(pos, splashR * 1.5, 20);
 }
 
+// Melee uses a short swept arc rather than one pixel-perfect gun ray.
+// One victim per swing, with wall occlusion checked on each sampled ray.
+export function meleeStrike(meshToEnemy,damage=70,range=2.8){
+ if(cb.isPvpActive?.())return {hit:!!cb.pvpHitscan?.(damage,range,0),target:null};
+ const center=camera.getForwardRay(1).direction.clone().normalize();
+ let best=null;
+ for(const angle of [-0.36,-0.18,0,0.18,0.36]){
+  const c=Math.cos(angle),q=Math.sin(angle);
+  const direction=new BABYLON.Vector3(
+    center.x*c+center.z*q,center.y,center.z*c-center.x*q).normalize();
+  const ray=new BABYLON.Ray(camera.position,direction,range);
+  const wall=scene.pickWithRay(ray,blocksBullet);
+  const hits=scene.multiPickWithRay(ray,m=>meshToEnemy.has(m))||[];
+  for(const h of hits){
+   if(!h.hit||!h.pickedMesh||h.distance>range)continue;
+   if(wall?.hit&&wall.distance+0.08<h.distance)continue;
+   const target=meshToEnemy.get(h.pickedMesh);
+   if(!target?.alive)continue;
+   const score=h.distance+Math.abs(angle)*.5;
+   if(!best||score<best.score)best={target,point:h.pickedPoint,score};
+  }
+ }
+ if(best){
+  cb.hitRobot?.(best.target,damage,false,false,'PLAYER','KNIFE');
+  if(best.point)spawnSparks(best.point,0xd2d6dd,8);
+  return {hit:true,target:best.target};
+ }
+ return {hit:false,target:null};
+}
+
 // ── Hitscan ────────────────────────────────────────────────────
 const _rcDir = new BABYLON.Vector3();
 
