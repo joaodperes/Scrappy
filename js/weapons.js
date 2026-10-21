@@ -633,7 +633,7 @@ function _makeSightLantern(parent, wName) {
     new BABYLON.Vector3(0, 0, 1),       // Shoot straight down the Z axis
     Math.PI / 2.5, 
     25, scene);
-  spotLight.priority = -1; // Force engine to prioritize this light over explosions
+  spotLight.priority = 100; // Keep the Lantern ahead of the mine's fixture lights
   import('./scene.js').then(({ camera }) => {
       spotLight.parent = camera;
   });
