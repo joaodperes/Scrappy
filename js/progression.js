@@ -2471,6 +2471,80 @@ export function initFirebaseAuth() {
   });
 }
 
+// The shop ledger sits beside the normal "profile" map on the SAME
+// Firestore user document. Regular profile sync writes never overwrite it.
+// The gross quest-earnings counter stays on profile.scraps; available scraps
+// are always gross earnings minus transactional ledger.spent.
+function _applyShopEntitlements(){
+ for(const itemId of _shopWallet.owned){
+  const item=SHOP_ITEMS.find(entry=>entry.id===itemId);
+  if(!item)continue;
+  if(item.kind==='playerSkin'){
+   if(!Array.isArray(profile.unlocked))profile.unlocked=['default'];
+   if(!profile.unlocked.includes(item.skin))profile.unlocked.push(item.skin);
+  }else if(item.kind==='weaponSkin'){
+   if(!profile.unlockedWeaponSkins||typeof profile.unlockedWeaponSkins!=='object')
+     profile.unlockedWeaponSkins={};
+   const list=profile.unlockedWeaponSkins[item.weapon]||[];
+   if(!list.includes(item.skin))profile.unlockedWeaponSkins[item.weapon]=[...list,item.skin];
+  }
+ }
+ _saveToLocalStorage();
+}
+export function getShopSnapshot(){
+ return {ready:_shopReady,owned:[..._shopWallet.owned],
+  scraps:shopAvailableScraps(profile.scraps||0,_shopWallet),
+  xpBonuses:{..._shopWallet.xpBonuses},loggedIn:!!_fbReady};
+}
+export async function refreshProfileShopWallet(uid=profile.firebaseUid){
+ if(!_fbReady||!uid||typeof firebase==='undefined'){_shopReady=false;return false}
+ try{
+  const documentRef=firebase.firestore().collection('player_profiles').doc(uid);
+  const snapshot=await documentRef.get();
+  if(profile.firebaseUid!==uid)return false;
+  _shopWallet=normalizeShopWallet(snapshot.data()?.shopWallet);
+  _shopReady=true;
+  _applyShopEntitlements();
+  return true;
+ }catch(error){
+  console.warn('[shop] Unable to read account wallet',error);
+  _shopReady=false;return false;
+ }
+}
+export async function purchaseProfileShopItem(itemId,requestId){
+ const uid=profile.firebaseUid;
+ if(!_fbReady||!uid||typeof firebase==='undefined')
+   return {ok:false,reason:'Sign in before purchasing'};
+ if(!_shopReady)return {ok:false,reason:'Shop wallet not loaded'};
+ await flushProfileToCloud();
+ if(_cloudDirty)return {ok:false,reason:'Profile changes not synced. Reconnect before purchasing'};
+ try{
+  const db=firebase.firestore();
+  const documentRef=db.collection('player_profiles').doc(uid);
+  const result=await db.runTransaction(async transaction=>{
+   const snapshot=await transaction.get(documentRef);
+   if(!snapshot.exists)return {ok:false,reason:'Player profile not found'};
+   const cloud=snapshot.data()||{};
+   const item=SHOP_ITEMS.find(entry=>entry.id===itemId);
+   const baseWeaponXp=Number(cloud.profile?.stats?.weaponXp?.[item?.weapon]||0);
+   const purchase=purchaseShopItem(
+     Number(cloud.profile?.scraps||0),cloud.shopWallet,itemId,requestId,baseWeaponXp);
+   if(!purchase.ok||purchase.duplicate)return purchase;
+   transaction.set(documentRef,{shopWallet:purchase.wallet},{merge:true});
+   return purchase;
+  });
+  if(profile.firebaseUid!==uid)return {ok:false,reason:'Account changed'};
+  if(result.ok){
+   _shopWallet=normalizeShopWallet(result.wallet);
+   _shopReady=true;_applyShopEntitlements();
+  }
+  return result;
+ }catch(error){
+  console.warn('[shop] Purchase not committed',error);
+  return {ok:false,reason:'Purchase could not be completed; no Scraps charged'};
+ }
+}
+
 async function _saveToFirestore() {
   if (!_fbReady || !profile.firebaseUid) return false;
   try {
