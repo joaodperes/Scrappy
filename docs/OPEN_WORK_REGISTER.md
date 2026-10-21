@@ -8,7 +8,7 @@
 
 2. **Melee / weapon categories** (`js/weapons.js`, `js/weaponCategories.js`, `js/player.js`, `js/projectiles.js`, `js/loadout.js`): actual dedicated Knife/special slot, animations and hit windows, regular-map availability and cosmetics. Gun Game finale currently uses the existing Knife through PvE hitscan; browser test it before approving.
 
-3. **Offline game modes** (`js/localArenaRules.js`, `js/localArenaRuntime.js`, `js/roomFlow.js`, `js/main.js`, `js/enemies.js`): Gun Game and Kill Confirmed robot matches have source-level runtime implementations and tests; finish browser QA and fix collision, pickups, score, respawn and weapon progress issues. FFA/TDM are explicitly labeled **Practice** because bots target the human, not each other.
+3. **Offline game modes** (`js/localArenaRules.js`, `js/localArenaRuntime.js`, `js/localArenaActors.js`, `js/roomFlow.js`, `js/main.js`, `js/enemies.js`): source now has box-modeled player-like participants, actual held weapon models/personas, bot-versus-bot target selection, FFA/TDM scoring, independent Gun Game ladders, and Kill Confirmed tag claim/denial. Browser QA still needed for collision, vertical pathfinding, weapon parity, fairness, score, respawn and tag collection; no gameplay acceptance claim yet.
 
 4. **Full local FFA/TDM factions and bot personas** (`js/enemies.js`, `js/botNavigation.js`, `js/gameState.js`, `assets/bot-personalities.json`): introduce friendly/opposing local bot groups, bot-vs-bot target/weapon/HP simulation, team kill attribution and balanced score/respawn. Reuse the six personality presets where practical, while keeping server-only Node helpers out of browser imports. This is needed before removing PRACTICE labeling.
 
