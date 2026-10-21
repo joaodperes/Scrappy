@@ -53,9 +53,11 @@ test('quest period rollover never combines yesterday and today',()=>{
 test('old local cache is imported conservatively, not double-credited',()=>{
  const remote=baseline(),legacy=copy(remote);
  legacy.totalXp=1200;legacy.scraps=65;legacy.unlocked.push('forest');
+ legacy.questProgress.daily.metrics.pveKills=22;
  const result=importLegacyProfile(legacy,remote);
  assert.equal(result.totalXp,1200);
  assert.equal(result.scraps,65);
+ assert.equal(result.questProgress.daily.metrics.pveKills,22);
  assert.deepEqual(copy(result.unlocked),['default','forest']);
  assert.equal(importLegacyProfile({...legacy,firebaseUid:'wrong-user'},remote).totalXp,1000);
 });
