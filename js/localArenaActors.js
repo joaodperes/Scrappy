@@ -169,6 +169,15 @@ export function updateArenaActors(actors,dt,mode,{humanAlive=true,onShot,onRespa
   if(!a.alive){a.respawnIn-=dt;if(a.respawnIn<=0)onRespawn?.(a);continue}
   a.cooldown=Math.max(0,a.cooldown-dt);
   a.reload=Math.max(0,a.reload-dt);
+  // A non-Gun-Game bot has the same primary/sidearm distinction as a
+  // human loadout. Switch to its equipped Pistol when the primary magazine
+  // runs empty; Gun Game must never bypass its current ladder weapon.
+  if(mode!=='gunGame'&&a.ammo<=0&&
+      a.weapon===a.persona.loadout?.primary&&
+      WDEFS[a.persona.loadout?.secondary]&&
+      a.persona.loadout.secondary!==a.weapon){
+    setArenaActorWeapon(a,a.persona.loadout.secondary);
+  }
   const goal=mode==='killConfirmed'?objectives.filter(o=>o&&o.mesh&&!o.mesh.isDisposed?.())
     .map(o=>({tag:o,d:B.Vector3.Distance(a.group.position,o.mesh.position)}))
     .filter(o=>o.d<32).sort((x,y)=>x.d-y.d)[0]:null;
