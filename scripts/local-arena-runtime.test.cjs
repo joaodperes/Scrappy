@@ -42,6 +42,8 @@ function harness(){
   },
   destroyArenaActors:aa=>aa.forEach(a=>a.disposed=true),
   killArenaActor:a=>{a.alive=false;a.hp=0;a.deaths++},
+  flashArenaActor:()=>{},
+  getArenaActorWeaponSpec:a=>({hitscan:true,range:60,dmg:20,cd:.2}),
   respawnArenaActor:(a,pos)=>{a.alive=true;a.hp=100;a.group.position.copyFrom(pos);return true},
   setArenaActorWeapon:(a,w)=>{a.weapon=w;guns.push([a.id,w])},
   updateArenaActors:(aa,dt,mode,opts)=>{context.lastUpdate={aa,dt,mode,opts}},
