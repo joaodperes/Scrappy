@@ -9,7 +9,7 @@ import {awardXp,recordKill,recordDamage} from './progression.js';
 import {resolveKillAttribution} from './killAttribution.js';
 import {fetchArenaPersonas,createArenaActor,destroyArenaActors,
   chooseArenaSpawn,setArenaActorWeapon,killArenaActor,respawnArenaActor,
-  updateArenaActors} from './localArenaActors.js';
+  updateArenaActors,getArenaActorWeaponSpec} from './localArenaActors.js';
 const BABYLON=window.BABYLON;
 let active=null,hud=null,tags=[],generation=0,tagSerial=0;
 const LABELS={ffa:'FREE FOR ALL',tdm:'TEAM DEATHMATCH',gunGame:'GUN GAME',killConfirmed:'KILL CONFIRMED'};
@@ -286,7 +286,7 @@ function updateArenaBotBurns(dt){
 }
 function actorShoots(shooter,victim,damage,weapon,aimPoint){
  if(!isActive())return;
- const spec=WDEFS[weapon]||WDEFS.PISTOL;
+ const spec=getArenaActorWeaponSpec(shooter);
  const point=aimPoint?.clone?.()||
    (victim?victim.group.position.add(new BABYLON.Vector3(0,1.35,0)):camera.position.clone());
  const impact=()=>{
