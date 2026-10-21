@@ -25,7 +25,7 @@ export const XP_GRANTS = {
 export const WEAPON_XP_GRANTS = {
   scout:15, heavy:30, sniper:18, drone:14, shotgun:16, rocket:20,
   pistol:9, grenadier:17, giantbot:150, pvp:35,
-  electron_bot:16, ion_sniper:22,
+  electron_bot:16, ion_sniper:22, arena:12,
   medic_bot:14, shield_bot:20, teleport_bot:16, swarm_host:28,
 };
 
