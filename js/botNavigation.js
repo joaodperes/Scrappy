@@ -28,7 +28,7 @@ function platformTop(plat) {
   return plat.position.y + (bounds.maximum.y - bounds.minimum.y) * 0.5;
 }
 
-function planTransition(bot, goal, nav, pads, platforms) {
+function planTransition(bot, goal, nav, pads, platforms, gravityMult=1) {
   const from = new V(bot.group.position.x, bot._floorY, bot.group.position.z);
   const direct = route(nav, from, goal);
   let bestScore = direct ? direct.length : Infinity;
@@ -41,10 +41,13 @@ function planTransition(bot, goal, nav, pads, platforms) {
       if (pad.pos.y < from.y - 2 || pad.pos.y >= goal.y - 2) continue;
       const toPad = route(nav, from, pad.pos);
       if (!toPad) continue;
-      const apex = Math.pow(pad.force, 2) / (2 * GRAVITY);
+      const gravity=GRAVITY*Math.max(.1,gravityMult);
+      const apex = Math.pow(pad.force, 2) / (2 * gravity);
       const rise = Math.min(6, goal.y - pad.pos.y);
       if (rise > apex - 0.4) continue;
-      const flight = pad.force / GRAVITY;
+      // Solve the descending intersection with the target platform height.
+      const flight = (pad.force + Math.sqrt(Math.max(0,
+        pad.force*pad.force-2*gravity*rise))) / gravity;
       const landingGuess = new V(pad.pos.x + pad.thrustX * flight,
                                   pad.pos.y + rise,
                                   pad.pos.z + pad.thrustZ * flight);
@@ -89,7 +92,7 @@ function planTransition(bot, goal, nav, pads, platforms) {
 }
 
 // Returns the current on-ground target; null while riding a moving platform.
-export function botTravelTarget(bot, goal, nav, pads, platforms, dt) {
+export function botTravelTarget(bot, goal, nav, pads, platforms, dt, gravityMult=1) {
   bot._padCooldown = Math.max(0, (bot._padCooldown || 0) - dt);
   let state = bot._navTransition;
   if (state) state.age += dt;
@@ -154,7 +157,7 @@ export function botTravelTarget(bot, goal, nav, pads, platforms, dt) {
       V.DistanceSquared(bot._navTarget, goal) > 36) {
     bot._navRepath = 0.7 + Math.random() * 0.35;
     bot._navTarget = goal.clone();
-    bot._navTransition = planTransition(bot, goal, nav, pads, platforms);
+    bot._navTransition = planTransition(bot, goal, nav, pads, platforms, gravityMult);
   }
   state = bot._navTransition;
   return state?.kind === 'pad' ? state.pad.pos :
