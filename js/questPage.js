@@ -67,9 +67,19 @@ export function renderQuestPage(){
         ';font-family:'+F+';font-size:12px;cursor:pointer',
         q.claimed?'✓ CLAIMED':q.complete?'CLAIM REWARD':'IN PROGRESS');
       claim.disabled=q.claimed||!q.complete;
-      claim.onclick=()=>{
-        const result=claimProfileQuest(q.id);
+      claim.onclick=async()=>{
+        claim.disabled=true;
+        claim.textContent='CLAIMING…';
+        const result=await claimProfileQuest(q.id);
+        if(!document.getElementById('questPageContent'))return;
         if(result.ok)renderQuestPage();
+        else{
+          claim.disabled=false;
+          claim.textContent='RETRY CLAIM';
+          const error=e('p','color:#f4bf67;font-size:12px',
+            result.reason||'Reward transaction unavailable');
+          card.appendChild(error);
+        }
       };
       card.appendChild(claim);
       body.appendChild(card);
