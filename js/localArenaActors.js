@@ -113,8 +113,17 @@ export function getArenaActorWeaponSpec(actor){
  // WDEFS heat value. Each actor owns an independent cooling/overheat meter.
  const base={...WDEFS[id],
    heat:(actor?.heat||0)/Math.max(1,WDEFS[id].maxHeat||100)};
- return getEffectiveStatsForLoadout(id,base,
-   actor?.persona?.loadout?.attachments?.[id]||{});
+ const attachments=actor?.persona?.loadout?.attachments?.[id]||{};
+ const spec=getEffectiveStatsForLoadout(id,base,attachments);
+ // The dual-trigger Plasma is a three-bolt burst most of the time, but
+ // uses its single, stronger sniper shot on every fourth trigger.
+ if(id==='PLASMA'&&attachments.special==='dual_trigger'){
+  const sniper=((actor._plasmaTriggers||0)%4)===3;
+  return {...spec,burstCount:sniper?1:3,
+    dmg:sniper?spec.dmg*3:spec.dmg,
+    hitscan:sniper,cd:sniper?.95:Math.max(.3,spec.cd||.22)};
+ }
+ return spec;
 }
 export function setArenaActorWeapon(actor,weapon){
  const id=WDEFS[weapon]?weapon:'PISTOL';
@@ -122,7 +131,7 @@ export function setArenaActorWeapon(actor,weapon){
  actor.weapon=id;
  const spec=getArenaActorWeaponSpec(actor);
  actor.ammo=spec.useHeat?Infinity:Math.max(1,spec.magSize||30);
- actor.heat=0;actor.reload=0;gunVisual(actor,id);
+ actor.heat=0;actor.reload=0;actor._plasmaTriggers=0;gunVisual(actor,id);
 }
 export function chooseArenaSpawn(existing=[],playerPosition=camera.position){
  const spawns=getWalkableSpawns(getCurrentMap());
@@ -184,7 +193,7 @@ export function respawnArenaActor(actor,spawn){
  // that weapon. Reload it explicitly on respawn, including Gun Game rungs.
  const spec=getArenaActorWeaponSpec(actor);
  actor.ammo=spec.useHeat?Infinity:Math.max(1,spec.magSize||30);
- actor.heat=0;actor.recoil=0;actor.walkPhase=0;actor.hitFlash=0;
+ actor.heat=0;actor.recoil=0;actor.walkPhase=0;actor.hitFlash=0;actor._plasmaTriggers=0;
  actor.mats?.[0]?.emissiveColor?.copyFromFloats(0,0,0);
  for(const limb of [...(actor.limbs?.arms||[]),...(actor.limbs?.legs||[])])limb.rotation.x=0;
  actor._dots=[];actor._poisonDots=[];actor._stunned=0;actor._knockback=null;
@@ -490,6 +499,9 @@ export function updateArenaActors(actors,dt,mode,
   // trigger, and approximate their grouped impacts as one scored hit.
   const rounds=spec.useHeat?1:Math.min(a.ammo,Math.max(1,spec.burstCount||1));
   if(!spec.useHeat)a.ammo-=rounds;
+  if(a.weapon==='PLASMA'&&
+     a.persona?.loadout?.attachments?.PLASMA?.special==='dual_trigger')
+    a._plasmaTriggers=(a._plasmaTriggers||0)+1;
   a.recoil=1;
   a.cooldown=Math.max(.08,(spec.cd||.35)*(1.3-(a.persona.aggression||.5)*.3));
   const chance=clamp(.34+(a.persona.aim||.6)*.65-distance*.004,.12,.9);
