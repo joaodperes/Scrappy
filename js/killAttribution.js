@@ -6,6 +6,7 @@ export const SPECIAL_KILL_WEAPONS=Object.freeze({
   THUNDERBOLT:'THUNDERBOLT', OMEGA_STORM:'OMEGA',
   FLAMETHROWER:'FLAMETHROWER', FLAME_DOT:'FLAMETHROWER',
   POISON:'CROSSBOW', AEGIS:'AEGIS',
+  DRAGONS_BREATH:'SHOTGUN',SUPERHEATED_RIVET:'RIVETER',
 });
 const NON_WEAPON_SOURCES=new Set(['ENVIRONMENT','BARREL_EXPLOSION']);
 export function resolveKillAttribution(heldWeapon,source='PLAYER',explicitWeapon=null,isExplosive=false){
