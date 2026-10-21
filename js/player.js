@@ -144,6 +144,7 @@ export function shoot() {
   if (wepCooldown > 0 || player.isReloading || _burstCooldown > 0) return;
   const W = WDEFS[curWep];
   if(W?.melee){
+    sfx.knife();
     setWepCooldown(W.cd);
     setSwingT(1);
     // Strike at the blade animation's contact window rather than the
