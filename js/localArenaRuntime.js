@@ -157,15 +157,23 @@ function onActorKilled(actor,killer,weapon){
    applyResult(next);
  }
 }
+// Special attacks identify their ability at the hitRobot boundary. They
+// still originate from the human player; do not silently discard their kills
+// or weapon XP when resolving local arena damage.
+const HUMAN_DAMAGE_SOURCES=new Set([
+ 'PLAYER','FLAMETHROWER','PHALANX_SHATTER','TESLA_CHAIN',
+ 'THUNDERBOLT','OMEGA_STORM','AEGIS',
+]);
 export function localArenaActorHit(actor,dmg,source='PLAYER'){
- if(!isActive()||!actor?.alive||!Number.isFinite(dmg)||dmg<=0)return;
+ if(!isActive()||!actor?.alive||!Number.isFinite(dmg)||dmg<=0||
+    !HUMAN_DAMAGE_SOURCES.has(source))return;
  // Gun Game's ladder cannot be bypassed by another equipped firearm.
  if(active.state.mode==='gunGame'&&curWep!==active.state.gunOrder[active.state.gunIndex])return;
  if(['tdm','killConfirmed'].includes(active.state.mode)&&actor.team==='RED')return;
  const dealt=Math.min(actor.hp,Math.min(500,dmg));
  actor.hp=Math.max(0,actor.hp-dealt);
- if(source==='PLAYER')recordDamage(curWep,dealt);
- if(actor.hp===0)onActorKilled(actor,source==='PLAYER'?'human':null,curWep);
+ recordDamage(curWep,dealt);
+ if(actor.hp===0)onActorKilled(actor,'human',curWep);
 }
 // Legacy Survival robot kills do not score in arena games. No Survival bots
 // are spawned by the new modes, so this callback must remain a no-op.
