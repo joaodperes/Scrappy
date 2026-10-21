@@ -78,9 +78,9 @@ test('lava is a solid, damaging hazard and the mine has enclosed floors',()=>{
   require('node:path').join(__dirname,'../js/levelHelpers.js'),'utf8');
  const level=require('node:fs').readFileSync(
   require('node:path').join(__dirname,'../js/levelJungle.js'),'utf8');
- assert.match(helpers,/export function createLava[^]*?m\\.checkCollisions = true/);
+ assert.match(helpers,/export function createLava[^]*?m\.checkCollisions = true/);
  assert.match(helpers,/hazardType: 'LAVA'/);
- assert.match(level,/applyEditableLayout\\(override, \\{ hazardZones, destructibleWalls/);
+ assert.match(level,/applyEditableLayout\(override, \{ hazardZones, destructibleWalls/);
  for(const y of [-7.5,-15,-30,-45])
   assert.ok(slabs.some(o=>o.params.surfY===y),'missing level floor '+y);
  const boundaries=walls.filter(o=>/^j-border-/.test(o.id));
