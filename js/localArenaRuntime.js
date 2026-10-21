@@ -172,7 +172,7 @@ export function localArenaActorHit(actor,dmg,source='PLAYER'){
  if(['tdm','killConfirmed'].includes(active.state.mode)&&actor.team==='RED')return;
  const dealt=Math.min(actor.hp,Math.min(500,dmg));
  actor.hp=Math.max(0,actor.hp-dealt);
- recordDamage(curWep,dealt);
+ recordDamage(curWep,dealt,'ARENA');
  if(actor.hp===0)onActorKilled(actor,'human',curWep);
 }
 // Legacy Survival robot kills do not score in arena games. No Survival bots
