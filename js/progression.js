@@ -2512,6 +2512,7 @@ function _restoreCloudProfile(uid,remote,receipts={}){
  _cloudBase=_copy(baseline);
  profile=_deepMerge(_defaultProfile(),recovered);
  profile.firebaseUid=uid;
+ profile.level=levelFromTotalXp(profile.totalXp||0);
  _sanitizeUnlocks();_primeProgressNoticeHistory();
  const hasPending=!!_recovery||
    JSON.stringify(profile)!==JSON.stringify(baseline);
@@ -2682,8 +2683,8 @@ async function _saveToFirestore(uid,localSnapshot,baseSnapshot,buffer){
    const doc=await tx.get(ref),data=doc.data()||{};
    if(!data.profile)throw new Error('CLOUD_PROFILE_MISSING');
    const owner=activeGameSession();
-   const lease=data.activeSession?.id;
-   if(lease&&(!owner||owner.uid!==uid||lease!==owner.id))
+   const lease=data.activeSession?.id||null;
+   if(owner?(owner.uid!==uid||lease!==owner.id):!!lease)
     throw new Error('SESSION_CONFLICT');
    const receipt=Number(data.profileSyncReceipts?.[buffer.id]||0);
    if(receipt>=buffer.version)return {merged:data.profile,duplicate:true};
@@ -2911,7 +2912,7 @@ export async function claimProfileQuest(id,date=new Date()){
    const doc=await tx.get(ref),data=doc.data()||{};
    if(!data.profile)throw new Error('Cloud profile missing');
    const owner=activeGameSession();
-   if(data.activeSession?.id&&data.activeSession.id!==owner?.id)
+   if(owner?(owner.uid!==uid||data.activeSession?.id!==owner.id):!!data.activeSession?.id)
     throw new Error('Account is active in another browser');
    const updated=_deepMerge(_defaultProfile(),data.profile);
    const result=claimQuest(updated,id,date);
