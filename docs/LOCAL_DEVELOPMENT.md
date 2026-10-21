@@ -23,8 +23,10 @@ a mode, then press **START LOCAL MATCH**. Survival supports Normal / Hard /
 Nightmare. Offline robot arenas include **Gun Game**, **Kill Confirmed**,
 **FFA Practice** and **TDM Practice**, with local score and time goals.
 No mode in this local path opens `ws://localhost:8080`, creates a room or
-requires a WebSocket server. FFA/TDM are deliberately labeled *Practice*
-until the robots can fight each other and support proper teams.
+requires a WebSocket server. FFA/TDM remain labeled *Practice* until the
+owner validates browser gameplay. Local actors already fight one another
+and use RED/BLUE team rules in TDM; their multi-floor navigation and
+specialized weapon effects still require QA.
 
 **ONLINE (EXPERIMENTAL)** and **BROWSE ONLINE (EXPERIMENTAL)** remain
 available for developers exercising the older multiplayer prototype; they
