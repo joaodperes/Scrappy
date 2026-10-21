@@ -93,7 +93,20 @@ export async function acquireGameSession({onLost,onBeforeHandoff}={}){
   // A cooperative handoff lets the old session flush before taking over.
   // A crashed/offline session cannot block login indefinitely.
   await ref.set({takeoverRequest:{id,at:firebase.firestore.FieldValue.serverTimestamp()}},{merge:true});
-  await new Promise(resolve=>setTimeout(resolve,1800));
+  await new Promise(resolve=>{
+   // Release as soon as the old browser finishes syncing, while preserving
+   // a bounded fallback for crashed/offline clients.
+   let done=false,stop=null;
+   const finish=()=>{
+    if(done)return;
+    done=true;clearTimeout(deadline);stop?.();resolve();
+   };
+   const deadline=setTimeout(finish,3500);
+   stop=ref.onSnapshot(snapshot=>{
+    if(!snapshot.metadata?.fromCache&&!snapshot.data()?.activeSession?.id)finish();
+   },finish);
+   if(done)stop?.();
+  });
  }
  let next=null;
  await firebase.firestore().runTransaction(async tx=>{
